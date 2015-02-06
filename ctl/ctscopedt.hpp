@@ -62,8 +62,8 @@ namespace ctl {
         {
         }
         // allowing move construction (not copy construction)
-        ctScopedT(ctScopedT&& other) throw()
-            : closeFunctor(std::move(other.closeFunctor)),
+        ctScopedT(ctScopedT&& other) throw() : 
+            closeFunctor(std::move(other.closeFunctor)),
             tValue(std::move(other.tValue))
         {
             // Stop the tValue from being destroyed as soon as other leaves scope
@@ -105,11 +105,10 @@ namespace ctl {
             swap(this->tValue, tShared.tValue);
         }
 
-    private:
-        // Not allowing copying 
-        ctScopedT(ctScopedT const&);
-        ctScopedT& operator=(ctScopedT const&);
+        ctScopedT(ctScopedT const&) = delete;
+        ctScopedT& operator=(ctScopedT const&) = delete;
 
+    private:
         Fn closeFunctor;
         T tValue;
     }; // class ctScopedT

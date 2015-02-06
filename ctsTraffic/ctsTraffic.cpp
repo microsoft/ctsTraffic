@@ -16,24 +16,20 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // CRT headers
 #include <stdio.h>
 #include <wchar.h>
+#include <exception>
 // OS headers
 #include <Windows.h>
-#include <algorithm>
-
 // ctl headers
 #include <ctException.hpp>
-#include <ctString.hpp>
 #include <ctThreadPoolTimer.hpp>
-
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocketBroker.h"
 
 using namespace ctsTraffic;
 using namespace ctl;
+using namespace std;
 
-// 'main' signature found without threading model.
-#pragma warning(disable:4447)
 
 // global ptr for easing debugging
 ctsSocketBroker* g_SocketBroker = nullptr;
@@ -46,13 +42,13 @@ BOOL WINAPI CtrlBreakHandlerRoutine(DWORD)
 }
 
 int
-__cdecl wmain(_In_ int argc, _In_reads_z_(argc) wchar_t** argv)
+__cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
     int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
         DWORD gle = ::WSAGetLastError();
-        wprintf(L"ctsTraffic failed at WSAStartup [%u]\n", gle);
+        ::wprintf(L"ctsTraffic failed at WSAStartup [%u]\n", gle);
         return gle;
     }
 
@@ -64,19 +60,19 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) wchar_t** argv)
     }
     catch (const ctsSafeIntException& e) {
         ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %s\n", ctsPrintSafeIntException(e));
-        ctsTraffic::ctsConfig::PrintUsage();
+        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
-    catch (const std::invalid_argument& e) {
+    catch (const invalid_argument& e) {
         ctsConfig::PrintErrorInfoOverride(L"Invalid argument specified: %S", e.what());
-        ctsTraffic::ctsConfig::PrintUsage();
+        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
-    catch (const std::exception& e) {
+    catch (const exception& e) {
         ctsConfig::PrintExceptionOverride(e);
-        ctsTraffic::ctsConfig::PrintUsage();
+        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
@@ -90,14 +86,14 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) wchar_t** argv)
         ctsConfig::PrintLegend();
 
         // set the start timer as close as possible to the start of the engine
-        ctsConfig::Settings->StartTimeMilliseconds = ctl::ctTimer::snap_qpc_msec();
+        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_msec();
         ctsSocketBroker broker;
         g_SocketBroker = &broker;
 
-        ctl::ctThreadpoolTimer status_timer;
+        ctThreadpoolTimer status_timer;
         status_timer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::Settings->StatusUpdateFrequencyMilliseconds);
         if (!broker.wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE)) {
-            throw std::runtime_error("Timelimit exceeded : aborting");
+            throw runtime_error("Timelimit exceeded : aborting");
         }
     }
     catch (const ctsSafeIntException& e) {
@@ -110,11 +106,11 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) wchar_t** argv)
         ctsConfig::Shutdown();
         return (e.why() == 0) ? ERROR_CANCELLED : e.why();
     }
-    catch (const std::bad_alloc&) {
+    catch (const bad_alloc&) {
         ctsConfig::PrintErrorInfo(L"ctsTraffic failed: Out of Memory");
         return ERROR_OUTOFMEMORY;
     }
-    catch (const std::exception& e) {
+    catch (const exception& e) {
         ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %S", e.what());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;

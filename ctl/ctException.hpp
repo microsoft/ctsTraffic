@@ -49,12 +49,6 @@ namespace ctl {
     //    is that once the const pointer is created, it is guaranteed not to change 
     //    for the lifetime of the ctException object.
     //
-    //  Note: the following guards areas of this file which are only available for desktop apps
-    //        modern apps do not have access to this functionality
-    //
-    //    #pragma region Desktop Family
-    //    #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     class ctException : public std::exception {
     public:
@@ -108,14 +102,14 @@ namespace ctl {
         void szMessageTowszMessage() throw();
 
         // private member variables
-        unsigned long ulCode;
-        const char* szMessage;
-        const wchar_t* wszMessage;
-        const wchar_t* wszLocation;
-        mutable wchar_t* wszTranslation;
-        bool bMessageCopy_s;
-        bool bMessageCopy_w;
-        bool bLocationCopy_w;
+        unsigned long ulCode = 0;
+        const char* szMessage = nullptr;
+        const wchar_t* wszMessage = nullptr;
+        const wchar_t* wszLocation = nullptr;
+        mutable wchar_t* wszTranslation = nullptr;
+        bool bMessageCopy_s = false;
+        bool bMessageCopy_w = false;
+        bool bLocationCopy_w = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -128,42 +122,21 @@ namespace ctl {
     //   - if no copy is made, the pointer won't be deleted on destruction
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    inline ctException::ctException() throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(0),
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+    inline ctException::ctException() throw() : 
+        std::exception("") // initialize the base c'tor
     {
     }
 
-    inline ctException::ctException(unsigned long _ulCode) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode), // initializing with args
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+    inline ctException::ctException(unsigned long _ulCode) throw() : 
+        std::exception(""), // initialize the base c'tor
+        ulCode(_ulCode) // initializing with args
     {
     }
 
-    inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(0),
+    inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) throw(): 
+        std::exception(""), // initialize the base c'tor
         szMessage(_szMessage), // initializing with args
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(_bMessageCopy),  // initializing with args
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+        bMessageCopy_s(_bMessageCopy)  // initializing with args
     {
         if (bMessageCopy_s) {
             szMessage = calloc_and_copy_s(_szMessage);
@@ -172,16 +145,10 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(0),
-        szMessage(nullptr),
+    inline ctException::ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy) throw() : 
+        std::exception(""), // initialize the base c'tor
         wszMessage(_wszMessage), // initializing with args
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(_bMessageCopy), // initializing with args
-        bLocationCopy_w(false)
+        bMessageCopy_w(_bMessageCopy) // initializing with args
     {
         if (bMessageCopy_w) {
             wszMessage = calloc_and_copy_w(_wszMessage);
@@ -190,58 +157,29 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::wstring& _wsMessage) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(0),
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(true),  // always copy out of the std::wstring
-        bLocationCopy_w(false)
+    inline ctException::ctException(_In_ const std::wstring& _wsMessage) throw() : 
+        std::exception("") // initialize the base c'tor
     {
         wszMessage = calloc_and_copy_w(_wsMessage.c_str());
+        bMessageCopy_w = true;
         // build the corresponding char string
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::string& _sMessage) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(0),
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(true),  // always copy out of the string
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+    inline ctException::ctException(_In_ const std::string& _sMessage) throw() : 
+        std::exception("") // initialize the base c'tor
     {
-        const char* szMessageString = nullptr;
-        try {
-            szMessageString = _sMessage.c_str();
-        }
-        catch (const std::exception&) {
-            szMessageString = nullptr;
-        }
-
-        if (szMessageString != nullptr) {
-            szMessage = calloc_and_copy_s(szMessageString);
-            // build the corresponding wchar_t string
-            szMessageTowszMessage();
-        }
+        szMessage = calloc_and_copy_s(_sMessage.c_str());
+        bMessageCopy_s = true;
+        // build the corresponding wchar_t string
+        szMessageTowszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy) throw()
-    : std::exception(""), // initialize the base c'tor
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy) throw() : 
+        std::exception(""), // initialize the base c'tor
         ulCode(_ulCode), // initializing with args
-        szMessage(nullptr),
         wszMessage(_wszMessage), // initializing with args
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(_bMessageCopy), // initializing with args
-        bLocationCopy_w(false)
+        bMessageCopy_w(_bMessageCopy) // initializing with args
     {
         if (bMessageCopy_w) {
             wszMessage = calloc_and_copy_w(_wszMessage);
@@ -250,14 +188,11 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy) throw()
-    : std::exception(""), // initialize the base c'tor
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy) throw() : 
+        std::exception(""), // initialize the base c'tor
         ulCode(_ulCode),
-        szMessage(nullptr),
         wszMessage(_wszMessage), // initializing with args
         wszLocation(_wszLocation), // initializing with args
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
         bMessageCopy_w(_bBothStringCopy), // initializing with args
         bLocationCopy_w(_bBothStringCopy) // initializing with args
     {
@@ -269,16 +204,11 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) throw()
-    : std::exception(_szMessage), // initialize the base c'tor
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) throw() : 
+        std::exception(_szMessage), // initialize the base c'tor
         ulCode(_ulCode), // initializing with args
         szMessage(_szMessage), // initializing with args
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(_bMessageCopy), // initializing with args
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+        bMessageCopy_s(_bMessageCopy) // initializing with args
     {
         if (bMessageCopy_s) {
             szMessage = calloc_and_copy_s(_szMessage);
@@ -287,70 +217,31 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ const std::wstring& _wsMessage) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode), // initializing with args
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(false),
-        bMessageCopy_w(true),  // always copy out of the std::wstring
-        bLocationCopy_w(false)
+    inline ctException::ctException(unsigned long _ulCode, _In_ const std::wstring& _wsMessage) throw() : 
+        std::exception(""), // initialize the base c'tor
+        ulCode(_ulCode) // initializing with args
     {
-        const wchar_t* wszMessageString = nullptr;
-        try {
-            wszMessageString = _wsMessage.c_str();
-        }
-        catch (const std::exception&) {
-            wszMessageString = nullptr;
-        }
-
-        if (wszMessageString != nullptr) {
-            wszMessage = calloc_and_copy_w(wszMessageString);
-            // build the corresponding char string
-            wszMessageToszMessage();
-        }
+        wszMessage = calloc_and_copy_w(_wsMessage.c_str());
+        bMessageCopy_w = true;
+        // build the corresponding char string
+        wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) throw()
-    : std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode), // initializing with args
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(true),  // always copy out of the string
-        bMessageCopy_w(false),
-        bLocationCopy_w(false)
+    inline ctException::ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) throw() : 
+        std::exception(""), // initialize the base c'tor
+        ulCode(_ulCode) // initializing with args
     {
-        const char* szMessageString = nullptr;
-        try {
-            szMessageString = _sMessage.c_str();
-        }
-        catch (const std::exception&) {
-            szMessageString = nullptr;
-        }
-
-        if (szMessageString != nullptr) {
-            szMessage = calloc_and_copy_s(szMessageString);
-            // build the corresponding wchar_t string
-            szMessageTowszMessage();
-        }
+        szMessage = calloc_and_copy_s(_sMessage.c_str());
+        bMessageCopy_s = true;
+        // build the corresponding wchar_t string
+        szMessageTowszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::exception& e) throw()
-    : std::exception(e), // initialize the base c'tor
-        ulCode(0),
-        szMessage(nullptr),
-        wszMessage(nullptr),
-        wszLocation(nullptr),
-        wszTranslation(nullptr),
-        bMessageCopy_s(true),  // always copy what() out of the std::exception
-        bMessageCopy_w(true),
-        bLocationCopy_w(false)
+    inline ctException::ctException(_In_ const std::exception& e) throw() : 
+        std::exception(e) // initialize the base c'tor
     {
         szMessage = calloc_and_copy_s(e.what());
+        bMessageCopy_s = true;
         // build the corresponding wchar_t string
         szMessageTowszMessage();
     }
@@ -360,8 +251,8 @@ namespace ctl {
     // Copy constructor
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    inline ctException::ctException(_In_ const ctException& e) throw()
-    : std::exception(""), // initialize the base c'tor
+    inline ctException::ctException(_In_ const ctException& e) throw() : 
+        std::exception(""), // initialize the base c'tor
         ulCode(e.ulCode),
         szMessage(e.szMessage),
         wszMessage(e.wszMessage),
@@ -436,13 +327,7 @@ namespace ctl {
         if (this->bMessageCopy_s)  ::free(const_cast<void*>(static_cast<const void*>(this->szMessage)));
         if (this->bMessageCopy_w)  ::free(const_cast<void*>(static_cast<const void*>(this->wszMessage)));
         if (this->bLocationCopy_w) ::free(const_cast<void*>(static_cast<const void*>(this->wszLocation)));
-
-        // always allocated by FormatMessage
-#pragma region Desktop Family
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        ::LocalFree(static_cast<void*>(this->wszTranslation));
-#endif
-#pragma endregion
+        ::free(static_cast<void*>(this->wszTranslation));
 
         this->ulCode = 0;
         this->szMessage = nullptr;
@@ -508,34 +393,38 @@ namespace ctl {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     inline const wchar_t* ctException::translation_w() const throw()
     {
-#pragma region Desktop Family
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        static const DWORD DWFLAGS =
-            FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS |
-            FORMAT_MESSAGE_ALLOCATE_BUFFER |
-            FORMAT_MESSAGE_MAX_WIDTH_MASK;
+        // If the translation has already been performed, return the existing value.
+        if (nullptr != this->wszTranslation) {
+            return this->wszTranslation;
+        }
 
-        void* lpBuffer = nullptr;
-        if (nullptr == this->wszTranslation) {
+        static const DWORD cchBuffer = 1024;
+        wchar_t* wszBuffer = static_cast<wchar_t*>(::calloc(cchBuffer, sizeof(wchar_t)));
+        if (nullptr != wszBuffer) {
+            // We carefully avoid using the FORMAT_MESSAGE_ALLOCATE_BUFFER flag.
+            // It triggers a use of the LocalAlloc() function. LocalAlloc() and LocalFree() are in an API set that is obsolete.
+            static const DWORD DWFLAGS =
+                FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_IGNORE_INSERTS |
+                FORMAT_MESSAGE_MAX_WIDTH_MASK;
+
             DWORD dwReturn = ::FormatMessageW(
                 DWFLAGS,
                 nullptr, // just search the system
                 this->ulCode,
                 0, // allow for proper MUI language fallback
-                reinterpret_cast<LPWSTR>(&lpBuffer),
-                0,
+                wszBuffer,
+                cchBuffer,
                 nullptr
                 );
-            if (dwReturn != 0) {
-                // if 0, couldn't find the resource
-                this->wszTranslation = reinterpret_cast<wchar_t*>(lpBuffer);
+            if (0 == dwReturn) {
+                // Free the temporary buffer here, as it won't be assigned to wszTranslation to be freed later.
+                ::free(static_cast<void*>(wszBuffer));
+            } else {
+                this->wszTranslation = wszBuffer;
             }
         }
-#endif
-#pragma endregion
 
-        // modern apps will always have "" returned
         return (this->wszTranslation != nullptr) ? this->wszTranslation : L"";
     }
 
@@ -562,7 +451,7 @@ namespace ctl {
             nullptr
             );
         if (iResult != 0) {
-            char* temp_szMessage = static_cast<char*>(calloc(iResult, sizeof(char)));
+            char* temp_szMessage = static_cast<char*>(::calloc(iResult, sizeof(char)));
             if (temp_szMessage != nullptr) {
                 iResult = ::WideCharToMultiByte(
                     CP_ACP,
@@ -597,25 +486,11 @@ namespace ctl {
             return;
         }
 
-        int iResult = ::MultiByteToWideChar(
-            CP_ACP,
-            0,
-            this->szMessage,
-            -1,
-            nullptr,
-            0
-            );
+        int iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, nullptr, 0);
         if (iResult != 0) {
-            wchar_t* temp_wszMessage = static_cast<wchar_t*>(calloc(iResult, sizeof(wchar_t)));
+            wchar_t* temp_wszMessage = static_cast<wchar_t*>(::calloc(iResult, sizeof(wchar_t)));
             if (temp_wszMessage != nullptr) {
-                iResult = ::MultiByteToWideChar(
-                    CP_ACP,
-                    0,
-                    this->szMessage,
-                    -1,
-                    temp_wszMessage,
-                    iResult
-                    );
+                iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, temp_wszMessage, iResult);
                 if (0 == iResult) {
                     // failed to populate the buffer, so should free it
                     free(temp_wszMessage);
@@ -644,7 +519,7 @@ namespace ctl {
         }
 
         size_t tSize = strlen(tSrc) + 1;
-        char* tDest = static_cast<char*>(calloc(tSize, sizeof(char)));
+        char* tDest = static_cast<char*>(::calloc(tSize, sizeof(char)));
         if (tDest != nullptr) {
             errno_t err = strcpy_s(tDest, tSize, tSrc);
             if (err != 0) {
@@ -673,7 +548,7 @@ namespace ctl {
         }
 
         size_t tSize = wcslen(tSrc) + 1;
-        wchar_t* tDest = static_cast<wchar_t*>(calloc(tSize, sizeof(wchar_t)));
+        wchar_t* tDest = static_cast<wchar_t*>(::calloc(tSize, sizeof(wchar_t)));
         if (tDest != nullptr) {
             errno_t err = wcscpy_s(tDest, tSize, tSrc);
             if (err != 0) {

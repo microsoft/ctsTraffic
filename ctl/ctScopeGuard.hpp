@@ -48,6 +48,14 @@ namespace ctl {
         {
         }
 
+        void run_once( ) throw()
+        {
+            if (m_p) {
+                (*m_p)();
+            }
+            m_p = nullptr;
+        }
+
         void dismiss() throw()
         {
             m_p = nullptr;

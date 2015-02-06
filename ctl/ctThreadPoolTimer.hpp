@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 #include <utility>
 #include <functional>
-#include <list>
+#include <vector>
 // os headers
 #include <Windows.h>
 // ct headers
@@ -42,39 +42,39 @@ namespace ctl {
         FILETIME timer_expiration;
         unsigned long reoccuring_period;
 
-        ctThreadpoolTimerCallbackInfo() throw()
-        : callback(nullptr),
-          timer_expiration(),
-          reoccuring_period(0UL)
+        ctThreadpoolTimerCallbackInfo() throw() :
+            callback(nullptr),
+            timer_expiration(),
+            reoccuring_period(0UL)
         {
             ::ZeroMemory(&timer_expiration, sizeof timer_expiration);
         }
 
         explicit
-        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallback_t&& _callback, long long _milliseconds)
-        : callback(std::move(_callback)),
-          timer_expiration(),
-          reoccuring_period(0UL)
+        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallback_t&& _callback, long long _milliseconds) :
+            callback(std::move(_callback)),
+            timer_expiration(),
+            reoccuring_period(0UL)
         {
             using namespace ctl::ctTimer;
             timer_expiration = convert_msec_absolute_filetime(snap_system_time_msec() + _milliseconds);
         }
         explicit
-        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallback_t&& _callback, long long _milliseconds, unsigned long _period)
-        : callback(std::move(_callback)),
-          timer_expiration(),
-          reoccuring_period(_period)
+        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallback_t&& _callback, long long _milliseconds, unsigned long _period) :
+            callback(std::move(_callback)),
+            timer_expiration(),
+            reoccuring_period(_period)
         {
             using namespace ctl::ctTimer;
             timer_expiration = convert_msec_absolute_filetime(snap_system_time_msec() + _milliseconds);
         }
 
         // supporting only move semantics
-        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _copy) throw()
+        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _callback_info) throw()
         {
-            callback = std::move(_copy.callback);
-            timer_expiration = std::move(_copy.timer_expiration);
-            reoccuring_period = std::move(_copy.reoccuring_period);
+            callback = std::move(_callback_info.callback);
+            timer_expiration = std::move(_callback_info.timer_expiration);
+            reoccuring_period = std::move(_callback_info.reoccuring_period);
         }
 
         // update FILETIME to the next time based off the reoccuring period
@@ -113,11 +113,11 @@ namespace ctl {
         /// These c'tors can fail under low resources
         /// - ctl::ctException (from the ThreadPool APIs)
         ///
-        ctThreadpoolTimer(_In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
-        : timer_lock(),
-          tp_environment(_ptp_env),
-          tp_timers(),
-          callback_objects()
+        ctThreadpoolTimer(_In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
+            tp_environment(_ptp_env),
+            timer_lock(),
+            tp_timers(),
+            callback_objects()
         {
             if (!::InitializeCriticalSectionEx(&timer_lock, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctl::ctThreadpoolTimer", false);

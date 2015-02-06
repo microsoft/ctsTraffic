@@ -14,9 +14,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // OS headers
-#include <windows.h>
 #include <winsock2.h>
 #include <mswsock.h>
+// ctl headers
+#include <ctVersionConversion.hpp>
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 
@@ -28,44 +29,53 @@ namespace ctsTraffic {
     /// - and provides it the buffer it should use to send/recv data
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+    enum class IOTaskAction
+    {
+        None,
+        Send,
+        Recv,
+        GracefulShutdown,
+        HardShutdown,
+        Abort,
+        FatalAbort
+    };
+
     struct ctsIOTask {
-        ctsIOTask() throw()
-        : ioAction(None),
-          buffer(nullptr),
-          buffer_length(0),
-          buffer_offset(0),
-          expected_pattern_offset(0),
-          time_offset_milliseconds(0LL),
-          rio_bufferid(RIO_INVALID_BUFFERID),
-          tracked_io(false),
-          unlisted_buffer(false)
-        {
-        }
-
-        enum IOAction {
-            Send,
-            Recv,
-            None,
-            Abort,
-            FatalAbort
-        } ioAction;
-
         _Field_size_full_(buffer_length)
-        char* buffer;
-        unsigned long buffer_length;
-        unsigned long buffer_offset;
-        unsigned long expected_pattern_offset;
-        long long time_offset_milliseconds;
-        RIO_BUFFERID rio_bufferid;
+        char* buffer = nullptr;
+        unsigned long buffer_length = 0UL;
+        unsigned long buffer_offset = 0UL;
+        unsigned long expected_pattern_offset = 0UL;
+        long long time_offset_milliseconds = 0LL;
+        RIO_BUFFERID rio_bufferid = RIO_INVALID_BUFFERID;
+        IOTaskAction ioAction = IOTaskAction::None;
 
-        //
-        // boolean values are internal to ctsIOPattern
-        //
+        // (internal) flag if this IO request is tracked and verified
+        bool track_io = false;
+        // (internal) flag identifying the type of buffer
+        enum class BufferType
+        {
+            Null,
+            TcpConnectionId,
+            UdpConnectionId,
+            Static,
+            Tracked
+        } buffer_type = BufferType::Null;
 
-        // (internal) flag if this IO request is tracked with inflight counters
-        bool tracked_io;
-        // (internal) flag if this is a non-listed-buffer (meaning the base class isn't containing it)
-        bool unlisted_buffer;
+        static LPCWSTR PrintIOAction(const IOTaskAction& _action) NOEXCEPT
+        {
+            switch (_action) {
+                case IOTaskAction::None: return L"None";
+                case IOTaskAction::Send: return L"Send";
+                case IOTaskAction::Recv: return L"Recv";
+                case IOTaskAction::GracefulShutdown: return L"GracefulShutdown";
+                case IOTaskAction::HardShutdown: return L"HardShutdown";
+                case IOTaskAction::Abort: return L"Abort";
+                case IOTaskAction::FatalAbort: return L"FatalAbort";
+            }
+
+            return L"Unknown IOAction";
+        }
     };
 
 } // namespace

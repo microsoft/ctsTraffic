@@ -17,9 +17,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-// project headers
-#include "ctsPrintStatus.hpp"
-
+// ctl headers
+#include <ctVersionConversion.hpp>
 
 namespace ctsTraffic {
     ///
@@ -42,7 +41,8 @@ namespace ctsTraffic {
     ///
     class ctsSocketState : public std::enable_shared_from_this<ctsSocketState> {
     public:
-        enum State {
+        enum class InternalState
+        {
             Creating,
             Created,
             Connecting,
@@ -57,26 +57,26 @@ namespace ctsTraffic {
         /// c'tor requiring a parent ctsSocketBroker
         ///
         explicit
-        ctsSocketState(ctsSocketBroker* _broker);
+        ctsSocketState(_In_ ctsSocketBroker* _broker);
 
-        ~ctsSocketState() throw();
+        ~ctsSocketState() NOEXCEPT;
 
         ///
         /// explicit method to 'start' the state machine
         /// - this is required to ensure the object is fully instatiated before
         ///   it is passed to the threadpool thread
         ///
-        void start() throw();
+        void start() NOEXCEPT;
 
         ///
         /// Completes the current socket state
         ///
-        void complete_state(DWORD) throw();
+        void complete_state(DWORD) NOEXCEPT;
 
         ///
         /// Accessor to current state information
         ///
-        bool is_closed() const throw();
+        InternalState current_state() const NOEXCEPT;
 
         ///
         /// block default c'tor, copy c'tor and assignment
@@ -91,7 +91,7 @@ namespace ctsTraffic {
         /// - disassociating the parent from the child
         ///
         friend class ctsSocketBroker;
-        void detach() throw();
+        void detach() NOEXCEPT;
 
         ///
         /// private members of ctsSocketState
@@ -102,15 +102,15 @@ namespace ctsTraffic {
         mutable CRITICAL_SECTION   broker_guard;
         ctsSocketBroker*           broker;
         std::shared_ptr<ctsSocket> socket;
-        State                      state;
+        unsigned long              last_error;
+        InternalState              state;
         bool                       initiated_io;
 
         ///
         /// static threadpool callback function
         ///
         static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) throw();
-
+        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) NOEXCEPT;
     };
 
 } // namespace

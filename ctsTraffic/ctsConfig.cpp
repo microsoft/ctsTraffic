@@ -69,63 +69,63 @@ namespace ctsTraffic {
         /// This design avoids having to pass a "config" object all over to share this information
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        static CRITICAL_SECTION StatusUpdateLock;
-        static CRITICAL_SECTION ShutdownLock;
+        static CRITICAL_SECTION s_StatusUpdateLock;
+        static CRITICAL_SECTION s_ShutdownLock;
 
-        static const unsigned short DefaultPort = 4444;
+        static const unsigned short s_DefaultPort = 4444;
 
-        static const unsigned long long DefaultTransfer = 0x40000000; // 1Gbyte
+        static const unsigned long long s_DefaultTransfer = 0x40000000; // 1Gbyte
 
-        static const unsigned long DefaultBufferSize = 0x10000; // 64kbyte
-        static const unsigned long DefaultAcceptLimit = 10;
-        static const unsigned long DefaultAcceptExLimit = 100;
-        static const unsigned long DefaultTcpConnectionLimit = 8;
-        static const unsigned long DefaultUdpConnectionLimit = 1;
-        static const unsigned long DefaultConnectionThrottleLimit = 1000;
-        static const unsigned long DefaultThreadpoolFactor = 2;
+        static const unsigned long s_DefaultBufferSize = 0x10000; // 64kbyte
+        static const unsigned long s_DefaultAcceptLimit = 10;
+        static const unsigned long s_DefaultAcceptExLimit = 100;
+        static const unsigned long s_DefaultTcpConnectionLimit = 8;
+        static const unsigned long s_DefaultUdpConnectionLimit = 1;
+        static const unsigned long s_DefaultConnectionThrottleLimit = 1000;
+        static const unsigned long s_DefaultThreadpoolFactor = 2;
 
-        static PTP_POOL ptp_pool = nullptr;
-        static TP_CALLBACK_ENVIRON tp_environment;
-        static unsigned long tp_thread_count = 0;
+        static PTP_POOL s_ThreadPool = nullptr;
+        static TP_CALLBACK_ENVIRON s_ThreadPoolEnvironment;
+        static unsigned long s_ThreadPoolThreadCount = 0;
 
-        static const wchar_t* CreateFunctionName = nullptr;
-        static const wchar_t* ConnectFunctionName = nullptr;
-        static const wchar_t* AcceptFunctionName = nullptr;
-        static const wchar_t* IoFunctionName = nullptr;
+        static const wchar_t* s_CreateFunctionName = nullptr;
+        static const wchar_t* s_ConnectFunctionName = nullptr;
+        static const wchar_t* s_AcceptFunctionName = nullptr;
+        static const wchar_t* s_IoFunctionName = nullptr;
 
         // connection info + error info
-        static unsigned long verbosity = 4;
-        static unsigned long buffersize_low = 0;
-        static unsigned long buffersize_high = 0;
-        static long long ratelimit_low = 0;
-        static long long ratelimit_high = 0;
-        static unsigned long long transfer_low = DefaultTransfer;
-        static unsigned long long transfer_high = 0;
+        static unsigned long s_ConsoleVerbosity = 4;
+        static unsigned long s_BufferSizeLow = 0;
+        static unsigned long s_BufferSizeHigh = 0;
+        static long long s_RateLimitLow = 0;
+        static long long s_RateLimitHigh = 0;
+        static unsigned long long s_TransferSizeLow = s_DefaultTransfer;
+        static unsigned long long s_TransferSizeHigh = 0;
 
-        static const unsigned long DefaultPushBytes = 0x100000;
-        static const unsigned long DefaultPullBytes = 0x100000;
+        static const unsigned long s_DefaultPushBytes = 0x100000;
+        static const unsigned long s_DefaultPullBytes = 0x100000;
 
-        static ctsUnsignedLong timer_changed_count = 0;
+        static ctsUnsignedLong s_TimePeriodRefCount = 0;
 
-        static ctsSignedLongLong printing_previous_timeslice;
-        static ctsSignedLongLong printing_timeslice_count;
+        static ctsSignedLongLong s_PreviousPrintTimeslice;
+        static ctsSignedLongLong s_PrintTimesliceCount;
 
-        static NET_IF_COMPARTMENT_ID compartment_id = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
-        static ctNetAdapterAddresses* netAdapterAddresses = nullptr;
+        static NET_IF_COMPARTMENT_ID s_CompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
+        static ctNetAdapterAddresses* s_NetAdapterAddresses = nullptr;
 
-        static MediaStreamSettings media_stream_settings;
-        static ctRandomTwister random;
+        static MediaStreamSettings s_MediaStreamSettings;
+        static ctRandomTwister s_RandomTwister;
 
         // default to 5 seconds
-        static const unsigned long DefaultStatusUpdateFrequency = 5000;
-        static std::shared_ptr<ctsStatusInformation> print_status;
-        static std::shared_ptr<ctsLogger> connectionlogger;
-        static std::shared_ptr<ctsLogger> statuslogger;
-        static std::shared_ptr<ctsLogger> errorlogger;
-        static std::shared_ptr<ctsLogger> jitterlogger;
+        static const unsigned long s_DefaultStatusUpdateFrequency = 5000;
+        static std::shared_ptr<ctsStatusInformation> s_PrintStatusInformation;
+        static std::shared_ptr<ctsLogger> s_ConnectionLogger;
+        static std::shared_ptr<ctsLogger> s_StatusLogger;
+        static std::shared_ptr<ctsLogger> s_ErrorLogger;
+        static std::shared_ptr<ctsLogger> s_JitterLogger;
 
-        static bool break_on_error = false;
-        static bool shutdown_called = false;
+        static bool s_BreakOnError = false;
+        static bool s_ShutdownCalled = false;
 
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,36 +136,34 @@ namespace ctsTraffic {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         static INIT_ONCE InitImpl = INIT_ONCE_STATIC_INIT;
-        static
-        BOOL CALLBACK InitOncectsConfigImpl(PINIT_ONCE, PVOID, PVOID *)
+        static BOOL CALLBACK InitOncectsConfigImpl(PINIT_ONCE, PVOID, PVOID *)
         {
-            if (!::InitializeCriticalSectionEx(&StatusUpdateLock, 4000, 0)) {
+            if (!::InitializeCriticalSectionEx(&s_StatusUpdateLock, 4000, 0)) {
                 ctl::ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %u", ::GetLastError());
             }
-            if (!::InitializeCriticalSectionEx(&ShutdownLock, 4000, 0)) {
+            if (!::InitializeCriticalSectionEx(&s_ShutdownLock, 4000, 0)) {
                 ctl::ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %u", ::GetLastError());
             }
 
             Settings = new ctsConfigSettings;
-            Settings->Port = DefaultPort;
+            Settings->Port = s_DefaultPort;
             Settings->SocketFlags = WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT;
             Settings->Iterations = MAXULONGLONG;
             Settings->ConnectionLimit = 1;
-            Settings->AcceptLimit = DefaultAcceptLimit;
-            Settings->ConnectionThrottleLimit = DefaultConnectionThrottleLimit;
+            Settings->AcceptLimit = s_DefaultAcceptLimit;
+            Settings->ConnectionThrottleLimit = s_DefaultConnectionThrottleLimit;
             Settings->ServerExitLimit = MAXULONGLONG;
-            Settings->StatusUpdateFrequencyMilliseconds = DefaultStatusUpdateFrequency;
+            Settings->StatusUpdateFrequencyMilliseconds = s_DefaultStatusUpdateFrequency;
             // defaulting to verifying - therefore not using a shared buffer
             Settings->ShouldVerifyBuffers = true;
             Settings->UseSharedBuffer = false;
 
-            printing_previous_timeslice = 0LL;
-            printing_timeslice_count = 0LL;
+            s_PreviousPrintTimeslice = 0LL;
+            s_PrintTimesliceCount = 0LL;
 
             return TRUE;
         }
-        static
-        void ctsConfigInitOnce() throw()
+        static void ctsConfigInitOnce() throw()
         {
             ctFatalCondition(
                 !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, NULL, NULL),
@@ -181,8 +179,7 @@ namespace ctsTraffic {
         /// throws invalid_parameter if something is obviously wrong 
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
-        static
-        wchar_t* ParseArgument(_In_z_ wchar_t* _input_argument, _In_z_ wchar_t* _expected_param)
+        static wchar_t* ParseArgument(_In_z_ wchar_t* _input_argument, _In_z_ wchar_t* _expected_param)
         {
             wchar_t* param_end = _input_argument + wcslen(_input_argument);
             wchar_t* param_delimiter = find(_input_argument, param_end, L':');
@@ -346,11 +343,6 @@ namespace ctsTraffic {
         ///
         /// Parses for the connect function to use
         ///
-        /// --conn:connect
-        /// --conn:wsaconnect
-        /// --conn:wsaconnectbyname
-        /// --conn:connectex  (*default)
-        ///
         //////////////////////////////////////////////////////////////////////////////////////////
         static
         void set_create(vector<wchar_t*>& _args)
@@ -358,7 +350,7 @@ namespace ctsTraffic {
             UNREFERENCED_PARAMETER(_args);
             if (nullptr == Settings->CreateFunction) {
                 Settings->CreateFunction = ctsWSASocket;
-                CreateFunctionName = L"WSASocket";
+                s_CreateFunctionName = L"WSASocket";
             }
         }
 
@@ -366,10 +358,10 @@ namespace ctsTraffic {
         ///
         /// Parses for the connect function to use
         ///
-        /// --conn:connect
-        /// --conn:wsaconnect
-        /// --conn:wsaconnectbyname
-        /// --conn:connectex  (*default)
+        /// -conn:connect
+        /// -conn:wsaconnect
+        /// -conn:wsaconnectbyname
+        /// -conn:connectex  (*default)
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
         static
@@ -377,23 +369,23 @@ namespace ctsTraffic {
         {
             bool connect_specifed = false;
             auto found_arg = find_if(begin(_args), end(_args), [&] (wchar_t* parameter) -> bool {
-                wchar_t* value = ParseArgument(parameter, L"--conn");
+                wchar_t* value = ParseArgument(parameter, L"-conn");
                 return (value != nullptr);
             });
             if (found_arg != end(_args)) {
                 if (Settings->Protocol != ctsConfig::ProtocolType::TCP) {
-                    throw invalid_argument("--conn (only applicable to TCP)");
+                    throw invalid_argument("-conn (only applicable to TCP)");
                 }
 
                 wchar_t* value = ParseArgument(*found_arg, L"--conn");
                 if (ctString::iordinal_equals(L"ConnectEx", value)) {
                     Settings->ConnectFunction = ctsConnectEx;
-                    ConnectFunctionName = L"ConnectEx";
+                    s_ConnectFunctionName = L"ConnectEx";
                 } else if (ctString::iordinal_equals(L"connect", value)) {
                     Settings->ConnectFunction = ctsSimpleConnect;
-                    ConnectFunctionName = L"connect";
+                    s_ConnectFunctionName = L"connect";
                 } else {
-                    throw invalid_argument("--conn");
+                    throw invalid_argument("-conn");
                 }
                 connect_specifed = true;
                 // always remove the arg from our vector
@@ -402,10 +394,10 @@ namespace ctsTraffic {
             } else {
                 if (Settings->IoPattern != IoPatternType::MediaStream) {
                     Settings->ConnectFunction = ctsConnectEx;
-                    ConnectFunctionName = L"ConnectEx";
+                    s_ConnectFunctionName = L"ConnectEx";
                 } else {
                     Settings->ConnectFunction = ctsMediaStreamClientConnect;
-                    ConnectFunctionName = L"MediaStream Client Connect";
+                    s_ConnectFunctionName = L"MediaStream Client Connect";
                 }
             }
 
@@ -418,34 +410,34 @@ namespace ctsTraffic {
         ///
         /// Parses for the accept function to use
         ///
-        /// --acc:accept
-        /// --acc:wsaaccept
-        /// --acc:acceptex  (*default)
+        /// -acc:accept
+        /// -acc:wsaaccept
+        /// -acc:acceptex  (*default)
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
         static
         void set_accept(vector<wchar_t*>& _args)
         {
-            Settings->AcceptLimit = DefaultAcceptExLimit;
+            Settings->AcceptLimit = s_DefaultAcceptExLimit;
 
             auto found_arg = find_if(begin(_args), end(_args), [&] (wchar_t* parameter) -> bool {
-                wchar_t* value = ParseArgument(parameter, L"--acc");
+                wchar_t* value = ParseArgument(parameter, L"-acc");
                 return (value != nullptr);
             });
             if (found_arg != end(_args)) {
                 if (Settings->Protocol != ctsConfig::ProtocolType::TCP) {
-                    throw invalid_argument("--acc (only applicable to TCP)");
+                    throw invalid_argument("-acc (only applicable to TCP)");
                 }
 
                 wchar_t* value = ParseArgument(*found_arg, L"--acc");
                 if (ctString::iordinal_equals(L"accept", value)) {
                     Settings->AcceptFunction = ctsSimpleAccept();
-                    AcceptFunctionName = L"accept";
+                    s_AcceptFunctionName = L"accept";
                 } else if (ctString::iordinal_equals(L"AcceptEx", value)) {
                     Settings->AcceptFunction = ctsAcceptEx();
-                    AcceptFunctionName = L"AcceptEx";
+                    s_AcceptFunctionName = L"AcceptEx";
                 } else {
-                    throw invalid_argument("--acc");
+                    throw invalid_argument("-acc");
                 }
                 // always remove the arg from our vector
                 _args.erase(found_arg);
@@ -454,10 +446,10 @@ namespace ctsTraffic {
                 if (IoPatternType::MediaStream != Settings->IoPattern) {
                     // only default an Accept function if listening
                     Settings->AcceptFunction = ctsAcceptEx();
-                    AcceptFunctionName = L"AcceptEx";
+                    s_AcceptFunctionName = L"AcceptEx";
                 } else {
                     Settings->AcceptFunction = ctsMediaStreamServerListener;
-                    AcceptFunctionName = L"MediaStream Server Listener";
+                    s_AcceptFunctionName = L"MediaStream Server Listener";
                 }
             }
         }
@@ -491,16 +483,16 @@ namespace ctsTraffic {
                 if (ctString::iordinal_equals(L"iocp", value)) {
                     Settings->IoFunction = ctsSendRecvIocp;
                     Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
-                    IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
+                    s_IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
 
                 } else if (ctString::iordinal_equals(L"readwritefile", value)) {
                     Settings->IoFunction = ctsReadWriteIocp;
-                    IoFunctionName = L"readwritefile (ReadFile/WriteFile using IOCP)";
+                    s_IoFunctionName = L"readwritefile (ReadFile/WriteFile using IOCP)";
 
                 } else if (ctString::iordinal_equals(L"rioiocp", value)) {
                     Settings->IoFunction = ctsRioIocp;
                     Settings->SocketFlags |= WSA_FLAG_REGISTERED_IO;
-                    IoFunctionName = L"RioIocp (RIO using IOCP notifications)";
+                    s_IoFunctionName = L"RioIocp (RIO using IOCP notifications)";
 
                 } else {
                     throw invalid_argument("-io");
@@ -513,18 +505,18 @@ namespace ctsTraffic {
                     // Default for TCP is WSASend/WSARecv using IOCP
                     Settings->IoFunction = ctsSendRecvIocp;
                     Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
-                    IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
+                    s_IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
 
                 } else {
                     // UDP only has one IOFunction: media streaming
                     if (IsListening()) {
                         Settings->IoFunction = ctsMediaStreamServerIo;
-                        IoFunctionName = L"MediaStream Server";
+                        s_IoFunctionName = L"MediaStream Server";
                     } else {
                         Settings->IoFunction = ctsMediaStreamClient;
                         Settings->Options |= OptionType::MAX_RECV_BUF;
                         Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
-                        IoFunctionName = L"MediaStream Client";
+                        s_IoFunctionName = L"MediaStream Client";
                     }
                 }
             }
@@ -589,7 +581,6 @@ namespace ctsTraffic {
                         } else {
                             throw invalid_argument("-Options (keepalive only allowed with TCP sockets)");
                         }
-
                     } else if (ctString::iordinal_equals(L"tcpfastpath", value)) {
                         if (ProtocolType::TCP == Settings->Protocol) {
                             Settings->Options |= OptionType::LOOPBACK_FAST_PATH;
@@ -676,7 +667,7 @@ namespace ctsTraffic {
                 // always remove the arg from our vector
                 _args.erase(found_pushbytes);
             } else {
-                Settings->PushBytes = DefaultPushBytes;
+                Settings->PushBytes = s_DefaultPushBytes;
             }
 
             auto found_pullbytes = find_if(begin(_args), end(_args), [&] (wchar_t* parameter) -> bool {
@@ -691,7 +682,7 @@ namespace ctsTraffic {
                 // always remove the arg from our vector
                 _args.erase(found_pullbytes);
             } else {
-                Settings->PullBytes = DefaultPullBytes;
+                Settings->PullBytes = s_DefaultPullBytes;
             }
 
             //
@@ -706,10 +697,10 @@ namespace ctsTraffic {
                 if (Settings->Protocol != ProtocolType::UDP) {
                     throw invalid_argument("-BitsPerSecond requires -Protocol:UDP");
                 }
-                media_stream_settings.BitsPerSecond = as_integral<long long>(ParseArgument(*found_arg, L"-BitsPerSecond"));
+                s_MediaStreamSettings.BitsPerSecond = as_integral<long long>(ParseArgument(*found_arg, L"-BitsPerSecond"));
                 // bitspersecond must align on a byte-boundary
-                if (media_stream_settings.BitsPerSecond % 8 != 0) {
-                    media_stream_settings.BitsPerSecond -= media_stream_settings.BitsPerSecond % 8;
+                if (s_MediaStreamSettings.BitsPerSecond % 8 != 0) {
+                    s_MediaStreamSettings.BitsPerSecond -= s_MediaStreamSettings.BitsPerSecond % 8;
                 }
                 // always remove the arg from our vector
                 _args.erase(found_arg);
@@ -723,7 +714,7 @@ namespace ctsTraffic {
                 if (Settings->Protocol != ProtocolType::UDP) {
                     throw invalid_argument("-FrameRate requires -Protocol:UDP");
                 }
-                media_stream_settings.FramesPerSecond = as_integral<unsigned long>(ParseArgument(*found_arg, L"-FrameRate"));
+                s_MediaStreamSettings.FramesPerSecond = as_integral<unsigned long>(ParseArgument(*found_arg, L"-FrameRate"));
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             }
@@ -736,7 +727,7 @@ namespace ctsTraffic {
                 if (Settings->Protocol != ProtocolType::UDP) {
                     throw invalid_argument("-BufferDepth requires -Protocol:UDP");
                 }
-                media_stream_settings.BufferDepthSeconds = as_integral<unsigned long>(ParseArgument(*found_arg, L"-BufferDepth"));
+                s_MediaStreamSettings.BufferDepthSeconds = as_integral<unsigned long>(ParseArgument(*found_arg, L"-BufferDepth"));
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             }
@@ -749,7 +740,7 @@ namespace ctsTraffic {
                 if (Settings->Protocol != ProtocolType::UDP) {
                     throw invalid_argument("-StreamLength requires -Protocol:UDP");
                 }
-                media_stream_settings.StreamLengthSeconds = as_integral<unsigned long>(ParseArgument(*found_arg, L"-StreamLength"));
+                s_MediaStreamSettings.StreamLengthSeconds = as_integral<unsigned long>(ParseArgument(*found_arg, L"-StreamLength"));
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             }
@@ -764,10 +755,10 @@ namespace ctsTraffic {
                 }
                 auto codec = ParseArgument(*found_arg, L"-StreamCodec");
                 if (ctString::iordinal_equals(L"NoResends", codec)) {
-                    media_stream_settings.StreamCodec = MediaStreamSettings::StreamCodecValues::NoResends;
+                    s_MediaStreamSettings.StreamCodec = StreamCodecValue::NoResends;
 
                 } else if (ctString::iordinal_equals(L"ResendOnce", codec)) {
-                    media_stream_settings.StreamCodec = MediaStreamSettings::StreamCodecValues::ResendOnce;
+                    s_MediaStreamSettings.StreamCodec = StreamCodecValue::ResendOnce;
 
                 } else {
                     throw invalid_argument("-StreamCodec");
@@ -779,22 +770,22 @@ namespace ctsTraffic {
 
             // validate and resolve the UDP protocol options
             if (ProtocolType::UDP == Settings->Protocol) {
-                if (0 == media_stream_settings.BitsPerSecond) {
+                if (0 == s_MediaStreamSettings.BitsPerSecond) {
                     throw invalid_argument("-BitsPerSecond is required");
                 }
-                if (0 == media_stream_settings.FramesPerSecond) {
+                if (0 == s_MediaStreamSettings.FramesPerSecond) {
                     throw invalid_argument("-FrameRate is required");
                 }
                 // BufferDepth is only required on client
-                if (!IsListening() && 0 == media_stream_settings.BufferDepthSeconds) {
+                if (!IsListening() && 0 == s_MediaStreamSettings.BufferDepthSeconds) {
                     throw invalid_argument("-BufferDepth is required");
                 }
-                if (0 == media_stream_settings.StreamLengthSeconds) {
+                if (0 == s_MediaStreamSettings.StreamLengthSeconds) {
                     throw invalid_argument("-StreamLength is required");
                 }
 
                 // finally calculate the total stream length after all settings are captured from the user
-                transfer_low = media_stream_settings.CalculateTransferSize();
+                s_TransferSizeLow = s_MediaStreamSettings.CalculateTransferSize();
             }
         }
 
@@ -1157,20 +1148,20 @@ namespace ctsTraffic {
 
                 wchar_t* value = ParseArgument(*found_arg, L"-buffer");
                 if (value[0] == L'[') {
-                    get_range(value, buffersize_low, buffersize_high);
+                    get_range(value, s_BufferSizeLow, s_BufferSizeHigh);
                 } else {
-                    // singe values are written to buffersize_low, with buffersize_high left at zero
-                    buffersize_low = as_integral<unsigned long>(value);
+                    // singe values are written to s_BufferSizeLow, with s_BufferSizeHigh left at zero
+                    s_BufferSizeLow = as_integral<unsigned long>(value);
                 }
-                if (0 == buffersize_low) {
+                if (0 == s_BufferSizeLow) {
                     throw invalid_argument("-buffer");
                 }
 
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             } else {
-                buffersize_low = DefaultBufferSize;
-                buffersize_high = 0;
+                s_BufferSizeLow = s_DefaultBufferSize;
+                s_BufferSizeHigh = 0;
             }
         }
 
@@ -1196,12 +1187,12 @@ namespace ctsTraffic {
 
                 wchar_t* value = ParseArgument(*found_arg, L"-transfer");
                 if (value[0] == L'[') {
-                    get_range(value, transfer_low, transfer_high);
+                    get_range(value, s_TransferSizeLow, s_TransferSizeHigh);
                 } else {
-                    // singe values are written to transfer_low, with transfer_high left at zero
-                    transfer_low = as_integral<unsigned long long>(value);
+                    // singe values are written to s_TransferSizeLow, with s_TransferSizeHigh left at zero
+                    s_TransferSizeLow = as_integral<unsigned long long>(value);
                 }
-                if (0 == transfer_low) {
+                if (0 == s_TransferSizeLow) {
                     throw invalid_argument("-transfer");
                 }
 
@@ -1231,6 +1222,7 @@ namespace ctsTraffic {
                     get_range(value, Settings->LocalPortLow, Settings->LocalPortHigh);
                 } else {
                     // single value are written to localport_low with localport_high left at zero
+                    Settings->LocalPortHigh = 0;
                     Settings->LocalPortLow = as_integral<USHORT>(value);
                 }
                 if (0 == Settings->LocalPortLow) {
@@ -1265,12 +1257,12 @@ namespace ctsTraffic {
                 }
                 wchar_t* value = ParseArgument(*found_ratelimit, L"-RateLimit");
                 if (value[0] == L'[') {
-                    get_range(value, ratelimit_low, ratelimit_low);
+                    get_range(value, s_RateLimitLow, s_RateLimitLow);
                 } else {
-                    // singe values are written to buffersize_low, with buffersize_high left at zero
-                    ratelimit_low = as_integral<long long>(ParseArgument(*found_ratelimit, L"-RateLimit"));
+                    // singe values are written to s_BufferSizeLow, with s_BufferSizeHigh left at zero
+                    s_RateLimitLow = as_integral<long long>(ParseArgument(*found_ratelimit, L"-RateLimit"));
                 }
-                if (0LL == ratelimit_low) {
+                if (0LL == s_RateLimitLow) {
                     throw invalid_argument("-RateLimit");
                 }
                 // always remove the arg from our vector
@@ -1285,7 +1277,7 @@ namespace ctsTraffic {
                 if (Settings->Protocol != ctsConfig::ProtocolType::TCP) {
                     throw invalid_argument("-RateLimitPeriod (only applicable to TCP)");
                 }
-                if (0LL == ratelimit_low) {
+                if (0LL == s_RateLimitLow) {
                     throw invalid_argument("-RateLimitPeriod requires specifying -RateLimit");
                 }
                 Settings->TcpBytesPerSecondPeriod = as_integral<long long>(ParseArgument(*found_ratelimit_period, L"-RateLimitPeriod"));
@@ -1337,8 +1329,8 @@ namespace ctsTraffic {
                 return (value != nullptr);
             });
             if (found_verbosity != end(_args)) {
-                verbosity = as_integral<unsigned long>(ParseArgument(*found_verbosity, L"-ConsoleVerbosity"));
-                if (verbosity > 6) {
+                s_ConsoleVerbosity = as_integral<unsigned long>(ParseArgument(*found_verbosity, L"-ConsoleVerbosity"));
+                if (s_ConsoleVerbosity > 6) {
                     throw invalid_argument("-ConsoleVerbosity");
                 }
 
@@ -1407,60 +1399,60 @@ namespace ctsTraffic {
 
             if (!connectionFilename.empty()) {
                 if (ctString::iends_with(connectionFilename, L".csv")) {
-                    connectionlogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::Csv);
+                    s_ConnectionLogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::Csv);
                 } else {
-                    connectionlogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::ClearText);
+                    s_ConnectionLogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::ClearText);
                 }
             }
 
             if (!errorFilename.empty()) {
                 if (ctString::iordinal_equals(connectionFilename, errorFilename)) {
-                    if (connectionlogger->IsCsvFormat()) {
+                    if (s_ConnectionLogger->IsCsvFormat()) {
                         throw invalid_argument("The error logfile cannot be of csv format");
                     }
-                    errorlogger = connectionlogger;
+                    s_ErrorLogger = s_ConnectionLogger;
                 } else {
                     if (ctString::iends_with(errorFilename, L".csv")) {
                         throw invalid_argument("The error logfile cannot be of csv format");
                     } else {
-                        errorlogger = make_shared<ctsTextLogger>(errorFilename.c_str(), StatusFormatting::ClearText);
+                        s_ErrorLogger = make_shared<ctsTextLogger>(errorFilename.c_str(), StatusFormatting::ClearText);
                     }
                 }
             }
 
             if (!statusFilename.empty()) {
                 if (ctString::iordinal_equals(connectionFilename, statusFilename)) {
-                    statuslogger = connectionlogger;
+                    s_StatusLogger = s_ConnectionLogger;
                 } else if (ctString::iordinal_equals(errorFilename, statusFilename)) {
-                    statuslogger = errorlogger;
+                    s_StatusLogger = s_ErrorLogger;
                 } else {
                     if (ctString::iends_with(statusFilename, L".csv")) {
-                        statuslogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::Csv);
+                        s_StatusLogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::Csv);
                     } else {
-                        statuslogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::ClearText);
+                        s_StatusLogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::ClearText);
                     }
                 }
             }
 
             if (!jitterFilename.empty()) {
                 if (ctString::iordinal_equals(connectionFilename, jitterFilename)) {
-                    if (!connectionlogger->IsCsvFormat()) {
+                    if (!s_ConnectionLogger->IsCsvFormat()) {
                         throw invalid_argument("Jitter can only be logged using a csv format");
                     }
-                    jitterlogger = connectionlogger;
+                    s_JitterLogger = s_ConnectionLogger;
                 } else if (ctString::iordinal_equals(errorFilename, jitterFilename)) {
-                    if (!errorlogger->IsCsvFormat()) {
+                    if (!s_ErrorLogger->IsCsvFormat()) {
                         throw invalid_argument("Jitter can only be logged using a csv format");
                     }
-                    jitterlogger = errorlogger;
+                    s_JitterLogger = s_ErrorLogger;
                 } else if (ctString::iordinal_equals(statusFilename, jitterFilename)) {
-                    if (!statuslogger->IsCsvFormat()) {
+                    if (!s_StatusLogger->IsCsvFormat()) {
                         throw invalid_argument("Jitter can only be logged using a csv format");
                     }
-                    jitterlogger = statuslogger;
+                    s_JitterLogger = s_StatusLogger;
                 } else {
                     if (ctString::iends_with(jitterFilename, L".csv")) {
-                        jitterlogger = make_shared<ctsTextLogger>(jitterFilename.c_str(), StatusFormatting::Csv);
+                        s_JitterLogger = make_shared<ctsTextLogger>(jitterFilename.c_str(), StatusFormatting::Csv);
                     } else {
                         throw invalid_argument("Jitter can only be logged using a csv format");
                     }
@@ -1485,9 +1477,9 @@ namespace ctsTraffic {
             if (found_arg != end(_args)) {
                 wchar_t* value = ParseArgument(*found_arg, L"-OnError");
                 if (ctString::iordinal_equals(L"log", value)) {
-                    break_on_error = false;
+                    s_BreakOnError = false;
                 } else if (ctString::iordinal_equals(L"break", value)) {
-                    break_on_error = true;
+                    s_BreakOnError = true;
                 } else {
                     throw invalid_argument("-OnError");
                 }
@@ -1540,14 +1532,14 @@ namespace ctsTraffic {
             });
             if (found_arg != end(_args)) {
                 wchar_t* value = ParseArgument(*found_arg, L"-Compartment");
-                netAdapterAddresses = new ctNetAdapterAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_COMPARTMENTS);
+                s_NetAdapterAddresses = new ctNetAdapterAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_COMPARTMENTS);
                 auto found_interface = find_if(
-                    netAdapterAddresses->begin(),
-                    netAdapterAddresses->end(),
+                    s_NetAdapterAddresses->begin(),
+                    s_NetAdapterAddresses->end(),
                     [&] (const IP_ADAPTER_ADDRESSES& _adapter_address) {
                     return ctString::iordinal_equals(value, _adapter_address.FriendlyName);
                 });
-                if (found_interface == netAdapterAddresses->end()) {
+                if (found_interface == s_NetAdapterAddresses->end()) {
                     throw ctException(
                         ERROR_NOT_FOUND,
                         ctString::format_string(
@@ -1557,7 +1549,7 @@ namespace ctsTraffic {
                         true);
                 }
 
-                compartment_id = found_interface->CompartmentId;
+                s_CompartmentId = found_interface->CompartmentId;
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             }
@@ -1577,18 +1569,18 @@ namespace ctsTraffic {
         {
             SYSTEM_INFO system_info;
             ::GetSystemInfo(&system_info);
-            tp_thread_count = system_info.dwNumberOfProcessors * DefaultThreadpoolFactor;
+            s_ThreadPoolThreadCount = system_info.dwNumberOfProcessors * s_DefaultThreadpoolFactor;
 
-            ptp_pool = ::CreateThreadpool(NULL);
-            if (NULL == ptp_pool) {
+            s_ThreadPool = ::CreateThreadpool(NULL);
+            if (NULL == s_ThreadPool) {
                 throw ctException(::GetLastError(), L"CreateThreadPool", L"ctsConfig", false);
             }
-            ::SetThreadpoolThreadMaximum(ptp_pool, tp_thread_count);
+            ::SetThreadpoolThreadMaximum(s_ThreadPool, s_ThreadPoolThreadCount);
 
-            ::InitializeThreadpoolEnvironment(&tp_environment);
-            ::SetThreadpoolCallbackPool(&tp_environment, ptp_pool);
+            ::InitializeThreadpoolEnvironment(&s_ThreadPoolEnvironment);
+            ::SetThreadpoolCallbackPool(&s_ThreadPoolEnvironment, s_ThreadPool);
 
-            Settings->PTPEnvironment = &tp_environment;
+            Settings->PTPEnvironment = &s_ThreadPoolEnvironment;
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -1627,6 +1619,42 @@ namespace ctsTraffic {
             }
         }
 
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Parses for how the client should close the connection with the server
+        ///
+        /// -shutdown:<graceful,rude>
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static
+        void set_shutdownOption(vector<wchar_t*>& _args)
+        {
+            if (IsListening()) {
+                Settings->TcpShutdown = TcpShutdownType::ServerSideShutdown;
+            }
+
+            auto found_arg = find_if(begin(_args), end(_args), [&] (wchar_t* parameter) -> bool {
+                wchar_t* value = ParseArgument(parameter, L"-shutdown");
+                return (value != nullptr);
+            });
+            if (found_arg != end(_args)) {
+                if (IsListening()) {
+                    throw invalid_argument("-shutdown is a client-only option");
+                }
+
+                wchar_t* value = ParseArgument(*found_arg, L"-shutdown");
+                if (ctString::iordinal_equals(L"graceful", value)) {
+                    Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
+                } else if (ctString::iordinal_equals(L"rude", value)) {
+                    Settings->TcpShutdown = TcpShutdownType::HardShutdown;
+                } else {
+                    throw invalid_argument("-shutdown");
+                }
+
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            }
+        }
         //////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// Parses for the optional maximum time to run
@@ -1801,6 +1829,13 @@ namespace ctsTraffic {
                                  L"\t- <default> == 1073741824  (each connection will transfer a sum total of 1GB)\n"
                                  L"\t- supports range : [low,high]  (each connection will randomly choose a total transfer size send across)\n"
                                  L"\t  note : specifying a range *will* create failures (used to test TCP failures paths)\n"
+                                 L"-Shutdown:<graceful,rude>\n"
+                                 L"   - controls how clients terminate the TCP connection - note this is a client-only option\n"
+                                 L"\t- <default> == gradeful\n"
+                                 L"\t- gradeful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
+                                 L"\t- rude : client will immediately close the connection once it receives the 'done' response from the server\n"
+                                 L"         : this will deliberately tell TCP to linger for zero seconds and close the socket\n"
+                                 L"         : this may reesult in a RST instead of a FIN\n"
                                  L"\n");
                     break;
 
@@ -2012,7 +2047,7 @@ namespace ctsTraffic {
                                  L"\t  note : zero means no throttling  (will immediately try to connect all '-Connections')\n"
                                  L"\t       : this is a client-only option\n"
                                  L"-TimeLimit:#####\n"
-                                 L"   - the maximum number of seconds to run before the application is aborted and terminated\n"
+                                 L"   - the maximum number of milliseconds to run before the application is aborted and terminated\n"
                                  L"\t- <default> == <no time limit>\n"
                                  L"\t  note : this is to be used only to cap the maximum time to run, as this will log an error\n"
                                  L"\t         if this timelimit is exceeded; predictable results should have the scenario finish\n"
@@ -2116,7 +2151,7 @@ namespace ctsTraffic {
             ///
             /// verify logging matches the protocol
             ///
-            if (jitterlogger && ctsConfig::ProtocolType::UDP != Settings->Protocol) {
+            if (s_JitterLogger && ctsConfig::ProtocolType::UDP != Settings->Protocol) {
                 throw invalid_argument("Jitter can only be logged using UDP");
             }
             set_ioPattern(args);
@@ -2130,9 +2165,9 @@ namespace ctsTraffic {
             }
             // set appropriate defaults for # of connections for TCP vs. UDP
             if (ProtocolType::UDP == Settings->Protocol) {
-                Settings->ConnectionLimit = DefaultUdpConnectionLimit;
+                Settings->ConnectionLimit = s_DefaultUdpConnectionLimit;
             } else {
-                Settings->ConnectionLimit = DefaultTcpConnectionLimit;
+                Settings->ConnectionLimit = s_DefaultTcpConnectionLimit;
             }
 
             ///
@@ -2140,9 +2175,9 @@ namespace ctsTraffic {
             /// - this must be called after both set_logging and set_protocol
             ///
             if (ProtocolType::TCP == Settings->Protocol) {
-                print_status = std::make_shared<ctsTcpStatusInformation>();
+                s_PrintStatusInformation = std::make_shared<ctsTcpStatusInformation>();
             } else {
-                print_status = std::make_shared<ctsUdpStatusInformation>();
+                s_PrintStatusInformation = std::make_shared<ctsUdpStatusInformation>();
             }
             ///
             /// Next: capture other various settings which do not have explicit dependencies
@@ -2158,11 +2193,11 @@ namespace ctsTraffic {
             set_serverExitLimit(args);
             set_timelimit(args);
 
-            if (media_stream_settings.FrameSizeBytes > 0) {
+            if (s_MediaStreamSettings.FrameSizeBytes > 0) {
                 // the buffersize is now effectively the frame size
-                buffersize_high = 0;
-                buffersize_low = media_stream_settings.FrameSizeBytes;
-                if (buffersize_low < 20) {
+                s_BufferSizeHigh = 0;
+                s_BufferSizeLow = s_MediaStreamSettings.FrameSizeBytes;
+                if (s_BufferSizeLow < 20) {
                     throw invalid_argument("The media stream frame size (buffer) must be at least 20 bytes");
                 }
             }
@@ -2192,6 +2227,10 @@ namespace ctsTraffic {
                     Settings->UseSharedBuffer = false;
                 }
             }
+
+            Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
+            set_shutdownOption(args);
+
             set_prepostrecvs(args);
             if (ProtocolType::TCP == Settings->Protocol && Settings->ShouldVerifyBuffers && Settings->PrePostRecvs > 1) {
                 throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
@@ -2228,7 +2267,7 @@ namespace ctsTraffic {
             if (timer != TIMERR_NOERROR) {
                 throw ctl::ctException(timer, L"timeBeginPeriod", false);
             }
-            ++timer_changed_count;
+            ++s_TimePeriodRefCount;
             return true;
         }
 
@@ -2236,8 +2275,8 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            ctl::ctAutoReleaseCriticalSection lock(&ShutdownLock);
-            shutdown_called = true;
+            ctl::ctAutoReleaseCriticalSection lock(&s_ShutdownLock);
+            s_ShutdownCalled = true;
             if (Settings->CtrlCHandle != NULL) {
                 if (!::SetEvent(Settings->CtrlCHandle)) {
                     ctAlwaysFatalCondition(
@@ -2246,12 +2285,12 @@ namespace ctsTraffic {
                 }
             }
 
-            delete netAdapterAddresses;
-            netAdapterAddresses = nullptr;
+            delete s_NetAdapterAddresses;
+            s_NetAdapterAddresses = nullptr;
 
-            while (timer_changed_count > 0) {
+            while (s_TimePeriodRefCount > 0) {
                 ::timeEndPeriod(1);
-                --timer_changed_count;
+                --s_TimePeriodRefCount;
             }
         }
 
@@ -2262,7 +2301,7 @@ namespace ctsTraffic {
             ctsConfigInitOnce();
 
             bool write_to_console = false;
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 case 1: // status updates
                     // case 2: // error info
@@ -2275,28 +2314,28 @@ namespace ctsTraffic {
                 }
             }
 
-            if (print_status) {
+            if (s_PrintStatusInformation) {
                 if (write_to_console) {
-                    LPCWSTR legend = print_status->print_legend(ctsConfig::StatusFormatting::ClearText);
+                    LPCWSTR legend = s_PrintStatusInformation->print_legend(ctsConfig::StatusFormatting::ClearText);
                     if (legend != nullptr) {
                         ::fwprintf(stdout, L"%s\n", legend);
                     }
-                    LPCWSTR header = print_status->print_header(ctsConfig::StatusFormatting::ClearText);
+                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ClearText);
                     if (header != nullptr) {
                         ::fwprintf(stdout, L"%s\n", header);
                     }
                 }
 
-                if (statuslogger) {
-                    statuslogger->LogLegend(print_status);
-                    statuslogger->LogHeader(print_status);
+                if (s_StatusLogger) {
+                    s_StatusLogger->LogLegend(s_PrintStatusInformation);
+                    s_StatusLogger->LogHeader(s_PrintStatusInformation);
                 }
-                if (connectionlogger && connectionlogger->IsCsvFormat()) {
+                if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
                     if (ProtocolType::UDP == Settings->Protocol) {
-                        connectionlogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result\n");
+                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result,ConnectionId\n");
 
                     } else { // TCP
-                        connectionlogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result\n");
+                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\n");
                     }
                 }
             }
@@ -2307,7 +2346,7 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            ctFatalCondition(break_on_error, L"[ctsTraffic] >> exception - %S\n", e.what());
+            ctFatalCondition(s_BreakOnError, L"[ctsTraffic] >> exception - %S\n", e.what());
 
             try {
                 auto formatted_string(
@@ -2317,14 +2356,14 @@ namespace ctsTraffic {
                     ctString::format_exception(e).c_str()));
 
                 ::fwprintf(stderr, L"%s\n", formatted_string.c_str());
-                if (errorlogger) {
-                    errorlogger->LogError(formatted_string.c_str());
+                if (s_ErrorLogger) {
+                    s_ErrorLogger->LogError(formatted_string.c_str());
                 }
             }
             catch (const std::exception&) {
                 ::fwprintf(stderr, L"Error : failed to allocate memory\n");
-                if (errorlogger) {
-                    errorlogger->LogError(L"Error : failed to allocate memory\n");
+                if (s_ErrorLogger) {
+                    s_ErrorLogger->LogError(L"Error : failed to allocate memory\n");
                 }
             }
         }
@@ -2342,8 +2381,8 @@ namespace ctsTraffic {
             try {
                 std::wstring exception_text(ctString::format_exception(e));
 
-                if (!shutdown_called) {
-                    ctFatalCondition(break_on_error, L"Fatal exception: %s", exception_text.c_str());
+                if (!s_ShutdownCalled) {
+                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %s", exception_text.c_str());
                 }
 
                 PrintErrorInfo(
@@ -2352,11 +2391,11 @@ namespace ctsTraffic {
                     exception_text.c_str());
             }
             catch (const std::exception&) {
-                if (!shutdown_called) {
-                    ctFatalCondition(break_on_error, L"Fatal exception: %S", e.what());
+                if (!s_ShutdownCalled) {
+                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %S", e.what());
                 }
 
-                switch (verbosity) {
+                switch (s_ConsoleVerbosity) {
                     // case 0: // nothing
                     // case 1: // status updates
                     case 2: // error info
@@ -2381,12 +2420,12 @@ namespace ctsTraffic {
             va_list argptr;
             va_start(argptr, _text);
 
-            ctFatalConditionVa(break_on_error, _text, argptr);
+            ctFatalConditionVa(s_BreakOnError, _text, argptr);
 
             ::vwprintf_s(_text, argptr);
-            if (errorlogger) {
+            if (s_ErrorLogger) {
                 try {
-                    errorlogger->LogError(ctString::format_string_va(_text, argptr).c_str());
+                    s_ErrorLogger->LogError(ctString::format_string_va(_text, argptr).c_str());
                 }
                 catch (const std::exception&) {
                 }
@@ -2398,14 +2437,14 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called) {
+            if (!s_ShutdownCalled) {
                 va_list argptr;
                 va_start(argptr, _text);
 
-                ctFatalConditionVa(break_on_error, _text, argptr);
+                ctFatalConditionVa(s_BreakOnError, _text, argptr);
 
                 bool write_to_console = false;
-                switch (verbosity) {
+                switch (s_ConsoleVerbosity) {
                     // case 0: // nothing
                     // case 1: // status updates
                     case 2: // error info
@@ -2422,9 +2461,9 @@ namespace ctsTraffic {
                     ::vwprintf_s(_text, argptr);
                 }
 
-                if (errorlogger) {
+                if (s_ErrorLogger) {
                     try {
-                        errorlogger->LogError(ctString::format_string_va(_text, argptr).c_str());
+                        s_ErrorLogger->LogError(ctString::format_string_va(_text, argptr).c_str());
                     }
                     catch (const std::exception&) {
                     }
@@ -2437,11 +2476,11 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called && (_why != 0)) {
-                ctFatalCondition(break_on_error, L"%s failed (%u)\n", _what, _why);
+            if (!s_ShutdownCalled && (_why != 0)) {
+                ctFatalCondition(s_BreakOnError, L"%s failed (%u)\n", _what, _why);
 
                 bool write_to_console = false;
-                switch (verbosity) {
+                switch (s_ConsoleVerbosity) {
                     // case 0: // nothing
                     // case 1: // status updates
                     case 2: // error info
@@ -2457,11 +2496,11 @@ namespace ctsTraffic {
 
                 try {
                     std::wstring error_string;
-                    if (ctsIOPatternProtocolError(static_cast<ctsIOPatternStatus>(_why))) {
+                    if (ctsIOPattern::IsProtocolError(_why)) {
                         error_string = ctl::ctString::format_string(
                             L"[%.3f] Connection aborted due to the protocol error %s\n",
                             ctsConfig::GetStatusTimeStamp(),
-                            ctsIOPatternProtocolErrorString(static_cast<ctsIOPatternStatus>(_why)));
+                            ctsIOPattern::BuildProtocolErrorString(_why));
                     } else {
                         ctException error_details(_why, _what);
                         error_string = ctl::ctString::format_string(
@@ -2476,8 +2515,8 @@ namespace ctsTraffic {
                         ::fwprintf(stderr, L"%s", error_string.c_str());
                     }
 
-                    if (errorlogger) {
-                        errorlogger->LogError(error_string.c_str());
+                    if (s_ErrorLogger) {
+                        s_ErrorLogger->LogError(error_string.c_str());
                     }
                 }
                 catch (const std::exception&) {
@@ -2488,10 +2527,10 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called) {
-                if (print_status) {
+            if (!s_ShutdownCalled) {
+                if (s_PrintStatusInformation) {
                     bool write_to_console = false;
-                    switch (verbosity) {
+                    switch (s_ConsoleVerbosity) {
                         // case 0: // nothing
                         case 1: // status updates
                             // case 2: // error info
@@ -2504,18 +2543,18 @@ namespace ctsTraffic {
                         }
                     }
 
-                    if (::TryEnterCriticalSection(&StatusUpdateLock)) {
-                        ctlScopeGuard(leaveCSOnExit, { ::LeaveCriticalSection(&StatusUpdateLock); });
+                    if (::TryEnterCriticalSection(&s_StatusUpdateLock)) {
+                        ctlScopeGuard(leaveCSOnExit, { ::LeaveCriticalSection(&s_StatusUpdateLock); });
 
                         // capture the timeslices
-                        ctsSignedLongLong l_previoutimeslice = printing_previous_timeslice;
+                        ctsSignedLongLong l_previoutimeslice = s_PreviousPrintTimeslice;
                         ctsSignedLongLong l_current_timeslice = ctTimer::snap_qpc_msec() - Settings->StartTimeMilliseconds;
 
                         if (l_current_timeslice > l_previoutimeslice) {
                             // write out the header to the console every 40 updates 
                             if (write_to_console) {
-                                if (printing_timeslice_count != 0 && 0 == printing_timeslice_count % 40) {
-                                    LPCWSTR header = print_status->print_header(ctsConfig::StatusFormatting::ClearText);
+                                if (s_PrintTimesliceCount != 0 && 0 == s_PrintTimesliceCount % 40) {
+                                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ClearText);
                                     if (header != nullptr) {
                                         ::fwprintf(stdout, L"%s", header);
                                     }
@@ -2529,14 +2568,14 @@ namespace ctsTraffic {
                             if (write_to_console) {
                                 ++status_count;
                             }
-                            if (statuslogger) {
+                            if (s_StatusLogger) {
                                 ++status_count;
                             }
 
                             if (write_to_console) {
                                 --status_count;
                                 bool clear_status = (0 == status_count);
-                                LPCWSTR print_string = print_status->print_status(
+                                LPCWSTR print_string = s_PrintStatusInformation->print_status(
                                     ctsConfig::StatusFormatting::ClearText,
                                     l_current_timeslice,
                                     clear_status);
@@ -2545,18 +2584,18 @@ namespace ctsTraffic {
                                 }
                             }
 
-                            if (statuslogger) {
+                            if (s_StatusLogger) {
                                 --status_count;
                                 bool clear_status = (0 == status_count);
-                                statuslogger->LogStatus(
-                                    print_status,
+                                s_StatusLogger->LogStatus(
+                                    s_PrintStatusInformation,
                                     l_current_timeslice,
                                     clear_status);
                             }
 
                             // update tracking values
-                            printing_previous_timeslice = l_current_timeslice;
-                            ++printing_timeslice_count;
+                            s_PreviousPrintTimeslice = l_current_timeslice;
+                            ++s_PrintTimesliceCount;
                         }
                     }
                 }
@@ -2567,8 +2606,8 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called) {
-                if (jitterlogger) {
+            if (!s_ShutdownCalled) {
+                if (s_JitterLogger) {
                     // long long ~= up to 20 characters long, plus 5 for commas & CR
                     static const size_t formatted_text_length = (20 * 5) + 5;
                     wchar_t formatted_text[formatted_text_length];
@@ -2579,18 +2618,18 @@ namespace ctsTraffic {
                         _TRUNCATE,
                         L"%lld,%lld,%lld,%lld,%lld\n",
                         _sequence_number, _sender_qpc, _sender_qpf, _recevier_qpc, _receiver_qpf);
-                    jitterlogger->LogMessage(formatted_text);
+                    s_JitterLogger->LogMessage(formatted_text);
                 }
             }
         }
 
-        void PrintNewConnection(const ctl::ctSockaddr& _remote_addr) throw()
+        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) throw()
         {
             ctsConfigInitOnce();
 
             // write even after shutdown so can print the final summaries
             bool write_to_console = false;
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 // case 1: // status updates
                 // case 2: // error info
@@ -2606,20 +2645,22 @@ namespace ctsTraffic {
             if (write_to_console) {
                 ::wprintf_s(
                     (ProtocolType::TCP == Settings->Protocol) ?
-                        L"[%.3f] TCP connection established to %s\n" :
-                        L"[%.3f] UDP connection established to %s\n",
+                        L"[%.3f] TCP connection established [%s - %s]\n" :
+                        L"[%.3f] UDP connection established [%s - %s]\n",
                     GetStatusTimeStamp(),
+                    _local_addr.writeCompleteAddress().c_str(),
                     _remote_addr.writeCompleteAddress().c_str());
             }
 
-            if (connectionlogger && !connectionlogger->IsCsvFormat()) {
+            if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
                 try {
-                    connectionlogger->LogMessage(
+                    s_ConnectionLogger->LogMessage(
                         ctString::format_string(
                             (ProtocolType::TCP == Settings->Protocol) ?
-                                L"[%.3f] TCP connection established to %s\n" :
-                                L"[%.3f] UDP connection established to %s\n",
+                                L"[%.3f] TCP connection established [%s - %s]\n" :
+                                L"[%.3f] UDP connection established [%s - %s]\n",
                             GetStatusTimeStamp(),
+                            _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str()).c_str());
                 }
                 catch (const std::exception&) {
@@ -2633,7 +2674,7 @@ namespace ctsTraffic {
 
             // write even after shutdown so can print the final summaries
             bool write_to_console = false;
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 // case 1: // status updates
                 // case 2: // error info
@@ -2646,28 +2687,29 @@ namespace ctsTraffic {
                 }
             }
 
-            enum ErrorType {
+            enum class ErrorType
+            {
                 Success,
                 NetworkError,
                 ProtocolError
             } error_type;
 
             if (0 == _error) {
-                error_type = Success;
-            } else if (ctsIOPatternProtocolError(static_cast<ctsIOPatternStatus>(_error))) {
-                error_type = ProtocolError;
+                error_type = ErrorType::Success;
+            } else if (ctsIOPattern::IsProtocolError(_error)) {
+                error_type = ErrorType::ProtocolError;
             } else {
-                error_type = NetworkError;
+                error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%s - %s] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
-            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %s : [%s - %s] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
-            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %s : [%s - %s] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
+            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%s - %s] [%S]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
+            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
+            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
 
-            // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result"
-            static LPCWSTR TCPResultCsvFormat = L"%.3f,%s,%s,%lld,%lld,%lld,%lld,%lld,%s\n";
+            // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
+            static LPCWSTR TCPResultCsvFormat = L"%.3f,%s,%s,%lld,%lld,%lld,%lld,%lld,%s,%S\n";
 
-            long long total_time(_stats.end_time.get() - _stats.start_time.get());
+            long long total_time = (_stats.end_time.get() - _stats.start_time.get());
             ctl::ctFatalCondition(
                 total_time < 0LL,
                 L"end_time is less than start_time in this ctsTcpStatistics object (%p)", &_stats);
@@ -2677,7 +2719,7 @@ namespace ctsTraffic {
                 std::wstring csv_string;
                 std::wstring text_string;
                 std::wstring error_string;
-                if (ProtocolError != error_type) {
+                if (ErrorType::ProtocolError != error_type) {
                     if (0 == _error) {
                         error_string = L"Succeeded";
                     } else {
@@ -2685,10 +2727,12 @@ namespace ctsTraffic {
                             L"%lu: %s",
                             _error,
                             ctl::ctException(_error).translation_w());
+                        // remove any commas from the formatted string - since that will mess up csv files
+                        ctl::ctString::replace_all(error_string, L",", L" ");
                     }
                 }
 
-                if (connectionlogger && connectionlogger->IsCsvFormat()) {
+                if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
                     csv_string = ctString::format_string(
                         TCPResultCsvFormat,
                         current_time,
@@ -2699,19 +2743,21 @@ namespace ctsTraffic {
                         _stats.bytes_recv.get(),
                         (total_time > 0LL) ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
                         total_time,
-                        (ProtocolError == error_type) ?
-                            ctsIOPatternProtocolErrorString(static_cast<ctsIOPatternStatus>(_error)) :
-                            error_string.c_str());
+                        (ErrorType::ProtocolError == error_type) ?
+                            ctsIOPattern::BuildProtocolErrorString(_error) :
+                            error_string.c_str(),
+                        _stats.connection_identifier);
                 }
                 // we'll never write csv format to the console so we'll need a text string in that case
-                // - and/or in the case the connectionlogger isn't writing to csv
-                if (write_to_console || (connectionlogger && !connectionlogger->IsCsvFormat())) {
+                // - and/or in the case the s_ConnectionLogger isn't writing to csv
+                if (write_to_console || (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat())) {
                     if (0 == _error) {
                         text_string = ctString::format_string(
                             TCPSuccessfulResultTextFormat,
                             current_time,
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str(),
+                            _stats.connection_identifier,
                             _stats.bytes_sent.get(),
                             (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                             _stats.bytes_recv.get(),
@@ -2719,13 +2765,14 @@ namespace ctsTraffic {
                             total_time);
                     } else {
                         text_string = ctString::format_string(
-                            (ProtocolError == error_type) ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
+                            (ErrorType::ProtocolError == error_type) ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
                             current_time,
-                            (ProtocolError == error_type) ?
-                                ctsIOPatternProtocolErrorString(static_cast<ctsIOPatternStatus>(_error)) :
+                            (ErrorType::ProtocolError == error_type) ?
+                                 ctsIOPattern::BuildProtocolErrorString(_error) :
                                 error_string.c_str(),
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str(),
+                            _stats.connection_identifier,
                             _stats.bytes_sent.get(),
                             (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                             _stats.bytes_recv.get(),
@@ -2739,11 +2786,11 @@ namespace ctsTraffic {
                     ::wprintf(L"%s", text_string.c_str());
                 }
 
-                if (connectionlogger) {
-                    if (connectionlogger->IsCsvFormat()) {
-                        connectionlogger->LogMessage(csv_string.c_str());
+                if (s_ConnectionLogger) {
+                    if (s_ConnectionLogger->IsCsvFormat()) {
+                        s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
-                        connectionlogger->LogMessage(text_string.c_str());
+                        s_ConnectionLogger->LogMessage(text_string.c_str());
                     }
                 }
             }
@@ -2756,7 +2803,7 @@ namespace ctsTraffic {
 
             // write even after shutdown so can print the final summaries
             bool write_to_console = false;
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 // case 1: // status updates
                 // case 2: // error info
@@ -2769,26 +2816,27 @@ namespace ctsTraffic {
                 }
             }
 
-            enum ErrorType {
+            enum class ErrorType
+            {
                 Success,
                 NetworkError,
                 ProtocolError
             } error_type;
 
             if (0 == _error) {
-                error_type = Success;
-            } else if (ctsIOPatternProtocolError(static_cast<ctsIOPatternStatus>(_error))) {
-                error_type = ProtocolError;
+                error_type = ErrorType::Success;
+            } else if (ctsIOPattern::IsProtocolError(_error)) {
+                error_type = ErrorType::ProtocolError;
             } else {
-                error_type = NetworkError;
+                error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
 
-            // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result"
-            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%llu,%s\n";
+            // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result,ConnectionId"
+            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%llu,%s,%S\n";
 
             float current_time = ctsConfig::GetStatusTimeStamp();
             long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
@@ -2798,18 +2846,20 @@ namespace ctsTraffic {
                 std::wstring csv_string;
                 std::wstring text_string;
                 std::wstring error_string;
-                if (ProtocolError != error_type) {
+                if (ErrorType::ProtocolError != error_type) {
                     if (0 == _error) {
                         error_string = L"Succeeded";
                     } else {
                         error_string = ctl::ctString::format_string(
-                            L"%u: %s",
+                            L"%lu: %s",
                             _error,
                             ctl::ctException(_error).translation_w());
+                        // remove any commas from the formatted string - since that will mess up csv files
+                        ctl::ctString::replace_all(error_string, L",", L" ");
                     }
                 }
 
-                if (connectionlogger && connectionlogger->IsCsvFormat()) {
+                if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
                     csv_string = ctString::format_string(
                         UDPResultCsvFormat,
                         current_time,
@@ -2821,19 +2871,21 @@ namespace ctsTraffic {
                         _stats.duplicate_frames.get(),
                         _stats.retry_attempts.get(),
                         _stats.error_frames.get(),
-                        (ProtocolError == error_type) ?
-                            ctsIOPatternProtocolErrorString(static_cast<ctsIOPatternStatus>(_error)) :
-                            error_string.c_str());
+                        (ErrorType::ProtocolError == error_type) ?
+                            ctsIOPattern::BuildProtocolErrorString(_error) :
+                            error_string.c_str(),
+                        _stats.connection_identifier);
                 }
                 // we'll never write csv format to the console so we'll need a text string in that case
-                // - and/or in the case the connectionlogger isn't writing to csv
-                if (write_to_console || (connectionlogger && !connectionlogger->IsCsvFormat())) {
+                // - and/or in the case the s_ConnectionLogger isn't writing to csv
+                if (write_to_console || (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat())) {
                     if (0 == _error) {
                         text_string = ctString::format_string(
                             UDPSuccessfulResultTextFormat,
                             current_time,
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str(),
+                            _stats.connection_identifier,
                             bits_per_second,
                             _stats.successful_frames.get(),
                             _stats.dropped_frames.get(),
@@ -2842,13 +2894,14 @@ namespace ctsTraffic {
                             _stats.error_frames.get());
                     } else {
                         text_string = ctString::format_string(
-                            (ProtocolError == error_type) ? UDPProtocolFailureResultTextFormat : UDPNetworkFailureResultTextFormat,
+                            (ErrorType::ProtocolError == error_type) ? UDPProtocolFailureResultTextFormat : UDPNetworkFailureResultTextFormat,
                             current_time,
-                            (ProtocolError == error_type) ?
-                                ctsIOPatternProtocolErrorString(static_cast<ctsIOPatternStatus>(_error)) :
+                            (ErrorType::ProtocolError == error_type) ?
+                                ctsIOPattern::BuildProtocolErrorString(_error) :
                                 error_string.c_str(),
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str(),
+                            _stats.connection_identifier,
                             bits_per_second,
                             _stats.successful_frames.get(),
                             _stats.dropped_frames.get(),
@@ -2863,23 +2916,32 @@ namespace ctsTraffic {
                     ::wprintf(L"%s", text_string.c_str());
                 }
 
-                if (connectionlogger) {
-                    if (connectionlogger->IsCsvFormat()) {
-                        connectionlogger->LogMessage(csv_string.c_str());
+                if (s_ConnectionLogger) {
+                    if (s_ConnectionLogger->IsCsvFormat()) {
+                        s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
-                        connectionlogger->LogMessage(text_string.c_str());
+                        s_ConnectionLogger->LogMessage(text_string.c_str());
                     }
                 }
             }
             catch (const std::exception&) {
             }
         }
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        {
+            if (ctsConfig::ProtocolType::TCP == Settings->Protocol) {
+                PrintConnectionResults(_local_addr, _remote_addr, _error, ctsTcpStatistics());
+            } else {
+                PrintConnectionResults(_local_addr, _remote_addr, _error, ctsUdpStatistics());
+            }
+        }
+
         void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called) {
-                switch (verbosity) {
+            if (!s_ShutdownCalled) {
+                switch (s_ConsoleVerbosity) {
                     // case 0: // nothing
                     // case 1: // status updates
                     // case 2: // error info
@@ -2900,8 +2962,8 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (!shutdown_called && (_why != 0)) {
-                switch (verbosity) {
+            if (!s_ShutdownCalled && (_why != 0)) {
+                switch (s_ConsoleVerbosity) {
                     // case 0: // nothing
                     // case 1: // status updates
                     // case 2: // error info
@@ -2910,7 +2972,7 @@ namespace ctsTraffic {
                     // case 5: // connection info + error info + status updates
                     case 6: // above + debug info
                     {
-                        ::fwprintf_s(stdout, L"\tNonFatal Error: %s failed (%u) [%s]", _what, _why, _where);
+                        ::fwprintf_s(stdout, L"\tNonFatal Error: %s failed (%u) [%s]\n", _what, _why, _where);
                     }
                 }
             }
@@ -2921,7 +2983,7 @@ namespace ctsTraffic {
 
             // write even after shutdown so can print the final summaries
             bool write_to_console = false;
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 case 1: // status updates
                 case 2: // error info
@@ -2941,9 +3003,9 @@ namespace ctsTraffic {
                 ::vwprintf_s(_text, argptr);
             }
 
-            if (connectionlogger && !connectionlogger->IsCsvFormat()) {
+            if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
                 try {
-                    connectionlogger->LogMessage(ctString::format_string_va(_text, argptr).c_str());
+                    s_ConnectionLogger->LogMessage(ctString::format_string_va(_text, argptr).c_str());
                 }
                 catch (const std::exception&) {
                 }
@@ -2963,11 +3025,11 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (0 == buffersize_high) {
+            if (0 == s_BufferSizeHigh) {
                 // range was not specified
-                return buffersize_low;
+                return s_BufferSizeLow;
             } else {
-                return random.uniform_int(buffersize_low, buffersize_high);
+                return s_RandomTwister.uniform_int(s_BufferSizeLow, s_BufferSizeHigh);
             }
         }
 
@@ -2975,11 +3037,11 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (buffersize_high == 0) {
+            if (s_BufferSizeHigh == 0) {
                 // User didn't specify a range
-                return buffersize_low;
+                return s_BufferSizeLow;
             } else {
-                return buffersize_high;
+                return s_BufferSizeHigh;
             }
         }
 
@@ -2988,11 +3050,11 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (0 == transfer_high) {
+            if (0 == s_TransferSizeHigh) {
                 // range was not specified
-                return transfer_low;
+                return s_TransferSizeLow;
             } else {
-                return random.uniform_int(transfer_low, transfer_high);
+                return s_RandomTwister.uniform_int(s_TransferSizeLow, s_TransferSizeHigh);
             }
         }
 
@@ -3000,11 +3062,11 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            if (0 == ratelimit_high) {
+            if (0 == s_RateLimitHigh) {
                 // range was not specified
-                return ratelimit_low;
+                return s_RateLimitLow;
             } else {
-                return random.uniform_int(ratelimit_low, ratelimit_high);
+                return s_RandomTwister.uniform_int(s_RateLimitLow, s_RateLimitHigh);
             }
         }
 
@@ -3025,10 +3087,10 @@ namespace ctsTraffic {
             ctsConfigInitOnce();
 
             ctFatalCondition(
-                0 == media_stream_settings.BitsPerSecond,
+                0 == s_MediaStreamSettings.BitsPerSecond,
                 L"Internally requesting media stream settings when this was not specified by the user");
 
-            return media_stream_settings;
+            return s_MediaStreamSettings;
         }
 
         bool IsListening() throw()
@@ -3079,11 +3141,11 @@ namespace ctsTraffic {
             }
 
             ///
-            /// netAdapterAddresses is created when the user has requested a compartment Id
+            /// s_NetAdapterAddresses is created when the user has requested a compartment Id
             /// - since we would have had to lookup the interface
             ///
-            if (netAdapterAddresses != nullptr) {
-                int optval = compartment_id;
+            if (s_NetAdapterAddresses != nullptr) {
+                int optval = s_CompartmentId;
                 int optlen = static_cast<int>(sizeof optval);
 
                 if (0 != ::setsockopt(
@@ -3216,12 +3278,6 @@ namespace ctsTraffic {
                 case ProtocolType::UDP:
                     setting_string.append(L"UDP");
                     break;
-                case ProtocolType::Multicast:
-                    setting_string.append(L"UDP Multicast");
-                    break;
-                case ProtocolType::RAW:
-                    setting_string.append(L"RAW");
-                    break;
             }
             setting_string.append(L"\n");
 
@@ -3238,7 +3294,7 @@ namespace ctsTraffic {
             }
             setting_string.append(L"\n");
 
-            setting_string.append(ctString::format_string(L"\tIO function: %s\n", IoFunctionName));
+            setting_string.append(ctString::format_string(L"\tIO function: %s\n", s_IoFunctionName));
 
             setting_string.append(L"\tIoPattern: ");
             switch (Settings->IoPattern) {
@@ -3267,74 +3323,74 @@ namespace ctsTraffic {
 
             setting_string.append(ctString::format_string(L"\tPort: %u\n", Settings->Port));
 
-            if (0 == buffersize_high) {
+            if (0 == s_BufferSizeHigh) {
                 setting_string.append(
                     ctString::format_string(
                         L"\tBuffer used for each IO request: %u [0x%x] bytes\n",
-                        buffersize_low, buffersize_low));
+                        s_BufferSizeLow, s_BufferSizeLow));
             } else {
                 setting_string.append(
                     ctString::format_string(
                         L"\tBuffer used for each IO request: [%u, %u] bytes\n",
-                        buffersize_low, buffersize_high));
+                        s_BufferSizeLow, s_BufferSizeHigh));
             }
 
-            if (0 == transfer_high) {
+            if (0 == s_TransferSizeHigh) {
                 setting_string.append(
                     ctString::format_string(
                         L"\tTotal transfer per connection: %llu bytes\n",
-                        transfer_low));
+                        s_TransferSizeLow));
             } else {
                 setting_string.append(
                     ctString::format_string(
                         L"\tTotal transfer per connection: [%llu, %llu] bytes\n",
-                        transfer_low, transfer_high));
+                        s_TransferSizeLow, s_TransferSizeHigh));
             }
 
             if (ProtocolType::UDP == Settings->Protocol) {
                 setting_string.append(
                     ctString::format_string(
                         L"\t\tUDP Stream BitsPerSecond: %lld bits per second\n",
-                        static_cast<long long>(media_stream_settings.BitsPerSecond)));
+                        static_cast<long long>(s_MediaStreamSettings.BitsPerSecond)));
                 setting_string.append(
                     ctString::format_string(
                         L"\t\tUDP Stream FrameRate: %lu frames per second\n",
-                        static_cast<unsigned long>(media_stream_settings.FramesPerSecond)));
-                if (media_stream_settings.BufferDepthSeconds > 0) {
+                        static_cast<unsigned long>(s_MediaStreamSettings.FramesPerSecond)));
+                if (s_MediaStreamSettings.BufferDepthSeconds > 0) {
                     setting_string.append(
                         ctString::format_string(
                             L"\t\tUDP Stream BufferDepth: %lu seconds\n",
-                            static_cast<unsigned long>(media_stream_settings.BufferDepthSeconds)));
+                            static_cast<unsigned long>(s_MediaStreamSettings.BufferDepthSeconds)));
                 }
                 setting_string.append(
                     ctString::format_string(
                         L"\t\tUDP Stream StreamLength: %lu seconds (%lu frames)\n",
-                        static_cast<unsigned long>(media_stream_settings.StreamLengthSeconds),
-                        static_cast<unsigned long>(media_stream_settings.StreamLengthFrames)));
+                        static_cast<unsigned long>(s_MediaStreamSettings.StreamLengthSeconds),
+                        static_cast<unsigned long>(s_MediaStreamSettings.StreamLengthFrames)));
                 setting_string.append(
                     ctString::format_string(
                         L"\t\tUDP Stream FrameSize: %lu bytes\n",
-                        static_cast<unsigned long>(media_stream_settings.FrameSizeBytes)));
+                        static_cast<unsigned long>(s_MediaStreamSettings.FrameSizeBytes)));
             }
 
-            if (ProtocolType::TCP == Settings->Protocol && ratelimit_low > 0) {
-                if (0 == ratelimit_high) {
+            if (ProtocolType::TCP == Settings->Protocol && s_RateLimitLow > 0) {
+                if (0 == s_RateLimitHigh) {
                     setting_string.append(
                         ctString::format_string(
                         L"\tSending throughput rate limited down to %lld bytes/second\n",
-                        ratelimit_low));
+                        s_RateLimitLow));
                 } else {
                     setting_string.append(
                         ctString::format_string(
                         L"\tSending throughput rate limited down to a range of [%lld, %lld] bytes/second\n",
-                        ratelimit_low, ratelimit_high));
+                        s_RateLimitLow, s_RateLimitHigh));
                 }
             }
 
-            if (netAdapterAddresses != nullptr) {
+            if (s_NetAdapterAddresses != nullptr) {
                 setting_string.append(
                     ctString::format_string(
-                        L"\tIP Compartment: %u\n", compartment_id));
+                        L"\tIP Compartment: %u\n", s_CompartmentId));
             }
 
             if (Settings->ListenAddresses.size() > 0) {
@@ -3349,7 +3405,7 @@ namespace ctsTraffic {
                 }
 
                 setting_string.append(
-                    ctString::format_string(L"\tAccepting function: %s\n", AcceptFunctionName));
+                    ctString::format_string(L"\tAccepting function: %s\n", s_AcceptFunctionName));
 
             } else {
                 setting_string.append(L"\tConnecting out to addresses:\n");
@@ -3387,7 +3443,7 @@ namespace ctsTraffic {
                 }
 
                 setting_string.append(
-                    ctString::format_string(L"\tConnection function: %s\n", ConnectFunctionName));
+                    ctString::format_string(L"\tConnection function: %s\n", s_ConnectFunctionName));
                 setting_string.append(
                     ctString::format_string(
                         L"\tConnection limit (maximum established connections): %u [0x%x]\n",
@@ -3437,7 +3493,7 @@ namespace ctsTraffic {
             setting_string.append(L"\n");
 
             // immediately print the legend once we know the status info object
-            switch (verbosity) {
+            switch (s_ConsoleVerbosity) {
                 // case 0: // nothing
                 case 1: // status updates
                 case 2: // error info
@@ -3450,8 +3506,8 @@ namespace ctsTraffic {
                 }
             }
 
-            if (connectionlogger && !connectionlogger->IsCsvFormat()) {
-                connectionlogger->LogMessage(setting_string.c_str());
+            if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
+                s_ConnectionLogger->LogMessage(setting_string.c_str());
             }
         }
 

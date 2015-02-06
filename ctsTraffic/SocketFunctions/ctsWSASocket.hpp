@@ -15,12 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <cassert>
 // os headers
+#include <windows.h>
 #include <winsock2.h>
 #include <mstcpip.h> // for the fast-path ioctl
-#include <windows.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
@@ -34,12 +34,10 @@ namespace ctsTraffic {
     static long long s_PortCounter = 0LL;
 
     inline
-    void ctsWSASocket(std::weak_ptr<ctsSocket> _socket) throw()
+    void ctsWSASocket(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
-        auto shared_socket_lock(_socket.lock());
-        ctsSocket* socket_lock = shared_socket_lock.get();
-        if (socket_lock == nullptr) {
-            // underlying socket went away - nothing to do now
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
 
@@ -74,60 +72,75 @@ namespace ctsTraffic {
             }
         }
 
-        wchar_t* function = nullptr;
-        SOCKET s = INVALID_SOCKET;
+        SOCKET socket = INVALID_SOCKET;
         int gle = 0;
+        const wchar_t* function = L"WSASocket";
         switch (ctsConfig::Settings->Protocol) {
-            case ctsConfig::ProtocolType::TCP: {
-                function = L"WSASocket";
-                s = ::WSASocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags);
-                if (INVALID_SOCKET == s) {
+            case ctsConfig::ProtocolType::TCP:
+                socket = ::WSASocketW(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags);
+                if (INVALID_SOCKET == socket) {
                     gle = ::WSAGetLastError();
                 }
-
                 break;
-            }
 
-            case ctsConfig::ProtocolType::UDP: {
-                function = L"WSASocket";
-                s = ::WSASocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, NULL, 0, ctsConfig::Settings->SocketFlags);
-                if (INVALID_SOCKET == s) {
+            case ctsConfig::ProtocolType::UDP:
+                socket = ::WSASocketW(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, NULL, 0, ctsConfig::Settings->SocketFlags);
+                if (INVALID_SOCKET == socket) {
                     gle = ::WSAGetLastError();
                 }
-
                 break;
-            }
+
 
             default: {
-                function = L"WSASocket";
-                ctsConfig::PrintErrorIfFailed(L"Unknown socket protocol", ctsConfig::Settings->Protocol);
+                ctsConfig::PrintErrorInfo(L"Unknown socket protocol (%u)", static_cast<unsigned>(ctsConfig::Settings->Protocol));
                 gle = WSAEINVAL;
             }
         }
 
         if (NO_ERROR == gle) {
             function = L"SetPreBindOptions";
-            gle = ctsConfig::SetPreBindOptions(s, local_addr);
+            gle = ctsConfig::SetPreBindOptions(socket, local_addr);
         }
 
         if (NO_ERROR == gle) {
             function = L"bind";
-            if (SOCKET_ERROR == ::bind(s, local_addr.sockaddr(), local_addr.length())) {
-                gle = ::WSAGetLastError();
+
+            if (0 == next_port) {
+                if (SOCKET_ERROR == ::bind(socket, local_addr.sockaddr(), local_addr.length())) {
+                    gle = ::WSAGetLastError();
+                }
+            } else {
+                // sleep up to 5 seconds to allow TCP to cleanup its internal state
+                static const unsigned long BindRetryCount = 5;
+                static const unsigned long BindRetrySleepMs = 1000;
+
+                for (unsigned long bind_retry = 0; bind_retry < BindRetryCount; ++bind_retry) {
+                    if (SOCKET_ERROR == ::bind(socket, local_addr.sockaddr(), local_addr.length())) {
+                        gle = ::WSAGetLastError();
+                        if (WSAEADDRINUSE == gle) {
+                            ctsConfig::PrintDebug(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs);
+                            ::Sleep(BindRetrySleepMs);
+                        }
+                    } else {
+                        // succeeded - exit the loop
+                        gle = NO_ERROR;
+                        ctsConfig::PrintDebug(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1);
+                        break;
+                    }
+                }
             }
         }
 
+        // store whatever values we have: for accurate logging
+        shared_socket->set_socket(socket);
+        shared_socket->set_local_address(local_addr);
+        shared_socket->set_target_address(target_addr);
+
         if (0 == gle) {
-            socket_lock->set_socket(s);
-            socket_lock->set_local(local_addr);
-            socket_lock->set_target(target_addr);
-            socket_lock->complete_state(NO_ERROR);
+            shared_socket->complete_state(NO_ERROR);
         } else {
             ctsConfig::PrintErrorIfFailed(function, gle);
-            socket_lock->complete_state(gle);
-            if (s != INVALID_SOCKET) {
-                ::closesocket(s);
-            }
+            shared_socket->complete_state(gle);
         }
     }
 

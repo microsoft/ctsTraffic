@@ -17,18 +17,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <algorithm>
 // os headers
-#include <winsock2.h>
-#include <mswsock.h>
 #include <windows.h>
-
 // ctl header
+#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsPrintStatus.hpp"
-
+#include "ctsSafeInt.hpp"
+#include "ctsIOPatternState.hpp"
+#include "ctsStatistics.hpp"
+#include "ctsIOBuffers.hpp"
 
 namespace ctsTraffic {
 
@@ -38,58 +39,44 @@ namespace ctsTraffic {
     /// - on failure, these codes can be reported as errors back to the caller
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    enum ctsIOPatternStatus : unsigned long {
-        MoreData = 0,
-        RequestFIN,    // TCP: next ask for IO will be a recv for the zero-byte FIN
-        VerifyFIN,     // TCP: final recv has been posted for the zero-byte FIN
-        CompletedTransfer,
-        ErrorIOFailed,
-        // Protocol errors need unique error codes (not a Win32 error)
-        ErrorNotAllDataTransferred = MAXINT - 1,
-        ErrorTooMuchDataTransferred = MAXINT - 2,
-        ErrorDataDidNotMatchBitPattern = MAXINT - 3,
-        // next should always be the lowest error value
-        ErrorPatternMinimumValue = MAXINT - 4
+    enum class ctsIOStatus
+    {
+        ContinueIo,
+        CompletedIo,
+        FailedIo
     };
-    // MAXINT is reserved for internal status of IO continuing
-    static const unsigned long ctsIOPatternStatusIORunning = MAXINT;
 
-    inline
-    bool ctsIOPatternContinueIO(ctsIOPatternStatus _status)  throw()
-    {
-        return (_status < CompletedTransfer);
-    }
-    inline
-    bool ctsIOPatternError(ctsIOPatternStatus _status) throw()
-    {
-        return (_status > CompletedTransfer);
-    }
-    inline
-    bool ctsIOPatternProtocolError(ctsIOPatternStatus _status) throw()
-    {
-        return (_status > ErrorPatternMinimumValue);
-    }
-    inline
-    const wchar_t* ctsIOPatternProtocolErrorString(ctsIOPatternStatus _status) throw()
-    {
-        switch (_status) {
-            case ErrorNotAllDataTransferred:
-                return L"ErrorNotAllDataTransferred";
-
-            case ErrorTooMuchDataTransferred:
-                return L"ErrorTooMuchDataTransferred";
-
-            case ErrorDataDidNotMatchBitPattern:
-                return L"ErrorDataDidNotMatchBitPattern";
-
-            default:
-                ctl::ctAlwaysFatalCondition(
-                    L"ctsIOPattern: internal inconsistency - expecting a protocol error ctsIOPatternStatus (%u)", _status);
-                return nullptr;
-        }
-    }
+    static const unsigned long ctsStatusIORunning = MAXINT;
+    static const unsigned long ctsStatusErrorNotAllDataTransferred = MAXINT - 1;
+    static const unsigned long ctsStatusErrorTooMuchDataTransferred = MAXINT - 2;
+    static const unsigned long ctsStatusErrorDataDidNotMatchBitPattern = MAXINT - 3;
+    static const unsigned long ctsStatusMinimumValue = MAXINT - 3;
 
     class ctsIOPattern {
+    public:
+        static bool IsProtocolError(unsigned long _status) NOEXCEPT
+        {
+            return (_status >= ctsStatusMinimumValue && _status < ctsStatusIORunning);
+        }
+        static const wchar_t* BuildProtocolErrorString(unsigned long _status) NOEXCEPT
+        {
+            switch (_status) {
+                case ctsStatusErrorNotAllDataTransferred:
+                    return L"ErrorNotAllDataTransferred";
+
+                case ctsStatusErrorTooMuchDataTransferred:
+                    return L"ErrorTooMuchDataTransferred";
+
+                case ctsStatusErrorDataDidNotMatchBitPattern:
+                    return L"ErrorDataDidNotMatchBitPattern";
+
+                default:
+                    ctl::ctAlwaysFatalCondition(
+                        L"ctsIOPattern: internal inconsistency - expecting a protocol error ctsIOProtocolState (%u)", _status);
+                    return nullptr;
+            }
+        }
+
     public:
         ///
         /// Helper factory to build known patterns
@@ -98,11 +85,16 @@ namespace ctsTraffic {
         ///
         /// Making available the shared buffer used for sends and recvs
         ///
-        static char* AccessSharedBuffer() throw();
-
+        static char* AccessSharedBuffer() NOEXCEPT;
+        ///
+        /// d'tor must be virtual as this is a base pure virtual class
+        ///
         virtual ~ctsIOPattern();
-        virtual void print_io_results(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) const = 0;
-        virtual void end_pattern() throw() = 0;
+
+        ///
+        /// Exposing statistics members publicly to ctsSocket
+        ///
+        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT = 0;
 
         ///
         /// none of these *_io functions can throw
@@ -110,30 +102,64 @@ namespace ctsTraffic {
         /// - the task given by initiate_io should be returned through complete_io
         ///   (or a copy of that task)
         ///
-        ctsIOTask initiate_io() throw();
-        ctsIOPatternStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) throw();
-        unsigned long verify_io() throw();
+        /// Callers access initiate_io() to retrieve a ctsIOTask object for the next IO operation
+        /// - they are expected to retain that ctsIOTask object until the IO operation completes
+        /// - at which time they pass it back to complete_io()
+        ///
+        /// initiate_io() can be called repeatedly by the caller if they want overlapping IO calls
+        /// - without forced to wait for complete_io() for the next IO request
+        ///
+        /// complete_io() should be called for every returned initiate_io with the following:
+        ///   _task : the ctsIOTask that was provided to perform
+        ///   _current_transfer : the number of bytes successfully transferred from the task
+        ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
+        ///
+        ctsIOTask initiate_io() NOEXCEPT;
+        ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT;
 
         ///
         /// Some derived IO types require callbacks to the IO functions
         /// - to request tasks from the normal initiate_io / complete_io pattern
         ///
-        void register_callback(std::function<void(const ctsIOTask&)> _callback);
+        void register_callback(std::function<void(const ctsIOTask&)> _callback)
+        {
+            ctl::ctAutoReleaseCriticalSection local_cs(&cs);
+            this->callback = _callback;
+        }
 
-        /// hide the default c'tor
+        unsigned long get_last_error() const NOEXCEPT
+        {
+            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            return this->last_error;
+        }
+
+        /// no default c'tor
         ctsIOPattern() = delete;
-        /// hide the copy c'tor and copy assignment
+        /// no copy c'tor or copy assignment
         ctsIOPattern(const ctsIOPattern&) = delete;
         ctsIOPattern& operator= (const ctsIOPattern&) = delete;
 
     private:
+        ctsIOStatus current_status() const NOEXCEPT
+        {
+            if (ctsStatusIORunning == this->last_error) {
+                return ctsIOStatus::ContinueIo;
+
+            } else if (NO_ERROR == this->last_error) {
+                return ctsIOStatus::CompletedIo;
+
+            } else {
+                return ctsIOStatus::FailedIo;
+            }
+        }
+
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// Private method to return a pre-populated task
         /// - *not* setting the private ctsIOTask::tracked_io property
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsIOTask new_task(ctsIOTask::IOAction _action, unsigned long _max_transfer);
+        ctsIOTask new_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -142,19 +168,21 @@ namespace ctsTraffic {
         /// ctsIOTask next_task()
         /// - must return a ctsIOTask returned from tracked_task or untracked_task
         ///
-        /// ctsIOPatternStatus completed_task(const ctsIOTask&, unsigned long _current_transfer) throw()
+        /// ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long _current_transfer) NOEXCEPT
         /// - a notification to the derived class over what task completed
         ///   - ctsIOTask argument: the ctsIOTask which it previously returned from next_task()
         ///   - unsigned long argument:  the # of bytes actually transferred
         /// - cannot throw [if it fails, it must RaiseException to debug]
-        /// - returns a ctsIOPatternStatus back to the base class to indicate errors
+        /// - returns a unsigned long back to the base class to indicate errors
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         virtual ctsIOTask next_task() = 0;
-        virtual ctsIOPatternStatus completed_task(const ctsIOTask&, unsigned long _current_transfer) throw() = 0;
+        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long _current_transfer) NOEXCEPT = 0;
 
         // CS memory guard for data within this object
-        CRITICAL_SECTION cs;
+        // - it's mutable to allow us to take the CS in const methods
+        mutable CRITICAL_SECTION cs;
+
         // recv buffers to return to the caller
         // - tracking sending buffers separate from receiving buffers
         //   since sending buffers will have a test pattern written to it (thus send buffers can be static)
@@ -166,14 +194,11 @@ namespace ctsTraffic {
         // optional callback for protocols which need to communicate OOB to the IO function
         std::function<void(const ctsIOTask&)> callback;
 
-        // tracking current bytes 
-        ctsUnsignedLongLong current_transfer;
-        // need to know when to stop
-        ctsUnsignedLongLong max_transfer;
+        // track the state of the L4 protocol (TCP or UDP)
+        ctsIOPatternState pattern_state;
+
         // need to know buffer size for each transfer
-        ctsSizeT buffer_size;
-        // need to know in-flight bytes
-        ctsSizeT inflight_bytes;
+        const ctsUnsignedLong buffer_size;
         // need to track the current offset into the buffer pattern
         // these are separate as we could have both sends and receive operations on the same connection
         ctsSizeT send_pattern_offset;
@@ -181,12 +206,12 @@ namespace ctsTraffic {
 
         // RIO buffer Id
         RIO_BUFFERID recv_rio_bufferid;
-        // track the status
-        ctsIOPatternStatus protocol_status;
         // tracking time information for scheduling IO at time offsets
-        ctsUnsignedLongLong bytes_sending_per_quantum;
-        ctsUnsignedLongLong bytes_sending_this_quantum;
-        ctsUnsignedLongLong quantum_start_time_ms;
+        const ctsSignedLongLong bytes_sending_per_quantum;
+        ctsSignedLongLong bytes_sending_this_quantum;
+        ctsSignedLongLong quantum_start_time_ms;
+
+        unsigned long last_error;
 
     protected:
         ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,11 +222,19 @@ namespace ctsTraffic {
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ctsIOPattern(unsigned long _recv_count);
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// The derived template class for tracking statistics must implement these pure virtual functions
+        ///
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        virtual void start_stats() NOEXCEPT = 0;
+        virtual void end_stats() NOEXCEPT = 0;
+        virtual char* connection_id() NOEXCEPT = 0;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
-        /// tracked_task(ctsIOTask::IOAction, unsigned long _max_transfer)
-        /// untracked_task(ctsIOTask::IOAction, unsigned long _max_transfer)
+        /// tracked_task(IOTaskAction, unsigned long _max_transfer)
+        /// untracked_task(IOTaskAction, unsigned long _max_transfer)
         ///
         /// - returns a ctsIOTask for the next transfer based on the IOAction
         /// - the returned buffer can be contained to maximum size with _max_transfer
@@ -211,8 +244,8 @@ namespace ctsTraffic {
         /// untracked_tasks will *not* have their buffers validated on complete_io
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsIOTask tracked_task(ctsIOTask::IOAction, unsigned long _max_transfer = 0);
-        ctsIOTask untracked_task(ctsIOTask::IOAction, unsigned long _max_transfer = 0);
+        ctsIOTask tracked_task(IOTaskAction, unsigned long _max_transfer = 0) NOEXCEPT;
+        ctsIOTask untracked_task(IOTaskAction, unsigned long _max_transfer = 0) NOEXCEPT;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -221,8 +254,14 @@ namespace ctsTraffic {
         ///  - to meet its requirements (e.g. must be an even total # for balanced send & recv's)
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsUnsignedLongLong get_total_transfer() const throw();
-        void set_total_transfer(const ctsUnsignedLongLong& _new_total) throw();
+        ctsUnsignedLongLong get_total_transfer() const NOEXCEPT
+        {
+            return this->pattern_state.get_max_transfer();
+        }
+        void set_total_transfer(const ctsUnsignedLongLong& _new_total) NOEXCEPT
+        {
+            this->pattern_state.set_max_transfer(_new_total);
+        }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -230,7 +269,7 @@ namespace ctsTraffic {
         /// - they created through untracked_task
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        bool verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes);
+        bool verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) NOEXCEPT;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -238,10 +277,53 @@ namespace ctsTraffic {
         /// - not that this will take the same internal lock as the publicly exposed functions
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        void send_callback(const ctsIOTask& _task) const throw()
+        void send_callback(const ctsIOTask& _task) const NOEXCEPT
         {
             if (this->callback) {
-                callback(_task);
+                this->callback(_task);
+            }
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Enabling derived types to update the internally tracked last-error
+        ///
+        /// update_last_error will attempt to keep the first error reported
+        /// - this will only update the value if an error has not yet been report for this state
+        ///
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        unsigned long update_last_error(DWORD _error) NOEXCEPT
+        {
+            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            if (ctsStatusIORunning == this->last_error) {
+                if (NO_ERROR == _error) {
+                    this->last_error = NO_ERROR;
+                } else {
+                    if (ctsIOPatternProtocolError::ErrorIOFailed == this->pattern_state.update_error(_error)) {
+                        this->last_error = _error;
+                    }
+                }
+            }
+            return this->get_last_error();
+        }
+        void update_last_protocol_error(ctsIOPatternProtocolError _protocol_error) NOEXCEPT
+        {
+            switch (_protocol_error) {
+                case ctsIOPatternProtocolError::CorruptedBytes:
+                    this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
+                    break;
+
+                case ctsIOPatternProtocolError::TooFewBytes:
+                    this->update_last_error(ctsStatusErrorNotAllDataTransferred);
+                    break;
+
+                case ctsIOPatternProtocolError::TooManyBytes:
+                    this->update_last_error(ctsStatusErrorTooMuchDataTransferred);
+                    break;
+
+                case ctsIOPatternProtocolError::SuccessfullyCompleted:
+                    this->update_last_error(NO_ERROR);
+                    break;
             }
         }
 
@@ -258,12 +340,12 @@ namespace ctsTraffic {
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         _Acquires_lock_(cs)
-        void base_lock() throw()
+        void base_lock() NOEXCEPT
         {
             ::EnterCriticalSection(&this->cs);
         }
         _Releases_lock_(cs)
-        void base_unlock() throw()
+        void base_unlock() NOEXCEPT
         {
             ::LeaveCriticalSection(&this->cs);
         }
@@ -279,37 +361,67 @@ namespace ctsTraffic {
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename S>
-    class ctsIOPatternImpl : public ctsIOPattern {
+    class ctsIOPatternStatistics : public ctsIOPattern {
     public:
-        ctsIOPatternImpl(unsigned long _recv_count) : ctsIOPattern(_recv_count)
+        ctsIOPatternStatistics(unsigned long _recv_count) : ctsIOPattern(_recv_count)
         {
+            // servers need to generate a unique connection ID
+            if (ctsConfig::IsListening()) {
+                ctsStatistics::GenerateConnectionId(this->stats);
+            }
         }
-        virtual ~ctsIOPatternImpl() throw()
+        virtual ~ctsIOPatternStatistics() NOEXCEPT
         {
             // guarantee that end_pattern has been called at least once
-            end_pattern();
+            end_stats();
         }
         ///
         /// Printing of results is controlled by the applicable statistics type
         ///
-        void print_io_results(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) const
+        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT
         {
+            // before printing the final results, make sure the timers are stopped
+            if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
+                ctsConfig::PrintDebug(L"ctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes");
+                this->update_last_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
+            }
+
             ctsConfig::PrintConnectionResults(
                 _local_addr,
                 _remote_addr,
-                _error,
+                this->get_last_error(),
                 stats);
+        }
+        ///
+        /// ensures that the pattern has started
+        /// - provides the method in this way so the caller doesn't have to track if it has started yet
+        ///
+        void start_stats() NOEXCEPT
+        {
+            if (0LL == stats.start_time.get()) {
+                // only calculate the QPC the first time
+                // - willing to take the cost of 2 interlocked operations the first time this is initialized
+                //   versus taking a QPC hit on every IO request
+                stats.start_time.set_conditionally(ctl::ctTimer::snap_qpc_msec(), 0LL);
+            }
         }
         ///
         /// Exposed to the caller to control when to set the end_time
         /// - if the end_time was previously zero, will also update historic stats
         ///
-        void end_pattern() throw()
+        void end_stats() NOEXCEPT
         {
             long long prior_end_time = stats.end_time.set_conditionally(ctl::ctTimer::snap_qpc_msec(), 0LL);
             if (0LL == prior_end_time) {
                 ctsConfig::UpdateGlobalStats(stats);
             }
+        }
+        ///
+        /// Access the ConnectionId stored in the Stats object
+        ///
+        char* connection_id() NOEXCEPT
+        {
+            return stats.connection_identifier;
         }
         ///
         /// Statistics for this object is protected to be accessible from the derived class
@@ -328,14 +440,14 @@ namespace ctsTraffic {
     ///    -- The client pulls data in 'segments'
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPull : public ctsIOPatternImpl<ctsTcpStatistics> {
+    class ctsIOPatternPull : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPull();
-        ~ctsIOPatternPull() throw();
+        ~ctsIOPatternPull() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOTask next_task() NOEXCEPT;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         ctsUnsignedLong io_needed;
@@ -350,14 +462,14 @@ namespace ctsTraffic {
     ///    -- The server pulls data in 'segments'
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPush : public ctsIOPatternImpl<ctsTcpStatistics> {
+    class ctsIOPatternPush : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPush();
-        ~ctsIOPatternPush() throw();
+        ~ctsIOPatternPush() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOTask next_task() NOEXCEPT;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         ctsUnsignedLong io_needed;
@@ -373,13 +485,13 @@ namespace ctsTraffic {
     ///    -- At each segment, roles swap (pusher/puller)
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPushPull : public ctsIOPatternImpl<ctsTcpStatistics> {
+    class ctsIOPatternPushPull : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPushPull();
-        ~ctsIOPatternPushPull() throw();
+        ~ctsIOPatternPushPull() NOEXCEPT;
 
-        ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOTask next_task() NOEXCEPT;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         const unsigned long push_segment_size;
@@ -400,14 +512,14 @@ namespace ctsTraffic {
     ///    -- The server both pushes and pulls data concurrently
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternDuplex : public ctsIOPatternImpl<ctsTcpStatistics> {
+    class ctsIOPatternDuplex : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternDuplex();
-        ~ctsIOPatternDuplex() throw();
+        ~ctsIOPatternDuplex() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOTask next_task() NOEXCEPT;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         // need to know when to stop sending
@@ -427,14 +539,14 @@ namespace ctsTraffic {
     ///    -- Remains alive until the DONE message is sent from the client
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternMediaStreamServer : public ctsIOPatternImpl<ctsUdpStatistics> {
+    class ctsIOPatternMediaStreamServer : public ctsIOPatternStatistics<ctsUdpStatistics> {
     public:
         ctsIOPatternMediaStreamServer();
-        ~ctsIOPatternMediaStreamServer() throw();
+        ~ctsIOPatternMediaStreamServer() NOEXCEPT;
 
         // required virtual functions
         ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         ctsUnsignedLong frame_size_bytes;
@@ -443,6 +555,12 @@ namespace ctsTraffic {
         ctsUnsignedLong frame_rate_fps;
         ctsUnsignedLong current_frame;
         ctsSignedLongLong base_time_milliseconds;
+        enum class ServerState
+        {
+            NotStarted,
+            IdSent,
+            IoStarted
+        } state;
     };
 
 
@@ -457,14 +575,14 @@ namespace ctsTraffic {
     ///    -- Sends a DONE message to the server after processing all frames
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternMediaStreamClient : public ctsIOPatternImpl<ctsUdpStatistics> {
+    class ctsIOPatternMediaStreamClient : public ctsIOPatternStatistics<ctsUdpStatistics> {
     public:
         ctsIOPatternMediaStreamClient();
-        ~ctsIOPatternMediaStreamClient() throw();
+        ~ctsIOPatternMediaStreamClient() NOEXCEPT;
 
         // required virtual functions
         ctsIOTask next_task();
-        ctsIOPatternStatus completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw();
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
         struct FrameEntry {
@@ -481,6 +599,7 @@ namespace ctsTraffic {
             bool retried;
         };
 
+        // private member variables
         PTP_TIMER renderer_timer;
         PTP_TIMER start_timer;
 
@@ -496,6 +615,8 @@ namespace ctsTraffic {
         ctsSignedLongLong tracking_resend_sequence_number;
 
         const double frame_rate_ms_per_frame;
+        bool started_timers;
+        bool finished_stream;
 
         // these must be protected by the base class cs
         // - the base lock is always taken before our virtual functions are called
@@ -513,19 +634,19 @@ namespace ctsTraffic {
 
         // member functions which require the base lock
         _Requires_lock_held_(cs)
-        std::vector<FrameEntry>::iterator find_sequence_number(long long _seq_number) throw();
+        std::vector<FrameEntry>::iterator find_sequence_number(long long _seq_number) NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        bool received_buffered_frames() throw();
+        bool received_buffered_frames() NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        void set_next_timer() throw();
+        void set_next_timer() NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        void set_next_start_timer() throw();
+        void set_next_start_timer() NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        void render_frame() throw();
+        void render_frame() NOEXCEPT;
 
         /// The "Renderer" processes frames at the specified frame rate
         static

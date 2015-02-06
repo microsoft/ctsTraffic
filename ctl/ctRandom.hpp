@@ -81,6 +81,8 @@ namespace ctl {
         ctRandomTwister& operator=(ctRandomTwister&& _other) throw();
         void swap(ctRandomTwister& _other) throw();
 
+        ~ctRandomTwister() = default;
+
         // Non-copyable mostly because instances are space-heavy (mt19937s are big)
         ctRandomTwister(const ctRandomTwister&) = delete;
         ctRandomTwister& operator=(const ctRandomTwister&) = delete;
@@ -100,18 +102,18 @@ namespace ctl {
 
     // Implementation
 
-    inline ctRandomTwister::ctRandomTwister(unsigned long seed)
-        : engine(new engine_type(seed))
+    inline ctRandomTwister::ctRandomTwister(unsigned long seed) : 
+        engine(new engine_type(seed))
     {
     }
 
-    inline ctRandomTwister::ctRandomTwister()
-        : engine(new engine_type(std::random_device()()))
+    inline ctRandomTwister::ctRandomTwister() : 
+        engine(new engine_type(std::random_device()()))
     {
     }
 
-    inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other)
-        : engine(std::move(other.engine))
+    inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) : 
+        engine(std::move(other.engine))
     {
     }
 

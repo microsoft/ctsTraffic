@@ -20,9 +20,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <exception>
 // os headers
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 #include <ctLocks.hpp>
@@ -52,16 +53,16 @@ namespace ctsTraffic {
     ///
     /// Function to pass to the cts 'accept' functor
     ///
-    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _socket) throw();
+    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
     ///
     /// Function to pass to the cts 'IO' functor
     ///
-    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _socket) throw();
+    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
 
     class ctsMediaStreamListeningSocket {
     private:
         mutable CRITICAL_SECTION object_guard;
-        
+
         /// members must have access protected
         _Guarded_by_(object_guard)
         std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
@@ -81,15 +82,15 @@ namespace ctsTraffic {
         DWORD recv_flags;
 
     public:
-        ctsMediaStreamListeningSocket(ctl::ctScopedSocket&& _listening_socket, const ctl::ctSockaddr& _listening_addr)
-        : object_guard(),
-          thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
-          recv_buffer(),
-          socket(std::move(_listening_socket)),
-          listening_addr(_listening_addr),
-          remote_addr(),
-          remote_addr_len(0),
-          recv_flags(0)
+        ctsMediaStreamListeningSocket(ctl::ctScopedSocket&& _listening_socket, const ctl::ctSockaddr& _listening_addr) :
+            object_guard(),
+            thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
+            recv_buffer(),
+            socket(std::move(_listening_socket)),
+            listening_addr(_listening_addr),
+            remote_addr(),
+            remote_addr_len(0),
+            recv_flags(0)
         {
             ctl::ctFatalCondition(
                 !!(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP),
@@ -100,7 +101,7 @@ namespace ctsTraffic {
             }
         }
 
-        ~ctsMediaStreamListeningSocket() throw()
+        ~ctsMediaStreamListeningSocket() NOEXCEPT
         {
             // close the socket, then end the TP
             this->reset();
@@ -111,19 +112,19 @@ namespace ctsTraffic {
         /// initiates and OVERLAPPED recv to be completed in the thread pool thread_iocp
         void initiate_recv();
 
-        SOCKET get_socket() const throw()
+        SOCKET get_socket() const NOEXCEPT
         {
             ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
             return this->socket.get();
         }
 
-        ctl::ctSockaddr get_address() const throw()
+        ctl::ctSockaddr get_address() const NOEXCEPT
         {
             ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
             return this->listening_addr;
         }
 
-        void reset() throw()
+        void reset() NOEXCEPT
         {
             ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
             this->socket.reset();
@@ -145,7 +146,7 @@ namespace ctsTraffic {
         SOCKET sending_socket;
 
         _Guarded_by_(object_guard)
-        std::weak_ptr<ctsSocket> cts_socket;
+        std::weak_ptr<ctsSocket> weak_socket;
         _Guarded_by_(object_guard)
         ctl::ctSockaddr remote_addr;
         _Guarded_by_(object_guard)
@@ -157,15 +158,15 @@ namespace ctsTraffic {
         const long long connect_time;
 
     public:
-        ctsMediaStreamConnectedSocket(std::weak_ptr<ctsSocket> _cts_socket, SOCKET _s, const ctl::ctSockaddr& _addr)
-        : object_guard(),
-          task_timer(nullptr),
-          sending_socket(_s),
-          cts_socket(_cts_socket),
-          remote_addr(_addr),
-          next_task(),
-          sequence_number(0LL),
-          connect_time(ctl::ctTimer::snap_qpc_msec())
+        ctsMediaStreamConnectedSocket(std::weak_ptr<ctsSocket> _weak_socket, SOCKET _s, const ctl::ctSockaddr& _addr) :
+            object_guard(),
+            task_timer(nullptr),
+            sending_socket(_s),
+            weak_socket(_weak_socket),
+            remote_addr(_addr),
+            next_task(),
+            sequence_number(0LL),
+            connect_time(ctl::ctTimer::snap_qpc_msec())
         {
             if (!::InitializeCriticalSectionEx(&object_guard, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
@@ -179,7 +180,7 @@ namespace ctsTraffic {
             }
         }
 
-        ~ctsMediaStreamConnectedSocket() throw()
+        ~ctsMediaStreamConnectedSocket() NOEXCEPT
         {
             // stop the TP before deleting the CS
             ::SetThreadpoolTimer(task_timer, nullptr, 0, 0);
@@ -189,7 +190,7 @@ namespace ctsTraffic {
             ::DeleteCriticalSection(&object_guard);
         }
 
-        void reset() throw()
+        void reset() NOEXCEPT
         {
             // this object does not "own" this socket thus we are not closing it here
             // - it's owned by the listening object that is listening on it
@@ -198,35 +199,35 @@ namespace ctsTraffic {
         }
 
         _Acquires_lock_(object_guard)
-        SOCKET socket_lock() const throw()
+        SOCKET socket_lock() const NOEXCEPT
         {
             ::EnterCriticalSection(&object_guard);
             return sending_socket;
         }
 
         _Releases_lock_(object_guard)
-        void socket_release() const throw()
+        void socket_release() const NOEXCEPT
         {
             ::LeaveCriticalSection(&object_guard);
         }
 
-        ctl::ctSockaddr get_address() const throw()
+        ctl::ctSockaddr get_address() const NOEXCEPT
         {
             return remote_addr;
         }
 
-        long long get_startTime() const throw()
+        long long get_startTime() const NOEXCEPT
         {
             return connect_time;
         }
 
-        long long increment_sequence() throw()
+        long long increment_sequence() NOEXCEPT
         {
             return ctl::ctMemoryGuardIncrement(&sequence_number);
         }
-        void schedule_task(const ctsIOTask _task) throw()
+        void schedule_task(const ctsIOTask _task) NOEXCEPT
         {
-            auto shared_socket(this->cts_socket.lock());
+            auto shared_socket(this->weak_socket.lock());
             if (shared_socket) {
                 if (_task.time_offset_milliseconds < 1) {
                     // in this case, immediately schedule the WSASendTo
@@ -243,9 +244,9 @@ namespace ctsTraffic {
             }
         }
 
-        std::shared_ptr<ctsSocket> reference_ctsSocket() throw()
+        std::shared_ptr<ctsSocket> reference_ctsSocket() NOEXCEPT
         {
-            return this->cts_socket.lock();
+            return this->weak_socket.lock();
         }
 
         // non-copyable, no default c'tor
@@ -283,13 +284,13 @@ namespace ctsTraffic {
         ctsMediaStreamServerImpl& operator=(const ctsMediaStreamServerImpl&) = delete;
 
     public:
-        ctsMediaStreamServerImpl()
-        : listening_sockets(),
-          connected_object_guard(),
-          connected_sockets(),
-          awaiting_object_guard(),
-          accepting_sockets(),
-          awaiting_endpoints()
+        ctsMediaStreamServerImpl() :
+            listening_sockets(),
+            connected_object_guard(),
+            connected_sockets(),
+            awaiting_object_guard(),
+            accepting_sockets(),
+            awaiting_endpoints()
         {
             if (!::InitializeCriticalSectionEx(&connected_object_guard, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
@@ -356,11 +357,11 @@ namespace ctsTraffic {
         /// Schedule the first IO on the specified ctsSocket
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void schedule_io(const std::weak_ptr<ctsSocket>& _socket, const ctsIOTask& _task)
+        void schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
         {
-            auto shared_socket = _socket.lock();
+            auto shared_socket = _weak_socket.lock();
             if (!shared_socket) {
-                throw ctl::ctException(WSAENOTSOCK, L"ctsSocket already freed", L"ctsMediaStreamServer", false);
+                throw ctl::ctException(WSAECONNABORTED, L"ctsSocket already freed", L"ctsMediaStreamServer", false);
             }
 
             // must guard connected_sockets since we need to add it
@@ -371,12 +372,12 @@ namespace ctsTraffic {
                 std::begin(this->connected_sockets),
                 std::end(this->connected_sockets),
                 [&] (const std::unique_ptr<ctsMediaStreamConnectedSocket>& _connected_socket) {
-                return (shared_socket->get_target() == _connected_socket->get_address());
+                return (shared_socket->target_address() == _connected_socket->get_address());
             });
             if (found_socket == std::end(this->connected_sockets)) {
                 ctsConfig::PrintDebug(
-                    L"\t\tctsMediaStreamServer - failed to find the socket with remote address %s in our connected socket list",
-                    shared_socket->get_target().writeCompleteAddress().c_str());
+                    L"\t\tctsMediaStreamServer - failed to find the socket with remote address %s in our connected socket list\n",
+                    shared_socket->target_address().writeCompleteAddress().c_str());
                 throw ctl::ctException(ERROR_INVALID_DATA, L"ctsSocket was not found in the Connected Sockets", L"ctsMediaStreamServer", false);
             }
 
@@ -390,16 +391,16 @@ namespace ctsTraffic {
         ///   which will create a corresponding ctsMediaStreamConnectedSocket in the process
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void accept_socket(const std::weak_ptr<ctsSocket>& _socket)
+        void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
         {
-            auto shared_socket(_socket.lock());
+            auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 // need a writer lock to allow modifying accepting_sockets and awaiting_endpoints
                 ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&this->awaiting_object_guard);
 
                 if (0 == this->awaiting_endpoints.size()) {
                     // just add it to our accepting sockets vector under the writer lock
-                    this->accepting_sockets.push_back(_socket);
+                    this->accepting_sockets.push_back(_weak_socket);
 
                 } else {
                     auto waiting_endpoint = this->awaiting_endpoints.rbegin();
@@ -409,7 +410,7 @@ namespace ctsTraffic {
                     {
                         ctl::ctAutoReleaseCriticalSection lock_connected_object(&this->connected_object_guard);
                         this->connected_sockets.emplace_back(std::make_unique<ctsMediaStreamConnectedSocket>(
-                            _socket, waiting_endpoint->first, waiting_endpoint->second));
+                            _weak_socket, waiting_endpoint->first, waiting_endpoint->second));
                     }
 
                     // now complete the ctsSocket 'Create' request
@@ -426,8 +427,8 @@ namespace ctsTraffic {
                         L"Could not find the socket (%Iu) in the waiting_endpoint from our listening sockets (%p)\n",
                         waiting_endpoint->first, &this->listening_sockets);
 
-                    shared_socket->set_local((*found_socket)->get_address());
-                    shared_socket->set_target(waiting_endpoint->second);
+                    shared_socket->set_local_address((*found_socket)->get_address());
+                    shared_socket->set_target_address(waiting_endpoint->second);
                     shared_socket->complete_state(NO_ERROR);
 
                     // if added to connected_sockets, can then safely remove it from the waiting endpoint
@@ -442,7 +443,7 @@ namespace ctsTraffic {
         /// - remove_socket takes the remote address to find the socket
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void remove_socket(const ctl::ctSockaddr& _target_addr)
+        void remove_socket(const ctl::ctSockaddr& _target_addr, unsigned long _error_code)
         {
             std::unique_ptr<ctsMediaStreamConnectedSocket> removed_socket;
             // scoping to the lock
@@ -474,7 +475,7 @@ namespace ctsTraffic {
             if (removed_socket) {
                 std::shared_ptr<ctsSocket> shared_socket(removed_socket->reference_ctsSocket());
                 if (shared_socket) {
-                    shared_socket->complete_state(0);
+                    shared_socket->complete_state(_error_code);
                 }
             }
             // only after releasing the lock can we delete the removed ctsMediaStreamConnectedSocket
@@ -522,25 +523,25 @@ namespace ctsTraffic {
             while (!this->accepting_sockets.empty()) {
                 auto weak_instance = *this->accepting_sockets.rbegin();
                 auto shared_instance = weak_instance.lock();
-                if (shared_instance.get() != nullptr) {
+                if (shared_instance) {
                     // 'move' the accepting socket to connected
                     // - scope the lock
-                    {
-                        ctl::ctAutoReleaseCriticalSection lock_connected_object(&this->connected_object_guard);
-                        this->connected_sockets.emplace_back(std::make_unique<ctsMediaStreamConnectedSocket>(
-                            weak_instance, _socket.get(), _target_addr));
-                    }
+                        {
+                            ctl::ctAutoReleaseCriticalSection lock_connected_object(&this->connected_object_guard);
+                            this->connected_sockets.emplace_back(std::make_unique<ctsMediaStreamConnectedSocket>(
+                                weak_instance, _socket.get(), _target_addr));
+                        }
 
                     // verify is successfully added to connected_sockets before popping off accepting_sockets
                     added_connection = true;
                     this->accepting_sockets.pop_back();
 
                     // now complete the accepted ctsSocket back to the ctsSocketState
-                    shared_instance->set_local(_local_addr);
-                    shared_instance->set_target(_target_addr);
-                    shared_instance->complete_state(0);
+                    shared_instance->set_local_address(_local_addr);
+                    shared_instance->set_target_address(_target_addr);
+                    shared_instance->complete_state(NO_ERROR);
 
-                    ctsConfig::PrintNewConnection(_target_addr);
+                    ctsConfig::PrintNewConnection(_local_addr, _target_addr);
                     break;
                 }
             }
@@ -582,12 +583,16 @@ namespace ctsTraffic {
             const std::unique_ptr<ctsMediaStreamConnectedSocket>& found_protected_socket = *found_socket;
             ctl::ctSockaddr target_addr(found_protected_socket->get_address());
 
-            SOCKET s = found_protected_socket->socket_lock();
+            SOCKET socket = found_protected_socket->socket_lock();
 #pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
             ctlScopeGuard(releaseSocketLockOnExit, { found_protected_socket->socket_release(); });
 
-            if (s != INVALID_SOCKET) {
+            if (socket != INVALID_SOCKET) {
                 long long seq_number(ctl::ctMemoryGuardRead(&_message.sequence_number));
+                ctsConfig::PrintDebug(
+                    L"\t\tctsMediaStreamServer resending seq number %lld (%lu bytes)",
+                    seq_number,
+                    static_cast<unsigned long>(ctsConfig::GetMediaStream().FrameSizeBytes));
 
                 ctsMediaStreamSendRequests sending_requests(
                     ctsConfig::GetMediaStream().FrameSizeBytes, // bytes to send
@@ -595,13 +600,16 @@ namespace ctsTraffic {
                     ctsIOPattern::AccessSharedBuffer());
 
                 for (auto& send_request : sending_requests) {
+                    ctsConfig::PrintDebug(
+                        L" (%u bytes)",
+                        static_cast<unsigned long>(send_request.size()));
                     DWORD bytes_sent;
-                    if (SOCKET_ERROR == ::WSASendTo(s, send_request.data(), static_cast<DWORD>(send_request.size()), &bytes_sent, 0, target_addr.sockaddr(), target_addr.length(), nullptr, nullptr)) {
+                    if (SOCKET_ERROR == ::WSASendTo(socket, send_request.data(), static_cast<DWORD>(send_request.size()), &bytes_sent, 0, target_addr.sockaddr(), target_addr.length(), nullptr, nullptr)) {
                         auto error = ::WSAGetLastError();
                         ctsConfig::PrintErrorInfo(
                             L"[%.3f] WSASendTo(%Iu, seq %lld, %s) for a RESEND request failed [%d]\n",
                             ctsConfig::GetStatusTimeStamp(),
-                            s,
+                            socket,
                             seq_number,
                             target_addr.writeCompleteAddress().c_str(),
                             error);
@@ -613,6 +621,7 @@ namespace ctsTraffic {
                             target_addr.writeCompleteAddress().c_str(), _message.sequence_number, bytes_sent);
                     }
                 }
+                ctsConfig::PrintDebug(L"\n");
             }
         }
     };
@@ -644,20 +653,20 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline
-    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _socket) throw()
+    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         try {
-            if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, NULL, NULL)) {
+            if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, nullptr, nullptr)) {
                 throw std::runtime_error("ctsMediaStreamServerListener could not be instantiated");
             }
 
             // ctsMediaStreamServerImpl will complete the ctsSocket object
             // when a client request comes in to be 'accepted'
-            pimpl->accept_socket(_socket);
+            pimpl->accept_socket(_weak_socket);
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            auto shared_socket(_socket.lock());
+            auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 shared_socket->complete_state(ERROR_OUTOFMEMORY);
             }
@@ -672,35 +681,39 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline
-    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _socket) throw()
+    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         ctsIOTask next_task;
         try {
-            if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, NULL, NULL)) {
+            if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, nullptr, nullptr)) {
                 throw std::runtime_error("ctsMediaStreamServerIo could not be instantiated");
             }
 
-            auto shared_socket(_socket.lock());
+            auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
+                // hold a reference on the iopattern
+                auto shared_pattern(shared_socket->io_pattern());
                 do {
-                    next_task = shared_socket->initiate_io();
-                    if (next_task.ioAction != ctsIOTask::IOAction::None) {
-                        pimpl->schedule_io(_socket, next_task);
-                        // reset the IoAction after successfully scheduling
-                        next_task.ioAction = ctsIOTask::IOAction::None;
+                    next_task = shared_pattern->initiate_io();
+                    if (next_task.ioAction != IOTaskAction::None) {
+                        pimpl->schedule_io(_weak_socket, next_task);
                     }
-                } while (next_task.ioAction != ctsIOTask::IOAction::None);
+                } while (next_task.ioAction != IOTaskAction::None);
             }
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            auto exception_shared_socket(_socket.lock());
-            if (exception_shared_socket) {
-                if (next_task.ioAction != ctsIOTask::IOAction::None) {
+            if (next_task.ioAction != IOTaskAction::None) {
+                auto exception_shared_socket(_weak_socket.lock());
+                if (exception_shared_socket) {
+                    // hold a reference on the iopattern
+                    auto exception_shared_pattern(exception_shared_socket->io_pattern());
                     // must complete any IO that was requested but not scheduled
-                    exception_shared_socket->complete_io(next_task, 0, WSAENOBUFS);
+                    exception_shared_pattern->complete_io(next_task, 0, WSAENOBUFS);
+                    if (0 == exception_shared_socket->pended_io()) {
+                        exception_shared_socket->complete_state(ERROR_OUTOFMEMORY);
+                    }
                 }
-                exception_shared_socket->complete_state(ERROR_OUTOFMEMORY);
             }
         }
     }
@@ -722,74 +735,71 @@ namespace ctsTraffic {
 
             try {
                 // scope to the object lock
-                {
-                    // must take the object lock before touching this->socket
-                    ctl::ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                    {
+                        // must take the object lock before touching this->socket
+                        ctl::ctAutoReleaseCriticalSection lock_object(&this->object_guard);
 
-                    if (INVALID_SOCKET == this->socket.get()) {
-                        // the listening socket was closed - just exit
-                        return;
-                    }
+                        if (INVALID_SOCKET == this->socket.get()) {
+                            // the listening socket was closed - just exit
+                            return;
+                        }
 
-                    DWORD bytes_received;
-                    if (!::WSAGetOverlappedResult(this->socket.get(), _ov, &bytes_received, FALSE, &this->recv_flags)) {
-                        // recvfrom failed
-                        auto gle = ::WSAGetLastError();
-                        if (WSAECONNRESET == gle) {
-                            // the remote endpoint is down - just remove this socket
-                            ctsConfig::PrintErrorInfo(
-                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable\n",
-                                ctsConfig::GetStatusTimeStamp(),
-                                this->remote_addr.writeCompleteAddress().c_str());
-
+                        DWORD bytes_received;
+                        if (!::WSAGetOverlappedResult(this->socket.get(), _ov, &bytes_received, FALSE, &this->recv_flags)) {
+                            // recvfrom failed
+                            auto gle = ::WSAGetLastError();
+                            if (WSAECONNRESET == gle) {
+                                // the remote endpoint is down - just remove this socket
+                                ctsConfig::PrintErrorInfo(
+                                    L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable\n",
+                                    ctsConfig::GetStatusTimeStamp(),
+                                    this->remote_addr.writeCompleteAddress().c_str());
+                            } else {
+                                ctsConfig::PrintErrorInfo(
+                                    L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed [%d]\n",
+                                    ctsConfig::GetStatusTimeStamp(),
+                                    ::WSAGetLastError());
+                            }
                             // cannot hold the object lock when remove this object through the pimpl
-                            pimpl_operation = ([&] () { pimpl->remove_socket(this->remote_addr); });
+                            pimpl_operation = ([&] () { pimpl->remove_socket(this->remote_addr, gle); });
 
                         } else {
-                            ctsConfig::PrintErrorInfo(
-                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed [%d]\n",
-                                ctsConfig::GetStatusTimeStamp(),
-                                ::WSAGetLastError());
-                        }
-
-                    } else {
-                        ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
-                        switch (message.action) {
-                            case ctsMediaStreamMessage::Action::START:
-                                ctsConfig::PrintDebug(
-                                    L"\t\tctsMediaStreamServer - processing START from %s\n",
-                                    this->remote_addr.writeCompleteAddress().c_str());
+                            ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
+                            switch (message.action) {
+                                case MediaStreamAction::START:
+                                    ctsConfig::PrintDebug(
+                                        L"\t\tctsMediaStreamServer - processing START from %s\n",
+                                        this->remote_addr.writeCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
-                                // cannot hold the object lock when remove this object through the pimpl
-                                // - all values must be passed to the lambda by value not by reference since they will be accessed outside the lock
-                                pimpl_operation = ([&] () { pimpl->start(this->socket, this->listening_addr, this->remote_addr); });
+                                    // Cannot be holding the object_guard when calling into any pimpl-> methods
+                                    pimpl_operation = ([&] () { pimpl->start(this->socket, this->listening_addr, this->remote_addr); });
 #endif
-                                break;
+                                    break;
 
-                            case ctsMediaStreamMessage::Action::RESEND:
-                                ctsConfig::PrintDebug(
-                                    L"\t\tctsMediaStreamServer - processing RESEND from %s - sending sequence number %lld\n",
-                                    this->remote_addr.writeCompleteAddress().c_str(),
-                                    ctl::ctMemoryGuardRead(&message.sequence_number));
+                                case MediaStreamAction::RESEND:
+                                    ctsConfig::PrintDebug(
+                                        L"\t\tctsMediaStreamServer - processing RESEND from %s - sending sequence number %lld\n",
+                                        this->remote_addr.writeCompleteAddress().c_str(),
+                                        ctl::ctMemoryGuardRead(&message.sequence_number));
 
-                                // cannot hold the object lock when remove this object through the pimpl
-                                pimpl_operation = ([&] () { pimpl->resend(message, this->remote_addr); });
-                                break;
+                                    // Cannot be holding the object_guard when calling into any pimpl-> methods
+                                    pimpl_operation = ([&] () { pimpl->resend(message, this->remote_addr); });
+                                    break;
 
-                            case ctsMediaStreamMessage::Action::DONE:
-                                ctsConfig::PrintDebug(
-                                    L"\t\tctsMediaStreamServer - processing DONE from %s\n",
-                                    this->remote_addr.writeCompleteAddress().c_str());
+                                case MediaStreamAction::DONE:
+                                    ctsConfig::PrintDebug(
+                                        L"\t\tctsMediaStreamServer - processing DONE from %s\n",
+                                        this->remote_addr.writeCompleteAddress().c_str());
 
-                                // cannot hold the object lock when remove this object through the pimpl
-                                pimpl_operation = ([&] () {pimpl->remove_socket(this->remote_addr); });
-                                break;
+                                    // Cannot be holding the object_guard when calling into any pimpl-> methods
+                                    pimpl_operation = ([&] () {pimpl->remove_socket(this->remote_addr, NO_ERROR); });
+                                    break;
 
-                            default:
-                                ctl::ctAlwaysFatalCondition(L"ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.action, this->recv_buffer.data());
+                                default:
+                                    ctl::ctAlwaysFatalCondition(L"ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.action, this->recv_buffer.data());
+                            }
                         }
                     }
-                }
 
                 // now execute the stored call outside the lock but inside the try/catch
                 pimpl_operation();
@@ -803,7 +813,9 @@ namespace ctsTraffic {
 
         // continue to try to post a recv if the call fails
         int error = SOCKET_ERROR;
+        unsigned long loop_counter = 0;
         while (error != NO_ERROR) {
+            ++loop_counter;
             ctl::ctAutoReleaseCriticalSection lock_socket(&this->object_guard);
             if (this->socket.get() != INVALID_SOCKET) {
                 WSABUF wsabuf;
@@ -828,15 +840,15 @@ namespace ctsTraffic {
                         // - for any other error, potentially close the socket, recreate it, and start over
                         this->thread_iocp->cancel_request(pov);
                         if (WSAECONNRESET == error) {
-                            ctsConfig::PrintErrorInfo(
-                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo failed with port unreachable\n",
-                                ctsConfig::GetStatusTimeStamp());
+                            // when this fails on retry, it has already failed from a prior WSARecvFrom request
+                            // - no need to continue to log it and fill up the error log
                         } else {
                             ctsConfig::PrintErrorInfo(
-                                L"[%.3f] WSARecvFrom failed (SOCKET %Iu) with error (%d)\n",
+                                L"[%.3f] WSARecvFrom failed (SOCKET %Iu) with error (%d) [%u]\n",
                                 ctsConfig::GetStatusTimeStamp(),
                                 this->socket.get(),
-                                error);
+                                error,
+                                loop_counter);
                         }
                     }
                 } else {
@@ -846,6 +858,9 @@ namespace ctsTraffic {
                 // if we no longer have a socket exit the loop
                 break;
             }
+        }
+        if (loop_counter > 1) {
+            ctsConfig::PrintDebug(L"\t\tctsMediaStreamServer : WSARecvFrom failed %u times in a row trying to get another recv post\n", loop_counter);
         }
     }
 
@@ -864,65 +879,81 @@ namespace ctsTraffic {
             int error = WSA_OPERATION_ABORTED;
             unsigned bytes_transferred = 0;
 
-            SOCKET s = this_ptr->socket_lock();
-            if (s != INVALID_SOCKET) {
-                long long seq_number = this_ptr->increment_sequence();
-
-#ifdef TESTING_RESEND
-                if (0 == seq_number % 5) {
-                    ctsConfig::PrintDebug(L"********* TESTING ***** SKIPPING EVERY 5 SEQUENCE NUMBERS\n");
-                    bytes_transferred = this_ptr->next_task.buffer_length;
-                    error = NO_ERROR;
+            SOCKET socket = this_ptr->socket_lock();
+            if (socket != INVALID_SOCKET) {
+                if (ctsIOTask::BufferType::UdpConnectionId == this_ptr->next_task.buffer_type) {
+                    // making a synchronous call
+                    DWORD bytes_sent;
+                    WSABUF wsabuf;
+                    wsabuf.buf = this_ptr->next_task.buffer;
+                    wsabuf.len = this_ptr->next_task.buffer_length;
+                    if (SOCKET_ERROR == ::WSASendTo(socket, &wsabuf, 1, &bytes_sent, 0, this_ptr->remote_addr.sockaddr(), this_ptr->remote_addr.length(), nullptr, nullptr)) {
+                        error = ::WSAGetLastError();
+                    } else {
+                        bytes_transferred = bytes_sent;
+                        error = NO_ERROR;
+                    }
 
                 } else {
-#endif
-                    ctsMediaStreamSendRequests sending_requests(
-                        this_ptr->next_task.buffer_length, // total bytes to send
-                        seq_number,
-                        this_ptr->next_task.buffer);
+                    auto seq_number = this_ptr->increment_sequence();
 
-                    for (auto& send_request : sending_requests) {
-                        DWORD bytes_sent;
-                        // making a synchronous call
-                        if (SOCKET_ERROR == ::WSASendTo(s, send_request.data(), static_cast<DWORD>(send_request.size()), &bytes_sent, 0, this_ptr->remote_addr.sockaddr(), this_ptr->remote_addr.length(), nullptr, nullptr)) {
-                            error = ::WSAGetLastError();
-                            if (WSAEMSGSIZE == error) {
-                                unsigned long bytes_requested = 0;
-                                // iterate across each WSABUF* in the array
-                                for (auto& wasbuf : send_request) {
-                                    bytes_requested += wasbuf.len;
-                                }
-                                ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes\n",
-                                    ctsConfig::GetStatusTimeStamp(),
-                                    s,
-                                    seq_number,
-                                    this_ptr->remote_addr.writeCompleteAddress().c_str(),
-                                    bytes_requested);
-                            } else {
-                                ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed [%d]\n",
-                                    ctsConfig::GetStatusTimeStamp(),
-                                    s,
-                                    seq_number,
-                                    this_ptr->remote_addr.writeCompleteAddress().c_str(),
-                                    error);
-                            }
-                            // break out early if send fails
-                            break;
-                        } else {
-                            ctsConfig::PrintDebug(
-                                L"\t\tctsMediaStreamServer SendThreadProc sent %s seq number %lld (%lu bytes)\n",
-                                this_ptr->remote_addr.writeCompleteAddress().c_str(),
-                                seq_number,
-                                bytes_sent);
-                            bytes_transferred += bytes_sent;
-                            error = NO_ERROR;
-                        }
-                    }
 #ifdef TESTING_RESEND
-                }
+                    if (0 == seq_number % 5) {
+                        ctsConfig::PrintDebug(L"********* TESTING ***** SKIPPING EVERY 5 SEQUENCE NUMBERS\n");
+                        bytes_transferred = this_ptr->next_task.buffer_length;
+                        error = NO_ERROR;
+
+                    } else {
 #endif
+                        ctsConfig::PrintDebug(
+                            L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
+                            seq_number,
+                            this_ptr->next_task.buffer_length);
+
+                        ctsMediaStreamSendRequests sending_requests(
+                            this_ptr->next_task.buffer_length, // total bytes to send
+                            seq_number,
+                            this_ptr->next_task.buffer);
+
+                        for (auto& send_request : sending_requests) {
+                            // making a synchronous call
+                            DWORD bytes_sent;
+                            if (SOCKET_ERROR == ::WSASendTo(socket, send_request.data(), static_cast<DWORD>(send_request.size()), &bytes_sent, 0, this_ptr->remote_addr.sockaddr(), this_ptr->remote_addr.length(), nullptr, nullptr)) {
+                                error = ::WSAGetLastError();
+                                if (WSAEMSGSIZE == error) {
+                                    unsigned long bytes_requested = 0;
+                                    // iterate across each WSABUF* in the array
+                                    for (auto& wasbuf : send_request) {
+                                        bytes_requested += wasbuf.len;
+                                    }
+                                    ctsConfig::PrintErrorInfo(
+                                        L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes\n",
+                                        ctsConfig::GetStatusTimeStamp(),
+                                        socket,
+                                        seq_number,
+                                        this_ptr->remote_addr.writeCompleteAddress().c_str(),
+                                        bytes_requested);
+                                } else {
+                                    ctsConfig::PrintErrorInfo(
+                                        L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed [%d]\n",
+                                        ctsConfig::GetStatusTimeStamp(),
+                                        socket,
+                                        seq_number,
+                                        this_ptr->remote_addr.writeCompleteAddress().c_str(),
+                                        error);
+                                }
+                                // break out early if send fails
+                                break;
+
+                            } else {
+                                bytes_transferred += bytes_sent;
+                                error = NO_ERROR;
+                            }
+                        }
+#ifdef TESTING_RESEND
+                    }
+#endif
+                }
             }
             this_ptr->socket_release();
 
@@ -930,32 +961,34 @@ namespace ctsTraffic {
         }; // end of lambda definition
 
         // take a lock on the ctsSocket for this 'connection'
-        std::shared_ptr<ctsSocket> shared_ctsSocket = this_ptr->cts_socket.lock();
-        if (shared_ctsSocket.get() == nullptr) {
+        auto shared_socket = this_ptr->weak_socket.lock();
+        if (!shared_socket) {
             // socket is already gone - remove it from the impl and exit
-            pimpl->remove_socket(this_ptr->remote_addr);
+            pimpl->remove_socket(this_ptr->remote_addr, WSAECONNABORTED);
             return;
         }
+        // hold a reference on the iopattern
+        auto shared_pattern(shared_socket->io_pattern());
 
         ctl::ctAutoReleaseCriticalSection socket_lock(&this_ptr->object_guard);
 
         // post a send, then loop sending/scheduling as necessary
         auto send_results = PostSendTo(this_ptr);
-        auto status = shared_ctsSocket->complete_io(
+        auto status = shared_pattern->complete_io(
             this_ptr->next_task,
             std::get<0>(send_results),
             std::get<1>(send_results));
 
         ctsIOTask current_task = this_ptr->next_task;
-        while (ctsSocket::IOStatus::SuccessMoreIO == status && ctsIOTask::IOAction::None != current_task.ioAction) {
-            current_task = shared_ctsSocket->initiate_io();
-            if (ctsIOTask::IOAction::Send == current_task.ioAction) {
+        while (ctsIOStatus::ContinueIo == status && IOTaskAction::None != current_task.ioAction) {
+            current_task = shared_pattern->initiate_io();
+            if (IOTaskAction::Send == current_task.ioAction) {
                 this_ptr->next_task = current_task;
                 // if the time is less than one ms., we need to catch up on sends
                 // - post the sendto immediately instead of scheduling for later
                 if (this_ptr->next_task.time_offset_milliseconds < 1) {
                     send_results = PostSendTo(this_ptr);
-                    status = shared_ctsSocket->complete_io(
+                    status = shared_pattern->complete_io(
                         this_ptr->next_task,
                         std::get<0>(send_results),
                         std::get<1>(send_results));

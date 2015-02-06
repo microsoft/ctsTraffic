@@ -17,16 +17,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <functional>
 // os headers
-#include <Winsock2.h>
 #include <windows.h>
+#include <Winsock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctSockaddr.hpp>
+#include <ctException.hpp>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
-
 
 
 namespace ctsTraffic {
@@ -36,7 +36,29 @@ namespace ctsTraffic {
     ///
     class ctsSocketState;
 
+    class ctsSocketGuard {
+    public:
+        // _Releases_lock_(cts_socket->socket_cs)
+        ~ctsSocketGuard() NOEXCEPT;
+        
+        // movable
+        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT;
 
+        SOCKET get() const NOEXCEPT;
+
+        /// no default c'tor
+        /// not copyable
+        ctsSocketGuard() = delete;
+        ctsSocketGuard(const ctsSocketGuard&) = delete;
+        ctsSocketGuard& operator=(const ctsSocketGuard&) = delete;
+    private:
+        std::shared_ptr<const ctsSocket> cts_socket;
+
+        /// constructor is private to ctsSocket factory function
+        friend class ctsSocket;
+        // _Acquires_lock_(cts_socket->socket_cs)
+        ctsSocketGuard(const std::shared_ptr<ctsSocket>& _cts_socket) NOEXCEPT;
+    };
     ///
     /// A safe socket container
     /// - ensures has a lock on the socket while in scope
@@ -44,12 +66,32 @@ namespace ctsTraffic {
     class ctsSocket : public std::enable_shared_from_this<ctsSocket> {
     public:
         ///
+        /// Callers should call LockSocket() in order to gain access to the SOCKET.
+        /// Callers then have exclusive access to the SOCKET through the returned ctsSocketGuard
+        /// - ctsSocketGuard's d'tor will release the lock on the socket
+        /// Callers are expected to hold this lock just long enough to make API calls with the SOCKET
+        ///
+        /// Callers are *not* allowed to call closesocket() with the returned SOCKET, even under a lock
+        /// - as doing so changes this SOCKET state outside of this container's knowledge
+        ///
+        /// Callers may call any other method in ctsSocket with or without this lock
+        ///
+        static ctsSocketGuard LockSocket(const std::shared_ptr<ctsSocket>& _shared_socket) NOEXCEPT
+        {
+            ctl::ctFatalCondition(
+                !_shared_socket,
+                L"ctsSocket::LockSocket was given a null std::shared_ptr<ctsSocket> (%p)", &_shared_socket);
+
+            return (ctsSocketGuard(_shared_socket));
+        }
+
+        ///
         /// c'tor requiring a parent ctsSocket reference
         ///
         ctsSocket(_In_ std::weak_ptr<ctsSocketState> _parent);
 
         _No_competing_thread_
-        ~ctsSocket() throw();
+        ~ctsSocket() NOEXCEPT;
 
         ///
         /// Assigns the object a new SOCKET value and fully initializes the object for use
@@ -59,31 +101,11 @@ namespace ctsTraffic {
         ///
         /// Cannot call any method in this object before this method succeeds
         ///
-        /// Does not associate with an IOCP ThreadPool by default
+        /// Does not require the socket to be locked
         ///
         /// A no-fail operation
         ///
-        void set_socket(SOCKET _socket) throw();
-
-        ///
-        /// Callers should call lock_socket() in order to gain access to the SOCKET.
-        /// Callers then have exclusive access to the SOCKET until unlock_socket() is called.
-        /// Callers are expected to hold this lock just long enough to make API calls with the SOCKET
-        /// - immediately after which they should call unlock_socket()
-        ///
-        /// Callers *must* call unlock_socket() on the same thread as lock_socket()
-        /// - the same requirement that comes with a CRITICAL_SECTION 
-        /// - the primative these functions use
-        ///
-        /// Callers are *not* allowed to call closesocket() with the returned SOCKET, even under a lock
-        /// - as doing so changes this SOCKET state outside of this container's knowledge
-        ///
-        /// Callers may call any other method in ctsSocket with or without this lock
-        ///
-        /// Both functions are no-throw
-        ///
-        _Acquires_lock_(this->socket_cs) SOCKET lock_socket() throw();
-        _Releases_lock_(this->socket_cs) void unlock_socket() throw();
+        void set_socket(SOCKET _socket) NOEXCEPT;
 
         ///
         /// Safely closes the encapsulated socket 
@@ -94,9 +116,9 @@ namespace ctsTraffic {
         ///
         /// It's made available for injectors who may want to close the SOCKET at random times
         /// 
-        /// Does not require the lock_socket
+        /// Does not require the socket to be locked
         ///
-        void close_socket() throw();
+        void close_socket() NOEXCEPT;
 
         ///
         /// Provides access to the IOCP ThreadPool associated with the SOCKET
@@ -104,87 +126,50 @@ namespace ctsTraffic {
         ///
         /// This can fail under low-resource conditions
         /// - can throw std::bad_alloc or ctl::ctException
+        /// 
+        /// Does not require the socket to be locked
         ///
         std::shared_ptr<ctl::ctThreadIocp> thread_pool();
-
-        ///
-        /// Callers access initiate_io() to retrieve a ctsIOTask object for the next IO operation
-        /// - they are expected to retain that ctsIOTask object until the IO operation completes
-        /// - at which time they pass it back to complete_io()
-        ///
-        /// initiate_io() can be called repeatedly by the caller if they want overlapping IO calls
-        /// - without forced to wait for complete_io() for the next IO request
-        ///
-        /// complete_io() should be called for every returned initiate_io with the following:
-        ///   _task : the ctsIOTask that was provided to perform
-        ///   _current_transfer : the number of bytes successfully transferred from the task
-        ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
-        ///
-        /// initiate_io() cannot fail
-        /// complete_io() cannot fail
-        ///
-        ctsIOTask initiate_io() throw();
-        ///
-        /// complete_io instructs the caller
-        /// - if the IO should be treated as a failure
-        /// - if the protocol is complete [no more IO on this socket]
-        ///
-        /// failure == no more IO on this socket
-        ///
-        enum IOStatus : unsigned short {
-            SuccessMoreIO,
-            SuccessDone,
-            Failure
-        };
-        IOStatus complete_io(ctsIOTask _task, unsigned _bytes_transferred, unsigned _status_code) throw();
 
         ///
         /// Callers are expected to call this when their 'stage' is complete for this SOCKET
         /// The only successful DWORD value is NO_ERROR (0)
         /// Any other DWORD indicates error
         ///
-        void complete_state(DWORD _dwerror) throw();
+        void complete_state(DWORD _error_code) NOEXCEPT;
 
         ///
         /// Gets/Sets the local address of the SOCKET
         ///
-        const ctl::ctSockaddr get_local() const throw();
-        void set_local(const ctl::ctSockaddr& _target) throw();
+        const ctl::ctSockaddr local_address() const NOEXCEPT;
+        void set_local_address(const ctl::ctSockaddr& _local) NOEXCEPT;
 
         ///
         /// Gets/Sets the target address of the SOCKET, if there is one
         ///
-        const ctl::ctSockaddr get_target() const throw();
-        void set_target(const ctl::ctSockaddr& _target) throw();
+        const ctl::ctSockaddr target_address() const NOEXCEPT;
+        void set_target_address(const ctl::ctSockaddr& _target) NOEXCEPT;
 
         ///
-        /// Makes available to callers the error code recorded for the socket
-        /// Will return MAXUINT while still connected and processing IO
+        /// Get/Set the ctsIOPattern
         ///
-        unsigned get_last_error() const throw();
+        std::shared_ptr<ctsIOPattern> io_pattern() const NOEXCEPT;
+        void set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) NOEXCEPT;
 
         ///
         /// methods for functors to use for refcounting the # of IO they have issued on this socket
         ///
-        LONG increment_io() throw();
-        LONG decrement_io() throw();
-
+        /// Does not require the socket to be locked
         ///
-        /// methods for constructing a new IO Pattern
-        /// - construct returns a Win32 error code if can construct the pattern
-        ///
-        DWORD construct_pattern() throw();
+        long increment_io() NOEXCEPT;
+        long decrement_io() NOEXCEPT;
+        long pended_io() NOEXCEPT;
 
         ///
         /// method for the parent to instruct the ctsSocket to print the connection data
         /// - which it is tracking, including the internal statistics
         ///
-        void print_pattern_results() const throw();
-
-        ///
-        /// Optional callback function which is passed down to the IOPattern instance
-        /// 
-        void register_pattern_callback(std::function<void(const ctsIOTask&)> _callback);
+        void print_pattern_results(unsigned long _last_error) const NOEXCEPT;
 
         ///
         /// Function to register a task for completion at the future point in time referenced
@@ -202,40 +187,67 @@ namespace ctsTraffic {
 
     private:
         ///
-        /// ctsSocketState is given friend-access to call shutdown and set_last_error
+        /// ctsSocketState is given friend-access to call shutdown
+        /// ctsSocketGuard is given friend-access to call lock_socket and unlock_socket
         ///
         friend class ctsSocketState;
-        void shutdown() throw();
-        void set_last_error(DWORD _error) throw();
-        void reset_last_error() throw();
+        friend class ctsSocketGuard;
+
+        void shutdown() NOEXCEPT;
+
+        // callable from ctsSocketGuard
+        _Acquires_lock_(socket_cs) void lock_socket() const NOEXCEPT;
+        _Releases_lock_(socket_cs) void unlock_socket() const NOEXCEPT;
 
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
-        mutable CRITICAL_SECTION            socket_cs;
+        mutable CRITICAL_SECTION socket_cs;
+        _Guarded_by_(socket_cs) SOCKET socket;
+        _Interlocked_ long io_count;
 
-        _Guarded_by_(socket_cs)
-        SOCKET                              socket;
-
-        _Interlocked_
-        LONG                                io_count;
-
-        // maintain a weak-reference to the parent
-        std::weak_ptr<ctsSocketState>       parent;
+        // maintain a weak-reference to the parent and child
+        std::weak_ptr<ctsSocketState> parent;
+        // maintain a shared_ptr to the pattern
+        std::shared_ptr<ctsIOPattern> pattern;
 
         /// only guarded when returning to the caller
         std::shared_ptr<ctl::ctThreadIocp>      tp_iocp;
         std::shared_ptr<ctl::ctThreadpoolTimer> tp_timer;
 
-        /// to avoid race conditions, can't be guarded when calling into the IOPattern
-        // _Requires_lock_not_held_(socket_cs)
-        std::shared_ptr<ctsIOPattern>       io_pattern;
-
-        ctl::ctSockaddr                     local_address;
-        ctl::ctSockaddr                     target_address;
-
-        _Guarded_by_(socket_cs)
-        unsigned                            last_error;
+        ctl::ctSockaddr local_sockaddr;
+        ctl::ctSockaddr target_sockaddr;
     };
 
+
+    ///
+    /// Definitions for ctsSocketGuard must come after ctsSocket is declared
+    ///
+    // _Acquires_lock_(cts_socket->socket_cs)
+    inline
+    ctsSocketGuard::ctsSocketGuard(const std::shared_ptr<ctsSocket>& _cts_socket) NOEXCEPT 
+    : cts_socket(_cts_socket)
+    {
+        cts_socket->lock_socket();
+    }
+    // _Releases_lock_(cts_socket->socket_cs)
+    inline
+    ctsSocketGuard::~ctsSocketGuard() NOEXCEPT
+    {
+        // will be null if moved-from
+        if (cts_socket) {
+            cts_socket->unlock_socket();
+        }
+    }
+    inline
+    ctsSocketGuard::ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT 
+    : cts_socket(std::move(_rvalue.cts_socket))
+    {
+        _rvalue.cts_socket.reset();
+    }
+    inline
+    SOCKET ctsSocketGuard::get() const NOEXCEPT
+    {
+        return this->cts_socket->socket;
+    }
 } // namespace

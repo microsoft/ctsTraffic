@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 
 /// ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>
@@ -33,26 +34,25 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    ctsSocket::ctsSocket(_In_ std::weak_ptr<ctsSocketState> _parent)
-    : socket_cs(),
-      socket(INVALID_SOCKET),
-      io_count(0),
-      local_address(),
-      target_address(),
-      tp_iocp(),
-      tp_timer(),
-      io_pattern(),
-      parent(_parent),
-      last_error(ctsIOPatternStatusIORunning)
+    ctsSocket::ctsSocket(_In_ weak_ptr<ctsSocketState> _parent) : 
+        socket_cs(),
+        socket(INVALID_SOCKET),
+        io_count(0),
+        parent(_parent),
+        pattern(),
+        tp_iocp(),
+        tp_timer(),
+        local_sockaddr(),
+        target_sockaddr()
     {
         /// using a common spin count from base OS usage & crt usage
         if (!::InitializeCriticalSectionEx(&this->socket_cs, 4000, 0)) {
-            ctl::ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed [%u]", ::GetLastError());
+            throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocket", false);
         }
     }
 
     _No_competing_thread_
-    ctsSocket::~ctsSocket() throw()
+    ctsSocket::~ctsSocket() NOEXCEPT
     {
         // shutdown() tears down the socket object
         this->shutdown();
@@ -62,25 +62,24 @@ namespace ctsTraffic {
         //   and there may be callbacks still running holding onto a reference to this ctsSocket object
         //   which causes the potential to AV in the io_pattern
         //   (a race-condition touching the io_pattern with deleting the io_pattern)
-        this->io_pattern.reset();
+        this->pattern.reset();
 
         ::DeleteCriticalSection(&this->socket_cs);
     }
 
-    _Acquires_lock_(this->socket_cs)
-    SOCKET ctsSocket::lock_socket() throw()
+    _Acquires_lock_(socket_cs)
+    void ctsSocket::lock_socket() const NOEXCEPT
     {
         ::EnterCriticalSection(&this->socket_cs);
-        return this->socket;
     }
 
-    _Releases_lock_(this->socket_cs)
-    void ctsSocket::unlock_socket() throw()
+    _Releases_lock_(socket_cs)
+    void ctsSocket::unlock_socket() const NOEXCEPT
     {
         ::LeaveCriticalSection(&this->socket_cs);
     }
 
-    void ctsSocket::set_socket(SOCKET _socket) throw()
+    void ctsSocket::set_socket(SOCKET _socket) NOEXCEPT
     {
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
@@ -92,305 +91,115 @@ namespace ctsTraffic {
         this->socket = _socket;
     }
 
-    void ctsSocket::close_socket() throw()
+    void ctsSocket::close_socket() NOEXCEPT
     {
-        // not holding the socket lock when trying to call back through the iopattern
-        // - to avoid potential deadlocks
-        auto ref_io_pattern(this->io_pattern);
-        if (ref_io_pattern) {
-            ref_io_pattern->end_pattern();
-        }
-
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
-
         if (this->socket != INVALID_SOCKET) {
             ::closesocket(this->socket);
             this->socket = INVALID_SOCKET;
         }
     }
 
-    std::shared_ptr<ctThreadIocp> ctsSocket::thread_pool()
+    shared_ptr<ctThreadIocp> ctsSocket::thread_pool()
     {
         // use the SOCKET cs to also guard creation of this TP object
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
         // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
         if ((this->socket != INVALID_SOCKET) && (!this->tp_iocp)) {
-            this->tp_iocp = std::make_shared<ctThreadIocp>(this->socket, ctsConfig::Settings->PTPEnvironment); // can throw
+            this->tp_iocp = make_shared<ctThreadIocp>(this->socket, ctsConfig::Settings->PTPEnvironment); // can throw
         }
 
         return this->tp_iocp;
     }
 
-    DWORD ctsSocket::construct_pattern() throw()
+    void ctsSocket::print_pattern_results(unsigned long _last_error) const NOEXCEPT
     {
-        // *NOT* taking a ctsSocket lock before calling through io_pattern
-        // - as IOPattern can also initiate calls through ctsSocket, which can then deadlock
-        // caller (parent) is assumed to serialize access
-        try {
-            this->io_pattern = ctsIOPattern::MakeIOPattern();
-        }
-        catch (const ctException& e) {
-            return (e.why() != 0 ? e.why() : ERROR_OUTOFMEMORY);
-        }
-        catch (const exception&) {
-            return ERROR_OUTOFMEMORY;
-        }
-        return NO_ERROR;
-    }
-
-    void ctsSocket::print_pattern_results() const throw()
-    {
-        auto ref_io_pattern(this->io_pattern);
-        if (ref_io_pattern) {
-            ref_io_pattern->print_io_results(
-                this->get_local(),
-                this->get_target(),
-                this->get_last_error());
+        if (this->pattern) {
+            this->pattern->print_stats(
+                this->local_address(),
+                this->target_address());
         } else {
-            // otherwise this failed before we ever constructed an io_pattern
-            // - provide an empty statistics object
-            if (ctsConfig::ProtocolType::TCP == ctsConfig::Settings->Protocol) {
-                ctsTcpStatistics empty_stats(0LL);
-                ctsConfig::PrintConnectionResults(
-                    this->get_local(),
-                    this->get_target(),
-                    this->get_last_error(),
-                    empty_stats);
-            } else {
-                ctsUdpStatistics empty_stats(0LL);
-                ctsConfig::PrintConnectionResults(
-                    this->get_local(),
-                    this->get_target(),
-                    this->get_last_error(),
-                    empty_stats);
-            }
+            // failed during socket creation, bind, or connect
+            ctsConfig::PrintConnectionResults(
+                this->local_address(),
+                this->target_address(),
+                _last_error);
+
         }
     }
 
-    void ctsSocket::register_pattern_callback(std::function<void(const ctsIOTask&)> _callback)
+    void ctsSocket::complete_state(DWORD _error_code) NOEXCEPT
     {
-        // *NOT* taking a ctsSocket lock before calling through io_pattern
-        // - as IOPattern can also initiate calls through ctsSocket, which can then deadlock
-        // Instead just holding a ref on the pattern
-        auto ref_io_pattern(this->io_pattern);
-        if (ref_io_pattern) {
-            ref_io_pattern->register_callback(_callback);
-        }
-    }
-
-    ctsIOTask ctsSocket::initiate_io() throw()
-    {
-        // *NOT* taking a ctsSocket lock before calling through io_pattern
-        // - as IOPattern can also initiate calls through ctsSocket, which can then deadlock
-        // default is an empty task to do nothing
-        ctsIOTask return_task;
-        auto ref_io_pattern(this->io_pattern);
-        if (ref_io_pattern) {
-            return_task = ref_io_pattern->initiate_io();
-        }
-        return return_task;
-    }
-
-    ///
-    /// complete_io needs to inform the caller of what to do next:
-    ///
-    /// - No errors (ignore status), we just don't need to send more IO right now
-    /// - No errors (ignore status), we are done sending IO
-    /// - Error - we are done sending IO
-    ///
-    ctsSocket::IOStatus ctsSocket::complete_io(ctsIOTask _task, unsigned _bytes_transferred, unsigned _status_code) throw()
-    {
-        //
-        // ignore completions for tasks on None
-        // 
-        if (ctsIOTask::IOAction::None == _task.ioAction) {
-            return IOStatus::SuccessMoreIO;
-        }
-        //
-        // if FatalAbort, no IO was completed, but last_error might need to be set (only if not yet set to an error)
-        //
-        if (ctsIOTask::IOAction::FatalAbort == _task.ioAction) {
-            this->set_last_error(_status_code);
-            return IOStatus::Failure;
-        }
-        //
-        // pass all other completions to the protocol layer
-        // *NOT* taking a ctsSocket lock before calling through io_pattern
-        // - as IOPattern can also initiate calls through ctsSocket, which can then deadlock
-        //
-        ctsIOPatternStatus next_pattern_status;
-        auto ref_io_pattern(this->io_pattern);
-        if (!ref_io_pattern) {
-            this->set_last_error(WSAENOTSOCK);
-            next_pattern_status = ctsIOPatternStatus::ErrorIOFailed;
-        } else {
-            // not holding a lock when calling back through the ctsIOPattern
-            next_pattern_status = ref_io_pattern->complete_io(_task, _bytes_transferred, _status_code);
-        }
-        //
-        // now that we know the pattern status, update last_error as needed
-        //
-        if (NO_ERROR == _status_code) {
-            // If IO failed, capture the IO error
-            if (ctsIOPatternProtocolError(next_pattern_status)) {
-                this->set_last_error(next_pattern_status);
-            }
-        } else {
-            // _status_code is an error and the IOPattern didn't choose to ignore it
-            if (ctsIOPatternError(next_pattern_status)) {
-                this->set_last_error(_status_code);
-            }
-        }
-        //
-        // if we now need a FIN, invoke shutdown() first to ensure a FIN is sent to the target
-        //
-        if (ctsIOPatternStatus::RequestFIN == next_pattern_status) {
-            SOCKET s = this->lock_socket();
-            { // scoping the lifetime of the lock
-                if (s != INVALID_SOCKET) {
-                    if (SOCKET_ERROR == ::shutdown(this->socket, SD_SEND)) {
-                        auto gle = ::WSAGetLastError();
-                        this->set_last_error(gle);
-
-                        ctsConfig::PrintErrorInfo(
-                            L"[%.3f] ctsSocket - failed to initiate shutdown(SD_SEND) [%d] for a graceful disconnect",
-                            ctsConfig::GetStatusTimeStamp(),
-                            gle);
-
-                        // can't continue - can't reliably request a FIN
-                        next_pattern_status = ctsIOPatternStatus::ErrorIOFailed;
-                    }
-                } else {
-                    // otherwise indicate could not set 
-                    this->set_last_error(WSAENOTSOCK);
-                    // can't continue - can't reliably request a FIN
-                    next_pattern_status = ctsIOPatternStatus::ErrorIOFailed;
-                }
-            }
-            this->unlock_socket();
-
-        } else if (ctsIOPatternStatus::CompletedTransfer == next_pattern_status) {
-            // If the protocol has successfully completed, update last_error to no longer be ctsIOPatternStatusIORunning
-            this->set_last_error(NO_ERROR);
-        }
-        //
-        // return to the user how to interpret this IO
-        //
-        if (ctsIOPatternError(next_pattern_status)) {
-            // always close the socket if the protocol sees this as a failure
-            this->close_socket();
-            return IOStatus::Failure;
-
-        } else if (ctsIOPatternContinueIO(next_pattern_status)) {
-            return IOStatus::SuccessMoreIO;
-
-        } else {
-            ctl::ctFatalCondition(
-                (ctsIOPatternStatus::CompletedTransfer != next_pattern_status),
-                L"ctsSocket: Invalid ctsIOPatternStatus (%u)\n", next_pattern_status);
-            // If UDP, close the socket as pended IO could now be blocked forever
-            if (ctsConfig::Settings->Protocol != ctsConfig::ProtocolType::TCP) {
-                this->close_socket();
-            }
-            return IOStatus::SuccessDone;
-        }
-    }
-
-    void ctsSocket::complete_state(DWORD _dwerror) throw()
-    {
-        LONG current_io_count = ::InterlockedCompareExchange(&this->io_count, 0, 0);
+        auto current_io_count = ctMemoryGuardRead(&this->io_count);
         ctFatalCondition(
-            current_io_count != 0,
+            (current_io_count != 0),
             L"ctsSocket::complete_state is called with outstanding IO (%d)", current_io_count);
 
-        //
-        // *NOT* taking a ctsSocket lock before calling through io_pattern
-        // - as IOPattern can also initiate calls through ctsSocket, which can then deadlock
-        //
-        DWORD recorded_error = _dwerror;
-        auto ref_io_pattern(this->io_pattern);
-        if (ref_io_pattern) {
-            if ((ctsIOPatternStatusIORunning == this->get_last_error()) && (NO_ERROR == _dwerror)) {
-                recorded_error = ref_io_pattern->verify_io();
-            }
+        DWORD recorded_error = _error_code;
+        if (this->pattern) {
+            // get the pattern's last_error
+            recorded_error = this->pattern->get_last_error();
             // no longer allow any more callbacks
-            ref_io_pattern->register_callback(nullptr);
+            this->pattern->register_callback(nullptr);
         }
-
-        // update last_error with those results
-        this->set_last_error(recorded_error);
 
         auto ref_parent(this->parent.lock());
         if (ref_parent) {
-            auto gle = this->get_last_error();
-            ref_parent->complete_state(gle);
+            ref_parent->complete_state(recorded_error);
         }
     }
 
-    const ctSockaddr ctsSocket::get_local() const throw()
+    const ctSockaddr ctsSocket::local_address() const NOEXCEPT
     {
-        return this->local_address;
+        return this->local_sockaddr;
     }
 
-    void ctsSocket::set_local(const ctSockaddr& _target) throw()
+    void ctsSocket::set_local_address(const ctSockaddr& _local) NOEXCEPT
     {
-        this->local_address = _target;
+        this->local_sockaddr = _local;
     }
 
-    const ctSockaddr ctsSocket::get_target() const throw()
+    const ctSockaddr ctsSocket::target_address() const NOEXCEPT
     {
-        return this->target_address;
+        return this->target_sockaddr;
     }
 
-    void ctsSocket::set_target(const ctSockaddr& _target) throw()
+    void ctsSocket::set_target_address(const ctSockaddr& _target) NOEXCEPT
     {
-        this->target_address = _target;
+        this->target_sockaddr = _target;
     }
 
-    LONG ctsSocket::increment_io() throw()
+    shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const NOEXCEPT
     {
-        return ::InterlockedIncrement(&this->io_count);
+        return this->pattern;
     }
 
-    LONG ctsSocket::decrement_io() throw()
+    void ctsSocket::set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) NOEXCEPT
     {
-        LONG io_value = ::InterlockedDecrement(&this->io_count);
+        this->pattern = _pattern;
+    }
+
+    long ctsSocket::increment_io() NOEXCEPT
+    {
+        return ctMemoryGuardIncrement(&this->io_count);
+    }
+
+    long ctsSocket::decrement_io() NOEXCEPT
+    {
+        auto io_value = ctMemoryGuardDecrement(&this->io_count);
         ctl::ctFatalCondition(
             (io_value < 0),
             L"ctsSocket: io count fell below zero (%d)\n", io_value);
         return io_value;
     }
 
-    unsigned int ctsSocket::get_last_error() const throw()
+    long ctsSocket::pended_io() NOEXCEPT
     {
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
-        return this->last_error;
+        return ctMemoryGuardRead(&this->io_count);
     }
 
-    ///
-    /// set_last_error will attempt to keep the first error reported
-    /// - this will only update the value if an error has not yet been report for this state
-    /// reset_last_error will directly overwrite last_error back for the start of the next state
-    ///
-    /// both of these methods are private, only to be called by ctsSocket and ctsSocketState
-    ///
-    void ctsSocket::set_last_error(DWORD _error) throw()
-    {
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
-        // update last_error under lock, only if not previously set
-        if (ctsIOPatternStatusIORunning == this->last_error) {
-            this->last_error = _error;
-        }
-    }
-
-    void ctsSocket::reset_last_error() throw()
-    {
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
-        this->last_error = ctsIOPatternStatusIORunning;
-    }
-
-    void ctsSocket::shutdown() throw()
+    void ctsSocket::shutdown() NOEXCEPT
     {
         // close the socket to trigger IO to complete/shutdown
         this->close_socket();
@@ -409,16 +218,16 @@ namespace ctsTraffic {
     /// - note that the timer 
     /// - can throw under low resource conditions
     ///
-    void ctsSocket::set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> _func)
+    void ctsSocket::set_timer(const ctsIOTask& _task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> _func)
     {
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
         if (!this->tp_timer) {
-            this->tp_timer = std::make_shared<ctl::ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
+            this->tp_timer = make_shared<ctl::ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
         }
         // register a weak pointer after creating a shared_ptr from the 'this' ptry
         this->tp_timer->schedule_singleton(
             _func,
-            std::weak_ptr<ctsSocket>(this->shared_from_this()),
+            weak_ptr<ctsSocket>(this->shared_from_this()),
             _task,
             _task.time_offset_milliseconds);
     }

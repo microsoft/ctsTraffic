@@ -13,15 +13,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-#include <cassert>
-
+#include <Windows.h>
 #include <winsock2.h>
 #include <mswsock.h>
-#include <Windows.h>
 #include <rpc.h> // for GUID
 
 #include "ctException.hpp"
-
+#include "ctScopeGuard.hpp"
 
 namespace ctl {
     ///
@@ -46,56 +44,27 @@ namespace ctl {
         ///
         /// ctSocketExtensionInit
         ///
-        /// - static function only to be called locally to ensure WSAStartup is held
-        ///   for the function pointers to remain accurate
+        /// InitOnce function only to be called locally to ensure WSAStartup is held
+        /// for the function pointers to remain accurate
         ///
-        LONG ctSocketExtensionLock = 0;
-        void ctSocketExtensionInit(__in SOCKET _socket)
+        static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
+        static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*)
         {
-            static const LONG LockUninitialized = 0;
-            static const LONG LockInitialized = 1;
-            static const LONG LockInitializing = 2;
-
-            LONG initialState;
-            do {
-                // if uninitialized, update to initializing
-                initialState = ::InterlockedCompareExchange(&ctSocketExtensionLock, LockInitializing, LockUninitialized);
-                // loop until lock is either uninitialized, or initialized
-                if (initialState == LockInitializing) {
-                    ::Sleep(0);
-                }
-            } while (initialState == LockInitializing);
-
-            if (initialState == LockInitialized) {
-                return;
-            }
-
-            // we now have the LockInitializing lock - prior state must have been LockUninitialized
-            ctFatalCondition(
-                initialState != LockUninitialized,
-                L"ctSocketExtensions - lock is now LockInitializing but initial state was not LockUninitialized");
-
             WSADATA wsadata;
             int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
             if (wsError != 0) {
-                // reset lock to uninitialized
-                ::InterlockedExchange(&ctSocketExtensionLock, LockUninitialized);
-                throw ctException(wsError, L"WSAStartup", L"ctl::ctSocketExtensionInit", false);
+                *static_cast<int*>(perror) = wsError;
+                return FALSE;
             }
-
+            ctlScopeGuard(WSACleanupOnExit, { ::WSACleanup(); });
 
             // check to see if need to create a temp socket
-            SOCKET local_socket = _socket;
+            SOCKET local_socket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
             if (INVALID_SOCKET == local_socket) {
-                local_socket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-                if (INVALID_SOCKET == local_socket) {
-                    DWORD errorCode = ::WSAGetLastError();
-                    // reset lock to uninitialized
-                    ::WSACleanup();
-                    ::InterlockedExchange(&ctSocketExtensionLock, LockUninitialized);
-                    throw ctException(errorCode, L"socket", L"ctl::ctSocketExtensionInit", false);
-                }
+                *static_cast<int*>(perror) = ::WSAGetLastError();
+                return FALSE;
             }
+            ctlScopeGuard(closesocketOnExit, { ::closesocket(local_socket); });
 
             // control code and the size to fetch the extension function pointers
             for (unsigned fn_loop = 0; fn_loop < fn_ptr_count; ++fn_loop) {
@@ -178,30 +147,27 @@ namespace ctl {
                     &bytes,
                     NULL, // lpOverlapped
                     NULL  // lpCompletionRoutine
-                    )) {
-                    // ignore not-supported errors to support Win7
+                    )) 
+                {
                     DWORD errorCode = ::WSAGetLastError();
-                    if (errorCode != WSAEOPNOTSUPP) {
-                        if (local_socket != _socket) {
-                            ::closesocket(local_socket);
-                        }
-                        ::WSACleanup();
-                        // reset lock to uninitialized
-                        ::InterlockedExchange(&ctSocketExtensionLock, LockUninitialized);
-                        throw ctException(errorCode, L"WSAIoctl", L"ctl::ctSocketExtensionInit", false);
+                    if (8 == fn_loop && errorCode == WSAEOPNOTSUPP) {
+                        // ignore not-supported errors for RIO APIs to support Win7
+                    } else {
+                        *static_cast<int*>(perror) = errorCode;
+                        return FALSE;
                     }
                 }
             }
 
-            // update lock to fully Initialized
-            ::InterlockedExchange(&ctSocketExtensionLock, LockInitialized);
-
-            if (local_socket != _socket) {
-                ::closesocket(local_socket);
-            }
-
+            return TRUE;
         }
-
+        static void s_InitSocketExtensions()
+        {
+            DWORD error = 0;
+            if (!::InitOnceExecuteOnce(&s_ctSocketExtensionInitOnce, s_ctSocketExtensionInitFn, &error, nullptr)) {
+                throw ctl::ctException(error, L"ctl::ctSocketExtensions", false);
+            }
+        }
     }; // anonymous namespace
 
     ///
@@ -209,7 +175,7 @@ namespace ctl {
     ///
     inline bool ctSocketIsRioAvailable()
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return (nullptr != rioextensionfunctiontable.RIOReceive);
     }
 
@@ -226,7 +192,7 @@ namespace ctl {
         _In_  DWORD dwReserved
         )
     {
-        ctSocketExtensionInit(hSocket);
+        s_InitSocketExtensions();
         return transmitfile(
             hSocket,
             hFile,
@@ -250,7 +216,7 @@ namespace ctl {
         _In_ DWORD dwFlags
         )
     {
-        ctSocketExtensionInit(hSocket);
+        s_InitSocketExtensions();
         return transmitpackets(
             hSocket,
             lpPacketArray,
@@ -275,7 +241,7 @@ namespace ctl {
         _Inout_ LPOVERLAPPED lpOverlapped
         )
     {
-        ctSocketExtensionInit(sListenSocket);
+        s_InitSocketExtensions();
         return acceptex(
             sListenSocket,
             sAcceptSocket,
@@ -302,7 +268,7 @@ namespace ctl {
         _Out_ LPINT RemoteSockaddrLength
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return getacceptexsockaddrs(
             lpOutputBuffer,
             dwReceiveDataLength,
@@ -328,7 +294,7 @@ namespace ctl {
         _Inout_ LPOVERLAPPED lpOverlapped
         )
     {
-        ctSocketExtensionInit(s);
+        s_InitSocketExtensions();
         return connectex(
             s,
             name,
@@ -350,7 +316,7 @@ namespace ctl {
         _In_ DWORD  dwReserved
         )
     {
-        ctSocketExtensionInit(s);
+        s_InitSocketExtensions();
         return disconnectex(
             s,
             lpOverlapped,
@@ -370,7 +336,7 @@ namespace ctl {
         _In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
         )
     {
-        ctSocketExtensionInit(s);
+        s_InitSocketExtensions();
         return wsarecvmsg(
             s,
             lpMsg,
@@ -392,7 +358,7 @@ namespace ctl {
         _In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
         )
     {
-        ctSocketExtensionInit(s);
+        s_InitSocketExtensions();
         return wsasendmsg(
             s,
             lpMsg,
@@ -414,7 +380,7 @@ namespace ctl {
         _In_ PVOID requestContext
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOReceive(
             socketQueue,
             pData,
@@ -439,7 +405,7 @@ namespace ctl {
         _In_ PVOID requestContext
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOReceiveEx(
             socketQueue,
             pData,
@@ -464,7 +430,7 @@ namespace ctl {
         _In_ PVOID requestContext
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOSend(
             socketQueue,
             pData,
@@ -489,7 +455,7 @@ namespace ctl {
         _In_ PVOID requestContext
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOSendEx(
             socketQueue,
             pData,
@@ -510,7 +476,7 @@ namespace ctl {
         _In_ RIO_CQ cq
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOCloseCompletionQueue(
             cq
             );
@@ -524,7 +490,7 @@ namespace ctl {
         _In_opt_ PRIO_NOTIFICATION_COMPLETION pNotificationCompletion
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOCreateCompletionQueue(
             queueSize,
             pNotificationCompletion
@@ -545,10 +511,7 @@ namespace ctl {
         _In_ PVOID socketContext
         )
     {
-        // A request queue is associated with a socket, ensure that the client passed us a valid socket 
-        assert(socket != INVALID_SOCKET);
-
-        ctSocketExtensionInit(socket);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOCreateRequestQueue(
             socket,
             maxOutstandingReceive,
@@ -570,7 +533,7 @@ namespace ctl {
         _In_ ULONG arraySize
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIODequeueCompletion(
             cq,
             array,
@@ -585,7 +548,7 @@ namespace ctl {
         _In_ RIO_BUFFERID bufferId
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIODeregisterBuffer(
             bufferId
             );
@@ -598,7 +561,7 @@ namespace ctl {
         _In_ RIO_CQ cq
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIONotify(
             cq
             );
@@ -612,7 +575,7 @@ namespace ctl {
         _In_ DWORD dataLength
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIORegisterBuffer(
             dataBuffer,
             dataLength
@@ -627,7 +590,7 @@ namespace ctl {
         _In_ DWORD queueSize
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOResizeCompletionQueue(
             cq,
             queueSize
@@ -643,7 +606,7 @@ namespace ctl {
         _In_ DWORD maxOutstandingSend
         )
     {
-        ctSocketExtensionInit(INVALID_SOCKET);
+        s_InitSocketExtensions();
         return rioextensionfunctiontable.RIOResizeRequestQueue(
             rq,
             maxOutstandingReceive,
@@ -651,5 +614,5 @@ namespace ctl {
             );
     }
 
-}; // namespace ctl
+} // namespace ctl
 

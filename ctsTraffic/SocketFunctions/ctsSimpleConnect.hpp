@@ -20,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <winsock2.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 // project headers
@@ -38,56 +39,56 @@ namespace ctsTraffic {
     ///
 
     inline
-    void ctsSimpleConnect(std::weak_ptr<ctsSocket> _socket) throw()
+    void ctsSimpleConnect(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
-        auto shared_socket_lock(_socket.lock());
-        ctsSocket* socket_lock = shared_socket_lock.get();
-        if (socket_lock == nullptr) {
-            // the underlying socket went away - nothing to do
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
 
         int error = NO_ERROR;
-        SOCKET s = socket_lock->lock_socket();
-        if (s != INVALID_SOCKET) {
-            try {
-                const ctl::ctSockaddr& targetAddress = socket_lock->get_target();
-                error = ctsConfig::SetPreConnectOptions(s);
-                if (error != NO_ERROR) {
-                    throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
-                }
+        // scope to the socket lock
+        {
+            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            SOCKET socket = socket_lock.get();
+            if (socket != INVALID_SOCKET) {
+                try {
+                    const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
+                    error = ctsConfig::SetPreConnectOptions(socket);
+                    if (error != NO_ERROR) {
+                        throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
+                    }
 
-                if (0 != ::connect(s, targetAddress.sockaddr(), targetAddress.length())) {
-                    error = ::WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed(L"connect", error);
-                } else {
-                    // get the local addr
-                    ctl::ctSockaddr local_addr;
-                    int local_addr_len = local_addr.length();
-                    if (0 == ::getsockname(s, local_addr.sockaddr(), &local_addr_len)) {
-                        socket_lock->set_local(local_addr);
+                    if (0 != ::connect(socket, targetAddress.sockaddr(), targetAddress.length())) {
+                        error = ::WSAGetLastError();
+                        ctsConfig::PrintErrorIfFailed(L"connect", error);
+                    } else {
+                        // set the local address
+                        ctl::ctSockaddr local_addr;
+                        int local_addr_len = local_addr.length();
+                        if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
+                            shared_socket->set_local_address(local_addr);
+                        }
                     }
                 }
+                catch (const ctl::ctException& e) {
+                    ctsConfig::PrintException(e);
+                    ctl::ctFatalCondition(
+                        (0 == e.why()),
+                        L"ctException (%p) thrown with a zero error code", &e);
+                    error = e.why();
+                }
+                catch (const std::bad_alloc& e) {
+                    ctsConfig::PrintException(e);
+                    error = WSAENOBUFS;
+                }
+            } else {
+                error = WSAECONNABORTED;
             }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                ctl::ctFatalCondition(
-                    (0 == e.why()),
-                    L"ctException (%p) thrown with a zero error code", &e);
-                error = e.why();
-            }
-            catch (const std::bad_alloc& e) {
-                ctsConfig::PrintException(e);
-                error = WSAENOBUFS;
-            }
-        } else {
-            error = WSAENOTSOCK;
         }
 
-        // unlock before completing the socket state
-        socket_lock->unlock_socket();
-        socket_lock->complete_state(error);
+        shared_socket->complete_state(error);
     }
 
 }

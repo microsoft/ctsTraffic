@@ -20,8 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 // os headers
 #include <excpt.h>
-#include <winsock2.h>
 #include <Windows.h>
+#include <winsock2.h>
 // ct headers
 #include "ctException.hpp"
 
@@ -98,7 +98,6 @@ namespace ctl {
         /// - ctl::ctException (from the ThreadPool APIs)
         ///
         ctThreadIocp(_In_ HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = NULL)
-        : ptp_io(nullptr)
         {
             ptp_io = ::CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
             if (nullptr == ptp_io) {
@@ -106,7 +105,6 @@ namespace ctl {
             }
         }
         ctThreadIocp(_In_ SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = NULL)
-        : ptp_io(nullptr)
         {
             ptp_io = ::CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
             if (nullptr == ptp_io) {
@@ -227,7 +225,7 @@ namespace ctl {
         ctThreadIocp& operator=(const ctThreadIocp&) = delete;
 
     private:
-        PTP_IO ptp_io;
+        PTP_IO ptp_io = nullptr;
 
         static void CALLBACK IoCompletionCallback(
             PTP_CALLBACK_INSTANCE /*_instance*/,

@@ -17,23 +17,29 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 #include <functional>
 #include <algorithm>
+#include <memory>
 // additional ctl headers
+#include <ctVersionConversion.hpp>
+#include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 // additional project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
+#include "ctsSocketState.h"
+
 
 
 namespace ctsTraffic {
 
     using namespace ctl;
+    using namespace std;
 
     ctsSocketBroker::ctsSocketBroker() :
         cs(),
         done_event(),
         socket_pool(),
-        wakeup_timer(new ctl::ctThreadpoolTimer()),
+        wakeup_timer(new ctThreadpoolTimer()),
         total_connections_remaining(0),
         pending_limit(0),
         pending_sockets(0),
@@ -61,6 +67,7 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionAndSpinCount(&cs, 4000)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionAndSpinCount", L"ctsSocketBroker", false);
         }
+        ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
 
         // create our manual-reset notification event
         done_event.reset(::CreateEvent(NULL, TRUE, FALSE, NULL));
@@ -76,27 +83,29 @@ namespace ctsTraffic {
             total_connections_remaining, pending_limit);
 
         // must always guard access to the vector
-        ctl::ctAutoReleaseCriticalSection csLock(&cs);
+        ctAutoReleaseCriticalSection csLock(&cs);
 
         // only loop to pending_limit
-        socket_pool.reserve(pending_limit);
-        while ((total_connections_remaining > 0) && (pending_sockets < pending_limit)) {
-            socket_pool.push_back(std::make_shared<ctsSocketState>(this));
-            (*socket_pool.rbegin())->start();
-            ++pending_sockets;
-            --total_connections_remaining;
-
+        while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
             // for outgoing connections, limit to ConnectionThrottleLimit 
             // - to prevent killing the box with DPCs with too many concurrent connect attempts
-            if (!ctsConfig::Settings->AcceptFunction) {
-                if (ctsConfig::Settings->ConnectionThrottleLimit == this->pending_sockets) {
-                    break;
-                }
+            // checking first since TimerCallback might have already established connections
+            if (!ctsConfig::Settings->AcceptFunction &&
+                this->pending_sockets >= ctsConfig::Settings->ConnectionThrottleLimit) {
+                break;
             }
+
+            socket_pool.push_back(make_shared<ctsSocketState>(this));
+            (*this->socket_pool.rbegin())->start();
+            ++this->pending_sockets;
+            --this->total_connections_remaining;
         }
+
+        // no failures, dismiss the scope guards
+        deleteCsOnExit.dismiss();
     }
 
-    ctsSocketBroker::~ctsSocketBroker() throw()
+    ctsSocketBroker::~ctsSocketBroker() NOEXCEPT
     {
         // first, turn off the timer to stop creating/tearing down the socket pool
         wakeup_timer.reset();
@@ -120,11 +129,11 @@ namespace ctsTraffic {
     /// - and will be pumping IO
     /// Update pending and active counts under guard
     ///
-    void ctsSocketBroker::initiating_io() throw()
+    void ctsSocketBroker::initiating_io() NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection lock_broker(&this->cs);
+        ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
-        ctl::ctFatalCondition(
+        ctFatalCondition(
             (this->pending_sockets == 0),
             L"ctsSocketBroker::initiating_io - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
             this->active_sockets);
@@ -136,18 +145,18 @@ namespace ctsTraffic {
     /// SocketState is indicating the socket is now 'closed'
     /// Update pending or active counts (depending on prior state) under guard
     ///
-    void ctsSocketBroker::closing(bool _was_active) throw()
+    void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection lock_broker(&this->cs);
+        ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
         if (_was_active) {
-            ctl::ctFatalCondition(
+            ctFatalCondition(
                 (this->active_sockets == 0),
                 L"ctsSocketBroker::closing - About to decrement active_sockets, but active_sockets == 0 (pending_sockets == %u)",
                 this->pending_sockets);
             --this->active_sockets;
         } else {
-            ctl::ctFatalCondition(
+            ctFatalCondition(
                 (this->pending_sockets == 0),
                 L"ctsSocketBroker::closing - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
                 this->active_sockets);
@@ -155,7 +164,7 @@ namespace ctsTraffic {
         }
     }
 
-    bool ctsSocketBroker::wait(DWORD _milliseconds) throw()
+    bool ctsSocketBroker::wait(DWORD _milliseconds) NOEXCEPT
     {
         HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
 
@@ -173,7 +182,7 @@ namespace ctsTraffic {
                 break;
 
             case WAIT_FAILED:
-                ctl::ctAlwaysFatalCondition(
+                ctAlwaysFatalCondition(
                     L"ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
                     arWait, ::GetLastError());
         }
@@ -184,29 +193,26 @@ namespace ctsTraffic {
     /// Timer callback to scavenge any closed sockets
     /// Then refresh sockets that should be created anew
     ///
-    void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* _broker) throw()
+    void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* _broker) NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection lock_broker(&_broker->cs);
+        ctAutoReleaseCriticalSection lock_broker(&_broker->cs);
         ///
         /// Everything must occur under the broker lock
         /// - touching the socket_pool
         /// - touching the socket / connection counters
         ///
         _broker->socket_pool.erase(
-            std::remove_if(
-                std::begin(_broker->socket_pool),
-                std::end(_broker->socket_pool),
-                [&] (std::shared_ptr<ctsSocketState>& _socket_state) {
-                    return _socket_state->is_closed();
-                }),
-            _broker->socket_pool.end()
-        );
+            remove_if(
+                begin(_broker->socket_pool),
+                end(_broker->socket_pool),
+                [&] (shared_ptr<ctsSocketState>& _socket_state) { return ctsSocketState::InternalState::Closed == _socket_state->current_state(); }),
+            _broker->socket_pool.end());
 
         // refresh our pool of sockets if more sockets should be added
         try {
-            if ((0 == _broker->total_connections_remaining) &&
-                 (0 == _broker->pending_sockets) &&
-                 (0 == _broker->active_sockets)) {
+            if (0 == _broker->total_connections_remaining &&
+                0 == _broker->pending_sockets &&
+                0 == _broker->active_sockets) {
                 /// it's time to exit if no more work is to be done
                 ::SetEvent(_broker->done_event.get());
 
@@ -214,8 +220,7 @@ namespace ctsTraffic {
                 // don't spin up more if the user asked to shutdown
                 if (WAIT_OBJECT_0 != ::WaitForSingleObject(_broker->done_event.get(), 0)) {
                     // catch up to the expected # of pended connections
-                    while ((_broker->pending_sockets < _broker->pending_limit) &&
-                            (_broker->total_connections_remaining > 0)) {
+                    while (_broker->pending_sockets < _broker->pending_limit && _broker->total_connections_remaining > 0) {
                         // not throttling the server accepting sockets based off total # of connections (pending + active)
                         // - only throttling total connections for outgoing connections
                         if (!ctsConfig::Settings->AcceptFunction) {
@@ -228,7 +233,7 @@ namespace ctsTraffic {
                             }
                         }
 
-                        _broker->socket_pool.push_back(std::make_shared<ctsSocketState>(_broker));
+                        _broker->socket_pool.push_back(make_shared<ctsSocketState>(_broker));
                         (*_broker->socket_pool.rbegin())->start();
                         ++_broker->pending_sockets;
                         --_broker->total_connections_remaining;
@@ -236,7 +241,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        catch (const std::exception&) {
+        catch (const exception&) {
             // if failed to create a socket will eventually reschedule
         }
     }

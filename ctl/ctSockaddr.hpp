@@ -14,14 +14,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // CPP headers
-#include <cassert>
 #include <algorithm>
 #include <string>
 #include <vector>
 // OS headers
+#include <Windows.h>
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
-#include <Windows.h>
 // CTL headers
 #include "ctScopeGuard.hpp"
 #include "ctException.hpp"
@@ -34,12 +33,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl {
 
+    enum class ByteOrder
+    {
+        HostOrder,
+        NetworkOrder
+    };
 
     class ctSockaddr {
     public:
 
         static
-        std::vector<ctSockaddr> ResolveName(__in LPCWSTR _name)
+        std::vector<ctSockaddr> ResolveName(_In_ LPCWSTR _name)
         {
             ADDRINFOW* addr_result = nullptr;
             ctlScopeGuard(freeAddrOnExit, { if (addr_result) ::FreeAddrInfoW(addr_result); });
@@ -56,61 +60,59 @@ namespace ctl {
             return return_addrs;
         }
 
-        enum ByteOrder {
-            HostOrder,
-            NetworkOrder
-        };
-
         //
         // constructors can throw if WSAStartup fails under low-resources
         // - copy c'tor and copy assignment can't fail
         //
-        ctSockaddr(__in short family = AF_UNSPEC);
+        ctSockaddr(short family = AF_UNSPEC);
 
-        explicit ctSockaddr(__in_bcount(inLength) const SOCKADDR* inAddr, __in int inLength) throw();
-        explicit ctSockaddr(__in_bcount(inLength) const SOCKADDR* inAddr, __in size_t inLength) throw();
-        explicit ctSockaddr(__in const SOCKADDR_IN*) throw();
-        explicit ctSockaddr(__in const SOCKADDR_IN6*) throw();
-        explicit ctSockaddr(__in const SOCKADDR_INET*) throw();
-        explicit ctSockaddr(__in const SOCKADDR_STORAGE*) throw();
-        explicit ctSockaddr(__in const SOCKET_ADDRESS*) throw();
+        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) throw();
+        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) throw();
+        explicit ctSockaddr(_In_ const SOCKADDR_IN*) throw();
+        explicit ctSockaddr(_In_ const SOCKADDR_IN6*) throw();
+        explicit ctSockaddr(_In_ const SOCKADDR_INET*) throw();
+        explicit ctSockaddr(_In_ const SOCKADDR_STORAGE*) throw();
+        explicit ctSockaddr(_In_ const SOCKET_ADDRESS*) throw();
 
-        ctSockaddr(__in const ctSockaddr&) throw();
-        ctSockaddr& operator=(__in const ctSockaddr&) throw();
+        ctSockaddr(const ctSockaddr&) throw();
+        ctSockaddr& operator=(const ctSockaddr&) throw();
 
-        bool operator==(__in const ctSockaddr&) const throw();
-        bool operator!=(__in const ctSockaddr&) const throw();
+        ctSockaddr(ctSockaddr&&) throw();
+        ctSockaddr& operator=(ctSockaddr&&) throw();
 
-        virtual ~ctSockaddr() throw();
+        bool operator==(const ctSockaddr&) const throw();
+        bool operator!=(const ctSockaddr&) const throw();
 
-        void reset(__in short family = AF_UNSPEC) throw();
+        virtual ~ctSockaddr() = default;
 
-        void swap(__inout ctSockaddr&) throw();
+        void reset(short family = AF_UNSPEC) throw();
 
-        bool setSocketAddress(__in SOCKET) throw();
+        void swap(_Inout_ ctSockaddr&) throw();
 
-        void setSockaddr(__in_bcount(length) const SOCKADDR*, __in int length) throw();
-        void setSockaddr(__in const SOCKADDR_IN*) throw();
-        void setSockaddr(__in const SOCKADDR_IN6*) throw();
-        void setSockaddr(__in const SOCKADDR_INET*) throw();
-        void setSockaddr(__in const SOCKADDR_STORAGE*) throw();
-        void setSockaddr(__in const SOCKET_ADDRESS*) throw();
+        bool setSocketAddress(SOCKET) throw();
 
-        void setPort(__in unsigned short, __in ByteOrder = HostOrder) throw();
+        void setSockaddr(_In_reads_bytes_(length) const SOCKADDR*, int length) throw();
+        void setSockaddr(_In_ const SOCKADDR_IN*) throw();
+        void setSockaddr(_In_ const SOCKADDR_IN6*) throw();
+        void setSockaddr(_In_ const SOCKADDR_INET*) throw();
+        void setSockaddr(_In_ const SOCKADDR_STORAGE*) throw();
+        void setSockaddr(_In_ const SOCKET_ADDRESS*) throw();
+
+        void setPort(unsigned short, ByteOrder = ByteOrder::HostOrder) throw();
 
         // for dual-mode sockets, when needing to explicitly connect to the target v4 address,
         // - one must map the v4 address to its mapped v6 address
         void mapDualMode4To6() throw();
 
         // setting by string returns a bool if was able to convert to an address
-        bool setAddress(__in PCWSTR wszAddr) throw();
-        bool setAddress(__in LPCSTR szAddr) throw();
+        bool setAddress(_In_ PCWSTR wszAddr) throw();
+        bool setAddress(_In_ LPCSTR szAddr) throw();
 
-        void setAddress(__in const IN_ADDR*) throw();
-        void setAddress(__in const IN6_ADDR*) throw();
+        void setAddress(_In_ const IN_ADDR*) throw();
+        void setAddress(_In_ const IN6_ADDR*) throw();
 
-        void setFlowInfo(__in unsigned long) throw();
-        void setScopeId(__in unsigned long) throw();
+        void setFlowInfo(unsigned long) throw();
+        void setScopeId(unsigned long) throw();
 
         void setAddressLoopback() throw();
         void setAddressAny() throw();
@@ -118,12 +120,12 @@ namespace ctl {
         bool isAddressLoopback() const throw();
         bool isAddressAny() const throw();
 
-        std::wstring writeAddress(__in bool trim_scope = false) const;
-        bool writeAddress(__out std::wstring& wsReturn, __in bool trim_scope = false) const;
-        bool writeAddress(__out std::string& sReturn, __in bool trim_scope = false) const;
-        std::wstring writeCompleteAddress(__in bool trim_scope = false) const;
-        bool writeCompleteAddress(__out std::wstring& wsReturn, __in bool trim_scope = false) const;
-        bool writeCompleteAddress(__out std::string& sReturn, __in bool trim_scope = false) const;
+        std::wstring writeAddress(bool trim_scope = false) const;
+        bool writeAddress(_Out_ std::wstring& wsReturn, bool trim_scope = false) const;
+        bool writeAddress(_Out_ std::string& sReturn, bool trim_scope = false) const;
+        std::wstring writeCompleteAddress(bool trim_scope = false) const;
+        bool writeCompleteAddress(_Out_ std::wstring& wsReturn, bool trim_scope = false) const;
+        bool writeCompleteAddress(_Out_ std::string& sReturn, bool trim_scope = false) const;
 
         //
         // Accessors
@@ -133,7 +135,6 @@ namespace ctl {
         short             family() const throw();
         unsigned long     flowinfo() const throw();
         unsigned long     scopeId() const throw();
-
         // returning non-const from const methods, for API compatibility
         SOCKADDR*         sockaddr() const throw();
         SOCKADDR_IN*      sockaddr_in() const throw();
@@ -146,7 +147,7 @@ namespace ctl {
     private:
         SOCKADDR_STORAGE saddr;
 
-        static int saddr_size()
+        static int saddr_size() throw()
         {
             return static_cast<int>(sizeof(SOCKADDR_STORAGE));
         }
@@ -156,127 +157,71 @@ namespace ctl {
     // non-member swap
     //
     inline
-    void swap(__inout ctSockaddr& left_, __inout ctSockaddr& right_) throw()
+    void swap(_Inout_ ctSockaddr& left_, _Inout_ ctSockaddr& right_) throw()
     {
         left_.swap(right_);
     }
 
 
-    inline
-    ctSockaddr::ctSockaddr(__in short family) throw()
+    inline ctSockaddr::ctSockaddr(short family) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
         saddr.ss_family = family;
     }
 
-    inline
-    ctSockaddr::ctSockaddr(__in_bcount(inLength) const SOCKADDR* inAddr, __in int inLength) throw()
+    inline ctSockaddr::ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) throw()
     {
-        assert(inLength <= saddr_size());
-
-        size_t length = (inLength <= saddr_size()) ?
-        inLength :
-            saddr_size();
+        size_t length = (inLength <= saddr_size()) ? inLength : saddr_size();
 
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            length
-            );
+        ::CopyMemory(&saddr, inAddr, length);
     }
-    inline
-    ctSockaddr::ctSockaddr(__in_bcount(inLength) const SOCKADDR* inAddr, __in size_t inLength) throw()
+    inline ctSockaddr::ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) throw()
     {
-        assert(static_cast<int>(inLength) <= saddr_size());
-
-        size_t length = (static_cast<int>(inLength) <= saddr_size()) ?
-        inLength :
-            saddr_size();
+        size_t length = (static_cast<int>(inLength) <= saddr_size()) ? inLength : saddr_size();
 
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            length
-            );
+        ::CopyMemory(&saddr, inAddr, length);
     }
 
-    inline
-    ctSockaddr::ctSockaddr(__in const SOCKADDR_IN* inAddr) throw()
+    inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_IN* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            sizeof(SOCKADDR_IN)
-            );
+        ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
     }
-    inline
-    ctSockaddr::ctSockaddr(__in const SOCKADDR_IN6* inAddr) throw()
+    inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_IN6* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            sizeof(SOCKADDR_IN6)
-            );
+        ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
     }
-    inline
-    ctSockaddr::ctSockaddr(__in const SOCKADDR_INET* inAddr) throw()
+    inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_INET* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
         if (AF_INET == inAddr->si_family) {
-            ::CopyMemory(
-                &saddr,
-                inAddr,
-                sizeof(SOCKADDR_IN)
-                );
+            ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
         } else {
-            ::CopyMemory(
-                &saddr,
-                inAddr,
-                sizeof(SOCKADDR_IN6)
-                );
+            ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
         }
     }
-    inline
-    ctSockaddr::ctSockaddr(__in const SOCKADDR_STORAGE* inAddr) throw()
+    inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_STORAGE* inAddr) throw()
     {
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            saddr_size()
-            );
+        ::CopyMemory(&saddr, inAddr, saddr_size());
     }
-    inline
-    ctSockaddr::ctSockaddr(__in const SOCKET_ADDRESS* inAddr) throw()
+    inline ctSockaddr::ctSockaddr(_In_ const SOCKET_ADDRESS* inAddr) throw()
     {
-        assert(inAddr->iSockaddrLength <= saddr_size());
-
         size_t length = (inAddr->iSockaddrLength <= saddr_size()) ?
             inAddr->iSockaddrLength :
             saddr_size();
 
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr->lpSockaddr,
-            length
-            );
+        ::CopyMemory(&saddr, inAddr->lpSockaddr, length);
     }
 
-    inline
-    ctSockaddr::ctSockaddr(__in const ctSockaddr& inAddr) throw()
+    inline ctSockaddr::ctSockaddr(const ctSockaddr& inAddr) throw()
     {
-        ::CopyMemory(
-            &saddr,
-            &(inAddr.saddr),
-            saddr_size()
-            );
+        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
     }
-    inline
-    ctSockaddr& ctSockaddr::operator=(__in const ctSockaddr& inAddr) throw()
+    inline ctSockaddr& ctSockaddr::operator=(const ctSockaddr& inAddr) throw()
     {
         // copy and swap
         ctSockaddr temp(inAddr);
@@ -284,126 +229,85 @@ namespace ctl {
         return *this;
     }
 
-    inline
-    bool ctSockaddr::operator==(__in const ctSockaddr& _inAddr) const throw()
+    inline ctSockaddr::ctSockaddr(ctSockaddr&& inAddr) throw()
+    {
+        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
+    }
+    inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) throw()
+    {
+        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
+        ::ZeroMemory(&inAddr, saddr_size());
+        return *this;
+    }
+
+    inline bool ctSockaddr::operator==(const ctSockaddr& _inAddr) const throw()
     {
         return (0 == ::memcmp(&this->saddr, &_inAddr.saddr, this->saddr_size()));
     }
-    inline
-    bool ctSockaddr::operator!=(__in const ctSockaddr& _inAddr) const throw()
+    inline bool ctSockaddr::operator!=(const ctSockaddr& _inAddr) const throw()
     {
         return !(*this == _inAddr);
     }
 
-    inline
-    ctSockaddr::~ctSockaddr() throw()
-    {
-        // empty
-    }
-
-    inline
-    void ctSockaddr::reset(__in short family) throw()
+    inline void ctSockaddr::reset(short family) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
         saddr.ss_family = family;
     }
 
-    inline
-    void ctSockaddr::swap(__inout ctSockaddr& inAddr) throw()
+    inline void ctSockaddr::swap(_Inout_ ctSockaddr& inAddr) throw()
     {
         using std::swap;
         swap(saddr, inAddr.saddr);
     }
 
-    inline
-    bool ctSockaddr::setSocketAddress(__in SOCKET s) throw()
+    inline bool ctSockaddr::setSocketAddress(SOCKET s) throw()
     {
         int namelen = this->length();
         return (0 == ::getsockname(s, this->sockaddr(), &namelen));
     }
 
-    inline
-    void ctSockaddr::setSockaddr(__in_bcount(inLength) const SOCKADDR* inAddr, __in int inLength) throw()
+    inline void ctSockaddr::setSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) throw()
     {
-        assert(inLength <= saddr_size());
-
-        size_t length = (inLength <= saddr_size()) ?
-        inLength :
-            saddr_size();
+        size_t length = (inLength <= saddr_size()) ? inLength : saddr_size();
 
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            length
-            );
+        ::CopyMemory(&saddr, inAddr, length);
     }
-    inline
-    void ctSockaddr::setSockaddr(__in const SOCKADDR_IN* inAddr) throw()
+    inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_IN* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            sizeof(SOCKADDR_IN)
-            );
+        ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
     }
-    inline
-    void ctSockaddr::setSockaddr(__in const SOCKADDR_IN6* inAddr) throw()
+    inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_IN6* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            sizeof(SOCKADDR_IN6)
-            );
+        ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
     }
-    inline
-    void ctSockaddr::setSockaddr(__in const SOCKADDR_INET* inAddr) throw()
+    inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_INET* inAddr) throw()
     {
         ::ZeroMemory(&saddr, saddr_size());
         if (AF_INET == inAddr->si_family) {
-            ::CopyMemory(
-                &saddr,
-                inAddr,
-                sizeof(SOCKADDR_IN)
-                );
+            ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
         } else {
-            ::CopyMemory(
-                &saddr,
-                inAddr,
-                sizeof(SOCKADDR_IN6)
-                );
+            ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
         }
     }
-    inline
-    void ctSockaddr::setSockaddr(__in const SOCKADDR_STORAGE* inAddr) throw()
+    inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_STORAGE* inAddr) throw()
     {
-        ::CopyMemory(
-            &saddr,
-            inAddr,
-            saddr_size()
-            );
+        ::CopyMemory(&saddr, inAddr, saddr_size());
     }
-    inline
-    void ctSockaddr::setSockaddr(__in const SOCKET_ADDRESS* inAddr) throw()
+    inline void ctSockaddr::setSockaddr(_In_ const SOCKET_ADDRESS* inAddr) throw()
     {
-        assert(inAddr->iSockaddrLength <= saddr_size());
-
         size_t length = (inAddr->iSockaddrLength <= saddr_size()) ?
             inAddr->iSockaddrLength :
             saddr_size();
 
         ::ZeroMemory(&saddr, saddr_size());
-        ::CopyMemory(
-            &saddr,
-            inAddr->lpSockaddr,
-            length
-            );
+        ::CopyMemory(&saddr, inAddr->lpSockaddr, length);
     }
 
-    inline
-    void ctSockaddr::setAddressLoopback() throw()
+    inline void ctSockaddr::setAddressLoopback() throw()
     {
         if (AF_INET == saddr.ss_family) {
             PSOCKADDR_IN in4 = reinterpret_cast<PSOCKADDR_IN>(&saddr);
@@ -422,11 +326,11 @@ namespace ctl {
             in6->sin6_port = in6_port;
             in6->sin6_addr.s6_bytes[15] = 1; // IN6ADDR_LOOPBACK_INIT;
         } else {
-            assert(!"ctSockaddr::setAddressLoopback - Unknown family");
+            ctl::ctAlwaysFatalCondition(
+                L"ctSockaddr: unknown family in the SOCKADDR_STORAGE (this %p)", this);
         }
     }
-    inline
-    void ctSockaddr::setAddressAny() throw()
+    inline void ctSockaddr::setAddressAny() throw()
     {
         if (AF_INET == saddr.ss_family) {
             PSOCKADDR_IN in4 = reinterpret_cast<PSOCKADDR_IN>(&saddr);
@@ -444,30 +348,26 @@ namespace ctl {
             in6->sin6_port = in6_port;
         }
     }
-    inline
-    bool ctSockaddr::isAddressLoopback() const throw()
+    inline bool ctSockaddr::isAddressLoopback() const throw()
     {
         ctSockaddr loopback(*this);
         loopback.setAddressLoopback();
         return (0 == ::memcmp(&(loopback.saddr), &(this->saddr), sizeof(SOCKADDR_STORAGE)));
     }
-    inline
-    bool ctSockaddr::isAddressAny() const throw()
+    inline bool ctSockaddr::isAddressAny() const throw()
     {
         ctSockaddr any_addr(*this);
         any_addr.setAddressAny();
         return (0 == ::memcmp(&(any_addr.saddr), &(this->saddr), sizeof(SOCKADDR_STORAGE)));
     }
 
-    inline
-    void ctSockaddr::setPort(__in unsigned short port, __in ByteOrder order) throw()
+    inline void ctSockaddr::setPort(unsigned short port, ByteOrder order) throw()
     {
         PSOCKADDR_IN addr_in = reinterpret_cast<PSOCKADDR_IN>(&saddr);
-        addr_in->sin_port = (order == HostOrder) ? ::htons(port) : port;
+        addr_in->sin_port = (order == ByteOrder::HostOrder) ? ::htons(port) : port;
     }
 
-    inline
-    void ctSockaddr::mapDualMode4To6() throw()
+    inline void ctSockaddr::mapDualMode4To6() throw()
     {
         static const IN6_ADDR v4MappedPrefix = IN6ADDR_V4MAPPEDPREFIX_INIT;
 
@@ -485,8 +385,7 @@ namespace ctl {
         this->swap(tempV6);
     }
 
-    inline
-    bool ctSockaddr::setAddress(__in LPCWSTR wszAddr) throw()
+    inline bool ctSockaddr::setAddress(_In_ LPCWSTR wszAddr) throw()
     {
         ADDRINFOW addr_hints;
         ::ZeroMemory(&addr_hints, sizeof(addr_hints));
@@ -502,8 +401,7 @@ namespace ctl {
         }
     }
 
-    inline
-    bool ctSockaddr::setAddress(__in LPCSTR szAddr) throw()
+    inline bool ctSockaddr::setAddress(_In_ LPCSTR szAddr) throw()
     {
         ADDRINFOA addr_hints;
         ::ZeroMemory(&addr_hints, sizeof(addr_hints));
@@ -520,49 +418,41 @@ namespace ctl {
         }
     }
 
-    inline
-    void ctSockaddr::setAddress(__in const IN_ADDR* inAddr) throw()
+    inline void ctSockaddr::setAddress(_In_ const IN_ADDR* inAddr) throw()
     {
         saddr.ss_family = AF_INET;
         PSOCKADDR_IN addr_in = reinterpret_cast<PSOCKADDR_IN>(&saddr);
         addr_in->sin_addr = *inAddr;
     }
-    inline
-    void ctSockaddr::setAddress(__in const IN6_ADDR* inAddr) throw()
+    inline void ctSockaddr::setAddress(_In_ const IN6_ADDR* inAddr) throw()
     {
         saddr.ss_family = AF_INET6;
         PSOCKADDR_IN6 addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&saddr);
         addr_in6->sin6_addr = *inAddr;
     }
 
-    inline
-    void ctSockaddr::setFlowInfo(__in unsigned long flowinfo) throw()
+    inline void ctSockaddr::setFlowInfo(unsigned long flowinfo) throw()
     {
-        assert(AF_INET6 == saddr.ss_family);
         if (AF_INET6 == saddr.ss_family) {
             PSOCKADDR_IN6 addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&saddr);
             addr_in6->sin6_flowinfo = flowinfo;
         }
     }
-    inline
-    void ctSockaddr::setScopeId(__in unsigned long scopeid) throw()
+    inline void ctSockaddr::setScopeId(unsigned long scopeid) throw()
     {
-        assert(AF_INET6 == saddr.ss_family);
         if (AF_INET6 == saddr.ss_family) {
             PSOCKADDR_IN6 addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&saddr);
             addr_in6->sin6_scope_id = scopeid;
         }
     }
 
-    inline
-    std::wstring ctSockaddr::writeAddress(__in bool trim_scope) const
+    inline std::wstring ctSockaddr::writeAddress(bool trim_scope) const
     {
         std::wstring return_string;
         this->writeAddress(return_string, trim_scope);
         return return_string;
     }
-    inline
-    bool ctSockaddr::writeAddress(__out std::wstring& wsReturn, __in bool trim_scope) const
+    inline bool ctSockaddr::writeAddress(_Out_ std::wstring& wsReturn, bool trim_scope) const
     {
         WCHAR address[64];
         size_t addressLength = 64;
@@ -600,8 +490,7 @@ namespace ctl {
         return false;
     }
 
-    inline
-    bool ctSockaddr::writeAddress(__out std::string& sReturn, __in bool trim_scope) const
+    inline bool ctSockaddr::writeAddress(_Out_ std::string& sReturn, bool trim_scope) const
     {
         CHAR address[64];
         DWORD addressLength = 64;
@@ -639,26 +528,18 @@ namespace ctl {
         return false;
     }
 
-    inline
-    std::wstring ctSockaddr::writeCompleteAddress(__in bool trim_scope) const
+    inline std::wstring ctSockaddr::writeCompleteAddress(bool trim_scope) const
     {
         std::wstring return_string;
         this->writeCompleteAddress(return_string, trim_scope);
         return return_string;
     }
-    inline
-    bool ctSockaddr::writeCompleteAddress(__out std::wstring& wsReturn, __in bool trim_scope) const
+    inline bool ctSockaddr::writeCompleteAddress(_Out_ std::wstring& wsReturn, bool trim_scope) const
     {
         WCHAR address[64];
         DWORD addressLength = 64;
 
-        if (0 == ::WSAAddressToStringW(
-            this->sockaddr(),
-            saddr_size(),
-            nullptr,
-            address,
-            &addressLength
-            )) {
+        if (0 == ::WSAAddressToStringW(this->sockaddr(), saddr_size(), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 WCHAR* end = address + addressLength;
                 WCHAR* scope_ptr = std::find(address, end, L'%');
@@ -686,19 +567,12 @@ namespace ctl {
         return false;
     }
 
-    inline
-    bool ctSockaddr::writeCompleteAddress(__out std::string& sReturn, __in bool trim_scope) const
+    inline bool ctSockaddr::writeCompleteAddress(_Out_ std::string& sReturn, bool trim_scope) const
     {
         CHAR address[64];
         DWORD addressLength = 64;
-
-        if (0 == ::WSAAddressToStringA(
-            this->sockaddr(),
-            saddr_size(),
-            nullptr,
-            address,
-            &addressLength
-            )) {
+#pragma warning( disable : 4996) 
+        if (0 == ::WSAAddressToStringA(this->sockaddr(), saddr_size(), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 CHAR* end = address + addressLength;
                 CHAR* scope_ptr = std::find(address, end, '%');
@@ -726,25 +600,21 @@ namespace ctl {
         return false;
     }
 
-    inline
-    int ctSockaddr::length() const throw()
+    inline int ctSockaddr::length() const throw()
     {
         return static_cast<int>(saddr_size());
     }
 
-    inline
-    short ctSockaddr::family() const throw()
+    inline short ctSockaddr::family() const throw()
     {
         return saddr.ss_family;
     }
-    inline
-    unsigned short ctSockaddr::port() const throw()
+    inline unsigned short ctSockaddr::port() const throw()
     {
         const SOCKADDR_IN* addr_in = reinterpret_cast<const SOCKADDR_IN*>(&saddr);
         return ::ntohs(addr_in->sin_port);
     }
-    inline
-    unsigned long ctSockaddr::flowinfo() const throw()
+    inline unsigned long ctSockaddr::flowinfo() const throw()
     {
         if (AF_INET6 == saddr.ss_family) {
             const SOCKADDR_IN6* addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&saddr);
@@ -753,8 +623,7 @@ namespace ctl {
             return 0;
         }
     }
-    inline
-    unsigned long ctSockaddr::scopeId() const throw()
+    inline unsigned long ctSockaddr::scopeId() const throw()
     {
         if (AF_INET6 == saddr.ss_family) {
             const SOCKADDR_IN6* addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&saddr);
@@ -764,43 +633,36 @@ namespace ctl {
         }
     }
 
-    inline
-    SOCKADDR* ctSockaddr::sockaddr() const throw()
+    inline SOCKADDR* ctSockaddr::sockaddr() const throw()
     {
         return const_cast<SOCKADDR*>(
             reinterpret_cast<const SOCKADDR*>(&saddr));
     }
-    inline
-    SOCKADDR_IN* ctSockaddr::sockaddr_in() const throw()
+    inline SOCKADDR_IN* ctSockaddr::sockaddr_in() const throw()
     {
         return const_cast<SOCKADDR_IN*>(
             reinterpret_cast<const SOCKADDR_IN*>(&saddr));
     }
-    inline
-    SOCKADDR_IN6* ctSockaddr::sockaddr_in6() const throw()
+    inline SOCKADDR_IN6* ctSockaddr::sockaddr_in6() const throw()
     {
         return const_cast<SOCKADDR_IN6*>(
             reinterpret_cast<const SOCKADDR_IN6*>(&saddr));
     }
-    inline
-    SOCKADDR_INET* ctSockaddr::sockaddr_inet() const throw()
+    inline SOCKADDR_INET* ctSockaddr::sockaddr_inet() const throw()
     {
         return const_cast<SOCKADDR_INET*>(
             reinterpret_cast<const SOCKADDR_INET*>(&saddr));
     }
-    inline
-    SOCKADDR_STORAGE* ctSockaddr::sockaddr_storage() const throw()
+    inline SOCKADDR_STORAGE* ctSockaddr::sockaddr_storage() const throw()
     {
         return const_cast<SOCKADDR_STORAGE*>(&saddr);
     }
-    inline
-    IN_ADDR* ctSockaddr::in_addr() const throw()
+    inline IN_ADDR* ctSockaddr::in_addr() const throw()
     {
         const SOCKADDR_IN* addr_in = reinterpret_cast<const SOCKADDR_IN*>(&saddr);
         return const_cast<IN_ADDR*>(&(addr_in->sin_addr));
     }
-    inline
-    IN6_ADDR* ctSockaddr::in6_addr() const throw()
+    inline IN6_ADDR* ctSockaddr::in6_addr() const throw()
     {
         const SOCKADDR_IN6* addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&saddr);
         return const_cast<IN6_ADDR*>(&(addr_in6->sin6_addr));

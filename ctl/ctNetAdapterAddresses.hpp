@@ -39,10 +39,8 @@ namespace ctl {
             /// - default d'tor, copy c'tor, and copy assignment
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            iterator() : buffer(), current(NULL)
-            {
-            }
-            iterator(__in std::shared_ptr<std::vector<BYTE>> _ipAdapter) throw() : buffer(_ipAdapter), current(NULL)
+            iterator() = default;
+            iterator(_In_ std::shared_ptr<std::vector<BYTE>> _ipAdapter) throw() : buffer(_ipAdapter)
             {
                 if ((buffer.get() != NULL) && (buffer->size() > 0)) {
                     current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0)));
@@ -54,7 +52,7 @@ namespace ctl {
             /// member swap method
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            void swap(__inout iterator& _in) throw()
+            void swap(_Inout_ iterator& _in) throw()
             {
                 using std::swap;
                 swap(this->buffer, _in.buffer);
@@ -90,17 +88,17 @@ namespace ctl {
             /// arithmatic operators can fail 
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            bool operator==(__in const iterator& _iter) const throw()
+            bool operator==(_In_ const iterator& _iter) const throw()
             {
                 // for comparison of 'end' iterators, just look at current
                 if (this->current == NULL) {
                     return (this->current == _iter.current);
                 } else {
                     return ((this->buffer == _iter.buffer) &&
-                             (this->current == _iter.current));
+                            (this->current == _iter.current));
                 }
             }
-            bool operator!=(__in const iterator& _iter) const throw()
+            bool operator!=(_In_ const iterator& _iter) const throw()
             {
                 return !(*this == _iter);
             }
@@ -146,8 +144,8 @@ namespace ctl {
             typedef IP_ADAPTER_ADDRESSES&       reference;
 
         private:
-            std::shared_ptr<std::vector<BYTE>> buffer;
-            PIP_ADAPTER_ADDRESSES current;
+            std::shared_ptr<std::vector<BYTE>> buffer = nullptr;
+            PIP_ADAPTER_ADDRESSES current = nullptr;
         };
 
     public:
@@ -161,7 +159,8 @@ namespace ctl {
         ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) throw() : buffer(new std::vector<BYTE>(16384))
+        ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) : 
+            buffer(new std::vector<BYTE>(16384))
         {
             this->refresh(_family, _gaaFlags);
         }
@@ -236,15 +235,17 @@ namespace ctl {
     /// - to find the first interface that has the specified address assigned
     ///
     struct ctNetAdapterMatchingAddrPredicate {
-        ctNetAdapterMatchingAddrPredicate(__in const ctl::ctSockaddr& _addr) : targetAddr(_addr)
+        ctNetAdapterMatchingAddrPredicate(_In_ const ctl::ctSockaddr& _addr) : 
+            targetAddr(_addr)
         {
         }
 
-        bool operator () (__in IP_ADAPTER_ADDRESSES& _ipAddress)
+        bool operator () (_In_ const IP_ADAPTER_ADDRESSES& _ipAddress) throw()
         {
             for (PIP_ADAPTER_UNICAST_ADDRESS unicastAddress = _ipAddress.FirstUnicastAddress;
-                 unicastAddress != NULL;
-                 unicastAddress = unicastAddress->Next) {
+                 unicastAddress != nullptr;
+                 unicastAddress = unicastAddress->Next) 
+            {
                 ctSockaddr unicastSockaddr(&unicastAddress->Address);
                 if (unicastSockaddr == targetAddr) {
                     return true;

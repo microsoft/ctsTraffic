@@ -14,12 +14,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <string>
-#include <vector>
-#include <memory>
+#include <wchar.h>
 // OS headers
 #include <windows.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
@@ -34,14 +33,15 @@ namespace ctsTraffic {
     ///
     class ctsStatusInformation {
     protected:
-        enum PrintingStatus {
+        enum class PrintingStatus
+        {
             PrintComplete,
             NoPrint
         };
 
     private:
         // expanded beyond 80 to handle very long IPv6 address strings
-        // - static buffer is expected to be protected by only a single caller at a time
+        // - buffer is expected to be protected by only a single caller at a time
         static const unsigned long OutputBufferSize = 128;
         // one more for the null terminator
         wchar_t OutputBuffer[OutputBufferSize + 1];
@@ -54,22 +54,22 @@ namespace ctsTraffic {
         }
 
     public:
-        ctsStatusInformation() throw()
+        ctsStatusInformation() NOEXCEPT
         {
         }
 
         // base class is movable
-        ctsStatusInformation(ctsStatusInformation&& _moved_from) throw()
+        ctsStatusInformation(ctsStatusInformation&& _moved_from) NOEXCEPT
         {
             ::wmemcpy_s(this->OutputBuffer, OutputBufferSize + 1, _moved_from.OutputBuffer, OutputBufferSize + 1);
             _moved_from.reset_buffer();
         }
 
-        virtual ~ctsStatusInformation() throw()
+        virtual ~ctsStatusInformation() NOEXCEPT
         {
         }
 
-        LPCWSTR print_legend(ctsConfig::StatusFormatting _format) throw()
+        LPCWSTR print_legend(ctsConfig::StatusFormatting _format) NOEXCEPT
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return nullptr;
@@ -78,7 +78,7 @@ namespace ctsTraffic {
             }
         }
 
-        LPCWSTR print_header(ctsConfig::StatusFormatting _format) throw()
+        LPCWSTR print_header(ctsConfig::StatusFormatting _format) NOEXCEPT
         {
             return this->format_header(_format);
         }
@@ -87,10 +87,10 @@ namespace ctsTraffic {
         /// Expects to be called in a loop
         /// - returns nullptr if nothing left to print
         ///
-        LPCWSTR print_status(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) throw()
+        LPCWSTR print_status(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
         {
             this->reset_buffer();
-            if (this->format_data(_format, _current_time, _clear_status) != NoPrint) {
+            if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint) {
                 return OutputBuffer;
             } else {
                 return nullptr;
@@ -99,13 +99,13 @@ namespace ctsTraffic {
 
     protected:
         ///
-        /// derived class is required to implement these two pure virtual function
+        /// derived class is required to implement these three pure virtual function
         ///
-        virtual PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) throw() = 0;
-        virtual LPCWSTR format_legend() throw() = 0;
-        virtual LPCWSTR format_header(ctsConfig::StatusFormatting _format) throw() = 0;
+        virtual PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT = 0;
+        virtual LPCWSTR format_legend() NOEXCEPT = 0;
+        virtual LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT = 0;
 
-        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, _In_ LPCWSTR _value) throw()
+        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, _In_ LPCWSTR _value) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 0 == _left_justified_offset,
@@ -127,7 +127,7 @@ namespace ctsTraffic {
                 _value,
                 value_length);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, float _value) throw()
+        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, float _value) NOEXCEPT
         {
             static const unsigned long CoversionBufferLength = 16;
             wchar_t ConversionBuffer[CoversionBufferLength];
@@ -162,7 +162,7 @@ namespace ctsTraffic {
                 ConversionBuffer,
                 converted);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, unsigned long _value) throw()
+        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, unsigned long _value) NOEXCEPT
         {
             static const unsigned long CoversionBufferLength = 12;
             wchar_t ConversionBuffer[CoversionBufferLength];
@@ -197,7 +197,7 @@ namespace ctsTraffic {
                 ConversionBuffer,
                 converted);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, long long _value) throw()
+        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, long long _value) NOEXCEPT
         {
             static const unsigned long CoversionBufferLength = 20;
             wchar_t ConversionBuffer[CoversionBufferLength];
@@ -250,7 +250,7 @@ namespace ctsTraffic {
         /// Functions to write to the output buffer in CSV formatting
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, float _value, bool _add_comma = true) throw()
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, float _value, bool _add_comma = true) NOEXCEPT
         {
             auto converted = ::_snwprintf_s(
                 OutputBuffer + _offset,
@@ -264,7 +264,7 @@ namespace ctsTraffic {
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, unsigned long _value, bool _add_comma = true) throw()
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, unsigned long _value, bool _add_comma = true) NOEXCEPT
         {
             errno_t error = ::_ui64tow_s(
                 _value,
@@ -298,7 +298,7 @@ namespace ctsTraffic {
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, long long _value, bool _add_comma = true) throw()
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, long long _value, bool _add_comma = true) NOEXCEPT
         {
             errno_t error = ::_ui64tow_s(
                 _value,
@@ -332,7 +332,7 @@ namespace ctsTraffic {
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, _In_ LPCWSTR _value, bool _add_comma = true) throw()
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, _In_ LPCWSTR _value, bool _add_comma = true) NOEXCEPT
         {
             auto converted = ::_snwprintf_s(
                 OutputBuffer + _offset,
@@ -361,17 +361,17 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctsUdpStatusInformation : public ctsStatusInformation {
     public:
-        ctsUdpStatusInformation() throw()
+        ctsUdpStatusInformation() NOEXCEPT
         {
         }
-        ~ctsUdpStatusInformation() throw()
+        ~ctsUdpStatusInformation() NOEXCEPT
         {
         }
 
         ///
         /// Pure-Virtual functions required to be defined
         ///
-        LPCWSTR format_legend() throw()
+        LPCWSTR format_legend() NOEXCEPT
         {
             return
                 L"Legend:\n"
@@ -384,7 +384,7 @@ namespace ctsTraffic {
                 L"\n";
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) throw()
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return
@@ -400,7 +400,7 @@ namespace ctsTraffic {
             }
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) throw()
+        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
         {
             ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
 
@@ -439,7 +439,7 @@ namespace ctsTraffic {
                 this->right_justify_output(ErrorFramesOffset, ErrorFramesLength, udp_data.error_frames.get());
                 this->terminate_string(ErrorFramesOffset);
             }
-            return PrintComplete;
+            return PrintingStatus::PrintComplete;
         }
 
 
@@ -476,22 +476,22 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctsJitterStatusInformation : public ctsStatusInformation {
     public:
-        ctsJitterStatusInformation() throw() : ctsStatusInformation()
+        ctsJitterStatusInformation() NOEXCEPT : ctsStatusInformation()
         {
         }
-        ~ctsJitterStatusInformation() throw()
+        ~ctsJitterStatusInformation() NOEXCEPT
         {
         }
 
         ///
         /// Pure-Virtual functions required to be defined
         ///
-        LPCWSTR format_legend(ctsConfig::StatusFormatting) throw()
+        LPCWSTR format_legend(ctsConfig::StatusFormatting) NOEXCEPT
         {
             return nullptr;
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) throw()
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 ctsConfig::StatusFormatting::Csv != _format,
@@ -499,9 +499,9 @@ namespace ctsTraffic {
             return L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\n";
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting, long long, bool) throw()
+        PrintingStatus format_data(ctsConfig::StatusFormatting, long long, bool) NOEXCEPT
         {
-            return NoPrint;
+            return PrintingStatus::NoPrint;
         }
     };
 
@@ -515,14 +515,14 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctsTcpStatusInformation : public ctsStatusInformation {
     public:
-        ctsTcpStatusInformation() throw() : ctsStatusInformation()
+        ctsTcpStatusInformation() NOEXCEPT : ctsStatusInformation()
         {
         }
-        ~ctsTcpStatusInformation() throw()
+        ~ctsTcpStatusInformation() NOEXCEPT
         {
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) throw()
+        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
         {
             ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
             ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
@@ -573,10 +573,10 @@ namespace ctsTraffic {
                 this->terminate_string(ProtocolErrorsOffset);
             }
 
-            return PrintComplete;
+            return PrintingStatus::PrintComplete;
         }
 
-        LPCWSTR format_legend() throw()
+        LPCWSTR format_legend() NOEXCEPT
         {
             return
                 L"Legend:\n"
@@ -589,7 +589,7 @@ namespace ctsTraffic {
                 L"\n";
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) throw()
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
         {
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 return

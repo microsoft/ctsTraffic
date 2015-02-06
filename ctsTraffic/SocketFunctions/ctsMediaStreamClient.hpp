@@ -15,15 +15,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <vector>
 // os headers
-#include <winsock2.h>
 #include <Windows.h>
+#include <winsock2.h>
 // ctl headers
-#include <ctSocketExtensions.hpp>
+#include <ctVersionConversion.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctTimer.hpp>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -42,7 +40,7 @@ namespace ctsTraffic {
         OVERLAPPED* _overlapped,
         std::weak_ptr<ctsSocket> _weak_socket,
         ctsIOTask _io_task
-        ) throw();
+        ) NOEXCEPT;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -70,26 +68,32 @@ namespace ctsTraffic {
     };
 
     static inline
-    IoImplStatus ctsMediaStreamClientIoImpl(_In_ ctsSocket* psocket, const ctsIOTask& _next_io, const std::weak_ptr<ctsSocket>& _weak_socket) throw()
+    IoImplStatus ctsMediaStreamClientIoImpl(_In_ std::shared_ptr<ctsSocket> _shared_socket, const ctsIOTask& _next_io) NOEXCEPT
     {
-        switch (_next_io.ioAction) {
-            // nothing failed, just no more IO right now
-            case ctsIOTask::IOAction::None:
-                return IoImplStatus(NO_ERROR, false);
+            switch (_next_io.ioAction) {
+                case IOTaskAction::None:
+                    // nothing failed, just no more IO right now
+                    return IoImplStatus(NO_ERROR, false);
 
-                // it's not an error to abort any pended IO
-            case ctsIOTask::IOAction::Abort:
-                psocket->close_socket();
-                return IoImplStatus(NO_ERROR, false);
+                case IOTaskAction::Abort: {
+                    // the protocol will signal abort when it's done
+                    auto shared_pattern(_shared_socket->io_pattern());
+                    shared_pattern->complete_io(_next_io, 0, 0);
+                    _shared_socket->close_socket();
+                    return IoImplStatus(NO_ERROR, false);
+                }
 
-            case ctsIOTask::IOAction::FatalAbort:
-                psocket->complete_io(_next_io, 0, ctsIOPatternStatus::ErrorNotAllDataTransferred);
-                psocket->close_socket();
-                return IoImplStatus(ctsIOPatternStatus::ErrorNotAllDataTransferred, false);
-        }
+                case IOTaskAction::FatalAbort: {
+                    // the protocol indicated to rudely abort the connection
+                    auto shared_pattern(_shared_socket->io_pattern());
+                    shared_pattern->complete_io(_next_io, 0, 0);
+                    _shared_socket->close_socket();
+                    return IoImplStatus(shared_pattern->get_last_error(), false);
+                }
+            }
 
         // add-ref the IO about to start
-        LONG io_count = psocket->increment_io();
+        LONG io_count = _shared_socket->increment_io();
 
         //
         // Using a functor to guarantee that regardless of error path, the required ctsSocket interactions occur
@@ -102,15 +106,15 @@ namespace ctsTraffic {
 
             } else {
                 // IO successfully completed inline or failed
-                unsigned int bytes_transferred = 0;
+                unsigned long bytes_transferred = 0;
                 if (_completed_inline) {
                     bytes_transferred = _completed_inline_bytes;
                 }
-
-                ctsSocket::IOStatus protocol_status = psocket->complete_io(_next_io, bytes_transferred, _gle);
+                // hold a reference on the iopattern
+                auto shared_pattern(_shared_socket->io_pattern());
+                ctsIOStatus protocol_status = shared_pattern->complete_io(_next_io, bytes_transferred, _gle);
                 switch (protocol_status) {
-                    case ctsSocket::IOStatus::SuccessMoreIO:
-                        ctsConfig::PrintDebug(L"\t\tctsMediaStreamClientIoImpl - complete_io returned SuccessMoreIO\n");
+                    case ctsIOStatus::ContinueIo:
                         // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
                         ctsConfig::PrintDebugIfFailed(function_name, _gle, L"ctsMediaStreamClient");
                         // the protocol wants to ignore the error and send more data
@@ -118,20 +122,20 @@ namespace ctsTraffic {
                         more_io = true;
                         break;
 
-                    case ctsSocket::IOStatus::SuccessDone:
-                        ctsConfig::PrintDebug(L"\t\tctsMediaStreamClientIoImpl - complete_io returned SuccessDone\n");
+                    case ctsIOStatus::CompletedIo:
                         // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
                         ctsConfig::PrintDebugIfFailed(function_name, _gle, L"ctsMediaStreamClient");
                         // the protocol wants to ignore the error but is done with IO
+                        _shared_socket->close_socket();
                         more_io = false;
                         break;
 
-                    case ctsSocket::IOStatus::Failure:
-                        ctsConfig::PrintDebug(L"\t\tctsMediaStreamClientIoImpl - complete_io returned Failure\n");
+                    case ctsIOStatus::FailedIo:
                         // write out the error
                         ctsConfig::PrintErrorIfFailed(function_name, _gle);
                         // the protocol acknoledged the failure - socket is done with IO
-                        _gle = psocket->get_last_error();
+                        _shared_socket->close_socket();
+                        _gle = shared_pattern->get_last_error();
                         more_io = false;
                         break;
 
@@ -140,12 +144,12 @@ namespace ctsTraffic {
                 }
 
                 // decrement the IO count if failed and/or inlined-completed
-                io_count = psocket->decrement_io();
+                io_count = _shared_socket->decrement_io();
                 // IO count should never be zero: callers should be guaranteeing a refcount before calling Impl
                 ctl::ctFatalCondition(
                     0 == io_count,
                     L"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
-                    psocket);
+                    _shared_socket.get());
             }
 
             return IoImplStatus(_gle, more_io);
@@ -156,27 +160,26 @@ namespace ctsTraffic {
         unsigned long bytes_transferred = 0;
         bool completed_inline = false;
 
-        function_name = L"ctsSocket::lock_socket";
-        // take a lock on the SOCKET to use in the Winsock API
-        SOCKET s = psocket->lock_socket();
+        // scope to the socket lock
         {
-            // scoped for the scope guard to unlock the socket
-#pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
-            ctlScopeGuard(unlockSocketOnExit, { psocket->unlock_socket(); });
-
-            if (INVALID_SOCKET == s) {
-                return onExitFunctor(WSAENOTSOCK, false, 0);
+            function_name = L"ctsSocket was closed";
+            auto socket_lock(ctsSocket::LockSocket(_shared_socket));
+            SOCKET socket = socket_lock.get();
+            if (INVALID_SOCKET == socket) {
+                return onExitFunctor(WSAECONNABORTED, false, 0);
             }
 
-            function_name = L"ctThreadIocp::new_request";
             std::shared_ptr<ctl::ctThreadIocp> io_thread_pool;
             OVERLAPPED* pov = NULL;
             try {
                 // these are the only calls which can throw in this function
-                io_thread_pool = psocket->thread_pool();
+                function_name = L"ctsSocket::thread_pool";
+                io_thread_pool = _shared_socket->thread_pool();
+
+                function_name = L"ctThreadIocp::new_request";
                 pov = io_thread_pool->new_request(
                     ctsMediaStreamClientIoCompletionCallback,
-                    _weak_socket,
+                    std::weak_ptr<ctsSocket>(_shared_socket),
                     _next_io);
             }
             catch (const ctl::ctException& e) {
@@ -192,10 +195,10 @@ namespace ctsTraffic {
             wsabuf.buf = _next_io.buffer + _next_io.buffer_offset;
             wsabuf.len = _next_io.buffer_length;
 
-            if (ctsIOTask::IOAction::Send == _next_io.ioAction) {
+            if (IOTaskAction::Send == _next_io.ioAction) {
                 function_name = L"WSASendTo";
-                const ctl::ctSockaddr target_addr(psocket->get_target());
-                if (::WSASendTo(s, &wsabuf, 1, NULL, 0, target_addr.sockaddr(), target_addr.length(), pov, NULL) != 0) {
+                const ctl::ctSockaddr target_addr(_shared_socket->target_address());
+                if (::WSASendTo(socket, &wsabuf, 1, NULL, 0, target_addr.sockaddr(), target_addr.length(), pov, NULL) != 0) {
                     gle = ::WSAGetLastError();
                     // IO pending is considered to be successful since the completion routine will handle it
                     if (WSA_IO_PENDING == gle) {
@@ -218,7 +221,7 @@ namespace ctsTraffic {
             } else {
                 function_name = L"WSARecvFrom";
                 DWORD flags = 0;
-                if (::WSARecvFrom(s, &wsabuf, 1, NULL, &flags, NULL, NULL, pov, NULL) != 0) {
+                if (::WSARecvFrom(socket, &wsabuf, 1, NULL, &flags, NULL, NULL, pov, NULL) != 0) {
                     gle = ::WSAGetLastError();
                     // IO pending is considered to be successful since the completion routine will handle it
                     if (WSA_IO_PENDING == gle) {
@@ -253,73 +256,72 @@ namespace ctsTraffic {
         OVERLAPPED* _overlapped,
         std::weak_ptr<ctsSocket> _weak_socket,
         ctsIOTask _io_task
-        ) throw()
+        ) NOEXCEPT
     {
-        auto shared_socket_lock(_weak_socket.lock());
-        ctsSocket* psocket(shared_socket_lock.get());
-        if (nullptr == psocket) {
-            // underlying socket went away - nothing to do
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
 
         int gle = NO_ERROR;
         DWORD transferred = 0;
-        SOCKET s = psocket->lock_socket();
-        if (s != INVALID_SOCKET) {
-            DWORD flags;
-            if (!::WSAGetOverlappedResult(s, _overlapped, &transferred, FALSE, &flags)) {
-                gle = ::WSAGetLastError();
-            }
-            // no longer directly need the SOCKET
-            psocket->unlock_socket();
-            s = INVALID_SOCKET;
-
-            if (gle != NO_ERROR) {
-                ctsConfig::PrintDebug(
-                    L"\t\tctsMediaStreamClientIoCompletionCallback IO completed (%s) with error %d\n",
-                    (_io_task.ioAction == ctsIOTask::IOAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
-                    gle);
-            }
-
-            // see if complete_io requests more IO
-            ctsSocket::IOStatus protocol_status = psocket->complete_io(_io_task, transferred, gle);
-            switch (protocol_status) {
-                case ctsSocket::IOStatus::SuccessMoreIO: {
-                    // more IO is requested from the protocol
-                    IoImplStatus status = ctsMediaStreamClientIoImpl(psocket, psocket->initiate_io(), _weak_socket);
-                    while (status.continue_io) {
-                        // invoke the new IO call while holding a refcount to the prior IO in a tight loop
-                        status = ctsMediaStreamClientIoImpl(psocket, psocket->initiate_io(), _weak_socket);
-                    }
-                    gle = status.error_code;
-                    break;
+        // scope to the socket lock
+        {
+            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            SOCKET socket = socket_lock.get();
+            if (socket != INVALID_SOCKET) {
+                DWORD flags;
+                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags)) {
+                    gle = ::WSAGetLastError();
                 }
-
-                case ctsSocket::IOStatus::SuccessDone:
-                    // protocol didn't fail this IO: no more IO is requested from the protocol
-                    gle = NO_ERROR;
-                    break;
-
-                case ctsSocket::IOStatus::Failure:
-                    // protocol sees this as a failure - capture the error the protocol recorded
-                    gle = psocket->get_last_error();
-                    break;
-
-                default:
-                    ctl::ctAlwaysFatalCondition(L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+            } else {
+                // we're intentionally ignoring the error when we have closed it early
+                // - doing this because that's how we shutdown the client after processing all frames
+                gle = NO_ERROR;
             }
-        } else {
-            // socket already went away - just decrement from the prior IO and exit
-            // we're intentionally ignoring the error when we have closed it early
-            // - doing this because that's how we shutdown the client after processing all frames
-            psocket->unlock_socket();
         }
 
-        // always decrement *after* attempting new IO
-        // - the prior IO is now formally "done"
-        if (psocket->decrement_io() == 0) {
+        // hold a reference on the iopattern
+        auto shared_pattern(shared_socket->io_pattern());
+        // see if complete_io requests more IO
+        ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
+        switch (protocol_status) {
+            case ctsIOStatus::ContinueIo: {
+                // more IO is requested from the protocol
+                IoImplStatus status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
+                while (status.continue_io) {
+                    // invoke the new IO call while holding a refcount to the prior IO in a tight loop
+                    status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
+                }
+                gle = status.error_code;
+                break;
+            }
+
+            case ctsIOStatus::CompletedIo:
+                shared_socket->close_socket();
+                gle = NO_ERROR;
+                break;
+
+            case ctsIOStatus::FailedIo:
+                if (gle != 0) {
+                    // the failure may have been a protocol error - in which case gle would just be NO_ERROR
+                    ctsConfig::PrintErrorInfo(
+                        L"ctsMediaStreamClientIoCompletionCallback IO failed (%s) with error %d\n",
+                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
+                        gle);
+                }
+                shared_socket->close_socket();
+                gle = shared_pattern->get_last_error();
+                break;
+
+            default:
+                ctl::ctAlwaysFatalCondition(L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+        }
+
+        // always decrement *after* attempting new IO - the prior IO is now formally "done"
+        if (shared_socket->decrement_io() == 0) {
             // if we have no more IO pended, complete the state
-            psocket->complete_state(gle);
+            shared_socket->complete_state(gle);
         }
     }
 
@@ -333,48 +335,43 @@ namespace ctsTraffic {
         OVERLAPPED* _overlapped,
         std::weak_ptr<ctsSocket> _weak_socket,
         ctl::ctSockaddr _target_address
-        ) throw()
+        ) NOEXCEPT
     {
-        auto shared_socket_lock(_weak_socket.lock());
-        ctsSocket* psocket(shared_socket_lock.get());
-        if (nullptr == psocket) {
-            // underlying socket went away - nothing to do
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
 
         int gle = NO_ERROR;
         DWORD transferred = 0;
-        SOCKET s = psocket->lock_socket();
-        if (s == INVALID_SOCKET) {
-            gle = WSAECONNABORTED;
-        } else {
-            DWORD flags;
-            if (!::WSAGetOverlappedResult(s, _overlapped, &transferred, FALSE, &flags)) {
-                gle = ::WSAGetLastError();
+        // scope to the socket lock
+        {
+            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            SOCKET socket = socket_lock.get();
+            if (INVALID_SOCKET == socket) {
+                gle = WSAECONNABORTED;
+            } else {
+                DWORD flags;
+                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags)) {
+                    gle = ::WSAGetLastError();
+                }
+            }
+
+            ctsConfig::PrintErrorIfFailed(L"\tWSASendTo (START request)", gle);
+
+            if (NO_ERROR == gle) {
+                // set the local and remote addr's
+                ctl::ctSockaddr local_addr;
+                int local_addr_len = local_addr.length();
+                if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
+                    shared_socket->set_local_address(local_addr);
+                }
+                shared_socket->set_target_address(_target_address);
+                ctsConfig::PrintNewConnection(local_addr, _target_address);
             }
         }
 
-        ctsConfig::PrintErrorIfFailed(L"\tWSASendTo (START request)", gle);
-
-        if (NO_ERROR == gle) {
-            // set the local addr
-            ctl::ctSockaddr local_addr;
-            int local_addr_len = local_addr.length();
-            if (0 == ::getsockname(s, local_addr.sockaddr(), &local_addr_len)) {
-                psocket->set_local(local_addr);
-            }
-            // set the remote addr
-            psocket->set_target(_target_address);
-        }
-
-        // unlock before completing the socket state
-        psocket->unlock_socket();
-        psocket->complete_state(gle);
-
-        // print results after completing state
-        if (NO_ERROR == gle) {
-            ctsConfig::PrintNewConnection(_target_address);
-        }
+        shared_socket->complete_state(gle);
     }
 
 
@@ -385,25 +382,22 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline
-    void ctsMediaStreamClient(std::weak_ptr<ctsSocket> _weak_socket) throw()
+    void ctsMediaStreamClient(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
-        auto shared_socket_lock(_weak_socket.lock());
-        ctsSocket* psocket = shared_socket_lock.get();
-        if (psocket == nullptr) {
-            // the underlying socket went away - nothing to do
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
+        // hold a reference on the iopattern
+        auto shared_pattern(shared_socket->io_pattern());
 
         // always register our ctsIOPattern callback since it's necessary for this IO Pattern
-        psocket->register_pattern_callback(
+        shared_pattern->register_callback(
             [_weak_socket] (const ctsIOTask& _task) {
             // attempt to get a reference to the socket
-            auto shared_socket_lock(_weak_socket.lock());
-            ctsSocket* psocket = shared_socket_lock.get();
-            if (psocket == nullptr) {
-                // the underlying socket went away - nothing to do
-                ctsConfig::PrintDebug(L"\t\tctsMediaStreamClient callback - NULL ctsSocket!!\n");
+            auto lambda_shared_socket(_weak_socket.lock());
+            if (!lambda_shared_socket) {
                 return;
             }
 
@@ -420,28 +414,29 @@ namespace ctsTraffic {
             //
 
             // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
-            if (psocket->increment_io() > 1) {
+            if (lambda_shared_socket->increment_io() > 1) {
                 // only running this one task in the OOB callback
-                IoImplStatus status = ctsMediaStreamClientIoImpl(psocket, _task, _weak_socket);
-                // always check to see if we aborted IO in the middle of an operation
-                // - there's a timing window where the main path won't see this decremented to zero
-                if (psocket->decrement_io() == 0) {
-                    psocket->complete_state(status.error_code);
+                IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
+                // decrement the IO count that we added before calling the Impl
+                // - complete_state if this happened to be the final IO refcount
+                if (lambda_shared_socket->decrement_io() == 0) {
+                    lambda_shared_socket->complete_state(status.error_code);
                 }
             } else {
-                psocket->decrement_io();
+                // just decrement the IO count that we added before calling the Impl (no IO attempted)
+                lambda_shared_socket->decrement_io();
             }
         });
 
         // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
-        psocket->increment_io();
-        IoImplStatus status = ctsMediaStreamClientIoImpl(psocket, psocket->initiate_io(), _weak_socket);
+        shared_socket->increment_io();
+        IoImplStatus status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
         while (status.continue_io) {
             // invoke the new IO call while holding a refcount to the prior IO in a tight loop
-            status = ctsMediaStreamClientIoImpl(psocket, psocket->initiate_io(), _weak_socket);
+            status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
         }
-        if (0 == psocket->decrement_io()) {
-            psocket->complete_state(status.error_code);
+        if (0 == shared_socket->decrement_io()) {
+            shared_socket->complete_state(status.error_code);
         }
     }
 
@@ -452,68 +447,79 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline
-    void ctsMediaStreamClientConnect(std::weak_ptr<ctsSocket> _weak_socket) throw()
+    void ctsMediaStreamClientConnect(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
-        auto shared_socket_lock(_weak_socket.lock());
-        ctsSocket* psocket = shared_socket_lock.get();
-        if (psocket == nullptr) {
-            // the underlying socket went away - nothing to do
+        auto shared_socket(_weak_socket.lock());
+        if (!shared_socket) {
             return;
         }
 
-        const ctl::ctSockaddr& targetAddress = psocket->get_target();
+        const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
 
         bool completed_inline = false;
         int io_error = NO_ERROR;
-        SOCKET s = psocket->lock_socket();
-        if (s != INVALID_SOCKET) {
-            std::shared_ptr<ctl::ctThreadIocp> io_thread_pool;
-            OVERLAPPED* pov = NULL;
 
-            try {
-                io_error = ctsConfig::SetPreConnectOptions(s);
-                if (io_error != NO_ERROR) {
-                    throw ctl::ctException(io_error, L"ctsConfig::SetPreConnectOptions", false);
-                }
-                // these are the only calls which can throw in this function
-                io_thread_pool = psocket->thread_pool();
-                // also passing the buffer through to ensure it remains allocated for the lifetime of the IO
-                pov = io_thread_pool->new_request(
-                    ctsMediaStreamClientConnectionCompletionCallback,
-                    _weak_socket,
-                    targetAddress);
-            }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                io_error = e.why();
-            }
-            catch (const std::bad_alloc& e) {
-                ctsConfig::PrintException(e);
-                io_error = WSAENOBUFS;
-            }
+        // scope to the socket lock
+        {
+            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            SOCKET socket = socket_lock.get();
+            if (socket != INVALID_SOCKET) {
+                std::shared_ptr<ctl::ctThreadIocp> io_thread_pool;
+                OVERLAPPED* pov = NULL;
 
-            if (NO_ERROR == io_error) {
-                auto start_task = ctsMediaStreamMessage::Construct(ctsMediaStreamMessage::START);
-                WSABUF wsabuf;
-                wsabuf.buf = start_task.buffer + start_task.buffer_offset;
-                wsabuf.len = start_task.buffer_length;
-
-                if (::WSASendTo(s, &wsabuf, 1, NULL, 0, targetAddress.sockaddr(), targetAddress.length(), pov, NULL) != 0) {
-                    io_error = ::WSAGetLastError();
-                    // IO pended successfully initiating the IO
-                    if (WSA_IO_PENDING == io_error) {
-                        io_error = NO_ERROR;
-                    } else {
-                        // must cancel the IOCP TP if the IO call fails
-                        io_thread_pool->cancel_request(pov);
+                try {
+                    io_error = ctsConfig::SetPreConnectOptions(socket);
+                    if (io_error != NO_ERROR) {
+                        throw ctl::ctException(io_error, L"ctsConfig::SetPreConnectOptions", false);
                     }
-                } else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
-                    // completed inline - won't hit the completion routine
-                    io_error = NO_ERROR;
-                    completed_inline = true;
-                    // completed inline, so the TP won't be notified
-                    io_thread_pool->cancel_request(pov);
+                    // these are the only calls which can throw in this function
+                    io_thread_pool = shared_socket->thread_pool();
+                    // also passing the buffer through to ensure it remains allocated for the lifetime of the IO
+                    pov = io_thread_pool->new_request(
+                        ctsMediaStreamClientConnectionCompletionCallback,
+                        _weak_socket,
+                        targetAddress);
+                }
+                catch (const ctl::ctException& e) {
+                    ctsConfig::PrintException(e);
+                    io_error = e.why();
+                }
+                catch (const std::bad_alloc& e) {
+                    ctsConfig::PrintException(e);
+                    io_error = WSAENOBUFS;
+                }
+
+                if (NO_ERROR == io_error) {
+                    auto start_task = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
+                    WSABUF wsabuf;
+                    wsabuf.buf = start_task.buffer + start_task.buffer_offset;
+                    wsabuf.len = start_task.buffer_length;
+
+                    if (::WSASendTo(socket, &wsabuf, 1, NULL, 0, targetAddress.sockaddr(), targetAddress.length(), pov, NULL) != 0) {
+                        io_error = ::WSAGetLastError();
+                        // IO pended successfully initiating the IO
+                        if (WSA_IO_PENDING == io_error) {
+                            io_error = NO_ERROR;
+                        } else {
+                            // must cancel the IOCP TP if the IO call fails
+                            io_thread_pool->cancel_request(pov);
+                        }
+                    } else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                        // completed inline, so the TP won't be notified
+                        io_thread_pool->cancel_request(pov);
+                        io_error = NO_ERROR;
+                        completed_inline = true;
+
+                        // set the local and remote addresses on the socket object
+                        ctl::ctSockaddr local_addr;
+                        int local_addr_len = local_addr.length();
+                        if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
+                            shared_socket->set_local_address(local_addr);
+                        }
+                        shared_socket->set_target_address(targetAddress);
+                        ctsConfig::PrintNewConnection(local_addr, targetAddress);
+                    }
                 }
 
                 if (NO_ERROR == io_error) {
@@ -521,30 +527,15 @@ namespace ctsTraffic {
                         L"\t\tctsMediaStreamClient sent its START message to %s\n",
                         targetAddress.writeCompleteAddress().c_str());
                 }
+
+            } else {
+                io_error = WSAECONNABORTED;
             }
-        } else {
-            io_error = WSAENOTSOCK;
         }
 
-        // unlock before completing the socket state
-        psocket->unlock_socket();
-
-        // complete only on failure (otherwise will complete in the IOCP callback)
-        if (io_error != NO_ERROR) {
-            psocket->complete_state(io_error);
-
-        } else if (completed_inline) {
-            // set the local addr
-            ctl::ctSockaddr local_addr;
-            int local_addr_len = local_addr.length();
-            if (0 == ::getsockname(s, local_addr.sockaddr(), &local_addr_len)) {
-                psocket->set_local(local_addr);
-            }
-            // set the remote addr
-            psocket->set_target(targetAddress);
-            psocket->complete_state(NO_ERROR);
-
-            ctsConfig::PrintNewConnection(targetAddress);
+        // complete only on failure or successfully completed inline (otherwise will complete in the IOCP callback)
+        if (completed_inline || io_error != NO_ERROR) {
+            shared_socket->complete_state(io_error);
         }
     }
 } // namespace

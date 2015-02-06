@@ -14,13 +14,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // C++ headers
-#include <stdio.h>
 #include <string>
 #include <exception>
 #include <memory>
 // OS headers
 #include <windows.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 #include <ctString.hpp>
 #include <ctScopeGuard.hpp>
@@ -46,14 +46,15 @@ namespace ctsTraffic {
 
     class ctsLogger {
     public:
-        ctsLogger(ctsConfig::StatusFormatting _format) throw() : format(_format)
+        ctsLogger(ctsConfig::StatusFormatting _format) NOEXCEPT :
+            format(_format)
         {
         }
-        virtual ~ctsLogger() throw()
+        virtual ~ctsLogger() NOEXCEPT
         {
         }
 
-        void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) throw()
+        void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
         {
             LPCWSTR message = _status_info->print_legend(this->format);
             if (message != nullptr) {
@@ -61,7 +62,7 @@ namespace ctsTraffic {
             }
         }
 
-        void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) throw()
+        void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
         {
             LPCWSTR message = _status_info->print_header(this->format);
             if (message != nullptr) {
@@ -69,7 +70,7 @@ namespace ctsTraffic {
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) throw()
+        void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) NOEXCEPT
         {
             LPCWSTR message = _status_info->print_status(this->format, _current_time, _clear_status);
             if (message != nullptr) {
@@ -77,17 +78,17 @@ namespace ctsTraffic {
             }
         }
 
-        void LogMessage(_In_ LPCWSTR _message) throw()
+        void LogMessage(_In_ LPCWSTR _message) NOEXCEPT
         {
             log_message_impl(_message);
         }
 
-        void LogError(_In_ LPCWSTR _message) throw()
+        void LogError(_In_ LPCWSTR _message) NOEXCEPT
         {
             log_error_impl(_message);
         }
 
-        bool IsCsvFormat() const throw()
+        bool IsCsvFormat() const NOEXCEPT
         {
             return ctsConfig::StatusFormatting::Csv == this->format;
         }
@@ -100,16 +101,16 @@ namespace ctsTraffic {
         ctsConfig::StatusFormatting format;
 
         /// pure virtual methods concrete classes must implement
-        virtual void log_message_impl(_In_ LPCWSTR _message) throw() = 0;
-        virtual void log_error_impl(_In_ LPCWSTR _message) throw() = 0;
+        virtual void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT = 0;
+        virtual void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT = 0;
     };
 
     class ctsTextLogger : public ctsLogger {
     public:
-        ctsTextLogger(_In_ LPCWSTR _file_name, ctsConfig::StatusFormatting _format)
-        : ctsLogger(_format),
-          file_cs(),
-          file_handle(INVALID_HANDLE_VALUE)
+        ctsTextLogger(_In_ LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
+            ctsLogger(_format),
+            file_cs(),
+            file_handle(INVALID_HANDLE_VALUE)
         {
             if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsTextLogger", false);
@@ -149,18 +150,18 @@ namespace ctsTraffic {
             closeHandleOnError.dismiss();
             deleteCSOnError.dismiss();
         }
-        ~ctsTextLogger() throw()
+        ~ctsTextLogger() NOEXCEPT
         {
             ::CloseHandle(file_handle);
             ::DeleteCriticalSection(&file_cs);
         }
 
-        void log_message_impl(_In_ LPCWSTR _message) throw()
+        void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT
         {
             write_impl(_message);
         }
 
-        void log_error_impl(_In_ LPCWSTR _message) throw()
+        void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT
         {
             write_impl(_message);
         }
@@ -169,7 +170,7 @@ namespace ctsTraffic {
         CRITICAL_SECTION file_cs;
         HANDLE file_handle;
 
-        void write_impl(_In_ LPCWSTR _message) throw()
+        void write_impl(_In_ LPCWSTR _message) NOEXCEPT
         {
             try {
                 auto converted_string(ctl::ctString::replace_all_copy(_message, L"\n", L"\r\n"));

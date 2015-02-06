@@ -19,6 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctHandle.hpp>
 // project headers
@@ -33,15 +34,16 @@ namespace ctsTraffic {
 
     class ctsSocketBroker {
     public:
-        // only the c'tor can throw
+        /// only the c'tor can throw
         ctsSocketBroker();
+        ~ctsSocketBroker() NOEXCEPT;
 
-        ~ctsSocketBroker() throw();
+        /// methods that the child ctsSocketState objects will invoke when they change state
+        void initiating_io() NOEXCEPT;
+        void closing(bool _was_active) NOEXCEPT;
 
-        void initiating_io() throw();
-        void closing(bool _was_active) throw();
-
-        bool wait(DWORD _milliseconds) throw();
+        /// method to wait on when all connections are completed
+        bool wait(DWORD _milliseconds) NOEXCEPT;
 
         /// not copyable
         ctsSocketBroker(const ctsSocketBroker&) = delete;
@@ -51,7 +53,7 @@ namespace ctsTraffic {
         /// timer to wake up and clean up the socket pool
         /// - delete any closed sockets
         /// - create new sockets
-        static const unsigned int TimerCallbackTimeout = 333; // millseconds
+        static const unsigned long TimerCallbackTimeout = 333; // millseconds
 
         /// CS to guard access to the vector socket_pool
         CRITICAL_SECTION cs;
@@ -74,7 +76,7 @@ namespace ctsTraffic {
         /// Callback for the threadpool timer to scavenge closed sockets and recreate new ones
         /// - this allows destroying ctsSockets outside of an inline path from ctsSocket
         ///
-        static void TimerCallback(_In_ ctsSocketBroker* _broker) throw();
+        static void TimerCallback(_In_ ctsSocketBroker* _broker) NOEXCEPT;
     };
 
 } // namespace

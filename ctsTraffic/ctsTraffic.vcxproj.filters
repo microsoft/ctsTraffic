@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="ctl">
+      <UniqueIdentifier>{cc254f44-0bca-4207-90df-1e7bfb2d2dbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SocketFunctions">
+      <UniqueIdentifier>{71dd0481-5c28-462d-83e3-1e31e9fe4f22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IOPattern">
+      <UniqueIdentifier>{3fea6222-7f01-4773-b6f4-d571615fba5a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ctsConfig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsIOPattern.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSocket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSocketBroker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSocketState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsTraffic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ctsConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPattern.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOTask.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsLogger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsPrintStatus.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsSocket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsSocketBroker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsSocketState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctException.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctLocks.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctRandom.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctscopedt.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctScopeGuard.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctString.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctThreadIocp.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctTimer.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctHandle.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctSockaddr.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsAcceptEx.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsConnectEx.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsMediaStreamClient.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsMediaStreamProtocol.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsMediaStreamServer.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsReadWriteIocp.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsRioIocp.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsSendRecvIocp.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsSimpleAccept.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsSimpleConnect.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketFunctions\ctsWSASocket.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsSafeInt.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternState.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsStatistics.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOBuffers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternProtocolPolicy.hpp">
+      <Filter>IOPattern</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternStateT.h">
+      <Filter>IOPattern</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp">
+      <Filter>IOPattern</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

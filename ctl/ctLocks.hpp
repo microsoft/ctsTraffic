@@ -29,7 +29,8 @@ namespace ctl {
     public:
         _Acquires_lock_(*this->cs)
         _Post_same_lock_(*_cs, *this->cs)
-        explicit ctAutoReleaseCriticalSection(_In_ CRITICAL_SECTION* _cs) throw() : cs(_cs)
+        explicit ctAutoReleaseCriticalSection(_In_ CRITICAL_SECTION* _cs) throw() :
+            cs(_cs)
         {
             ::EnterCriticalSection(this->cs);
         }
@@ -56,8 +57,6 @@ namespace ctl {
         ctPrioritizedCriticalSection() throw()
         {
             ::InitializeSRWLock(&srwlock);
-            // InitializeCriticalSectionAndSpinCount cannot fail on modern OS's
-            // - but PREFast will check that the return was captured
             if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
                 ctAlwaysFatalCondition(
                     L"ctPrioritizedCriticalSection: InitializeCriticalSectionEx failed [%u]",
@@ -111,7 +110,8 @@ namespace ctl {
     };
     class ctAutoReleasePriorityCriticalSection {
     public:
-        explicit ctAutoReleasePriorityCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() : prioritized_cs(_priority_cs)
+        explicit ctAutoReleasePriorityCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() :
+            prioritized_cs(_priority_cs)
         {
             prioritized_cs.priority_lock();
         }
@@ -132,7 +132,8 @@ namespace ctl {
     };
     class ctAutoReleaseDefaultCriticalSection {
     public:
-        explicit ctAutoReleaseDefaultCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() : prioritized_cs(_priority_cs)
+        explicit ctAutoReleaseDefaultCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() :
+            prioritized_cs(_priority_cs)
         {
             prioritized_cs.default_lock();
         }
