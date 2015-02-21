@@ -71,7 +71,7 @@ namespace ctsTraffic {
     static const unsigned long s_FinBufferSize = 4; // just 4 bytes for the FIN
     static char s_FinBuffer[s_FinBufferSize];
 
-    BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) throw()
+    BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
     {
         s_SharedBufferSize = BufferPatternSize + ctsConfig::GetMaxBufferSize() + s_CompletionMessageSize;
 
@@ -174,7 +174,7 @@ namespace ctsTraffic {
                 return nullptr;
         }
     }
-    char* ctsIOPattern::AccessSharedBuffer() throw()
+    char* ctsIOPattern::AccessSharedBuffer() NOEXCEPT
     {
         // this init-once call is no-fail
         (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
@@ -253,7 +253,7 @@ namespace ctsTraffic {
     }
 
 
-    ctsIOPattern::~ctsIOPattern() throw()
+    ctsIOPattern::~ctsIOPattern() NOEXCEPT
     {
         if (recv_rio_bufferid != RIO_INVALID_BUFFERID &&
             recv_rio_bufferid != s_SharedBufferId) {
@@ -263,7 +263,7 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&cs);
     }
 
-    ctsIOTask ctsIOPattern::initiate_io() throw()
+    ctsIOTask ctsIOPattern::initiate_io() NOEXCEPT
     {
         // make sure stats starts tracking IO at the first IO request
         this->start_stats();
@@ -391,7 +391,7 @@ namespace ctsTraffic {
     /// Returns the current status of the IO operation on this socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) throw()
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) NOEXCEPT
     {
         //
         // Take the object lock before touching internal values
@@ -523,7 +523,7 @@ namespace ctsTraffic {
         return this->current_status();
     }
 
-    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) throw()
+    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
     {
         ctAutoReleaseCriticalSection local_cs(&this->cs);
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
@@ -531,7 +531,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) throw()
+    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
     {
         ctAutoReleaseCriticalSection local_cs(&this->cs);
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
@@ -539,7 +539,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::new_task(IOTaskAction _action, unsigned long _max_transfer) throw()
+    ctsIOTask ctsIOPattern::new_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
     {
         //
         // with TCP, we need to calculate the buffer size based off bytes remaining
@@ -722,7 +722,7 @@ namespace ctsTraffic {
         sending(ctsConfig::IsListening())
     {
     }
-    ctsIOPatternPull::~ctsIOPatternPull() throw()
+    ctsIOPatternPull::~ctsIOPatternPull() NOEXCEPT
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -735,7 +735,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPull::next_task() throw()
+    ctsIOTask ctsIOPatternPull::next_task() NOEXCEPT
     {
         if (this->io_needed > 0) {
             --this->io_needed;
@@ -750,7 +750,7 @@ namespace ctsTraffic {
             return ctsIOTask();
         }
     }
-    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) throw()
+    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
             ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
@@ -781,7 +781,7 @@ namespace ctsTraffic {
         sending(!ctsConfig::IsListening())
     {
     }
-    ctsIOPatternPush::~ctsIOPatternPush() throw()
+    ctsIOPatternPush::~ctsIOPatternPush() NOEXCEPT
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -794,7 +794,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPush::next_task() throw()
+    ctsIOTask ctsIOPatternPush::next_task() NOEXCEPT
     {
         if (this->io_needed > 0) {
             --this->io_needed;
@@ -809,7 +809,7 @@ namespace ctsTraffic {
             return ctsIOTask();
         }
     }
-    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) throw()
+    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
             ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
@@ -848,7 +848,7 @@ namespace ctsTraffic {
         sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
     {
     }
-    ctsIOPatternPushPull::~ctsIOPatternPushPull() throw()
+    ctsIOPatternPushPull::~ctsIOPatternPushPull() NOEXCEPT
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -861,7 +861,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPushPull::next_task() throw()
+    ctsIOTask ctsIOPatternPushPull::next_task() NOEXCEPT
     {
         ctsUnsignedLong segment_size;
         if (this->listening) {
@@ -893,7 +893,7 @@ namespace ctsTraffic {
             return ctsIOTask();
         }
     }
-    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw()
+    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
             ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
@@ -961,7 +961,7 @@ namespace ctsTraffic {
             static_cast<ULONGLONG>(remaining_recv_bytes),
             static_cast<ULONGLONG>(this->get_total_transfer()));
     }
-    ctsIOPatternDuplex::~ctsIOPatternDuplex() throw()
+    ctsIOPatternDuplex::~ctsIOPatternDuplex() NOEXCEPT
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -974,7 +974,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternDuplex::next_task() throw()
+    ctsIOTask ctsIOPatternDuplex::next_task() NOEXCEPT
     {
         ctsIOTask return_task;
 
@@ -1006,7 +1006,7 @@ namespace ctsTraffic {
 
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) throw()
+    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         switch (_task.ioAction) {
             case IOTaskAction::Send:
@@ -1094,7 +1094,7 @@ namespace ctsTraffic {
         }
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) throw()
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
     {
         if (_task.buffer_type != ctsIOTask::BufferType::UdpConnectionId) {
             ctsUnsignedLong current_transfer_bits = _current_transfer * 8UL;
@@ -1254,7 +1254,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) throw()
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         if (_task.ioAction == IOTaskAction::Abort) {
             // the stream should now be done
@@ -1421,7 +1421,7 @@ namespace ctsTraffic {
     /// If the sequence number was not found, will return end(frame_entries)
     ///
     _Requires_lock_held_(cs)
-    vector<ctsIOPatternMediaStreamClient::FrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) throw()
+    vector<ctsIOPatternMediaStreamClient::FrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) NOEXCEPT
     {
         ctsSignedLongLong head_sequence_number = this->head_entry->sequence_number;
         ctsSignedLongLong tail_sequence_number = head_sequence_number + this->frame_entries.size() - 1;
@@ -1445,7 +1445,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::received_buffered_frames() throw()
+    bool ctsIOPatternMediaStreamClient::received_buffered_frames() NOEXCEPT
     {
         if (this->frame_entries[0].sequence_number > 1) {
             // we've already received enough datagrams to fill one buffer
@@ -1465,7 +1465,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_timer() throw()
+    void ctsIOPatternMediaStreamClient::set_next_timer() NOEXCEPT
     {
         // only schedule the next timer instance if the d'tor hasn't indicated it's wanting to exit
         if (this->renderer_timer != nullptr) {
@@ -1489,7 +1489,7 @@ namespace ctsTraffic {
         }
     }
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_start_timer() throw()
+    void ctsIOPatternMediaStreamClient::set_next_start_timer() NOEXCEPT
     {
         if (this->start_timer != nullptr) {
             // convert to filetime from milliseconds
@@ -1503,7 +1503,7 @@ namespace ctsTraffic {
     // "render the current frame"
     // - update the current frame as "read" and move the head to the next frame
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::render_frame() throw()
+    void ctsIOPatternMediaStreamClient::render_frame() NOEXCEPT
     {
         if (this->head_entry->retried) {
             ctsConfig::Settings->UdpStatusDetails.retry_attempts.increment();

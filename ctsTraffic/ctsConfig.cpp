@@ -163,7 +163,7 @@ namespace ctsTraffic {
 
             return TRUE;
         }
-        static void ctsConfigInitOnce() throw()
+        static void ctsConfigInitOnce() NOEXCEPT
         {
             ctFatalCondition(
                 !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, NULL, NULL),
@@ -2342,7 +2342,7 @@ namespace ctsTraffic {
         }
 
         /// Always print to console if override
-        void PrintExceptionOverride(const std::exception& e) throw()
+        void PrintExceptionOverride(const std::exception& e) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2374,7 +2374,7 @@ namespace ctsTraffic {
         ///   and prints to console accordingly
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        void PrintException(const exception& e) throw()
+        void PrintException(const exception& e) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2413,7 +2413,7 @@ namespace ctsTraffic {
             }
         }
         /// Always print to console if override
-        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2433,7 +2433,7 @@ namespace ctsTraffic {
 
             va_end(argptr);
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2472,7 +2472,7 @@ namespace ctsTraffic {
                 va_end(argptr);
             }
         }
-        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) throw()
+        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2523,7 +2523,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        void PrintStatusUpdate() throw()
+        void PrintStatusUpdate() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2602,7 +2602,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) throw()
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2623,7 +2623,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) throw()
+        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2668,7 +2668,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2797,7 +2797,7 @@ namespace ctsTraffic {
             catch (const std::exception&) {
             }
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2927,7 +2927,7 @@ namespace ctsTraffic {
             catch (const std::exception&) {
             }
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
             if (ctsConfig::ProtocolType::TCP == Settings->Protocol) {
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsTcpStatistics());
@@ -2936,7 +2936,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2958,7 +2958,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) throw()
+        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2977,7 +2977,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3021,7 +3021,7 @@ namespace ctsTraffic {
         /// - accessor functions made public to retrieve configuration details
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsUnsignedLong GetBufferSize() throw()
+        ctsUnsignedLong GetBufferSize() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3033,7 +3033,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsUnsignedLong GetMaxBufferSize() throw()
+        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3046,7 +3046,7 @@ namespace ctsTraffic {
         }
 
 
-        ctsUnsignedLongLong GetTransferSize() throw()
+        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3058,7 +3058,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() throw()
+        ctsSignedLongLong GetTcpBytesPerSecond() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3070,7 +3070,7 @@ namespace ctsTraffic {
             }
         }
 
-        int GetListenBacklog() throw()
+        int GetListenBacklog() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3082,7 +3082,7 @@ namespace ctsTraffic {
             return backlog;
         }
 
-        const MediaStreamSettings& GetMediaStream() throw()
+        const MediaStreamSettings& GetMediaStream() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3093,14 +3093,14 @@ namespace ctsTraffic {
             return s_MediaStreamSettings;
         }
 
-        bool IsListening() throw()
+        bool IsListening() NOEXCEPT
         {
             ctsConfigInitOnce();
 
             return !Settings->ListenAddresses.empty();
         }
 
-        float GetStatusTimeStamp() throw()
+        float GetStatusTimeStamp() NOEXCEPT
         {
             return static_cast<float>((ctl::ctTimer::snap_qpc_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
@@ -3239,13 +3239,13 @@ namespace ctsTraffic {
             return 0;
         }
 
-        void UpdateGlobalStats(const ctsTcpStatistics& _in_stats) throw()
+        void UpdateGlobalStats(const ctsTcpStatistics& _in_stats) NOEXCEPT
         {
             Settings->HistoricTcpDetails.total_time.add(_in_stats.end_time.get() - _in_stats.start_time.get());
             Settings->HistoricTcpDetails.bytes_recv.add(_in_stats.bytes_recv.get());
             Settings->HistoricTcpDetails.bytes_sent.add(_in_stats.bytes_sent.get());
         }
-        void UpdateGlobalStats(const ctsUdpStatistics& _in_stats) throw()
+        void UpdateGlobalStats(const ctsUdpStatistics& _in_stats) NOEXCEPT
         {
             Settings->HistoricUdpDetails.total_time.add(_in_stats.end_time.get() - _in_stats.start_time.get());
             Settings->HistoricUdpDetails.bits_received.add(_in_stats.bits_received.get());

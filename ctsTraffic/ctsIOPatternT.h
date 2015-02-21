@@ -13,13 +13,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// cpp headers
 #include <functional>
-
+// ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctLocks.hpp>
 #include <ctTimer.hpp>
-
+#include <ctVersionConversion.hpp>
+// project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsIOPatternProtocolPolicy.hpp"

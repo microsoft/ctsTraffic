@@ -20,7 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 // os headers
 #include <Windows.h>
-// ct headers
+// ctl headers
+#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
 #include "ctTimer.hpp"
@@ -42,7 +43,7 @@ namespace ctl {
         FILETIME timer_expiration;
         unsigned long reoccuring_period;
 
-        ctThreadpoolTimerCallbackInfo() throw() :
+        ctThreadpoolTimerCallbackInfo() NOEXCEPT :
             callback(nullptr),
             timer_expiration(),
             reoccuring_period(0UL)
@@ -70,7 +71,7 @@ namespace ctl {
         }
 
         // supporting only move semantics
-        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _callback_info) throw()
+        ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _callback_info) NOEXCEPT
         {
             callback = std::move(_callback_info.callback);
             timer_expiration = std::move(_callback_info.timer_expiration);
@@ -78,7 +79,7 @@ namespace ctl {
         }
 
         // update FILETIME to the next time based off the reoccuring period
-        void update_expiration() throw()
+        void update_expiration() NOEXCEPT
         {
             // addition in hundredNs to avoid loss of precision if were to convert to milliseconds
             using namespace ctl::ctTimer;
@@ -86,7 +87,7 @@ namespace ctl {
             this->timer_expiration = convert_hundredNs_absolute_filetime(next_timer_hundredNs);
         }
 
-        void swap(ctThreadpoolTimerCallbackInfo& _in) throw()
+        void swap(ctThreadpoolTimerCallbackInfo& _in) NOEXCEPT
         {
             using std::swap;
             swap(this->callback, _in.callback);

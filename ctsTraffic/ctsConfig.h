@@ -16,14 +16,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 #include <functional>
-
 // OS headers
 #include <windows.h>
-
 // ctl headers
+#include <ctVersionConversion.hpp>
 #include <ctTimer.hpp>
 #include <ctSockaddr.hpp>
-
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
 // - with the below exceptions : these do not include any cts* headers
@@ -167,37 +165,37 @@ namespace ctsTraffic {
 
         void PrintLegend();
         void PrintSettings();
-        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) throw();
-        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) throw();
+        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) NOEXCEPT;
+        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT;
         /// *Override will always print to console regardless of settings (important if can't even start)
-        void PrintExceptionOverride(const std::exception& e) throw();
-        void PrintException(const std::exception& e) throw();
-        void PrintStatusUpdate() throw();
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) throw();
+        void PrintExceptionOverride(const std::exception& e) NOEXCEPT;
+        void PrintException(const std::exception& e) NOEXCEPT;
+        void PrintStatusUpdate() NOEXCEPT;
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT;
 
         /// *Override will always print to console regardless of settings (important if can't even start)
-        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw();
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw();
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) throw();
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw();
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw();
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw();
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw();
-        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw();
+        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT;
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
 
         // Get* functions
-        ctsSignedLongLong   GetTcpBytesPerSecond() throw();
-        ctsUnsignedLong     GetMaxBufferSize() throw();
-        ctsUnsignedLong     GetBufferSize() throw();
-        ctsUnsignedLongLong GetTransferSize() throw();
+        ctsSignedLongLong   GetTcpBytesPerSecond() NOEXCEPT;
+        ctsUnsignedLong     GetMaxBufferSize() NOEXCEPT;
+        ctsUnsignedLong     GetBufferSize() NOEXCEPT;
+        ctsUnsignedLongLong GetTransferSize() NOEXCEPT;
 
-        float GetStatusTimeStamp() throw();
+        float GetStatusTimeStamp() NOEXCEPT;
 
-        int  GetListenBacklog() throw();
-        bool IsListening() throw();
+        int  GetListenBacklog() NOEXCEPT;
+        bool IsListening() NOEXCEPT;
 
-        void UpdateGlobalStats(const ctsTcpStatistics&) throw();
-        void UpdateGlobalStats(const ctsUdpStatistics&) throw();
+        void UpdateGlobalStats(const ctsTcpStatistics&) NOEXCEPT;
+        void UpdateGlobalStats(const ctsUdpStatistics&) NOEXCEPT;
 
         // Set* functions
         int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address);
@@ -212,7 +210,7 @@ namespace ctsTraffic {
         // for the MediaStream pattern
         struct MediaStreamSettings {
 
-            MediaStreamSettings() throw()
+            MediaStreamSettings() NOEXCEPT
             : BitsPerSecond(0LL),
               FramesPerSecond(0UL),
               BufferDepthSeconds(0UL),

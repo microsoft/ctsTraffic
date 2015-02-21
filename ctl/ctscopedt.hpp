@@ -13,9 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// CPP headers
+// cpp headers
 #include <new>
 #include <utility>
+// ctl headers
+#include "ctVersionConversion.hpp"
 
 namespace ctl {
 
@@ -31,10 +33,10 @@ namespace ctl {
     //    does not need to be released
     //
     //  - typename Fn should reference a functor which implements:
-    //            void operator()(T&) throw()'
+    //            void operator()(T&) NOEXCEPT'
     //    - should free the resource type T
     //
-    //  All methods are specified throw() - none can throw
+    //  All methods are specified NOEXCEPT - none can throw
     //
     //  This class does not allow copy assignment or construction by design, but does
     //  allow move assignment and construction
@@ -51,54 +53,54 @@ namespace ctl {
         // - optionally take a deleter Functor instance
         // - default constructor initializes with tNullValue
         ///////////////////////////////////////////////////////////////
-        ctScopedT() throw() : closeFunctor(), tValue(tNullValue)
+        ctScopedT() NOEXCEPT : closeFunctor(), tValue(tNullValue)
         {
         }
         // non-explicit by design
-        ctScopedT(T const& t) throw() : closeFunctor(), tValue(t)
+        ctScopedT(T const& t) NOEXCEPT : closeFunctor(), tValue(t)
         {
         }
-        ctScopedT(T const& t, Fn const& f) throw() : closeFunctor(f), tValue(t)
+        ctScopedT(T const& t, Fn const& f) NOEXCEPT : closeFunctor(f), tValue(t)
         {
         }
         // allowing move construction (not copy construction)
-        ctScopedT(ctScopedT&& other) throw() : 
+        ctScopedT(ctScopedT&& other) NOEXCEPT : 
             closeFunctor(std::move(other.closeFunctor)),
             tValue(std::move(other.tValue))
         {
             // Stop the tValue from being destroyed as soon as other leaves scope
             other.tValue = tNullValue;
         }
-        ctScopedT& operator=(ctScopedT&& other) throw()
+        ctScopedT& operator=(ctScopedT&& other) NOEXCEPT
         {
             ctScopedT(std::move(other)).swap(*this);
             return *this;
         }
 
         // default destructor (no-fail)
-        ~ctScopedT() throw()
+        ~ctScopedT() NOEXCEPT
         {
             this->reset();
         }
         // getter
-        const T& get() const throw()
+        const T& get() const NOEXCEPT
         {
             return this->tValue;
         }
         // function to free internal resources
-        T release() throw()
+        T release() NOEXCEPT
         {
             T value = this->tValue;
             this->tValue = tNullValue;
             return value;
         }
-        void reset(T const& newValue = tNullValue) throw()
+        void reset(T const& newValue = tNullValue) NOEXCEPT
         {
             closeFunctor(this->tValue);
             this->tValue = newValue;
         }
         // implementation of swap()
-        void swap(ctScopedT& tShared) throw()
+        void swap(ctScopedT& tShared) NOEXCEPT
         {
             using std::swap;
             swap(this->closeFunctor, tShared.closeFunctor);
@@ -119,7 +121,7 @@ namespace ctl {
     // no-throw guarantee
     ///////////////////////////////////////////////////////////////////
     template <typename T, T tNullValue, typename Fn>
-    void swap(ctScopedT<T, tNullValue, Fn>& a, ctScopedT<T, tNullValue, Fn>& b) throw()
+    void swap(ctScopedT<T, tNullValue, Fn>& a, ctScopedT<T, tNullValue, Fn>& b) NOEXCEPT
     {
         a.swap(b);
     }
@@ -130,12 +132,12 @@ namespace ctl {
     // no-throw guarantee
     ///////////////////////////////////////////////////////////////////
     template <typename T, T tNullValue, typename FnT, typename A, A aNullValue, typename FnA>
-    bool operator==(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) throw()
+    bool operator==(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) NOEXCEPT
     {
         return (lhs.get() == rhs.get());
     }
     template <typename T, T tNullValue, typename FnT, typename A, A aNullValue, typename FnA>
-    bool operator!=(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) throw()
+    bool operator!=(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) NOEXCEPT
     {
         return (lhs.get() != rhs.get());
     }

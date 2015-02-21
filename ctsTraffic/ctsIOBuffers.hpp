@@ -13,26 +13,29 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// cpp headers
 #include <vector>
-
+// os headers
 #include <windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
-
+// ctl headers
 #include <ctException.hpp>
 #include <ctLocks.hpp>
-
+#include <ctVersionConversion.hpp>
+// local headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"
 #include "ctSocketExtensions.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 
+
 namespace ctsTraffic {
 
     namespace statics {
         // forward-declarations
-        inline static bool GrowConnectionIdBuffer() throw();
+        inline static bool GrowConnectionIdBuffer() NOEXCEPT;
 
         // pre-reserving for up to 1 million concurrent connections
         static const unsigned long ServerMaxConnections = 1000000UL;
@@ -47,7 +50,7 @@ namespace ctsTraffic {
         static ::RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
         static ::CRITICAL_SECTION ConnectionIdLock;
 
-        inline static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) throw()
+        inline static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
         {
             using ::ctsTraffic::ctsConfig::Settings;
             using ::ctsTraffic::ctsConfig::IsListening;
@@ -134,7 +137,7 @@ namespace ctsTraffic {
         // - to handle more incoming connections
         //
         //////////////////////////////////////////////////////////////////////////
-        inline static bool GrowConnectionIdBuffer() throw()
+        inline static bool GrowConnectionIdBuffer() NOEXCEPT
         {
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
             using ::ctsTraffic::ctsUnsignedLong;
@@ -235,7 +238,7 @@ namespace ctsTraffic {
             return return_task;
         }
 
-        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) throw()
+        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) NOEXCEPT
         {
             ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
             try {
@@ -253,7 +256,7 @@ namespace ctsTraffic {
             }
         }
 
-        inline bool SetConnectionId(_Inout_ char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) throw()
+        inline bool SetConnectionId(_Inout_ char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
                 ctsConfig::PrintDebug(

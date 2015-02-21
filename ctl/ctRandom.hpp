@@ -13,8 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// cpp headers
 #include <random>
 #include <memory>
+// ctl headers
+#include "ctVersionConversion.hpp"
 
 namespace ctl {
 
@@ -77,9 +80,9 @@ namespace ctl {
         void seed(unsigned long _seed);
 
         // Enabling move, move assign, and swap
-        ctRandomTwister(ctRandomTwister&& _other) throw();
-        ctRandomTwister& operator=(ctRandomTwister&& _other) throw();
-        void swap(ctRandomTwister& _other) throw();
+        ctRandomTwister(ctRandomTwister&& _other) NOEXCEPT;
+        ctRandomTwister& operator=(ctRandomTwister&& _other) NOEXCEPT;
+        void swap(ctRandomTwister& _other) NOEXCEPT;
 
         ~ctRandomTwister() = default;
 
@@ -94,7 +97,7 @@ namespace ctl {
     };
 
     // non-member namespace swap
-    inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) throw()
+    inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) NOEXCEPT
     {
         lhs.swap(rhs);
     }

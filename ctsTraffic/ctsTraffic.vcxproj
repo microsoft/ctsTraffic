@@ -89,7 +89,7 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /Zc:strictStrings </AdditionalOptions>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
@@ -125,7 +125,7 @@
       </PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /Zc:strictStrings </AdditionalOptions>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
@@ -157,7 +157,7 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Qvec-report:2 /Zc:strictStrings </AdditionalOptions>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Qvec-report:2 /Zc:strictStrings /Gw </AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
@@ -194,7 +194,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Qvec-report:2 /Zc:strictStrings </AdditionalOptions>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Qvec-report:2 /Zc:strictStrings /Gw </AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <BrowseInformation>true</BrowseInformation>
@@ -241,13 +241,13 @@
     <ClInclude Include="..\ctl\ctThreadIocp.hpp" />
     <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp" />
     <ClInclude Include="..\ctl\ctTimer.hpp" />
+    <ClInclude Include="..\ctl\ctVersionConversion.hpp" />
     <ClInclude Include="ctsConfig.h" />
     <ClInclude Include="ctsIOBuffers.hpp" />
     <ClInclude Include="ctsIOPattern.h" />
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp" />
     <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp" />
     <ClInclude Include="ctsIOPatternState.hpp" />
-    <ClInclude Include="ctsIOPatternStateT.h" />
     <ClInclude Include="ctsIOPatternT.h" />
     <ClInclude Include="ctsIOTask.hpp" />
     <ClInclude Include="ctsLogger.hpp" />

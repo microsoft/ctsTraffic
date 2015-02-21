@@ -22,6 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ws2ipdef.h>
 #include <Iphlpapi.h>
 // project headers
+#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctSockaddr.hpp"
 
@@ -40,7 +41,7 @@ namespace ctl {
             ///
             ////////////////////////////////////////////////////////////////////////////////
             iterator() = default;
-            iterator(_In_ std::shared_ptr<std::vector<BYTE>> _ipAdapter) throw() : buffer(_ipAdapter)
+            iterator(_In_ std::shared_ptr<std::vector<BYTE>> _ipAdapter) NOEXCEPT : buffer(_ipAdapter)
             {
                 if ((buffer.get() != NULL) && (buffer->size() > 0)) {
                     current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0)));
@@ -52,7 +53,7 @@ namespace ctl {
             /// member swap method
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            void swap(_Inout_ iterator& _in) throw()
+            void swap(_Inout_ iterator& _in) NOEXCEPT
             {
                 using std::swap;
                 swap(this->buffer, _in.buffer);
@@ -88,7 +89,7 @@ namespace ctl {
             /// arithmatic operators can fail 
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            bool operator==(_In_ const iterator& _iter) const throw()
+            bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
                 // for comparison of 'end' iterators, just look at current
                 if (this->current == NULL) {
@@ -98,7 +99,7 @@ namespace ctl {
                             (this->current == _iter.current));
                 }
             }
-            bool operator!=(_In_ const iterator& _iter) const throw()
+            bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
             {
                 return !(*this == _iter);
             }
@@ -212,11 +213,11 @@ namespace ctl {
         /// - constructs ctNetAdapterAddresses::iterators
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        iterator begin() const throw()
+        iterator begin() const NOEXCEPT
         {
             return iterator(this->buffer);
         }
-        iterator end() const throw()
+        iterator end() const NOEXCEPT
         {
             return iterator();
         }
@@ -240,7 +241,7 @@ namespace ctl {
         {
         }
 
-        bool operator () (_In_ const IP_ADAPTER_ADDRESSES& _ipAddress) throw()
+        bool operator () (_In_ const IP_ADAPTER_ADDRESSES& _ipAddress) NOEXCEPT
         {
             for (PIP_ADAPTER_UNICAST_ADDRESS unicastAddress = _ipAddress.FirstUnicastAddress;
                  unicastAddress != nullptr;

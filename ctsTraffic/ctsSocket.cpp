@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 
 /// ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>

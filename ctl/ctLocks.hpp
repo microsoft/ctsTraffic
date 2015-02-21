@@ -16,7 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // OS headers
 #include <windows.h>
 // ctl headers
-#include <ctException.hpp>
+#include "ctVersionConversion.hpp"
+#include "ctException.hpp"
 
 
 namespace ctl {
@@ -29,14 +30,14 @@ namespace ctl {
     public:
         _Acquires_lock_(*this->cs)
         _Post_same_lock_(*_cs, *this->cs)
-        explicit ctAutoReleaseCriticalSection(_In_ CRITICAL_SECTION* _cs) throw() :
+        explicit ctAutoReleaseCriticalSection(_In_ CRITICAL_SECTION* _cs) NOEXCEPT :
             cs(_cs)
         {
             ::EnterCriticalSection(this->cs);
         }
 
         _Releases_lock_(*this->cs)
-        ~ctAutoReleaseCriticalSection() throw()
+        ~ctAutoReleaseCriticalSection() NOEXCEPT
         {
             ::LeaveCriticalSection(this->cs);
         }
@@ -54,7 +55,7 @@ namespace ctl {
 
     class ctPrioritizedCriticalSection {
     public:
-        ctPrioritizedCriticalSection() throw()
+        ctPrioritizedCriticalSection() NOEXCEPT
         {
             ::InitializeSRWLock(&srwlock);
             if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
@@ -63,7 +64,7 @@ namespace ctl {
                     ::GetLastError());
             }
         }
-        ~ctPrioritizedCriticalSection() throw()
+        ~ctPrioritizedCriticalSection() NOEXCEPT
         {
             ::DeleteCriticalSection(&cs);
         }
@@ -72,14 +73,14 @@ namespace ctl {
         // - we want to interrupt the IO path so we can initiate more IO if we need to grow the CQ
         _Acquires_exclusive_lock_(this->srwlock)
         _Acquires_lock_(this->cs)
-        void priority_lock() throw()
+        void priority_lock() NOEXCEPT
         {
             ::AcquireSRWLockExclusive(&srwlock);
             ::EnterCriticalSection(&cs);
         }
         _Releases_lock_(this->cs)
         _Releases_exclusive_lock_(this->srwlock)
-        void priority_release() throw()
+        void priority_release() NOEXCEPT
         {
             ::LeaveCriticalSection(&cs);
             ::ReleaseSRWLockExclusive(&srwlock);
@@ -87,14 +88,14 @@ namespace ctl {
 
         _Acquires_shared_lock_(this->srwlock)
         _Acquires_lock_(this->cs)
-        void default_lock() throw()
+        void default_lock() NOEXCEPT
         {
             ::AcquireSRWLockShared(&srwlock);
             ::EnterCriticalSection(&cs);
         }
         _Releases_lock_(this->cs)
         _Releases_shared_lock_(this->srwlock)
-        void default_release() throw()
+        void default_release() NOEXCEPT
         {
             ::LeaveCriticalSection(&cs);
             ::ReleaseSRWLockShared(&srwlock);
@@ -110,13 +111,13 @@ namespace ctl {
     };
     class ctAutoReleasePriorityCriticalSection {
     public:
-        explicit ctAutoReleasePriorityCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() :
+        explicit ctAutoReleasePriorityCriticalSection(ctPrioritizedCriticalSection& _priority_cs) NOEXCEPT :
             prioritized_cs(_priority_cs)
         {
             prioritized_cs.priority_lock();
         }
 
-        ~ctAutoReleasePriorityCriticalSection() throw()
+        ~ctAutoReleasePriorityCriticalSection() NOEXCEPT
         {
             prioritized_cs.priority_release();
         }
@@ -132,13 +133,13 @@ namespace ctl {
     };
     class ctAutoReleaseDefaultCriticalSection {
     public:
-        explicit ctAutoReleaseDefaultCriticalSection(ctPrioritizedCriticalSection& _priority_cs) throw() :
+        explicit ctAutoReleaseDefaultCriticalSection(ctPrioritizedCriticalSection& _priority_cs) NOEXCEPT :
             prioritized_cs(_priority_cs)
         {
             prioritized_cs.default_lock();
         }
 
-        ~ctAutoReleaseDefaultCriticalSection() throw()
+        ~ctAutoReleaseDefaultCriticalSection() NOEXCEPT
         {
             prioritized_cs.default_release();
         }
@@ -160,19 +161,19 @@ namespace ctl {
     ///  long *
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    inline long long ctMemoryGuardRead(_In_ const long long* _original_value) throw()
+    inline long long ctMemoryGuardRead(_In_ const long long* _original_value) NOEXCEPT
     {
         return ::InterlockedCompareExchange64(const_cast<volatile long long*>(_original_value), 0LL, 0LL);
     }
-    inline long ctMemoryGuardRead(_In_ const long* _original_value) throw()
+    inline long ctMemoryGuardRead(_In_ const long* _original_value) NOEXCEPT
     {
         return ::InterlockedCompareExchange(const_cast<volatile long*>(_original_value), 0LL, 0LL);
     }
-    inline long long ctMemoryGuardRead(_In_ long long* _original_value) throw()
+    inline long long ctMemoryGuardRead(_In_ long long* _original_value) NOEXCEPT
     {
         return ::InterlockedCompareExchange64(const_cast<volatile long long*>(_original_value), 0LL, 0LL);
     }
-    inline long ctMemoryGuardRead(_In_ long* _original_value) throw()
+    inline long ctMemoryGuardRead(_In_ long* _original_value) NOEXCEPT
     {
         return ::InterlockedCompareExchange(const_cast<volatile long*>(_original_value), 0LL, 0LL);
     }
@@ -190,56 +191,56 @@ namespace ctl {
     /// - *Decrement returns the *new* value
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    inline long long ctMemoryGuardWrite(_Inout_ long long* _original_value, long long _new_value) throw()
+    inline long long ctMemoryGuardWrite(_Inout_ long long* _original_value, long long _new_value) NOEXCEPT
     {
         return ::InterlockedExchange64(_original_value, _new_value);
     }
-    inline long ctMemoryGuardWrite(_Inout_ long* _original_value, long _new_value) throw()
+    inline long ctMemoryGuardWrite(_Inout_ long* _original_value, long _new_value) NOEXCEPT
     {
         return ::InterlockedExchange(_original_value, _new_value);
     }
 
-    inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* _original_value, long long _new_value, long long _if_equals) throw()
+    inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* _original_value, long long _new_value, long long _if_equals) NOEXCEPT
     {
         return ::InterlockedCompareExchange64(_original_value, _new_value, _if_equals);
     }
-    inline long ctMemoryGuardWriteConditionally(_Inout_ long* _original_value, long _new_value, long _if_equals) throw()
+    inline long ctMemoryGuardWriteConditionally(_Inout_ long* _original_value, long _new_value, long _if_equals) NOEXCEPT
     {
         return ::InterlockedCompareExchange(_original_value, _new_value, _if_equals);
     }
 
-    inline long long ctMemoryGuardAdd(_Inout_ long long* _original_value, long long _add_value) throw()
+    inline long long ctMemoryGuardAdd(_Inout_ long long* _original_value, long long _add_value) NOEXCEPT
     {
         return ::InterlockedExchangeAdd64(_original_value, _add_value);
     }
-    inline long ctMemoryGuardAdd(_Inout_ long* _original_value, long _add_value) throw()
+    inline long ctMemoryGuardAdd(_Inout_ long* _original_value, long _add_value) NOEXCEPT
     {
         return ::InterlockedExchangeAdd(_original_value, _add_value);
     }
 
-    inline long long ctMemoryGuardSubtract(_Inout_ long long* _original_value, long long _subtract_value) throw()
+    inline long long ctMemoryGuardSubtract(_Inout_ long long* _original_value, long long _subtract_value) NOEXCEPT
     {
         return ::InterlockedExchangeAdd64(_original_value, _subtract_value * -1LL);
     }
-    inline long ctMemoryGuardSubtract(_Inout_ long* _original_value, long _subtract_value) throw()
+    inline long ctMemoryGuardSubtract(_Inout_ long* _original_value, long _subtract_value) NOEXCEPT
     {
         return ::InterlockedExchangeAdd(_original_value, _subtract_value * -1L);
     }
 
-    inline long long ctMemoryGuardIncrement(_Inout_ long long* _original_value) throw()
+    inline long long ctMemoryGuardIncrement(_Inout_ long long* _original_value) NOEXCEPT
     {
         return ::InterlockedIncrement64(_original_value);
     }
-    inline long ctMemoryGuardIncrement(_Inout_ long* _original_value) throw()
+    inline long ctMemoryGuardIncrement(_Inout_ long* _original_value) NOEXCEPT
     {
         return ::InterlockedIncrement(_original_value);
     }
 
-    inline long long ctMemoryGuardDecrement(_Inout_ long long* _original_value) throw()
+    inline long long ctMemoryGuardDecrement(_Inout_ long long* _original_value) NOEXCEPT
     {
         return ::InterlockedDecrement64(_original_value);
     }
-    inline long ctMemoryGuardDecrement(_Inout_ long* _original_value) throw()
+    inline long ctMemoryGuardDecrement(_Inout_ long* _original_value) NOEXCEPT
     {
         return ::InterlockedDecrement(_original_value);
     }

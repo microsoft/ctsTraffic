@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // local project headers
+#include "ctVersionConversion.hpp"
 #include "ctScopedT.hpp"
 
 
@@ -30,7 +31,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctHandleDeleter {
-        void operator() (const HANDLE h) const throw()
+        void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
                 ::CloseHandle(h);
@@ -48,7 +49,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctHKeyDeleter {
-        void operator() (const HKEY h) const throw()
+        void operator() (const HKEY h) const NOEXCEPT
         {
             if ((h != NULL) &&
                 (h != HKEY_CLASSES_ROOT) &&
@@ -72,7 +73,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctFindHandleDeleter {
-        void operator() (const HANDLE h) const throw()
+        void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
                 ::FindClose(h);
@@ -90,7 +91,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctEventLogHandleDeleter {
-        void operator() (const HANDLE h) const throw()
+        void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
                 ::CloseEventLog(h);
@@ -108,7 +109,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctLibraryHandleDeleter {
-        void operator() (const HMODULE h) const throw()
+        void operator() (const HMODULE h) const NOEXCEPT
         {
             if (h != NULL) {
                 ::FreeLibrary(h);
@@ -126,7 +127,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctServiceHandleDeleter {
-        void operator() (const SC_HANDLE h) const throw()
+        void operator() (const SC_HANDLE h) const NOEXCEPT
         {
             if (h != NULL) {
                 ::CloseServiceHandle(h);
@@ -145,7 +146,7 @@ namespace ctl {
     ///
     ///////////////////////////////////////////////////////////////////////////////////
     struct ctSocketHandleDeleter {
-        void operator() (const SOCKET s) const throw()
+        void operator() (const SOCKET s) const NOEXCEPT
         {
             if (s != INVALID_SOCKET) {
                 ::closesocket(s);

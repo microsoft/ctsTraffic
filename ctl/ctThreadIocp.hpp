@@ -23,6 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // ct headers
+#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 
 
@@ -209,7 +210,7 @@ namespace ctl {
         /// This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
         /// - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
         ///
-        void cancel_request(OVERLAPPED* _pov) throw()
+        void cancel_request(OVERLAPPED* _pov) NOEXCEPT
         {
             ::CancelThreadpoolIo(this->ptp_io);
             ctThreadIocpCallbackInfo* old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);

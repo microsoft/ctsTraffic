@@ -73,9 +73,6 @@
     <ClInclude Include="ctsSocketState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -163,16 +160,19 @@
     <ClInclude Include="ctsIOBuffers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ctsIOPatternT.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp">
       <Filter>IOPattern</Filter>
     </ClInclude>
-    <ClInclude Include="ctsIOPatternStateT.h">
+    <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp">
       <Filter>IOPattern</Filter>
     </ClInclude>
-    <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp">
+    <ClInclude Include="..\ctl\ctVersionConversion.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsIOPatternT.h">
       <Filter>IOPattern</Filter>
     </ClInclude>
   </ItemGroup>

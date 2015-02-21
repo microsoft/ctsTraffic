@@ -872,6 +872,8 @@ namespace ctsTraffic {
 
         // complete the socket state back to the parent if there is no pended IO
         if (0 == io_count) {
+// shared_socket was indeed initialized - there is no path where it could not have been uninitialized
+#pragma warning(suppress: 6001)
             shared_socket->complete_state(error);
             delete socket_context;
         }

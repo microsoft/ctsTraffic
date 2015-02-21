@@ -13,13 +13,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// os headers
 #include <Windows.h>
 #include <winsock2.h>
 #include <mswsock.h>
 #include <rpc.h> // for GUID
-
+// ctl headers
+#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
+
 
 namespace ctl {
     ///

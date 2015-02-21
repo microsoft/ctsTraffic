@@ -37,18 +37,22 @@ See the Apache Version 2.0 License for specific language governing permissions a
 ///
 
 
+// cpp headers
 #include <memory> // for std::addressof()
+// ctl headers
+#include "ctVersionConversion.hpp"
+
 
 namespace ctl {
 
     template <typename F> class ctScopeGuardT {
     public:
-        explicit ctScopeGuardT(F& f) throw() :
+        explicit ctScopeGuardT(F& f) NOEXCEPT :
             m_p(std::addressof(f))
         {
         }
 
-        void run_once( ) throw()
+        void run_once( ) NOEXCEPT
         {
             if (m_p) {
                 (*m_p)();
@@ -56,12 +60,12 @@ namespace ctl {
             m_p = nullptr;
         }
 
-        void dismiss() throw()
+        void dismiss() NOEXCEPT
         {
             m_p = nullptr;
         }
 
-        ~ctScopeGuardT() throw()
+        ~ctScopeGuardT() NOEXCEPT
         {
             if (m_p) {
                 (*m_p)();
