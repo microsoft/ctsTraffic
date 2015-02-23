@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30723.0
-MinimumVisualStudioVersion = 10.0.40219.1
+MinimumVisualStudioVersion = 12.0.30723.0
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsMediaStreamProtocolUnitTest", "ctsMediaStreamSendBuffer\ctsMediaStreamSendBufferUnitTest.vcxproj", "{0D761E6B-7871-4464-AC2E-B1357B6C0915}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsSocketUnitTest", "ctsSocketUnitTest\ctsSocketUnitTest.vcxproj", "{FB78B82F-1483-4F85-B43B-7BA62B0C21BE}"
