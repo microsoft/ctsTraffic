@@ -545,7 +545,7 @@ namespace ctsTraffic {
         // with TCP, we need to calculate the buffer size based off bytes remaining
         // with UDP, we're always posting the same size buffer
         //
-        ctsUnsignedLongLong new_buffer_size = 0ULL;
+        ctsSignedLongLong new_buffer_size = 0LL;
         //
         // first: calculate the next buffer size assuming no max ceiling specified by the protocol
         //
@@ -608,7 +608,7 @@ namespace ctsTraffic {
 
                     // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
                     // - when we have already sent at least 1 additional quantum of bytes
-                    ctsUnsignedLongLong ms_for_quantums_to_skip = (quantum_ahead_to_schedule - 1) * ctsConfig::Settings->TcpBytesPerSecondPeriod;
+                    ctsSignedLongLong ms_for_quantums_to_skip = (quantum_ahead_to_schedule - 1) * ctsConfig::Settings->TcpBytesPerSecondPeriod;
 
                     // carry forward extra bytes from quantums that will be filled by the bytes we have already sent
                     // (including the current quantum)

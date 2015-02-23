@@ -150,7 +150,7 @@ namespace ctsTraffic {
         /// Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        bool Startup(_In_ int argc, _In_reads_(argc) wchar_t** argv);
+        bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv);
         void Shutdown();
 
         enum class PrintUsageOption
@@ -370,8 +370,7 @@ namespace ctsTraffic {
 
             ctsUnsignedLong StatusUpdateFrequencyMilliseconds;
 
-            ctsUnsignedLongLong TcpBytesPerSecondPeriod;
-
+            ctsSignedLongLong TcpBytesPerSecondPeriod;
             ctsSignedLongLong StartTimeMilliseconds;
 
             ctsUnsignedLong TimeLimit;
