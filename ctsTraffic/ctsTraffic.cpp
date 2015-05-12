@@ -86,7 +86,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::PrintLegend();
 
         // set the start timer as close as possible to the start of the engine
-        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_msec();
+        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
         ctsSocketBroker broker;
         g_SocketBroker = &broker;
 

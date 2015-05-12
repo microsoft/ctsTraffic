@@ -189,7 +189,7 @@ namespace ctsTraffic {
         //
         ctsConnectionStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_msec();
+            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
@@ -274,7 +274,7 @@ namespace ctsTraffic {
         //
         ctsUdpStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_msec();
+            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
@@ -356,7 +356,7 @@ namespace ctsTraffic {
         //
         ctsTcpStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_msec();
+            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();

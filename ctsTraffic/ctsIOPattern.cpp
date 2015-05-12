@@ -194,7 +194,7 @@ namespace ctsTraffic {
         // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
         bytes_sending_per_quantum(ctsConfig::GetTcpBytesPerSecond() * static_cast<unsigned long long>(ctsConfig::Settings->TcpBytesPerSecondPeriod) / 1000LL),
         bytes_sending_this_quantum(0LL),
-        quantum_start_time_ms(ctTimer::snap_qpc_msec()),
+        quantum_start_time_ms(ctTimer::snap_qpc_as_msec()),
         last_error(ctsStatusIORunning)
     {
         ctFatalCondition(
@@ -576,7 +576,7 @@ namespace ctsTraffic {
             // check to see if the send needs to be deferred into the future
             //
             if (this->bytes_sending_per_quantum > 0) {
-                auto current_time_ms(ctTimer::snap_qpc_msec());
+                auto current_time_ms(ctTimer::snap_qpc_as_msec());
                 if (this->bytes_sending_this_quantum < this->bytes_sending_per_quantum) {
                     // adjust bytes_sending_this_quantum
                     this->bytes_sending_this_quantum += new_buffer_size;
@@ -1076,7 +1076,7 @@ namespace ctsTraffic {
                 break;
 
             case ServerState::IdSent:
-                this->base_time_milliseconds = ctTimer::snap_qpc_msec();
+                this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
                 this->state = ServerState::IoStarted;
                 // fall-through
             case ServerState::IoStarted:
@@ -1087,7 +1087,7 @@ namespace ctsTraffic {
                     return_task.time_offset_milliseconds =
                         this->base_time_milliseconds
                         + static_cast<long long>(this->current_frame * 1000UL / this->frame_rate_fps)
-                        - ctTimer::snap_qpc_msec();
+                        - ctTimer::snap_qpc_as_msec();
 
                     current_frame_requested += return_task.buffer_length;
                 }
@@ -1230,7 +1230,7 @@ namespace ctsTraffic {
         if (!this->started_timers) {
             // initiate the timers the first time the object is used
             this->started_timers = true;
-            this->base_time_milliseconds = ctTimer::snap_qpc_msec();
+            this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
             this->set_next_start_timer();
             this->set_next_timer();
         }
@@ -1476,7 +1476,7 @@ namespace ctsTraffic {
             // - we'll also render a frame at the same time if the initial buffer is full
             timer_offset += static_cast<long long>(static_cast<unsigned long>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
             // subtract out the current time to get the delta # of milliseconds
-            timer_offset -= ctTimer::snap_qpc_msec();
+            timer_offset -= ctTimer::snap_qpc_as_msec();
             // can't let it go negative
             if (timer_offset < 1) {
                 timer_offset = 0;

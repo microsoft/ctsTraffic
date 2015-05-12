@@ -90,8 +90,7 @@ namespace ctsTraffic {
         }
     }
 
-    inline
-        void ctsConnectEx(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    inline void ctsConnectEx(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -113,7 +112,9 @@ namespace ctsTraffic {
 
                     // get a new IO request from the socket's TP
                     std::shared_ptr<ctl::ctThreadIocp> connect_iocp = shared_socket->thread_pool();
-                    OVERLAPPED* pov = connect_iocp->new_request(ctsConnectExIoCompletionCallback, _weak_socket, targetAddress);
+                    OVERLAPPED* pov = connect_iocp->new_request(
+                        [_weak_socket, targetAddress] (OVERLAPPED* _ov) 
+                        { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                     if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), NULL, 0, NULL, pov)) {
                         error = ::WSAGetLastError();

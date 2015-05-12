@@ -603,7 +603,7 @@ namespace ctl {
         }
     }
     inline
-    void ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+        void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
     {
         if (_condition) {
             // write everyting out into a single string
@@ -631,12 +631,12 @@ namespace ctl {
     }
     inline
     __analysis_noreturn
-    void ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+    void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
     {
         ctFatalConditionVa(true, _text, _argptr);
     }
     inline
-    void ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+    void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
     {
         if (_condition) {
             va_list argptr;
@@ -647,7 +647,7 @@ namespace ctl {
     }
     inline
     __analysis_noreturn
-    void ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+    void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
     {
         va_list argptr;
         va_start(argptr, _text);

@@ -1,0 +1,154 @@
+/*
+
+Copyright (c) Microsoft Corporation
+All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
+
+*/
+
+#pragma once
+// cpp headers
+#include <exception>
+#include <memory>
+
+// OS headers
+#include <Windows.h>
+#include <WinSock2.h>
+
+// ctl headers
+#include <ctSockaddr.hpp>
+#include <ctThreadIocp.hpp>
+
+// project headers
+#include "ctsWinsockLayer.h"
+#include "ctsIOTask.hpp"
+#include "ctsConfig.h"
+#include "ctsSocket.h"
+
+//
+// These functions encapsulate making Winsock API calls
+// - primarily facilitating unit testing of interface logic that calls through Winsock
+//   but also simplifying the logic behind the code to make reasoning over the code more straight forward
+//
+namespace ctsTraffic {
+
+    ///
+    /// WSARecvFrom
+    ///
+    wsIOResult ctsWSARecvFrom(
+        std::shared_ptr<ctsSocket>& _shared_socket,
+        const ctsIOTask& _task,
+        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
+    {
+        auto socket_lock(ctsSocket::LockSocket(_shared_socket));
+        SOCKET socket = socket_lock.get();
+        if (INVALID_SOCKET == socket) {
+            return WSAECONNABORTED;
+        }
+
+        unsigned long bytes_transferred = 0UL;
+        int io_error = NO_ERROR;
+        try {
+            auto io_thread_pool = _shared_socket->thread_pool();
+            OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
+
+            WSABUF wsabuf;
+            wsabuf.buf = _task.buffer + _task.buffer_offset;
+            wsabuf.len = _task.buffer_length;
+
+            DWORD flags = 0;
+            if (::WSARecvFrom(socket, &wsabuf, 1, NULL, &flags, NULL, NULL, pov, NULL) != 0) {
+                io_error = ::WSAGetLastError();
+                // IO pended == successfully initiating the IO
+                if (io_error != WSA_IO_PENDING) {
+                    // must cancel the IOCP TP if the IO call fails
+                    io_thread_pool->cancel_request(pov);
+                }
+                // will return WSA_IO_PENDING transparently to the caller
+
+            } else {
+                if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                    // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
+                    // - this member is set when the request is completed inline
+                    bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    // completed inline, so the TP won't be notified
+                    io_thread_pool->cancel_request(pov);
+                    io_error = ERROR_SUCCESS;
+                } else {
+                    // WSARecvFrom returned success, but inline completions is not enabled
+                    // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
+                    io_error = WSA_IO_PENDING;
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            ctsConfig::PrintException(e);
+            return WSAENOBUFS;
+        }
+
+        return wsIOResult(io_error, bytes_transferred);
+    }
+
+        ///
+        /// WSASendTo
+        ///
+    wsIOResult ctsWSASendTo(
+        std::shared_ptr<ctsSocket>& _shared_socket,
+        const ctsIOTask& _task,
+        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
+    {
+        auto socket_lock(ctsSocket::LockSocket(_shared_socket));
+        SOCKET socket = socket_lock.get();
+        if (INVALID_SOCKET == socket) {
+            return WSAECONNABORTED;
+        }
+
+        unsigned long bytes_transferred = 0UL;
+        int io_error = NO_ERROR;
+        try {
+            const ctl::ctSockaddr& targetAddress = _shared_socket->target_address();
+
+            auto io_thread_pool = _shared_socket->thread_pool();
+            OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
+
+            WSABUF wsabuf;
+            wsabuf.buf = _task.buffer + _task.buffer_offset;
+            wsabuf.len = _task.buffer_length;
+
+            if (::WSASendTo(socket, &wsabuf, 1, NULL, 0, targetAddress.sockaddr(), targetAddress.length(), pov, NULL) != 0) {
+                io_error = ::WSAGetLastError();
+                // IO pended == successfully initiating the IO
+                if (io_error != WSA_IO_PENDING) {
+                    // must cancel the IOCP TP if the IO call fails
+                    io_thread_pool->cancel_request(pov);
+                }
+                // will return WSA_IO_PENDING transparently to the caller
+
+            } else {
+                if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                    // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
+                    // - this member is set when the request is completed inline
+                    bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    // completed inline, so the TP won't be notified
+                    io_thread_pool->cancel_request(pov);
+                    io_error = ERROR_SUCCESS;
+                } else {
+                    // WSASendTo returned success, but inline completions is not enabled
+                    // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
+                    io_error = WSA_IO_PENDING;
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            ctsConfig::PrintException(e);
+            return WSAENOBUFS;
+        }
+
+        return wsIOResult(io_error, bytes_transferred);
+    }
+}

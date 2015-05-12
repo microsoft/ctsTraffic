@@ -107,8 +107,8 @@ namespace ctsTraffic {
         ctsSimpleAccept() : pimpl(new ctsSimpleAcceptImpl)
         {
             // need a CS to guard access to our vectors
-            if (!::InitializeCriticalSectionAndSpinCount(&pimpl->accepting_cs, 4000)) {
-                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionAndSpinCount", L"ctsSimpleAccept", false);
+            if (!::InitializeCriticalSectionEx(&pimpl->accepting_cs, 4000, 0)) {
+                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSimpleAccept", false);
             }
 
             // will use the global threadpool, but will mark these work-items as running long

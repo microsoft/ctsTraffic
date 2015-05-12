@@ -179,8 +179,8 @@ namespace ctsTraffic {
 
             ctsAcceptExImpl() : cs(), listeners(), accepted_connections(), pended_accept_requests()
             {
-                if (!::InitializeCriticalSectionAndSpinCount(&cs, 4000)) {
-                    throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionAndSpinCount", L"ctsAcceptEx", false);
+                if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
+                    throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
                 }
             }
 
@@ -454,8 +454,8 @@ namespace ctsTraffic {
       listening_addr(_listen_socket->addr),
       listening_iocp(_listen_socket->iocp)
     {
-        if (!::InitializeCriticalSectionAndSpinCount(&cs, 4000)) {
-            throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionAndSpinCount", L"ctsAcceptEx", false);
+        if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
+            throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
         }
     }
 
@@ -499,9 +499,9 @@ namespace ctsTraffic {
         DWORD bytes_received;
 
         this->pov = this->listening_iocp->new_request(
-            ctsAcceptExIoCompletionCallback,
-            _pimpl,
-            this);
+            [_pimpl, this] (OVERLAPPED* _ov) 
+            { ctsAcceptExIoCompletionCallback(_ov, _pimpl, this);  });
+
         if (!ctl::ctAcceptEx(
                 this->listening_socket,
                 new_socket,

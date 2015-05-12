@@ -22,6 +22,12 @@
     <Filter Include="IOPattern">
       <UniqueIdentifier>{3fea6222-7f01-4773-b6f4-d571615fba5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MediaStreaming">
+      <UniqueIdentifier>{6c25a8c6-cc64-45a4-a5f8-23aba61ea248}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WinsockCallouts">
+      <UniqueIdentifier>{b3e62cb3-4bce-4b76-9db0-21b6538f2a45}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp">
@@ -41,6 +47,21 @@
     </ClCompile>
     <ClCompile Include="ctsTraffic.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsMediaStreamServerConnectedSocket.cpp">
+      <Filter>MediaStreaming</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsMediaStreamServerImpl.cpp">
+      <Filter>MediaStreaming</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsMediaStreamServerListeningSocket.cpp">
+      <Filter>MediaStreaming</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsMediaStreamClient.cpp">
+      <Filter>MediaStreaming</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsWinsockLayer.cpp">
+      <Filter>WinsockCallouts</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,37 +136,28 @@
     <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsAcceptEx.hpp">
+    <ClInclude Include="ctsAcceptEx.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsConnectEx.hpp">
+    <ClInclude Include="ctsConnectEx.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsMediaStreamClient.hpp">
+    <ClInclude Include="ctsReadWriteIocp.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsMediaStreamProtocol.hpp">
+    <ClInclude Include="ctsRioIocp.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsMediaStreamServer.hpp">
+    <ClInclude Include="ctsSendRecvIocp.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsReadWriteIocp.hpp">
+    <ClInclude Include="ctsSimpleAccept.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsRioIocp.hpp">
+    <ClInclude Include="ctsSimpleConnect.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsSendRecvIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsSimpleAccept.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsSimpleConnect.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="SocketFunctions\ctsWSASocket.hpp">
+    <ClInclude Include="ctsWSASocket.hpp">
       <Filter>SocketFunctions</Filter>
     </ClInclude>
     <ClInclude Include="ctsSafeInt.hpp">
@@ -174,6 +186,24 @@
     </ClInclude>
     <ClInclude Include="ctsIOPatternT.h">
       <Filter>IOPattern</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsMediaStreamProtocol.hpp">
+      <Filter>MediaStreaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsMediaStreamServerConnectedSocket.h">
+      <Filter>MediaStreaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsMediaStreamServerListeningSocket.h">
+      <Filter>MediaStreaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsMediaStreamServer.h">
+      <Filter>MediaStreaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsMediaStreamClient.h">
+      <Filter>MediaStreaming</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsWinsockLayer.h">
+      <Filter>WinsockCallouts</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

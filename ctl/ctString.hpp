@@ -552,7 +552,7 @@ namespace ctl {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         inline
-        std::wstring format_string_va(_Printf_format_string_ LPCWSTR _format_string, va_list _args)
+        std::wstring __cdecl format_string_va(_Printf_format_string_ LPCWSTR _format_string, va_list _args)
         {
             std::wstring formatted_string(_format_string);
             // loop until the formatted string will fit
@@ -588,7 +588,7 @@ namespace ctl {
             return formatted_string;
         }
         inline
-        std::wstring format_string(_Printf_format_string_ LPCWSTR _format_string, ...)
+        std::wstring __cdecl format_string(_Printf_format_string_ LPCWSTR _format_string, ...)
         {
             va_list args;
             va_start(args, _format_string);

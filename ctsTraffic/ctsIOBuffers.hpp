@@ -56,7 +56,9 @@ namespace ctsTraffic {
             using ::ctsTraffic::ctsConfig::IsListening;
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
 
-            (void) ::InitializeCriticalSectionAndSpinCount(&statics::ConnectionIdLock, 4000);
+            if (!::InitializeCriticalSectionEx(&statics::ConnectionIdLock, 4000, 0)) {
+                ::ctl::ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %d", ::WSAGetLastError());
+            }
 
             ::SYSTEM_INFO sysInfo;         // Useful information about the system
             ::GetSystemInfo(&sysInfo);     // Initialize the structure.

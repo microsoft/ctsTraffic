@@ -170,9 +170,8 @@ namespace ctsTraffic {
                         // these are the only calls which can throw in this function
                         io_thread_pool = shared_socket->thread_pool();
                         pov = io_thread_pool->new_request(
-                            ctsReadWriteIocpIoCompletionCallback,
-                            _weak_socket,
-                            next_io);
+                            [_weak_socket, next_io] (OVERLAPPED* _ov) 
+                            { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
                     catch (const ctl::ctException& e) {
                         ctsConfig::PrintException(e);

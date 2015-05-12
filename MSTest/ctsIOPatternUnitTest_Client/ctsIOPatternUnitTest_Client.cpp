@@ -147,7 +147,7 @@ namespace ctsTraffic {
 
         float GetStatusTimeStamp() throw()
         {
-            return static_cast<float>((ctl::ctTimer::snap_qpc_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
+            return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
     }
 }

@@ -173,15 +173,16 @@ namespace ctsTraffic {
         void PrintStatusUpdate() NOEXCEPT;
         void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT;
 
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void  __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void  __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
         /// *Override will always print to console regardless of settings (important if can't even start)
-        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+
         void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT;
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT;
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT;
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT;
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
 
         // Get* functions
         ctsSignedLongLong   GetTcpBytesPerSecond() NOEXCEPT;
@@ -313,7 +314,7 @@ namespace ctsTraffic {
               ListenAddresses(),
               TargetAddresses(),
               BindAddresses(),
-              ConnectionStatusDetails(ctl::ctTimer::snap_qpc_msec()),
+              ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec()),
               TcpStatusDetails(),
               UdpStatusDetails(),
               HistoricConnectionDetails(),

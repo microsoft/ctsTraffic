@@ -63,8 +63,8 @@ namespace ctsTraffic {
             pending_limit = static_cast<unsigned long>(total_connections_remaining);
         }
 
-        if (!::InitializeCriticalSectionAndSpinCount(&cs, 4000)) {
-            throw ctException(::GetLastError(), L"InitializeCriticalSectionAndSpinCount", L"ctsSocketBroker", false);
+        if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
+            throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketBroker", false);
         }
         ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
 
@@ -75,7 +75,10 @@ namespace ctsTraffic {
         }
 
         // intiate the threadpool timer
-        wakeup_timer->schedule_reoccuring(ctsSocketBroker::TimerCallback, this, 0LL, TimerCallbackTimeout);
+        wakeup_timer->schedule_reoccuring(
+            [this] () {ctsSocketBroker::TimerCallback(this); }, 
+            0LL, 
+            TimerCallbackTimeout);
 
         ctsConfig::PrintDebug(
             L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",

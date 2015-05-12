@@ -17,7 +17,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 
 #include "ctsConfig.h"
+#include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
+
 
 namespace ctsTraffic {
 
@@ -25,89 +27,105 @@ namespace ctsTraffic {
     typedef struct ctsIOPatternRateLimitDontThrottle_t ctsIOPatternRateLimitDontThrottle;
 
     template <typename Protocol>
-    struct ctsIOPatternRateLimitPolicy
-    {
-        ctsIOPatternRateLimitPolicy() NOEXCEPT
-        : bytes_sending_per_quantum(ctsConfig::GetTcpBytesPerSecond() * static_cast<long long>(ctsConfig::Settings->TcpBytesPerSecondPeriod) / 1000LL),
-          bytes_sending_this_quantum(0LL);
-          quantum_start_time_ms(ctl::ctTimer::snap_qpc_msec())
-        {
-        }
-
-        long long operator() (const ctsUnsignedLongLong& _buffer_size) NOEXCEPT;
-
-        const ctsSignedLongLong bytes_sending_per_quantum;
-        ctsSignedLongLong bytes_sending_this_quantum;
-        ctsSignedLongLong quantum_start_time_ms;
+    struct ctsIOPatternRateLimitPolicy {
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) NOEXCEPT;
     };
 
-    template <>
-    long long ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>::operator() (const ctsUnsignedLongLong&) NOEXCEPT
-    {
-        // effectively a no-opt
-        return 0LL;
-    }
-    
-    template <>
-    long long ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>::operator() (const ctsUnsignedLongLong& _buffer_size) NOEXCEPT
-    {
-        long long time_offset_milliseconds = 0LL;
 
-        auto current_time_ms(ctl::ctTimer::snap_qpc_msec());
-        if (this->bytes_sending_this_quantum < this->bytes_sending_per_quantum) {
-            // adjust bytes_sending_this_quantum
-            this->bytes_sending_this_quantum += _buffer_size;
+    ///
+    /// ctsIOPatternRateLimitDontThrottle
+    ///
+    template<>
+    struct ctsIOPatternRateLimitPolicy < ctsIOPatternRateLimitDontThrottle > {
 
-            // no need to adjust quantum_start_time_ms unless we skipped into a new quantum
-            // (meaning the previous quantum had not filled the max bytes for that quantum)
-            if (current_time_ms > (this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod)) {
-                // current time shows it's now beyond this quantum timeframe
-                // - once we see how many quantums we have skipped forward, move our quantum start time to the quantum we are actually in
-                // - then adjust the number of bytes we are to send this quantum by how many quantum we just skipped
-                auto quantums_skipped_since_last_send = (current_time_ms - this->quantum_start_time_ms) / ctsConfig::Settings->TcpBytesPerSecondPeriod;
-                this->quantum_start_time_ms += quantums_skipped_since_last_send * ctsConfig::Settings->TcpBytesPerSecondPeriod;
-
-                // we have to be careful making this adjustment since the remainingbytes this quantum could be very small
-                // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
-                auto bytes_to_adjust = this->bytes_sending_per_quantum * quantums_skipped_since_last_send;
-                if (bytes_to_adjust > this->bytes_sending_this_quantum) {
-                    this->bytes_sending_this_quantum = 0;
-                } else {
-                    this->bytes_sending_this_quantum -= bytes_to_adjust;
-                }
-            }
-
-        } else {
-            // we have sent more than required for this quantum
-            // - check if this fullfilled future quantums as well
-
-            auto quantum_ahead_to_schedule = this->bytes_sending_this_quantum / this->bytes_sending_per_quantum;
-
-            // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
-            // - when we have already sent at least 1 additional quantum of bytes
-            ctsSignedLongLong ms_for_quantums_to_skip = (quantum_ahead_to_schedule - 1LL) * ctsConfig::Settings->TcpBytesPerSecondPeriod;
-
-            // carry forward extra bytes from quantums that will be filled by the bytes we have already sent
-            // (including the current quantum)
-            // then adding the bytes we're about to send
-            this->bytes_sending_this_quantum -= this->bytes_sending_per_quantum * quantum_ahead_to_schedule;
-            this->bytes_sending_this_quantum += _buffer_size;
-
-            // update the return task for when to schedule the send
-            // first, calculate the time to get to the end of this time quantum
-            // - only adjust if the current time isn't already outside this quantum
-            if (current_time_ms < this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod) {
-                time_offset_milliseconds = this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod - current_time_ms;
-            }
-
-            // then add in any quantum we need to skip
-            time_offset_milliseconds += ms_for_quantums_to_skip;
-
-            // finally, adjust quantum_start_time_ms to the next quantum which IO will complete
-            this->quantum_start_time_ms += ms_for_quantums_to_skip + ctsConfig::Settings->TcpBytesPerSecondPeriod;
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) NOEXCEPT
+        {
+            // no-op
         }
 
-        return time_offset_milliseconds;
-    }
+    };
+
+    ///
+    /// ctsIOPatternRateLimitThrottle
+    ///
+    template<>
+    struct ctsIOPatternRateLimitPolicy < ctsIOPatternRateLimitThrottle > {
+
+    private:
+        const ctsUnsignedLongLong BytesSendingPerQuantum;
+        const ctsUnsignedLongLong QuantumPeriodMs;
+        ctsUnsignedLongLong bytes_sent_this_quantum;
+        ctsUnsignedLongLong quantum_start_time_ms;
+
+    public:
+        ctsIOPatternRateLimitPolicy() NOEXCEPT
+        : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
+          QuantumPeriodMs(ctsConfig::Settings->TcpBytesPerSecondPeriod),
+          bytes_sent_this_quantum(0ULL),
+          quantum_start_time_ms(ctl::ctTimer::snap_qpc_as_msec())
+        {
+#ifdef CTSTRAFFIC_UNIT_TESTS
+            ctsConfig::PrintDebug(
+                L"ctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
+                static_cast<unsigned long long>(this->BytesSendingPerQuantum),
+                static_cast<unsigned long long>(this->QuantumPeriodMs));
+#endif
+        }
+
+        void update_time_offset(ctsIOTask& _task, const ctsUnsignedLongLong& _buffer_size) NOEXCEPT
+        {
+            if (_task.ioAction != IOTaskAction::Send) {
+                return;
+            }
+
+            _task.time_offset_milliseconds = 0LL;
+            auto current_time_ms(ctl::ctTimer::snap_qpc_as_msec());
+
+            if (this->bytes_sent_this_quantum < this->BytesSendingPerQuantum) {
+                if (current_time_ms < this->quantum_start_time_ms + this->QuantumPeriodMs) {
+                    if (current_time_ms > this->quantum_start_time_ms) {
+                        // time is in the current quantum
+                        this->bytes_sent_this_quantum += _buffer_size;
+                    } else {
+                        // time is still in a prior quantum
+                        _task.time_offset_milliseconds = this->newQuantumStartTime() - current_time_ms;
+                        this->bytes_sent_this_quantum += _buffer_size;
+                    }
+                } else {
+                    // time is already in a new quantum - start over
+                    this->bytes_sent_this_quantum = _buffer_size;
+                    this->quantum_start_time_ms += ((current_time_ms - this->quantum_start_time_ms) / this->QuantumPeriodMs) * this->QuantumPeriodMs;
+                }
+            } else {
+                // have already fulfilled the prior quantum
+                auto new_quantum_start_time_ms = this->newQuantumStartTime();
+
+                if (current_time_ms < new_quantum_start_time_ms) {
+                    _task.time_offset_milliseconds = new_quantum_start_time_ms - current_time_ms;
+                    this->bytes_sent_this_quantum = _buffer_size;
+                    this->quantum_start_time_ms = new_quantum_start_time_ms;
+                } else {
+                    this->bytes_sent_this_quantum = _buffer_size;
+                    this->quantum_start_time_ms += ((current_time_ms - this->quantum_start_time_ms) / this->QuantumPeriodMs) * this->QuantumPeriodMs;
+                }
+            }
+#ifdef CTSTRAFFIC_UNIT_TESTS
+            ctsConfig::PrintDebug(
+                L"ctsIOPatternRateLimitPolicy\n"
+                L"\tcurrent_time_ms: %lld\n"
+                L"\tquantum_start_time_ms: %llu\n"
+                L"\tbytes_sent_this_quantum: %llu\n",
+                current_time_ms,
+                static_cast<long long>(this->quantum_start_time_ms),
+                static_cast<long long>(this->bytes_sent_this_quantum));
+#endif
+        }
+
+    private:
+        long long newQuantumStartTime()
+        {
+            return this->quantum_start_time_ms + (this->bytes_sent_this_quantum / this->BytesSendingPerQuantum * this->QuantumPeriodMs);
+        }
+    };
 }
 

@@ -87,10 +87,11 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -123,10 +124,11 @@
       </PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -148,7 +150,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -160,6 +162,7 @@
       <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Qvec-report:2 /Zc:strictStrings /Gw </AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -182,7 +185,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>..\ctl;SocketFunctions;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -198,6 +201,7 @@
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <BrowseInformation>true</BrowseInformation>
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -219,10 +223,15 @@
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
+    <ClCompile Include="ctsMediaStreamClient.cpp" />
+    <ClCompile Include="ctsMediaStreamServerImpl.cpp" />
     <ClCompile Include="ctsSocket.cpp" />
     <ClCompile Include="ctsSocketBroker.cpp" />
     <ClCompile Include="ctsSocketState.cpp" />
     <ClCompile Include="ctsTraffic.cpp" />
+    <ClCompile Include="ctsMediaStreamServerListeningSocket.cpp" />
+    <ClCompile Include="ctsMediaStreamServerConnectedSocket.cpp" />
+    <ClCompile Include="ctsWinsockLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -257,18 +266,21 @@
     <ClInclude Include="ctsSocketBroker.h" />
     <ClInclude Include="ctsSocketState.h" />
     <ClInclude Include="ctsStatistics.hpp" />
+    <ClInclude Include="ctsWinsockLayer.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="SocketFunctions\ctsAcceptEx.hpp" />
-    <ClInclude Include="SocketFunctions\ctsConnectEx.hpp" />
-    <ClInclude Include="SocketFunctions\ctsMediaStreamClient.hpp" />
-    <ClInclude Include="SocketFunctions\ctsMediaStreamProtocol.hpp" />
-    <ClInclude Include="SocketFunctions\ctsMediaStreamServer.hpp" />
-    <ClInclude Include="SocketFunctions\ctsReadWriteIocp.hpp" />
-    <ClInclude Include="SocketFunctions\ctsRioIocp.hpp" />
-    <ClInclude Include="SocketFunctions\ctsSendRecvIocp.hpp" />
-    <ClInclude Include="SocketFunctions\ctsSimpleAccept.hpp" />
-    <ClInclude Include="SocketFunctions\ctsSimpleConnect.hpp" />
-    <ClInclude Include="SocketFunctions\ctsWSASocket.hpp" />
+    <ClInclude Include="ctsAcceptEx.hpp" />
+    <ClInclude Include="ctsConnectEx.hpp" />
+    <ClInclude Include="ctsMediaStreamClient.h" />
+    <ClInclude Include="ctsMediaStreamServerListeningSocket.h" />
+    <ClInclude Include="ctsMediaStreamProtocol.hpp" />
+    <ClInclude Include="ctsMediaStreamServer.h" />
+    <ClInclude Include="ctsMediaStreamServerConnectedSocket.h" />
+    <ClInclude Include="ctsReadWriteIocp.hpp" />
+    <ClInclude Include="ctsRioIocp.hpp" />
+    <ClInclude Include="ctsSendRecvIocp.hpp" />
+    <ClInclude Include="ctsSimpleAccept.hpp" />
+    <ClInclude Include="ctsSimpleConnect.hpp" />
+    <ClInclude Include="ctsWSASocket.hpp" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

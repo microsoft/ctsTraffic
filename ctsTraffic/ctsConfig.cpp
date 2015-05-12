@@ -44,8 +44,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSendRecvIocp.hpp"
 #include "ctsReadWriteIocp.hpp"
 #include "ctsrioiocp.hpp"
-#include "ctsMediaStreamClient.hpp"
-#include "ctsMediaStreamServer.hpp"
+#include "ctsMediaStreamClient.h"
+#include "ctsMediaStreamServer.h"
 
 
 using namespace std;
@@ -2413,7 +2413,7 @@ namespace ctsTraffic {
             }
         }
         /// Always print to console if override
-        void PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2433,7 +2433,7 @@ namespace ctsTraffic {
 
             va_end(argptr);
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2548,7 +2548,7 @@ namespace ctsTraffic {
 
                         // capture the timeslices
                         ctsSignedLongLong l_previoutimeslice = s_PreviousPrintTimeslice;
-                        ctsSignedLongLong l_current_timeslice = ctTimer::snap_qpc_msec() - Settings->StartTimeMilliseconds;
+                        ctsSignedLongLong l_current_timeslice = ctTimer::snap_qpc_as_msec() - Settings->StartTimeMilliseconds;
 
                         if (l_current_timeslice > l_previoutimeslice) {
                             // write out the header to the console every 40 updates 
@@ -2936,7 +2936,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void  __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2977,7 +2977,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        void PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -3102,7 +3102,7 @@ namespace ctsTraffic {
 
         float GetStatusTimeStamp() NOEXCEPT
         {
-            return static_cast<float>((ctl::ctTimer::snap_qpc_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
+            return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

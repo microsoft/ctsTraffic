@@ -29,7 +29,7 @@ namespace ctl {
         /// Conversion functions between hundred-nanoseconds <-> milliseconds
         ///
         /// nano-second == 10 ^ -9
-        /// - therefore 100 nano-seconds is 10 ^ -7
+        /// - therefore 100 nano-seconds == 10 ^ -7
         /// millisecond == 10 ^ -3
         ///
 
@@ -137,7 +137,7 @@ namespace ctl {
             static LARGE_INTEGER s_Qpf;
             static BOOL CALLBACK s_QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*)
             {
-                QueryPerformanceFrequency(&s_Qpf);
+                ::QueryPerformanceFrequency(&s_Qpf);
                 return TRUE;
             }
         }
@@ -151,24 +151,30 @@ namespace ctl {
 
         ///
         /// Returns the current 'time' from QPC/QPF in terms of milliseconds
+        /// - leaving undefined for unit tests which need to control 'time' for their tests
         ///
+#ifdef CTSTRAFFIC_UNIT_TESTS
         inline
-        long long snap_qpc_msec() NOEXCEPT
+        long long snap_qpc_as_msec() NOEXCEPT;
+#else
+        inline
+        long long snap_qpc_as_msec() NOEXCEPT
         {
             (void) ::InitOnceExecuteOnce(&s_QpfInitOnce, s_QpfInitOnceCallback, nullptr, nullptr);
             LARGE_INTEGER qpc;
-            QueryPerformanceCounter(&qpc);
+            ::QueryPerformanceCounter(&qpc);
             // multiplying by 1000 as (qpc / qpf) == seconds
             return static_cast<long long>((qpc.QuadPart * 1000LL) / s_Qpf.QuadPart);
         }
+#endif
         ///
         /// Returns the current 'time' from QPC/QPF as a FILETIME
         /// (FILETIME records time in one-hundred-nano-seconds)
         ///
         inline
-        FILETIME snap_qpc_filetime() NOEXCEPT
+        FILETIME snap_qpc_as_filetime() NOEXCEPT
         {
-            return convert_hundredNs_absolute_filetime(snap_qpc_msec());
+            return convert_hundredNs_absolute_filetime(snap_qpc_as_msec());
         }
 
         ///
@@ -176,7 +182,7 @@ namespace ctl {
         /// (FILETIME records time in one-hundred-nano-seconds)
         ///
         inline
-        FILETIME snap_system_time_filetime() NOEXCEPT
+        FILETIME snap_system_time_as_filetime() NOEXCEPT
         {
             FILETIME return_filetime;
             ::GetSystemTimeAsFileTime(&return_filetime);
@@ -186,9 +192,9 @@ namespace ctl {
         /// Returns the current 'time' from GetSystemTimeAsFiletime in terms of milliseconds
         ///
         inline
-        long long snap_system_time_msec() NOEXCEPT
+        long long snap_system_time_as_msec() NOEXCEPT
         {
-            return convert_filetime_msec(snap_system_time_filetime());
+            return convert_filetime_msec(snap_system_time_as_filetime());
         }
 
     } // namespace ctTimer

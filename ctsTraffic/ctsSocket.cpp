@@ -223,11 +223,12 @@ namespace ctsTraffic {
         if (!this->tp_timer) {
             this->tp_timer = make_shared<ctl::ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
         }
+        
         // register a weak pointer after creating a shared_ptr from the 'this' ptry
+        weak_ptr<ctsSocket> weak_reference(this->shared_from_this());
+
         this->tp_timer->schedule_singleton(
-            _func,
-            weak_ptr<ctsSocket>(this->shared_from_this()),
-            _task,
+            [_func, weak_reference, _task] () { _func(weak_reference, _task); },
             _task.time_offset_milliseconds);
     }
 

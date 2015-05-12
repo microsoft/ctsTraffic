@@ -31,8 +31,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl {
 
     ///
-    /// not using unnamed as this is incredibly difficult to debug with Windows debuggers
-    ///
     /// typedef used for the std::function to be invoked by ctThreadpoolTimerCallbackInfo
     ///  - created when the user calls schedule()
     ///
@@ -58,7 +56,7 @@ namespace ctl {
             reoccuring_period(0UL)
         {
             using namespace ctl::ctTimer;
-            timer_expiration = convert_msec_absolute_filetime(snap_system_time_msec() + _milliseconds);
+            timer_expiration = convert_msec_absolute_filetime(snap_system_time_as_msec() + _milliseconds);
         }
         explicit
         ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallback_t&& _callback, long long _milliseconds, unsigned long _period) :
@@ -67,7 +65,7 @@ namespace ctl {
             reoccuring_period(_period)
         {
             using namespace ctl::ctTimer;
-            timer_expiration = convert_msec_absolute_filetime(snap_system_time_msec() + _milliseconds);
+            timer_expiration = convert_msec_absolute_filetime(snap_system_time_as_msec() + _milliseconds);
         }
 
         // supporting only move semantics
@@ -141,90 +139,23 @@ namespace ctl {
             ::DeleteCriticalSection(&timer_lock);
         }
 
-        template <typename F>
-        void schedule_singleton(F _function, long long _millisecond_offset)
+        void schedule_singleton(std::function<void(void)> _function, long long _millisecond_offset)
         {
             // capture the caller's context in a lambda to be invoked in the callback
             this->insert_callback_info(
                 ctThreadpoolTimerCallbackInfo(
-                    [_function] () -> void { _function(); },
+                    std::move(_function), 
                     _millisecond_offset));
         }
-        template <typename F>
-        void schedule_reoccuring(F _function, long long _millisecond_offset, unsigned long _period)
+        void schedule_reoccuring(std::function<void(void)> _function, long long _millisecond_offset, unsigned long _period)
         {
             // capture the caller's context in a lambda to be invoked in the callback
             this->insert_callback_info(
                 ctThreadpoolTimerCallbackInfo(
-                    [_function] () -> void { _function(); },
+                    std::move(_function),
                     _millisecond_offset,
                     _period));
         }
-
-
-        template <typename F, typename C>
-        void schedule_singleton(F _function, C _function_arg, long long _millisecond_offset)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg] () -> void { _function(_function_arg); },
-                    _millisecond_offset));
-        }
-        template <typename F, typename C>
-        void schedule_reoccuring(F _function, C _function_arg, long long _millisecond_offset, unsigned long _period)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg] () -> void { _function(_function_arg); },
-                    _millisecond_offset,
-                    _period));
-        }
-
-
-        template <typename F, typename C1, typename C2>
-        void schedule_singleton(F _function, C1 _function_arg1, C2 _function_arg2, long long _millisecond_offset)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg1, _function_arg2] () -> void { _function(_function_arg1, _function_arg2); },
-                    _millisecond_offset));
-        }
-        template <typename F, typename C1, typename C2>
-        void schedule_reoccuring(F _function, C1 _function_arg1, C2 _function_arg2, long long _millisecond_offset, unsigned long _period)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg1, _function_arg2] () -> void { _function(_function_arg1, _function_arg2); },
-                    _millisecond_offset,
-                    _period));
-        }
-
-
-        template <typename F, typename C1, typename C2, typename C3>
-        void schedule_singleton(F _function, C1 _function_arg1, C2 _function_arg2, C3 _function_arg3, long long _millisecond_offset)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg1, _function_arg2, _function_arg3] () -> void { _function(_function_arg1, _function_arg2, _function_arg3); },
-                    _millisecond_offset));
-        }
-        template <typename F, typename C1, typename C2, typename C3>
-        void schedule_reoccuring(F _function, C1 _function_arg1, C2 _function_arg2, C3 _function_arg3, long long _millisecond_offset, unsigned long _period)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            this->insert_callback_info(
-                ctThreadpoolTimerCallbackInfo(
-                    [_function, _function_arg1, _function_arg2, _function_arg3] () -> void { _function(_function_arg1, _function_arg2, _function_arg3); },
-                    _millisecond_offset,
-                    _period));
-        }
-
-
         ///
         /// No copy c'tors
         ///
@@ -339,7 +270,7 @@ namespace ctl {
                 }
             }
 
-            // now run the user's callback
+            // now run the user's callback outside the internal lock
             functor();
         }
     };

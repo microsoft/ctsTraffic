@@ -14,10 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <memory>
-#include <algorithm>
+#include <utility>
 #include <functional>
-#include <vector>
 // os headers
 #include <excpt.h>
 #include <Windows.h>
@@ -29,19 +27,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl {
 
-    ///
-    /// not using an unnamed namespace as debugging this is unnecessarily difficult with Windows debuggers
-    ///
-    ///
-    /// typedef used for the std::function to be given to ctThreadIocpCallbackInfo
-    /// - constructed by ctThreadIocp
-    ///
+    //
+    // not using an unnamed namespace as debugging this is unnecessarily difficult with Windows debuggers
+    //
+    //
+    // typedef used for the std::function to be given to ctThreadIocpCallbackInfo
+    // - constructed by ctThreadIocp
+    //
     typedef std::function<void(OVERLAPPED*)> ctThreadIocpCallback_t;
-    ///
-    /// structure passed to the ctThreadIocp IO completion function
-    /// - to allow the callback function to find the callback
-    ///   associated with that completed OVERLAPPED* 
-    ///
+    //
+    // structure passed to the ctThreadIocp IO completion function
+    // - to allow the callback function to find the callback
+    //   associated with that completed OVERLAPPED* 
+    //
     struct ctThreadIocpCallbackInfo {
         OVERLAPPED ov;
         PVOID _padding; // required padding before the std::function for the below C_ASSERT alignment/sizing to be correct
@@ -57,7 +55,7 @@ namespace ctl {
         ctThreadIocpCallbackInfo(const ctThreadIocpCallbackInfo&) = delete;
         ctThreadIocpCallbackInfo& operator=(const ctThreadIocpCallbackInfo&) = delete;
     };
-    /// asserting at compile time, as we assume this when we reinterpret_cast in the callback
+    // asserting at compile time, as we assume this when we reinterpret_cast in the callback
     C_ASSERT(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) +sizeof(PVOID) +sizeof(ctThreadIocpCallback_t));
 
 
@@ -74,7 +72,6 @@ namespace ctl {
     /// - construct a ctThreadIocp object by passing in the HANDLE/SOCKET on which overlapped IO calls will be made
     /// - call new_request to get an OVERLAPPED* for an asynchronous Win32 API call the associated HANDLE/SOCKET
     ///   - additionally pass a function to be invoked on IO completion 
-    ///     + optional context to be associated with that IO request which is passed to the callback function
     /// - if the Win32 API succeeds or returns ERROR_IO_PENDING:
     ///    - the user's callback function will be called on completion [if succeeds or fails]
     ///    - from the callback function, the user then calls GetOverlappedResult/WSAGetOverlappedResult 
@@ -94,10 +91,10 @@ namespace ctl {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctThreadIocp {
     public:
-        ///
-        /// These c'tors can fail under low resources
-        /// - ctl::ctException (from the ThreadPool APIs)
-        ///
+        //
+        // These c'tors can fail under low resources
+        // - ctl::ctException (from the ThreadPool APIs)
+        //
         ctThreadIocp(_In_ HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = NULL)
         {
             ptp_io = ::CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
@@ -118,98 +115,44 @@ namespace ctl {
             ::WaitForThreadpoolIoCallbacks(this->ptp_io, FALSE);
             ::CloseThreadpoolIo(this->ptp_io);
         }
-        ///
-        /// new_request is expected to be called before each call to a Win32 function taking an OVLERAPPED*
-        /// - which the caller expects to have their function <typename F> invoked with the following signature:
-        ///     void callback_function(OVERLAPPED* _overlapped, ...)
-        /// - the elipsis is to be replaced with the (optional) context types that were passed to new_request
-        ///
-        /// All arguments (function F as well as all Context parameters) are captured by value and thus will invoke a copy
-        /// - those copies will persist until the callback invokes the function F
-        ///
-        /// The OVERLAPPED* returned is always owned by the object - never by the caller
-        /// - the caller is expected to pass it directly to a Win32 API
-        /// - after the callback completes, the OVERLAPPED* is no longer valid
-        ///
-        /// If the API which is given the associated HANDLE/SOCKET + OVERLAPPED* succeeds or returns ERROR_IO_PENDING,
-        /// - the OVERLAPPED* is now in-use and should not be touched until it's passed to the user's callback function
-        ///   [unless the user needs to cancel the IO request with another Win32 API call like CancelIoEx or closesocket]
-        ///
-        /// If the API which is given the associated HANDLE/SOCKET + OVERLAPPED* fails with an error other than ERROR_IO_PENDING
-        /// - the caller should immediately call cancel_request() with the corresponding OVERLAPPED*
-        ///
-        /// Callers can invoke new_request to issue separate and concurrent IO over the same HANDLE/SOCKET
-        /// - each call will return a unique OVERLAPPED*
-        /// - the callback will be given the OVERLAPPED* matching the IO that completed
-        ///
-        template <typename F>
-        OVERLAPPED* new_request(F _function)
+        //
+        // new_request is expected to be called before each call to a Win32 function taking an OVLERAPPED*
+        // - which the caller expects to have their std::function invoked with the following signature:
+        //     void callback_function(OVERLAPPED* _overlapped)
+        //
+        // The OVERLAPPED* returned is always owned by the object - never by the caller
+        // - the caller is expected to pass it directly to a Win32 API
+        // - after the callback completes, the OVERLAPPED* is no longer valid
+        //
+        // If the API which is given the associated HANDLE/SOCKET + OVERLAPPED* succeeds or returns ERROR_IO_PENDING,
+        // - the OVERLAPPED* is now in-use and should not be touched until it's passed to the user's callback function
+        //   [unless the user needs to cancel the IO request with another Win32 API call like CancelIoEx or closesocket]
+        //
+        // If the API which is given the associated HANDLE/SOCKET + OVERLAPPED* fails with an error other than ERROR_IO_PENDING
+        // - the caller should immediately call cancel_request() with the corresponding OVERLAPPED*
+        //
+        // Callers can invoke new_request to issue separate and concurrent IO over the same HANDLE/SOCKET
+        // - each call will return a unique OVERLAPPED*
+        // - the callback will be given the OVERLAPPED* matching the IO that completed
+        //
+        OVERLAPPED* new_request(std::function<void(OVERLAPPED*)> _callback)
         {
-            // capture the caller's context in a lambda to be invoked in the callback
-            ctThreadIocpCallbackInfo* new_callback = new ctThreadIocpCallbackInfo(
-                [_function]                    // lambda capture
-                (OVERLAPPED* _pov) -> void     // lambda parameters
-                { _function(_pov); });         // lambda body
-
+            // this can fail by throwing std::bad_alloc
+            ctThreadIocpCallbackInfo* new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
             // once creating a new request succeeds, start the IO
             // - all below calls are no-fail calls
             ::StartThreadpoolIo(this->ptp_io);
             ::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
             return &new_callback->ov;
         }
-        template <typename F, typename C>
-        OVERLAPPED* new_request(F _function, C _context)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            ctThreadIocpCallbackInfo* new_callback = new ctThreadIocpCallbackInfo(
-                [_function, _context]              // lambda capture
-                (OVERLAPPED* _pov) -> void         // lambda parameters
-                { _function(_pov, _context); });   // lambda body
-
-            // once creating a new request succeeds, start the IO
-            // - all below calls are no-fail calls
-            ::StartThreadpoolIo(this->ptp_io);
-            ::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
-            return &new_callback->ov;
-        }
-        template <typename F, typename C1, typename C2>
-        OVERLAPPED* new_request(F _function, C1 _context1, C2 _context2)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            ctThreadIocpCallbackInfo* new_callback = new ctThreadIocpCallbackInfo(
-                [_function, _context1, _context2]             // lambda capture
-                (OVERLAPPED* _pov) -> void                    // lambda parameters
-                { _function(_pov, _context1, _context2); });  // lambda body
-
-            // once creating a new request succeeds, start the IO
-            // - all below calls are no-fail calls
-            ::StartThreadpoolIo(this->ptp_io);
-            ::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
-            return &new_callback->ov;
-        }
-        template <typename F, typename C1, typename C2, typename C3>
-        OVERLAPPED* new_request(F _function, C1 _context1, C2 _context2, C3 _context3)
-        {
-            // capture the caller's context in a lambda to be invoked in the callback
-            ctThreadIocpCallbackInfo* new_callback = new ctThreadIocpCallbackInfo(
-                [_function, _context1, _context2, _context3]            // lambda capture
-                (OVERLAPPED* _pov) -> void                              // lambda parameter
-                { _function(_pov, _context1, _context2, _context3); }); // lambda body
-
-            // once creating a new request succeeds, start the IO
-            // - all below calls are no-fail calls
-            ::StartThreadpoolIo(this->ptp_io);
-            ::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
-            return &new_callback->ov;
-        }
-        ///
-        /// This function should be called only if the Win32 API call which was given the OVERLAPPED* from new_request
-        /// - failed with an error other than ERROR_IO_PENDING
-        ///
-        /// *Note*
-        /// This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
-        /// - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
-        ///
+        //
+        // This function should be called only if the Win32 API call which was given the OVERLAPPED* from new_request
+        // - failed with an error other than ERROR_IO_PENDING
+        //
+        // *Note*
+        // This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
+        // - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
+        //
         void cancel_request(OVERLAPPED* _pov) NOEXCEPT
         {
             ::CancelThreadpoolIo(this->ptp_io);
@@ -217,10 +160,10 @@ namespace ctl {
             delete old_request;
         }
 
-        ///
-        /// No default c'tor - preventing zombie objects
-        /// No copy c'tors
-        ///
+        //
+        // No default c'tor - preventing zombie objects
+        // No copy c'tors
+        //
         ctThreadIocp() = delete;
         ctThreadIocp(const ctThreadIocp&) = delete;
         ctThreadIocp& operator=(const ctThreadIocp&) = delete;
