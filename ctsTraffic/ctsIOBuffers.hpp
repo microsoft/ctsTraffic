@@ -23,7 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctVersionConversion.hpp>
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"
 #include "ctSocketExtensions.hpp"

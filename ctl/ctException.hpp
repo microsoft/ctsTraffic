@@ -13,13 +13,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// CPP headers
+// cpp headers
 #include <malloc.h>
 #include <memory.h>
 #include <intrin.h>
 #include <string>
 #include <exception>
-// OS headers
+// os headers
 #include <Windows.h>
 // ctl headers
 #include "ctVersionConversion.hpp"

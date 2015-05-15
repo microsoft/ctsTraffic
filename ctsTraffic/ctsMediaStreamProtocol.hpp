@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <array>
 #include <string>
 #include <memory>
-// OS headers
+// os headers
 #include <windows.h>
 #include <WinSock2.h>
 // ctl headers

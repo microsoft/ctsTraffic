@@ -11,6 +11,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+#pragma once
+
 //
 // using a macro to express no-throw behavior until noexcept is available in a released version of Visual C++
 //

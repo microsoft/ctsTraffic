@@ -13,19 +13,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-//
+// os headers
+#include <Windows.h>
 // ctl headers
-//
 #include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 #include <ctSockaddr.hpp>
-//
 // project headers
-//
 #include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
-
 
 
 namespace ctsTraffic {

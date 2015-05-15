@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <stdio.h>
 #include <wchar.h>
 #include <exception>
-// OS headers
+// os headers
 #include <Windows.h>
 // ctl headers
 #include <ctException.hpp>

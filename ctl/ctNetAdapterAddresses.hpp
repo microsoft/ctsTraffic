@@ -17,11 +17,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 #include <vector>
 #include <memory>
-// OS headers
+// os headers
 #include <winsock2.h>
 #include <ws2ipdef.h>
 #include <Iphlpapi.h>
-// project headers
+// ctl headers
 #include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctSockaddr.hpp"

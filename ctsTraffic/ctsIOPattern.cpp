@@ -1063,7 +1063,7 @@ namespace ctsTraffic {
     {
     }
     // required virtual functions
-    ctsIOTask ctsIOPatternMediaStreamServer::next_task()
+    ctsIOTask ctsIOPatternMediaStreamServer::next_task() NOEXCEPT
     {
         ctsIOTask return_task;
         switch (this->state) {
@@ -1225,7 +1225,7 @@ namespace ctsTraffic {
         ::CloseThreadpoolTimer(original_timer);
     }
 
-    ctsIOTask ctsIOPatternMediaStreamClient::next_task()
+    ctsIOTask ctsIOPatternMediaStreamClient::next_task() NOEXCEPT
     {
         if (!this->started_timers) {
             // initiate the timers the first time the object is used

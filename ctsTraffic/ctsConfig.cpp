@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <algorithm>
 
-// OS headers
+// os headers
 #include <windows.h>
 #include <winsock2.h>
 #include <iphlpapi.h>

@@ -45,7 +45,7 @@ template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFram
 
 namespace ctsUnitTest
 {		
-    TEST_CLASS(ctsMediaStreamSendBufferUnitTest)
+    TEST_CLASS(ctsMediaStreamProtocolUnitTest)
     {
         const long long SequenceNumber = 1LL;
         char* BufferPtr = nullptr;

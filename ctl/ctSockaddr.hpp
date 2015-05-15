@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 #include <string>
 #include <vector>
-// OS headers
+// os headers
 #include <Windows.h>
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -146,12 +146,8 @@ namespace ctl {
         IN6_ADDR*         in6_addr() const NOEXCEPT;
 
     private:
+        static const size_t SADDR_SIZE = sizeof(SOCKADDR_STORAGE);
         SOCKADDR_STORAGE saddr;
-
-        static int saddr_size() NOEXCEPT
-        {
-            return static_cast<int>(sizeof(SOCKADDR_STORAGE));
-        }
     };
 
     //
@@ -166,38 +162,38 @@ namespace ctl {
 
     inline ctSockaddr::ctSockaddr(short family) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         saddr.ss_family = family;
     }
 
     inline ctSockaddr::ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) NOEXCEPT
     {
-        size_t length = (inLength <= saddr_size()) ? inLength : saddr_size();
+        size_t length = (static_cast<size_t>(inLength) <= SADDR_SIZE) ? inLength : SADDR_SIZE;
 
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, length);
     }
     inline ctSockaddr::ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) NOEXCEPT
     {
-        size_t length = (static_cast<int>(inLength) <= saddr_size()) ? inLength : saddr_size();
+        size_t length = (inLength <= SADDR_SIZE) ? inLength : SADDR_SIZE;
 
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, length);
     }
 
     inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_IN* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
     }
     inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_IN6* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
     }
     inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_INET* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         if (AF_INET == inAddr->si_family) {
             ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
         } else {
@@ -206,21 +202,21 @@ namespace ctl {
     }
     inline ctSockaddr::ctSockaddr(_In_ const SOCKADDR_STORAGE* inAddr) NOEXCEPT
     {
-        ::CopyMemory(&saddr, inAddr, saddr_size());
+        ::CopyMemory(&saddr, inAddr, SADDR_SIZE);
     }
     inline ctSockaddr::ctSockaddr(_In_ const SOCKET_ADDRESS* inAddr) NOEXCEPT
     {
-        size_t length = (inAddr->iSockaddrLength <= saddr_size()) ?
+        size_t length = (inAddr->iSockaddrLength <= SADDR_SIZE) ?
             inAddr->iSockaddrLength :
-            saddr_size();
+            SADDR_SIZE;
 
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr->lpSockaddr, length);
     }
 
     inline ctSockaddr::ctSockaddr(const ctSockaddr& inAddr) NOEXCEPT
     {
-        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
+        ::CopyMemory(&saddr, &inAddr.saddr, SADDR_SIZE);
     }
     inline ctSockaddr& ctSockaddr::operator=(const ctSockaddr& inAddr) NOEXCEPT
     {
@@ -232,18 +228,18 @@ namespace ctl {
 
     inline ctSockaddr::ctSockaddr(ctSockaddr&& inAddr) NOEXCEPT
     {
-        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
+        ::CopyMemory(&saddr, &inAddr.saddr, SADDR_SIZE);
     }
     inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) NOEXCEPT
     {
-        ::CopyMemory(&saddr, &inAddr.saddr, saddr_size());
-        ::ZeroMemory(&inAddr, saddr_size());
+        ::CopyMemory(&saddr, &inAddr.saddr, SADDR_SIZE);
+        ::ZeroMemory(&inAddr, SADDR_SIZE);
         return *this;
     }
 
     inline bool ctSockaddr::operator==(const ctSockaddr& _inAddr) const NOEXCEPT
     {
-        return (0 == ::memcmp(&this->saddr, &_inAddr.saddr, this->saddr_size()));
+        return (0 == ::memcmp(&this->saddr, &_inAddr.saddr, SADDR_SIZE));
     }
     inline bool ctSockaddr::operator!=(const ctSockaddr& _inAddr) const NOEXCEPT
     {
@@ -252,7 +248,7 @@ namespace ctl {
 
     inline void ctSockaddr::reset(short family) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         saddr.ss_family = family;
     }
 
@@ -270,24 +266,24 @@ namespace ctl {
 
     inline void ctSockaddr::setSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) NOEXCEPT
     {
-        size_t length = (inLength <= saddr_size()) ? inLength : saddr_size();
+        size_t length = (inLength <= SADDR_SIZE) ? inLength : SADDR_SIZE;
 
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, length);
     }
     inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_IN* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
     }
     inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_IN6* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN6));
     }
     inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_INET* inAddr) NOEXCEPT
     {
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         if (AF_INET == inAddr->si_family) {
             ::CopyMemory(&saddr, inAddr, sizeof(SOCKADDR_IN));
         } else {
@@ -296,15 +292,15 @@ namespace ctl {
     }
     inline void ctSockaddr::setSockaddr(_In_ const SOCKADDR_STORAGE* inAddr) NOEXCEPT
     {
-        ::CopyMemory(&saddr, inAddr, saddr_size());
+        ::CopyMemory(&saddr, inAddr, SADDR_SIZE);
     }
     inline void ctSockaddr::setSockaddr(_In_ const SOCKET_ADDRESS* inAddr) NOEXCEPT
     {
-        size_t length = (inAddr->iSockaddrLength <= saddr_size()) ?
-            inAddr->iSockaddrLength :
-            saddr_size();
+        size_t length = (static_cast<size_t>(inAddr->iSockaddrLength) <= SADDR_SIZE) ?
+            static_cast<size_t>(inAddr->iSockaddrLength) :
+            SADDR_SIZE;
 
-        ::ZeroMemory(&saddr, saddr_size());
+        ::ZeroMemory(&saddr, SADDR_SIZE);
         ::CopyMemory(&saddr, inAddr->lpSockaddr, length);
     }
 
@@ -313,7 +309,7 @@ namespace ctl {
         if (AF_INET == saddr.ss_family) {
             PSOCKADDR_IN in4 = reinterpret_cast<PSOCKADDR_IN>(&saddr);
             unsigned short in4_port = in4->sin_port;
-            ::ZeroMemory(&saddr, saddr_size());
+            ::ZeroMemory(&saddr, SADDR_SIZE);
 
             in4->sin_family = AF_INET;
             in4->sin_port = in4_port;
@@ -321,7 +317,7 @@ namespace ctl {
         } else if (AF_INET6 == saddr.ss_family) {
             PSOCKADDR_IN6 in6 = reinterpret_cast<PSOCKADDR_IN6>(&saddr);
             unsigned short in6_port = in6->sin6_port;
-            ::ZeroMemory(&saddr, saddr_size());
+            ::ZeroMemory(&saddr, SADDR_SIZE);
 
             in6->sin6_family = AF_INET6;
             in6->sin6_port = in6_port;
@@ -336,14 +332,14 @@ namespace ctl {
         if (AF_INET == saddr.ss_family) {
             PSOCKADDR_IN in4 = reinterpret_cast<PSOCKADDR_IN>(&saddr);
             unsigned short in4_port = in4->sin_port;
-            ::ZeroMemory(&saddr, saddr_size());
+            ::ZeroMemory(&saddr, SADDR_SIZE);
 
             in4->sin_family = AF_INET;
             in4->sin_port = in4_port;
         } else if (AF_INET6 == saddr.ss_family) {
             PSOCKADDR_IN6 in6 = reinterpret_cast<PSOCKADDR_IN6>(&saddr);
             unsigned short in6_port = in6->sin6_port;
-            ::ZeroMemory(&saddr, saddr_size());
+            ::ZeroMemory(&saddr, SADDR_SIZE);
 
             in6->sin6_family = AF_INET6;
             in6->sin6_port = in6_port;
@@ -540,7 +536,7 @@ namespace ctl {
         WCHAR address[64];
         DWORD addressLength = 64;
 
-        if (0 == ::WSAAddressToStringW(this->sockaddr(), saddr_size(), nullptr, address, &addressLength)) {
+        if (0 == ::WSAAddressToStringW(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 WCHAR* end = address + addressLength;
                 WCHAR* scope_ptr = std::find(address, end, L'%');
@@ -573,7 +569,7 @@ namespace ctl {
         CHAR address[64];
         DWORD addressLength = 64;
 #pragma warning( disable : 4996) 
-        if (0 == ::WSAAddressToStringA(this->sockaddr(), saddr_size(), nullptr, address, &addressLength)) {
+        if (0 == ::WSAAddressToStringA(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 CHAR* end = address + addressLength;
                 CHAR* scope_ptr = std::find(address, end, '%');
@@ -603,7 +599,7 @@ namespace ctl {
 
     inline int ctSockaddr::length() const NOEXCEPT
     {
-        return static_cast<int>(saddr_size());
+        return static_cast<int>(SADDR_SIZE);
     }
 
     inline short ctSockaddr::family() const NOEXCEPT

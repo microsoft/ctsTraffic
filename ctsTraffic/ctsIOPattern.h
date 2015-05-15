@@ -545,7 +545,7 @@ namespace ctsTraffic {
         ~ctsIOPatternMediaStreamServer() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task();
+        ctsIOTask next_task() NOEXCEPT;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:
@@ -581,7 +581,7 @@ namespace ctsTraffic {
         ~ctsIOPatternMediaStreamClient() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task();
+        ctsIOTask next_task() NOEXCEPT;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
 
     private:

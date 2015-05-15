@@ -12,10 +12,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 #pragma once
-#include "ctVersionConversion.hpp"
+
+// ctl headers
+#include <ctVersionConversion.hpp>
+// project headers
 #include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
+
 
 namespace ctsTraffic {
 

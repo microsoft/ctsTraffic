@@ -177,7 +177,7 @@ namespace ctsTraffic {
 using namespace ctsTraffic;
 namespace ctsUnitTest {	
 
-    TEST_CLASS(ctsIOPatternUnitTest)
+    TEST_CLASS(ctsIOPatternUnitTest_Client)
     {
     private:
         enum TestRole  {
