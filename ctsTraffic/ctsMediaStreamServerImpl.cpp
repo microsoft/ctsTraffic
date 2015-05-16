@@ -256,12 +256,6 @@ namespace ctsTraffic {
                 if (found_socket != std::end(ctsMediaStreamServerImpl::connected_sockets)) {
                     removed_socket = *found_socket;
                     ctsMediaStreamServerImpl::connected_sockets.erase(found_socket);
-
-                } else {
-                    ctsConfig::PrintErrorInfo(
-                        L"[%.3f] ctsMediaStreamServer - no connected socket with remote address %s to process the Done request\n",
-                        ctsConfig::GetStatusTimeStamp(),
-                        _target_addr.writeCompleteAddress().c_str());
                 }
             }
 
@@ -344,107 +338,14 @@ namespace ctsTraffic {
             }
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Process an incoming RESEND request
-        ///
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void ctsMediaStreamServerImpl::resend(const ctsMediaStreamMessage& _message, const ctl::ctSockaddr& _target_addr)
-        {
-            std::shared_ptr<ctsMediaStreamServerConnectedSocket> found_protected_socket;
-            ctl::ctSockaddr target_addr;
-
-            // scope to lock
-            {
-                ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
-
-                // find the connected socket to resend a datagram
-                auto found_socket = std::find_if(
-                    std::begin(ctsMediaStreamServerImpl::connected_sockets),
-                    std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
-                    return _target_addr == _connected_socket->get_address();
-                });
-                if (found_socket == std::end(ctsMediaStreamServerImpl::connected_sockets)) {
-                    throw ctl::ctException(
-                        ERROR_INVALID_DATA,
-                        ctl::ctString::format_string(
-                        L"ctsMediaStreamServer - socket with remote address %s asked to be Resend but was not found\n",
-                        _target_addr.writeCompleteAddress().c_str()).c_str(),
-                        L"ctsMediaStreamServer::resend",
-                        true);
-
-                }
-
-                found_protected_socket = *found_socket;
-                target_addr = found_protected_socket->get_address();
-            }
-            // have a shared_ptr to the object, so can leave the connected socket lock
-
-            SOCKET socket = found_protected_socket->socket_lock();
-#pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
-            ctlScopeGuard(
-                releaseSocketLockOnExit,
-                {found_protected_socket->socket_release();});
-
-            if (socket != INVALID_SOCKET) {
-                long long seq_number(ctl::ctMemoryGuardRead(&_message.sequence_number));
-                ctsConfig::PrintDebug(
-                    L"\t\tctsMediaStreamServer resending seq number %lld (%lu bytes)",
-                    seq_number,
-                    static_cast<unsigned long>(ctsConfig::GetMediaStream().FrameSizeBytes));
-
-                ctsMediaStreamSendRequests sending_requests(
-                    ctsConfig::GetMediaStream().FrameSizeBytes, // bytes to send
-                    seq_number,
-                    ctsIOPattern::AccessSharedBuffer());
-
-                for (auto& send_request : sending_requests) {
-                    ctsConfig::PrintDebug(
-                        L" (%u bytes)",
-                        static_cast<unsigned long>(send_request.size()));
-                    DWORD bytes_sent;
-                    auto send_result = ::WSASendTo(
-                        socket,
-                        send_request.data(),
-                        static_cast<DWORD>(send_request.size()),
-                        &bytes_sent,
-                        0,
-                        target_addr.sockaddr(),
-                        target_addr.length(),
-                        nullptr,
-                        nullptr);
-
-                    if (SOCKET_ERROR == send_result) {
-                        auto error = ::WSAGetLastError();
-                        ctsConfig::PrintErrorInfo(
-                            L"[%.3f] WSASendTo(%Iu, seq %lld, %s) for a RESEND request failed [%d]\n",
-                            ctsConfig::GetStatusTimeStamp(),
-                            socket,
-                            seq_number,
-                            target_addr.writeCompleteAddress().c_str(),
-                            error);
-                        // break out early if send fails
-                        break;
-                    } else {
-                        ctsConfig::PrintDebug(
-                            L"\t\tctsMediaStreamServer RESEND sent %s seq number %lld (%lu bytes)\n",
-                            target_addr.writeCompleteAddress().c_str(), _message.sequence_number, bytes_sent);
-                    }
-                }
-                ctsConfig::PrintDebug(L"\n");
-            }
-        }
-
 
         wsIOResult ctsMediaStreamServerImpl::ConnectedSocketIo(ctsMediaStreamServerConnectedSocket* this_ptr)
         {
             int error = NO_ERROR;
             unsigned bytes_transferred = 0;
 
-            SOCKET socket = this_ptr->socket_lock();
-            ctlScopeGuard(releaseSocketLockOnExit, {this_ptr->socket_release();});
-
+            auto this_socket_lock(ctsGuardSocket(this_ptr));
+            SOCKET socket = this_socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 return WSA_OPERATION_ABORTED;
             }
@@ -480,84 +381,73 @@ namespace ctsTraffic {
             } else {
                 auto seq_number = this_ptr->increment_sequence();
 
-#ifdef TESTING_RESEND
-                if (0 == seq_number % 5) {
-                    ctsConfig::PrintDebug(L"********* TESTING ***** SKIPPING EVERY 5 SEQUENCE NUMBERS\n");
-                    bytes_transferred = this_ptr->next_task.buffer_length;
-                    error = NO_ERROR;
+                ctsConfig::PrintDebug(
+                    L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
+                    seq_number,
+                    next_task.buffer_length);
 
-                } else {
-#endif
-                    ctsConfig::PrintDebug(
-                        L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
-                        seq_number,
-                        next_task.buffer_length);
+                ctsMediaStreamSendRequests sending_requests(
+                    next_task.buffer_length, // total bytes to send
+                    seq_number,
+                    next_task.buffer);
 
-                    ctsMediaStreamSendRequests sending_requests(
-                        next_task.buffer_length, // total bytes to send
-                        seq_number,
-                        next_task.buffer);
+                for (auto& send_request : sending_requests) {
+                    // making a synchronous call
+                    DWORD bytes_sent;
+                    auto send_result = ::WSASendTo(
+                        socket,
+                        send_request.data(),
+                        static_cast<DWORD>(send_request.size()),
+                        &bytes_sent,
+                        0,
+                        remote_addr.sockaddr(),
+                        remote_addr.length(),
+                        nullptr,
+                        nullptr);
 
-                    for (auto& send_request : sending_requests) {
-                        // making a synchronous call
-                        DWORD bytes_sent;
-                        auto send_result = ::WSASendTo(
-                            socket,
-                            send_request.data(),
-                            static_cast<DWORD>(send_request.size()),
-                            &bytes_sent,
-                            0,
-                            remote_addr.sockaddr(),
-                            remote_addr.length(),
-                            nullptr,
-                            nullptr);
+                    if (SOCKET_ERROR == send_result) {
+                        error = ::WSAGetLastError();
 
-                        if (SOCKET_ERROR == send_result) {
-                            error = ::WSAGetLastError();
-
-                            try {
-                                if (WSAEMSGSIZE == error) {
-                                    unsigned long bytes_requested = 0;
-                                    // iterate across each WSABUF* in the array
-                                    for (auto& wasbuf : send_request) {
-                                        bytes_requested += wasbuf.len;
-                                    }
-                                    ctsConfig::PrintErrorInfo(
-                                        L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes\n",
-                                        ctsConfig::GetStatusTimeStamp(),
-                                        socket,
-                                        seq_number,
-                                        remote_addr.writeCompleteAddress().c_str(),
-                                        bytes_requested);
-                                } else {
-                                    ctsConfig::PrintErrorInfo(
-                                        L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed [%d]\n",
-                                        ctsConfig::GetStatusTimeStamp(),
-                                        socket,
-                                        seq_number,
-                                        remote_addr.writeCompleteAddress().c_str(),
-                                        error);
+                        try {
+                            if (WSAEMSGSIZE == error) {
+                                unsigned long bytes_requested = 0;
+                                // iterate across each WSABUF* in the array
+                                for (auto& wasbuf : send_request) {
+                                    bytes_requested += wasbuf.len;
                                 }
+                                ctsConfig::PrintErrorInfo(
+                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes\n",
+                                    ctsConfig::GetStatusTimeStamp(),
+                                    socket,
+                                    seq_number,
+                                    remote_addr.writeCompleteAddress().c_str(),
+                                    bytes_requested);
+                            } else {
+                                ctsConfig::PrintErrorInfo(
+                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed [%d]\n",
+                                    ctsConfig::GetStatusTimeStamp(),
+                                    socket,
+                                    seq_number,
+                                    remote_addr.writeCompleteAddress().c_str(),
+                                    error);
                             }
-                            catch (const std::exception&) {
-                                // best effort
-                            }
-
-                            // break out early if send fails
-                            return error;
-
                         }
-                        
-                        // successfully completed synchronously
-                        error = NO_ERROR;
-                        bytes_transferred += bytes_sent;
+                        catch (const std::exception&) {
+                            // best effort
+                        }
+
+                        // break out early if send fails
+                        return error;
+
                     }
-#ifdef TESTING_RESEND
+                        
+                    // successfully completed synchronously
+                    error = NO_ERROR;
+                    bytes_transferred += bytes_sent;
                 }
-#endif
             }
 
-            return wsIOResult(bytes_transferred, error);
+            return wsIOResult(error, bytes_transferred);
         }
     }
 }

@@ -28,6 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+#include "ctsSocketGuard.hpp"
 
 
 namespace ctsTraffic {
@@ -58,7 +59,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // lock the socket just long enough to read the result
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
@@ -129,7 +130,7 @@ namespace ctsTraffic {
         int io_error = NO_ERROR;
 
         // lock the socket while doing IO
-        auto socket_lock(ctsSocket::LockSocket(shared_socket));
+        auto socket_lock(ctsGuardSocket(shared_socket));
         SOCKET socket = socket_lock.get();
         if (socket != INVALID_SOCKET) {
             // loop until failure or initiate_io returns None

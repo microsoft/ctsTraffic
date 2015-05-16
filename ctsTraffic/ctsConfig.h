@@ -202,12 +202,6 @@ namespace ctsTraffic {
         int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address);
         int SetPreConnectOptions(SOCKET _s);
 
-        enum class StreamCodecValue
-        {
-            NoResends,
-            ResendOnce
-        };
-
         // for the MediaStream pattern
         struct MediaStreamSettings {
 
@@ -216,7 +210,6 @@ namespace ctsTraffic {
               FramesPerSecond(0UL),
               BufferDepthSeconds(0UL),
               StreamLengthSeconds(0UL),
-              StreamCodec(StreamCodecValue::NoResends),
               FrameSizeBytes(0UL),
               StreamLengthFrames(0UL),
               BufferedFrames(0UL)
@@ -284,7 +277,6 @@ namespace ctsTraffic {
             ctsUnsignedLong FramesPerSecond;
             ctsUnsignedLong BufferDepthSeconds;
             ctsUnsignedLong StreamLengthSeconds;
-            StreamCodecValue StreamCodec;
             // internally calculated
             ctsUnsignedLong FrameSizeBytes;
             ctsUnsignedLong StreamLengthFrames;

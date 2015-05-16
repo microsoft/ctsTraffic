@@ -14,11 +14,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <SDKDDKVer.h>
 #include "CppUnitTest.h"
 
+#include <ctString.hpp>
+
 #include "ctsSocket.h"
+#include "ctsSocketGuard.hpp"
 #include "ctsSocketState.h"
 #include "ctsIOPattern.h"
-
-#include <ctString.hpp>
 
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -114,7 +115,7 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // get the socket under lock
-            auto socket_guard(ctsSocket::LockSocket(test));
+            auto socket_guard(ctsGuardSocket(test));
             Assert::AreEqual(socket_value, socket_guard.get());
         }
 
@@ -129,7 +130,7 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // validate the object guard
-            auto socket_guard(ctsSocket::LockSocket(test));
+            auto socket_guard(ctsGuardSocket(test));
             Assert::AreEqual(socket_value, socket_guard.get());
             
             // move the guard object
@@ -146,13 +147,13 @@ namespace ctsUnitTest
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(ctsSocket::LockSocket(test));
+                auto socket_guard(ctsGuardSocket(test));
                 Assert::AreEqual(socket_value, socket_guard.get());
             }
 
             test->close_socket();
             {
-                auto socket_guard(ctsSocket::LockSocket(test));
+                auto socket_guard(ctsGuardSocket(test));
                 Assert::AreEqual(INVALID_SOCKET, socket_guard.get());
             }
         }
@@ -166,7 +167,7 @@ namespace ctsUnitTest
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(ctsSocket::LockSocket(test));
+                auto socket_guard(ctsGuardSocket(test));
                 Assert::AreEqual(socket_value, socket_guard.get());
             }
 

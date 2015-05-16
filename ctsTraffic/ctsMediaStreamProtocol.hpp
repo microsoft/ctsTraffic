@@ -41,8 +41,6 @@ namespace ctsTraffic {
     ///
     ///   REQUEST_ID
     ///   START
-    ///   RESEND.<sequence_number>
-    ///   DONE
     ///
 
     static const unsigned short UdpDatagramProtocolHeaderFlagData = 0x0000;
@@ -60,16 +58,10 @@ namespace ctsTraffic {
 
     static const char* UdpDatagramStartString = "START";
     static const unsigned long UdpDatagramStartStringLength = 5;
-    static const char* UdpDatagramDoneString = "DONE";
-    static const unsigned long UdpDatagramDoneStringLength = 4;
-    static const char* UdpDatagramResendString = "RESEND.";
-    static const unsigned long UdpDatagramResendStringLength = 7;
 
     enum class MediaStreamAction : char
     {
-        START,
-        RESEND,
-        DONE
+        START
     };
 
     class ctsMediaStreamSendRequests
@@ -409,35 +401,11 @@ namespace ctsTraffic {
                     return_task.buffer_length = UdpDatagramStartStringLength;
                     break;
 
-                case MediaStreamAction::RESEND:
-                    return_task.buffer = const_cast<char*>(UdpDatagramResendString);
-                    return_task.buffer_length = UdpDatagramResendStringLength;
-                    break;
-
-                case MediaStreamAction::DONE:
-                    return_task.buffer = const_cast<char*>(UdpDatagramDoneString);
-                    return_task.buffer_length = UdpDatagramDoneStringLength;
-                    break;
-
                 default:
                     ctl::ctAlwaysFatalCondition(L"Invalid Action specified : %d", _action);
             }
 
             return return_task;
-        }
-
-        static std::unique_ptr<std::string> Construct(MediaStreamAction _action, unsigned long long _seq_number)
-        {
-            std::unique_ptr<std::string> constructed_string(new std::string);
-            if (MediaStreamAction::RESEND == _action) {
-                constructed_string->assign(UdpDatagramResendString);
-                constructed_string->resize(constructed_string->size() + UdpDatagramSequenceNumberLength);
-                ::memcpy(&(*constructed_string)[UdpDatagramResendStringLength], &_seq_number, UdpDatagramSequenceNumberLength);
-            } else {
-                ctl::ctAlwaysFatalCondition(L"Invalid Action specified : %d", _action);
-            }
-
-            return constructed_string;
         }
 
         static ctsMediaStreamMessage Extract(_In_reads_bytes_(_input_length) const char* _input, _In_ unsigned _input_length)
@@ -446,14 +414,6 @@ namespace ctsTraffic {
 
             if (ctl::ctString::iordinal_equals(UdpDatagramStartString, buffer)) {
                 return ctsMediaStreamMessage(MediaStreamAction::START);
-
-            } else if (ctl::ctString::iordinal_equals(UdpDatagramDoneString, buffer)) {
-                return ctsMediaStreamMessage(MediaStreamAction::DONE);
-
-            } else if (15 == _input_length && ctl::ctString::istarts_with(buffer, UdpDatagramResendString)) {
-                ctsMediaStreamMessage resend_msg(MediaStreamAction::RESEND);
-                resend_msg.sequence_number = *reinterpret_cast<const long long*>(_input + UdpDatagramResendStringLength);
-                return resend_msg;
             }
 
             throw ctl::ctException(

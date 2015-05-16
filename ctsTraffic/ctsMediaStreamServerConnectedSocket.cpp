@@ -41,7 +41,7 @@ namespace ctsTraffic {
         task_timer(nullptr),
         weak_socket(_weak_socket),
         io_functor(std::move(_io_functor)),
-        sending_socket(_sending_socket),
+        socket(_sending_socket),
         next_task(),
         remote_addr(_remote_addr),
         sequence_number(0LL),
@@ -70,14 +70,13 @@ namespace ctsTraffic {
     }
 
     _Acquires_lock_(object_guard)
-    SOCKET ctsMediaStreamServerConnectedSocket::socket_lock() const NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::lock_socket() const NOEXCEPT
     {
         ::EnterCriticalSection(&object_guard);
-        return sending_socket;
     }
 
     _Releases_lock_(object_guard)
-    void ctsMediaStreamServerConnectedSocket::socket_release() const NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::unlock_socket() const NOEXCEPT
     {
         ::LeaveCriticalSection(&object_guard);
     }
@@ -112,6 +111,7 @@ namespace ctsTraffic {
                 ctAutoReleaseCriticalSection lock_object(&this->object_guard);
                 this->next_task = _task;
                 ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(nullptr, this, nullptr);
+
             } else {
                 FILETIME ftDueTime(ctTimer::convert_msec_relative_filetime(_task.time_offset_milliseconds));
                 // assign the next task *and* schedule the timer while in *this object lock
@@ -208,8 +208,19 @@ namespace ctsTraffic {
                 this_ptr->get_address(), returned_status);
         }
 
-        // if status == ctsIOStatus::CompletedIo:
-        // the pattern is complete - 
-        // but we must keep the connection alive until the client tells us they are done
+        if (ctsIOStatus::CompletedIo == status) {
+            try {
+                ctsConfig::PrintDebug(
+                    L"[%.3f] ctsMediaStream socket (%s) has completed its stream - closing this 'connection'",
+                    ctsConfig::GetStatusTimeStamp(),
+                    this_ptr->remote_addr.writeCompleteAddress().c_str());
+            }
+            catch (const std::exception&) {
+                // best effort
+            }
+
+            ctsMediaStreamServerImpl::remove_socket(
+                this_ptr->get_address(), send_results.error_code);
+        }
     }
 } // namespace

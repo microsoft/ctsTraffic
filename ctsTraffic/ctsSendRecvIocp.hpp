@@ -27,7 +27,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
-
+#include "ctsSocketGuard.hpp"
 
 namespace ctsTraffic {
 
@@ -67,7 +67,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scoping the socket lock
         {
-            auto socketlock(ctsSocket::LockSocket(shared_socket));
+            auto socketlock(ctsGuardSocket(shared_socket));
             SOCKET socket = socketlock.get();
             // if we no longer have a valid socket or the pattern was destroyed, return early
             if (!shared_pattern || INVALID_SOCKET == socket) {
@@ -132,7 +132,7 @@ namespace ctsTraffic {
         // hold a reference on the iopattern
         auto shared_pattern(_shared_socket->io_pattern());
         // take a lock on the socket before accessing it
-        auto socketlock(ctsSocket::LockSocket(_shared_socket));
+        auto socketlock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socketlock.get();
         // if we no longer have a valid socket return early
         if (INVALID_SOCKET == socket) {

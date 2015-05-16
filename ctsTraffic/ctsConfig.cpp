@@ -745,29 +745,6 @@ namespace ctsTraffic {
                 _args.erase(found_arg);
             }
 
-            found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
-                const wchar_t* value = ParseArgument(parameter, L"-StreamCodec");
-                return (value != nullptr);
-            });
-            if (found_arg != end(_args)) {
-                if (Settings->Protocol != ProtocolType::UDP) {
-                    throw invalid_argument("-StreamCodec requires -Protocol:UDP");
-                }
-                auto codec = ParseArgument(*found_arg, L"-StreamCodec");
-                if (ctString::iordinal_equals(L"NoResends", codec)) {
-                    s_MediaStreamSettings.StreamCodec = StreamCodecValue::NoResends;
-
-                } else if (ctString::iordinal_equals(L"ResendOnce", codec)) {
-                    s_MediaStreamSettings.StreamCodec = StreamCodecValue::ResendOnce;
-
-                } else {
-                    throw invalid_argument("-StreamCodec");
-                }
-
-                // always remove the arg from our vector
-                _args.erase(found_arg);
-            }
-
             // validate and resolve the UDP protocol options
             if (ProtocolType::UDP == Settings->Protocol) {
                 if (0 == s_MediaStreamSettings.BitsPerSecond) {
@@ -1730,7 +1707,7 @@ namespace ctsTraffic {
                                  L"----------------------------------------------------------------------\n"
                                  L"                    Common Server-side options                        \n"
                                  L"                                                                      \n"
-                                 L"  -Listen, -Port, -ServerExitLimit                                    \n"
+                                 L"  -Listen, -ServerExitLimit                                           \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Listen:<addr or *> [-Listen:<addr> -Listen:<addr>]\n"
@@ -1744,7 +1721,7 @@ namespace ctsTraffic {
                                  L"----------------------------------------------------------------------\n"
                                  L"                    Common Client-side options                        \n"
                                  L"                                                                      \n"
-                                 L"  -Connections, -Iterations, -Port, -Target                           \n"
+                                 L"  -Connections, -Iterations, -Target                                  \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Connections:####\n"
@@ -1771,7 +1748,7 @@ namespace ctsTraffic {
                                  L"-Port:####\n"
                                  L"   - the port # the server will listen and the client will connect\n"
                                  L"\t- <default> == 4444\n"
-                                 L"-Protocol:<udp>\n"
+                                 L"-Protocol:<tcp,udp>\n"
                                  L"   - the protocol used for connectivity and IO\n"
                                  L"\t- tcp : see -help:TCP for usage options\n"
                                  L"\t- udp : see -help:UDP for usage options\n"
@@ -1791,7 +1768,7 @@ namespace ctsTraffic {
                                  L"                    TCP-specific usage options                        \n"
                                  L"                                                                      \n"
                                  L"  -Buffer, -IO, -Pattern, -PullBytes, -PushBytes, -RateLimit,         \n"
-                                 L"   -Transfer                                                          \n"
+                                 L"  -Transfer                                                           \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Buffer:#####\n"
@@ -1849,8 +1826,7 @@ namespace ctsTraffic {
                                  L"  * In all cases, the client-side receives and server-side sends      \n"
                                  L"    at a fixed bit-rate and frame-size                                \n"
                                  L"                                                                      \n"
-                                 L"  -BitsPerSecond, -FrameRate, -BufferDepth,                           \n"
-                                 L"   -StreamLength, -StreamCodec                                        \n"
+                                 L"  -BitsPerSecond, -FrameRate, -BufferDepth, -StreamLength,            \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-BitsPerSecond:####\n"
@@ -1870,19 +1846,6 @@ namespace ctsTraffic {
                                  L"-StreamLength:####\n"
                                  L"   - the total number of seconds to run the entire stream\n"
                                  L"\t- <required>\n"
-                                 L"-StreamCodec:<noresends,resendonce>\n"
-                                 L"   - codec used when processing the received datagrams from the UDP stream\n"
-                                 L"\t- <default> == noresends\n"
-                                 L"\t- resendonce : as frames are verified, the client receiving datagrams will look ahead into its buffered\n"
-                                 L"\t               datagrams to see if that later frame was dropped, as it should have been received\n"
-                                 L"\t               if dropped, the client will immediately request the server to resend the missing frame\n"
-                                 L"\t             : a frame that was dropped once but was later received due to the resend request shows\n"
-                                 L"\t               under the column 'Retries' in the status updates\n"
-                                 L"\t             : a frame that was dropped both in the initial stream *and* dropped from the resend\n"
-                                 L"\t               request will show under the 'Dropped' column in the status updates\n"
-                                 L"\t- noresends : the client will not look ahead into its buffered datagrams to request a resend\n"
-                                 L"\t              from the server.\n"
-                                 L"\t            : all frame drops will show under the 'Dropped' column in the status updates\n"
                                  L"\n");
                     break;
 

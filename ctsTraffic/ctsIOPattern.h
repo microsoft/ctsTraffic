@@ -612,7 +612,6 @@ namespace ctsTraffic {
         ctsUnsignedLong recv_needed;
 
         ctsSignedLongLong base_time_milliseconds;
-        ctsSignedLongLong tracking_resend_sequence_number;
 
         const double frame_rate_ms_per_frame;
         bool started_timers;

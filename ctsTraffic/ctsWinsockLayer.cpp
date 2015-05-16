@@ -29,6 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 #include "ctsSocket.h"
+#include "ctsSocketGuard.hpp"
 
 //
 // These functions encapsulate making Winsock API calls
@@ -45,7 +46,7 @@ namespace ctsTraffic {
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
     {
-        auto socket_lock(ctsSocket::LockSocket(_shared_socket));
+        auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return WSAECONNABORTED;
@@ -102,7 +103,7 @@ namespace ctsTraffic {
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
     {
-        auto socket_lock(ctsSocket::LockSocket(_shared_socket));
+        auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return WSAECONNABORTED;

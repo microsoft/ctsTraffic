@@ -84,10 +84,8 @@ namespace ctsTraffic {
     {
         // continue to try to post a recv if the call fails
         int error = SOCKET_ERROR;
-        unsigned long loop_counter = 0;
+        unsigned long failure_counter = 0;
         while (error != NO_ERROR) {
-            ++loop_counter;
-
             try {
                 ctl::ctAutoReleaseCriticalSection lock_socket(&this->object_guard);
                 if (this->socket.get() != INVALID_SOCKET) {
@@ -129,11 +127,10 @@ namespace ctsTraffic {
                                 // - no need to continue to log it and fill up the error log
                             } else {
                                 ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSARecvFrom failed (SOCKET %Iu) with error (%d) [%u]\n",
+                                    L"[%.3f] WSARecvFrom failed (SOCKET %Iu) with error (%d)\n",
                                     ctsConfig::GetStatusTimeStamp(),
                                     this->socket.get(),
-                                    error,
-                                    loop_counter);
+                                    error);
                             }
                         }
                     } else {
@@ -149,13 +146,15 @@ namespace ctsTraffic {
                 error = ERROR_OUTOFMEMORY;
             }
 
-            if (error != NO_ERROR) {
-                ctsConfig::PrintDebug(
+            if (error != NO_ERROR && error != WSAECONNRESET) {
+                ++failure_counter;
+
+                ctsConfig::PrintErrorInfo(
                     L"\t\tctsMediaStreamServer : WSARecvFrom failed (%d) - %u times in a row trying to get another recv posted\n",
-                    error, loop_counter);
+                    error, failure_counter);
 
                 ctl::ctFatalCondition(
-                    (0 == loop_counter % 10),
+                    (0 == failure_counter % 10),
                     L"ctsMediaStreamServer has failed to post another recv - it cannot accept any more client connections");
 
                 ::Sleep(10);
@@ -214,29 +213,6 @@ namespace ctsTraffic {
                                 ctsMediaStreamServerImpl::start(this->socket, this->listening_addr, this->remote_addr);
                             };
 #endif
-                            break;
-
-                        case MediaStreamAction::RESEND:
-                            ctsConfig::PrintDebug(
-                                L"\t\tctsMediaStreamServer - processing RESEND from %s - sending sequence number %lld\n",
-                                this->remote_addr.writeCompleteAddress().c_str(),
-                                ctl::ctMemoryGuardRead(&message.sequence_number));
-
-                            // Cannot be holding the object_guard when calling into any pimpl-> methods
-                            pimpl_operation = [this, &message] () {
-                                ctsMediaStreamServerImpl::resend(message, this->remote_addr);
-                            };
-                            break;
-
-                        case MediaStreamAction::DONE:
-                            ctsConfig::PrintDebug(
-                                L"\t\tctsMediaStreamServer - processing DONE from %s\n",
-                                this->remote_addr.writeCompleteAddress().c_str());
-
-                            // Cannot be holding the object_guard when calling into any pimpl-> methods
-                            pimpl_operation = [this] () {
-                                ctsMediaStreamServerImpl::remove_socket(this->remote_addr, NO_ERROR);
-                            };
                             break;
 
                         default:

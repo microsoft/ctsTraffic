@@ -22,6 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 // project headers
 #include "ctsMediaStreamClient.h"
+#include "ctsSocketGuard.hpp"
 #include "ctsWinsockLayer.h"
 #include "ctsIOTask.hpp"
 #include "ctsIOPattern.h"
@@ -133,7 +134,7 @@ namespace ctsTraffic {
 
         // scope to lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
@@ -160,7 +161,7 @@ namespace ctsTraffic {
         });
 
         if (NO_ERROR == response.error_code) {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
@@ -203,34 +204,6 @@ namespace ctsTraffic {
         IoImplStatus return_status;
 
         switch (_next_io.ioAction) {
-            case IOTaskAction::None:
-                // nothing failed, just no more IO right now
-                return_status.error_code = NO_ERROR;
-                return_status.continue_io = false;
-                break;
-
-            case IOTaskAction::Abort: {
-                // the protocol signaled to immediately abort
-                auto shared_pattern(_shared_socket->io_pattern());
-                shared_pattern->complete_io(_next_io, 0, 0);
-                _shared_socket->close_socket();
-
-                return_status.error_code = NO_ERROR;
-                return_status.continue_io = false;
-                break;
-            }
-
-            case IOTaskAction::FatalAbort: {
-                // the protocol indicated to rudely abort the connection
-                auto shared_pattern(_shared_socket->io_pattern());
-                shared_pattern->complete_io(_next_io, 0, 0);
-                _shared_socket->close_socket();
-
-                return_status.error_code = shared_pattern->get_last_error();
-                return_status.continue_io = false;
-                break;
-            }
-
             case IOTaskAction::Send: // fall-through
             case IOTaskAction::Recv: {
                 // add-ref the IO about to start
@@ -307,6 +280,34 @@ namespace ctsTraffic {
                         _shared_socket.get());
                 }
             }
+            case IOTaskAction::None:
+                // nothing failed, just no more IO right now
+                return_status.error_code = NO_ERROR;
+                return_status.continue_io = false;
+                break;
+
+            case IOTaskAction::Abort: {
+                // the protocol signaled to immediately abort
+                auto shared_pattern(_shared_socket->io_pattern());
+                shared_pattern->complete_io(_next_io, 0, 0);
+                _shared_socket->close_socket();
+
+                return_status.error_code = NO_ERROR;
+                return_status.continue_io = false;
+                break;
+            }
+
+            case IOTaskAction::FatalAbort: {
+                // the protocol indicated to rudely abort the connection
+                auto shared_pattern(_shared_socket->io_pattern());
+                shared_pattern->complete_io(_next_io, 0, 0);
+                _shared_socket->close_socket();
+
+                return_status.error_code = shared_pattern->get_last_error();
+                return_status.continue_io = false;
+                break;
+            }
+
         }
 
         return return_status;
@@ -333,7 +334,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scope to the socket lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 DWORD flags;
@@ -414,7 +415,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scope to the socket lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;

@@ -24,6 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
 #include "ctsWinsockLayer.h"
+#include "ctsSocketGuard.hpp"
 
 
 namespace ctsTraffic {
@@ -32,6 +33,12 @@ namespace ctsTraffic {
 
     class ctsMediaStreamServerConnectedSocket {
     private:
+        //
+        // ctsSocketGuard is given friend-access to call lock_socket and unlock_socket
+        //
+        friend class ctsSocketGuard<ctsMediaStreamServerConnectedSocket*>;
+        friend class ctsSocketGuard<std::shared_ptr<ctsMediaStreamServerConnectedSocket>>;
+
         // the CS is mutable so we can take a lock / release a lock in const methods
         mutable CRITICAL_SECTION object_guard;
         PTP_TIMER task_timer;
@@ -46,18 +53,19 @@ namespace ctsTraffic {
         // sending_socket is a shared socket from the datagram server
         // that (potentially) many connected datagram sockets will send from
         // thus it's not owned by this class
-        _Guarded_by_(object_guard)
-        SOCKET sending_socket;
+        _Guarded_by_(object_guard) SOCKET socket;
 
-        _Guarded_by_(object_guard)
-        ctsIOTask next_task;
+        _Guarded_by_(object_guard) ctsIOTask next_task;
 
         const ctl::ctSockaddr remote_addr;
 
-        _Interlocked_
-        long long sequence_number;
+        _Interlocked_ long long sequence_number;
 
         const long long connect_time;
+
+        // called by ctsSocketGuard
+        _Acquires_lock_(object_guard) void lock_socket() const NOEXCEPT;
+        _Releases_lock_(object_guard) void unlock_socket() const NOEXCEPT;
 
     public:
         ctsMediaStreamServerConnectedSocket(
@@ -67,12 +75,6 @@ namespace ctsTraffic {
             ctsMediaStreamConnectedSocketIoFunctor _io_functor);
 
         ~ctsMediaStreamServerConnectedSocket() NOEXCEPT;
-
-        _Acquires_lock_(object_guard)
-        SOCKET socket_lock() const NOEXCEPT;
-
-        _Releases_lock_(object_guard)
-        void socket_release() const NOEXCEPT;
 
         const ctl::ctSockaddr& get_address() const NOEXCEPT;
 

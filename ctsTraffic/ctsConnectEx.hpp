@@ -29,7 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 // project headers
 #include "ctsSocket.h"
-
+#include "ctsSocketGuard.hpp"
 
 namespace ctsTraffic {
 
@@ -49,7 +49,7 @@ namespace ctsTraffic {
         ctl::ctSockaddr local_addr;
         // scope to the socket lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (socket == INVALID_SOCKET) {
                 gle = WSAECONNABORTED;
@@ -100,7 +100,7 @@ namespace ctsTraffic {
         int error = NO_ERROR;
         // scope to the socket lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 try {

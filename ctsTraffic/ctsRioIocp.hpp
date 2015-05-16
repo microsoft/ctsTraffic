@@ -29,6 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+#include "ctsSocketGuard.hpp"
 
 namespace ctsTraffic {
 
@@ -453,7 +454,7 @@ namespace ctsTraffic {
             }
             
             // lock the socket when doing IO on it
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 throw std::exception("ctsRioIocp: invalid socket given to RioSocketContext");
@@ -527,7 +528,7 @@ namespace ctsTraffic {
             //
             // Must lock the socket before doing anything on it
             //
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             //
             // decrement the counter in our RQ for the completed IO
             //
@@ -611,7 +612,7 @@ namespace ctsTraffic {
             auto shared_pattern(shared_socket->io_pattern());
 
             // hold onto the RIO socket lock while posting IO on it
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET rio_socket = socket_lock.get();
             if (INVALID_SOCKET == rio_socket) {
                 return WSAECONNABORTED;

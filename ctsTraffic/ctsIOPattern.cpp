@@ -1144,7 +1144,6 @@ namespace ctsTraffic {
         timer_wheel_offset_frames(0UL),
         recv_needed(ctsConfig::Settings->PrePostRecvs),
         base_time_milliseconds(0LL),
-        tracking_resend_sequence_number(1LL),
         frame_rate_ms_per_frame(1000.0 / static_cast<unsigned long>(ctsConfig::GetMediaStream().FramesPerSecond)),
         frame_entries(),
         head_entry(),
@@ -1157,8 +1156,7 @@ namespace ctsTraffic {
         if (final_frame < initial_buffer_frames) {
             initial_buffer_frames = final_frame;
         }
-        // start the timer at 1/2 the total frame-queue length to start checking for resend's
-        timer_wheel_offset_frames = static_cast<unsigned long>(initial_buffer_frames / 2);
+        timer_wheel_offset_frames = initial_buffer_frames;
 
         const static long ExtraBufferDepthFactor = 2;
         // queue_size is intentionally a signed long: will catch overflows
@@ -1313,86 +1311,69 @@ namespace ctsTraffic {
                 //
                 // search our circular queue (starting at the head_entry)
                 // for the seq number we just received, and if found, tag as received
-                // tracking_resend_sequence_number will be zero when it's time to exit
                 //
-                if (this->tracking_resend_sequence_number > 0) {
-                    // take the base class lock before accessing our internal queue
-                    this->base_lock();
-#pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
-                    ctlScopeGuard(unlockBaseLockOnExit, { this->base_unlock(); });
+                auto found_slot = this->find_sequence_number(received_seq_number);
+                if (found_slot != this->frame_entries.end()) {
+                    if (found_slot->received != this->frame_size_bytes) {
+                        long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
+                        long long buffered_qpf = *reinterpret_cast<long long*>(_task.buffer + 16);
 
-                    auto found_slot = this->find_sequence_number(received_seq_number);
-                    if (found_slot != this->frame_entries.end()) {
-                        if (found_slot->received != this->frame_size_bytes) {
-                            long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
-                            long long buffered_qpf = *reinterpret_cast<long long*>(_task.buffer + 16);
+                        LARGE_INTEGER qpc;
+                        QueryPerformanceCounter(&qpc);
+                        // always overwrite qpc & qpf values with the latest datagram details
+                        found_slot->sender_qpc = buffered_qpc;
+                        found_slot->sender_qpf = buffered_qpf;
+                        found_slot->receiver_qpc = qpc.QuadPart;
+                        found_slot->receiver_qpf = ctTimer::snap_qpf();
+                        found_slot->received += _completed_bytes;
 
-                            LARGE_INTEGER qpc;
-                            QueryPerformanceCounter(&qpc);
-                            // always overwrite qpc & qpf values with the latest datagram details
-                            found_slot->sender_qpc = buffered_qpc;
-                            found_slot->sender_qpf = buffered_qpf;
-                            found_slot->receiver_qpc = qpc.QuadPart;
-                            found_slot->receiver_qpf = ctTimer::snap_qpf();
-                            found_slot->received += _completed_bytes;
+                        ctsConfig::PrintDebug(
+                            L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%lu bytes)\n",
+                            static_cast<long long>(found_slot->sequence_number),
+                            static_cast<unsigned long>(found_slot->received));
 
-                            ctsConfig::PrintDebug(
-                                L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%lu bytes)\n",
-                                static_cast<long long>(found_slot->sequence_number),
-                                static_cast<unsigned long>(found_slot->received));
-
-                            // stop the timer once we receive the last frame
-                            // - it's not perfect (e.g. might have received them out of order)
-                            // - but it will be very close for tracking the total bits/sec
-                            if (static_cast<unsigned long>(received_seq_number) == this->final_frame) {
-                                this->end_stats();
-                            }
-
-                        } else {
-                            ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
-                            this->stats.duplicate_frames.increment();
-
-                            ctsConfig::PrintDebug(
-                                L"[%.3f] MediaStreamClient received **a duplicate frame** for seq number (%lld)\n",
-                                ctsConfig::GetStatusTimeStamp(),
-                                received_seq_number);
+                        // stop the timer once we receive the last frame
+                        // - it's not perfect (e.g. might have received them out of order)
+                        // - but it will be very close for tracking the total bits/sec
+                        if (static_cast<unsigned long>(received_seq_number) == this->final_frame) {
+                            this->end_stats();
                         }
+
                     } else {
-                        ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
-                        this->stats.error_frames.increment();
+                        ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
+                        this->stats.duplicate_frames.increment();
 
-                        if (received_seq_number < this->head_entry->sequence_number) {
-                            ctsConfig::PrintDebug(
-                                L"[%.3f] MediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
-                                ctsConfig::GetStatusTimeStamp(),
-                                received_seq_number,
-                                static_cast<long long>(this->head_entry->sequence_number));
-                        } else {
-                            ctsConfig::PrintDebug(
-                                L"[%.3f] MediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
-                                ctsConfig::GetStatusTimeStamp(),
-                                received_seq_number,
-                                static_cast<long long>(this->head_entry->sequence_number),
-                                static_cast<long long>(this->head_entry->sequence_number + this->frame_entries.size() - 1));
-                        }
+                        ctsConfig::PrintDebug(
+                            L"[%.3f] MediaStreamClient received **a duplicate frame** for seq number (%lld)\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            received_seq_number);
+                    }
+                } else {
+                    ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
+                    this->stats.error_frames.increment();
+
+                    if (received_seq_number < this->head_entry->sequence_number) {
+                        ctsConfig::PrintDebug(
+                            L"[%.3f] MediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            received_seq_number,
+                            static_cast<long long>(this->head_entry->sequence_number));
+                    } else {
+                        ctsConfig::PrintDebug(
+                            L"[%.3f] MediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            received_seq_number,
+                            static_cast<long long>(this->head_entry->sequence_number),
+                            static_cast<long long>(this->head_entry->sequence_number + this->frame_entries.size() - 1));
                     }
                 }
             }
 
-            // since a recv completed successfully, will need to request another
+            // since a recv completed successfully, will need to request another if not done
             ++this->recv_needed;
 
         } else {  // else process SEND requests
-            // process the DONE request 
-            if (0 == ::memcmp("DONE", _task.buffer, min<unsigned long>(4, _task.buffer_length))) {
-                // indicate to the caller to abort any pended recv requests: aborting
-                this->finished_stream = true;
-                ctsIOTask abort_task;
-                abort_task.ioAction = IOTaskAction::Abort;
-                this->send_callback(abort_task);
-                ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
-
-            } else if (0 == ::memcmp("START", _task.buffer, min<unsigned long>(5, _task.buffer_length))) {
+            if (0 == ::memcmp("START", _task.buffer, min<unsigned long>(5, _task.buffer_length))) {
                 // nothing to do : it's a static buffer
 
             } else {
@@ -1559,8 +1540,7 @@ namespace ctsTraffic {
 #pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
         ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
 
-        if (0 == this_ptr->tracking_resend_sequence_number) {
-            // this_ptr->tracking_resend_sequence_number will be zero when the object indicates to itself that it's time to exit
+        if (this_ptr->finished_stream) {
             return;
         }
 
@@ -1591,70 +1571,16 @@ namespace ctsTraffic {
 #pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
         ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
 
-        if (0 == this_ptr->tracking_resend_sequence_number) {
-            // this_ptr->tracking_resend_sequence_number will be zero when the object indicates to itself that it's time to exit
+        if (this_ptr->finished_stream) {
             return;
         }
 
-        if (ctsConfig::StreamCodecValue::ResendOnce == ctsConfig::GetMediaStream().StreamCodec) {
-            // check for resends when the codec has specified and we have not yet checked the final frame
-            // - only request a RESEND if we have ever heard from the server
-            // if we never hear from the server we'll eventually terminate the connection
-            if (this_ptr->received_buffered_frames()) {
-                if (this_ptr->tracking_resend_sequence_number <= this_ptr->final_frame) {
-                    vector<FrameEntry>::iterator resend_iterator = this_ptr->find_sequence_number(this_ptr->tracking_resend_sequence_number);
-                    if (this_ptr->frame_entries.end() != resend_iterator) {
-                        if (resend_iterator->received != this_ptr->frame_size_bytes) {
-                            // reset received to zero since we want the whole thing resent
-                            resend_iterator->received = 0;
-
-                            ctsConfig::PrintDebug(
-                                L"\t\tctsIOPatternMediaStreamClient requesting RESEND frame # %lld\n",
-                                static_cast<long long>(resend_iterator->sequence_number));
-
-                            try {
-                                this_ptr->send_buffers.emplace_back(
-                                    ctsMediaStreamMessage::Construct(
-                                    MediaStreamAction::RESEND,
-                                    resend_iterator->sequence_number));
-                                string* resend_string = this_ptr->send_buffers.rbegin()->get();
-
-                                ctsIOTask resend_task;
-                                resend_task.ioAction = IOTaskAction::Send;
-                                resend_task.track_io = false;
-                                resend_task.buffer = &(*resend_string)[0];
-                                resend_task.buffer_offset = 0;
-                                resend_task.buffer_length = static_cast<unsigned long>(resend_string->length());
-                                resend_task.buffer_type = ctsIOTask::BufferType::Static; // this buffer is only maintained in the derived object, not the base class
-                                this_ptr->send_callback(resend_task);
-
-                                resend_iterator->retried = true;
-                            }
-                            catch (const exception& e) {
-                                ctsConfig::PrintException(e);
-                            }
-                        }
-                    }
-                    // increment the resend tracking value after checking this referenced frame
-                    ++this_ptr->tracking_resend_sequence_number;
-                }
-            } else {
-                // move the tracking resend sequence number to the next frame
-                // - the server is very late to send data but we need to continue forward progress
-                ++this_ptr->tracking_resend_sequence_number;
-            }
-        } else {
-            // if not checking for rends, just increment the tracking sequence number
-            ++this_ptr->tracking_resend_sequence_number;
-        }
+        ++this_ptr->timer_wheel_offset_frames;
 
         bool aborted = false;
-        // provide a guard if the client *never* receives any datagrams from the server
-        // - only issue this fatalabort if enough time has passed to have fulled the buffered set of frames
-        //   but none have been received yet
-        if (this_ptr->tracking_resend_sequence_number >= (this_ptr->initial_buffer_frames / 2) &&
+        if (this_ptr->timer_wheel_offset_frames >= this_ptr->initial_buffer_frames &&
             this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
-            // if we haven't yet received *anything* from the server, abort this conneciton
+            // if we haven't yet received *anything* from the server, abort this connection
             if (!this_ptr->received_buffered_frames()) {
                 ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection\n");
                 ctsIOTask abort_task;
@@ -1670,15 +1596,15 @@ namespace ctsTraffic {
 
         if (!aborted) {
             // wait for the precise number of milliseconds for the next frame
-            ++this_ptr->timer_wheel_offset_frames;
             if (this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
                 this_ptr->set_next_timer();
 
             } else {
-                // when all frames are rendered, will track this state internally by setting tracking_resend_sequence_number to zero
-                this_ptr->tracking_resend_sequence_number = 0;
-                ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - indicating DONE: have rendered all possible frames\n");
-                this_ptr->send_callback(ctsMediaStreamMessage::Construct(MediaStreamAction::DONE));
+                this_ptr->finished_stream = true;
+                ctsIOTask abort_task;
+                abort_task.ioAction = IOTaskAction::Abort;
+                this_ptr->send_callback(abort_task);
+                ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
             }
         }
     }

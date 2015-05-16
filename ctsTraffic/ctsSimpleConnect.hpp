@@ -50,7 +50,7 @@ namespace ctsTraffic {
         int error = NO_ERROR;
         // scope to the socket lock
         {
-            auto socket_lock(ctsSocket::LockSocket(shared_socket));
+            auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 try {

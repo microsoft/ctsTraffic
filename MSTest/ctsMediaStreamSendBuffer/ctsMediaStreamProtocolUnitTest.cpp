@@ -35,10 +35,6 @@ template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFram
     switch (_message) {
         case ctsTraffic::MediaStreamAction::START:
             return L"START";
-        case ctsTraffic::MediaStreamAction::RESEND:
-            return L"RESEND";
-        case ctsTraffic::MediaStreamAction::DONE:
-            return L"DONE";
     }
     return ctl::ctString::format_string(L"Unknown Message (0x%x)", _message);
 }
@@ -171,32 +167,6 @@ namespace ctsUnitTest
 
             ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(test_task.buffer, test_task.buffer_length));
             Assert::AreEqual(MediaStreamAction::START, round_trip.action);
-        }
-
-        TEST_METHOD(ConstructDone)
-        {
-            Assert::AreEqual(UdpDatagramDoneStringLength, static_cast<unsigned long>(::strlen(UdpDatagramDoneString)));
-
-            ctsIOTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::DONE));
-            Assert::AreEqual(UdpDatagramDoneStringLength, test_task.buffer_length);
-
-            ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(test_task.buffer, test_task.buffer_length));
-            Assert::AreEqual(MediaStreamAction::DONE, round_trip.action);
-        }
-
-        TEST_METHOD(ConstructResend)
-        {
-            Assert::AreEqual(UdpDatagramResendStringLength, static_cast<unsigned long>(::strlen(UdpDatagramResendString)));
-            Assert::AreEqual(UdpDatagramSequenceNumberLength, static_cast<unsigned long>(sizeof(unsigned long long)));
-
-            ctsIOTask test_task_bad(ctsMediaStreamMessage::Construct(MediaStreamAction::RESEND));
-            Assert::AreEqual(UdpDatagramResendStringLength, test_task_bad.buffer_length);
-            Assert::ExpectException<ctl::ctException>([&] {ctsMediaStreamMessage::Extract(test_task_bad.buffer, test_task_bad.buffer_length); });
-
-            std::unique_ptr<std::string> resend_string (ctsMediaStreamMessage::Construct(MediaStreamAction::RESEND, 1LL));
-            ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(resend_string->c_str( ), resend_string->length()));
-            Assert::AreEqual(MediaStreamAction::RESEND, round_trip.action);
-            Assert::AreEqual(1LL, round_trip.sequence_number);
         }
 
     private:
