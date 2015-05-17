@@ -172,6 +172,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ctsTraffic\ctsIOPattern.cpp" />
+    <ClCompile Include="..\..\ctsTraffic\ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsIOPatternUnitTest_Client.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

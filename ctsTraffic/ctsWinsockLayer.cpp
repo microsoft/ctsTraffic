@@ -95,9 +95,9 @@ namespace ctsTraffic {
         return wsIOResult(io_error, bytes_transferred);
     }
 
-        ///
-        /// WSASendTo
-        ///
+    ///
+    /// WSASendTo
+    ///
     wsIOResult ctsWSASendTo(
         std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,

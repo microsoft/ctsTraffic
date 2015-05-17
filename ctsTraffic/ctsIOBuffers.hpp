@@ -262,7 +262,7 @@ namespace ctsTraffic {
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
                 ctsConfig::PrintDebug(
-                    L"ctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)",
+                    L"\t\tctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)",
                     _current_transfer, ctsStatistics::ConnectionIdLength);
                 return false;
             }

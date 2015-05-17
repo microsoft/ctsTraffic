@@ -63,6 +63,9 @@
     <ClCompile Include="ctsWinsockLayer.cpp">
       <Filter>WinsockCallouts</Filter>
     </ClCompile>
+    <ClCompile Include="ctsIOPatternMediaStream.cpp">
+      <Filter>MediaStreaming</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

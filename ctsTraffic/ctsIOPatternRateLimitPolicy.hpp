@@ -67,7 +67,7 @@ namespace ctsTraffic {
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
             ctsConfig::PrintDebug(
-                L"ctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
+                L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
                 static_cast<unsigned long long>(this->BytesSendingPerQuantum),
                 static_cast<unsigned long long>(this->QuantumPeriodMs));
 #endif
@@ -112,7 +112,7 @@ namespace ctsTraffic {
             }
 #ifdef CTSTRAFFIC_UNIT_TESTS
             ctsConfig::PrintDebug(
-                L"ctsIOPatternRateLimitPolicy\n"
+                L"\t\tctsIOPatternRateLimitPolicy\n"
                 L"\tcurrent_time_ms: %lld\n"
                 L"\tquantum_start_time_ms: %llu\n"
                 L"\tbytes_sent_this_quantum: %llu\n",

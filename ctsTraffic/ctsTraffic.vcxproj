@@ -223,6 +223,7 @@
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
+    <ClCompile Include="ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsMediaStreamClient.cpp" />
     <ClCompile Include="ctsMediaStreamServerImpl.cpp" />
     <ClCompile Include="ctsSocket.cpp" />

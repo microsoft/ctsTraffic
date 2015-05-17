@@ -382,7 +382,7 @@ namespace ctsTraffic {
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
-                ctsConfig::PrintDebug(L"ctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes");
+                ctsConfig::PrintDebug(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes");
                 this->update_last_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }
 
@@ -614,7 +614,6 @@ namespace ctsTraffic {
         ctsSignedLongLong base_time_milliseconds;
 
         const double frame_rate_ms_per_frame;
-        bool started_timers;
         bool finished_stream;
 
         // these must be protected by the base class cs
@@ -628,10 +627,7 @@ namespace ctsTraffic {
         _Requires_lock_held_(cs)
         std::vector<FrameEntry>::iterator head_entry;
 
-        _Requires_lock_held_(cs)
-        std::vector<std::unique_ptr<std::string>> send_buffers;
-
-        // member functions which require the base lock
+        // member functions - all require the base lock
         _Requires_lock_held_(cs)
         std::vector<FrameEntry>::iterator find_sequence_number(long long _seq_number) NOEXCEPT;
 

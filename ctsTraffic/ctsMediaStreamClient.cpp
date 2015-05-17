@@ -222,6 +222,10 @@ namespace ctsTraffic {
                 } else if (IOTaskAction::Recv == _next_io.ioAction) {
                     function_name = L"WSARecvFrom";
                     result = ctsWSARecvFrom(_shared_socket, _next_io, callback);
+                } else {
+                    ctl::ctAlwaysFatalCondition(
+                        L"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)",
+                        &_next_io);
                 }
 
                 if (WSA_IO_PENDING == result.error_code) {
@@ -279,15 +283,19 @@ namespace ctsTraffic {
                         L"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
                         _shared_socket.get());
                 }
+
+                break;
             }
-            case IOTaskAction::None:
+
+            case IOTaskAction::None: {
                 // nothing failed, just no more IO right now
                 return_status.error_code = NO_ERROR;
                 return_status.continue_io = false;
                 break;
+            }
 
             case IOTaskAction::Abort: {
-                // the protocol signaled to immediately abort
+                // the protocol signaled to immediately stop the stream
                 auto shared_pattern(_shared_socket->io_pattern());
                 shared_pattern->complete_io(_next_io, 0, 0);
                 _shared_socket->close_socket();
@@ -374,9 +382,15 @@ namespace ctsTraffic {
                 if (gle != 0) {
                     // the failure may have been a protocol error - in which case gle would just be NO_ERROR
                     ctsConfig::PrintErrorInfo(
-                        L"ctsMediaStreamClientIoCompletionCallback IO failed (%s) with error %d\n",
+                        L"[%.3f] MediaStream Client: IO failed (%s) with error %d\n",
+                        ctsConfig::GetStatusTimeStamp(),
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
                         gle);
+                } else {
+                    ctsConfig::PrintErrorInfo(
+                        L"[%.3f] MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%d)\n",
+                        ctsConfig::GetStatusTimeStamp(),
+                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo");
                 }
                 shared_socket->close_socket();
                 gle = shared_pattern->get_last_error();

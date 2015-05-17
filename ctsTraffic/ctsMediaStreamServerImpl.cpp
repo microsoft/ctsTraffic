@@ -288,7 +288,7 @@ namespace ctsTraffic {
 
                 if (found_socket != std::end(ctsMediaStreamServerImpl::connected_sockets)) {
                     ctsConfig::PrintDebug(
-                        L"ctsMediaStreamServer - socket with remote address %s asked to be Started but was already established\n",
+                        L"\t\tctsMediaStreamServer - socket with remote address %s asked to be Started but was already established\n",
                         _target_addr.writeCompleteAddress().c_str());
                     // return early if this was a duplicate request: this can happen if there is latency or drops
                     // between the client and server as they attempt to negotiating starting a new stream

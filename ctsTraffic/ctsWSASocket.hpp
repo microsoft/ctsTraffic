@@ -92,7 +92,10 @@ namespace ctsTraffic {
 
 
             default: {
-                ctsConfig::PrintErrorInfo(L"Unknown socket protocol (%u)", static_cast<unsigned>(ctsConfig::Settings->Protocol));
+                ctsConfig::PrintErrorInfo(
+                    L"[%.3f] Unknown socket protocol (%u)", 
+                    ctsConfig::GetStatusTimeStamp(),
+                    static_cast<unsigned>(ctsConfig::Settings->Protocol));
                 gle = WSAEINVAL;
             }
         }

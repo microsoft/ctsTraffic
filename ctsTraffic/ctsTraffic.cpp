@@ -107,11 +107,12 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return (e.why() == 0) ? ERROR_CANCELLED : e.why();
     }
     catch (const bad_alloc&) {
-        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: Out of Memory");
+        ctsConfig::PrintErrorInfo(L"[%.3f] ctsTraffic failed: Out of Memory", ctsConfig::GetStatusTimeStamp());
+        ctsConfig::Shutdown();
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e) {
-        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %S", e.what());
+        ctsConfig::PrintErrorInfo(L"[%.3f] ctsTraffic failed: %S", ctsConfig::GetStatusTimeStamp(), e.what());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;
     }

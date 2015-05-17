@@ -150,8 +150,8 @@ namespace ctsTraffic {
                 ++failure_counter;
 
                 ctsConfig::PrintErrorInfo(
-                    L"\t\tctsMediaStreamServer : WSARecvFrom failed (%d) - %u times in a row trying to get another recv posted\n",
-                    error, failure_counter);
+                    L"[%.3f] MediaStream Server : WSARecvFrom failed (%d) - %u times in a row trying to get another recv posted\n",
+                    ctsConfig::GetStatusTimeStamp(), error, failure_counter);
 
                 ctl::ctFatalCondition(
                     (0 == failure_counter % 10),
