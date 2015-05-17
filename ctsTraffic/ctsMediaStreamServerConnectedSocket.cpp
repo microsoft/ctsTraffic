@@ -137,8 +137,6 @@ namespace ctsTraffic {
         // take a lock on the ctsSocket for this 'connection'
         auto shared_socket = this_ptr->weak_socket.lock();
         if (!shared_socket) {
-            // socket is already gone - remove it from the impl and exit
-            ctsMediaStreamServerImpl::remove_socket(this_ptr->remote_addr, WSAECONNABORTED);
             return;
         }
         // hold a reference on the iopattern
@@ -204,11 +202,9 @@ namespace ctsTraffic {
                 // best effort
             }
 
-            ctsMediaStreamServerImpl::remove_socket(
-                this_ptr->get_address(), returned_status);
-        }
+            this_ptr->complete_state(returned_status);
 
-        if (ctsIOStatus::CompletedIo == status) {
+        } else if (ctsIOStatus::CompletedIo == status) {
             try {
                 ctsConfig::PrintDebug(
                     L"\t\tctsMediaStreamServerConnectedSocket socket (%s) has completed its stream - closing this 'connection'",
@@ -219,8 +215,7 @@ namespace ctsTraffic {
                 // best effort
             }
 
-            ctsMediaStreamServerImpl::remove_socket(
-                this_ptr->get_address(), send_results.error_code);
+            this_ptr->complete_state(send_results.error_code);
         }
     }
 } // namespace

@@ -111,16 +111,13 @@ namespace ctsTraffic {
                         &this->remote_addr_len,
                         pov,
                         nullptr);
+
                     if (SOCKET_ERROR == error) {
                         error = ::WSAGetLastError();
                         if (WSA_IO_PENDING == error) {
-                            error = NO_ERROR; // pending is not an error
-
+                            // pending is not an error
+                            error = NO_ERROR; 
                         } else {
-                            // TODO: how to handle failure
-                            // - currently will just retry until succeeds - we might get into a bad state and infinitely loop
-                            // - for WSAECONNRESET, definately just need to retry
-                            // - for any other error, potentially close the socket, recreate it, and start over
                             this->thread_iocp->cancel_request(pov);
                             if (WSAECONNRESET == error) {
                                 // when this fails on retry, it has already failed from a prior WSARecvFrom request
@@ -150,7 +147,7 @@ namespace ctsTraffic {
                 ++failure_counter;
 
                 ctsConfig::PrintErrorInfo(
-                    L"[%.3f] MediaStream Server : WSARecvFrom failed (%d) - %u times in a row trying to get another recv posted\n",
+                    L"[%.3f] MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted\n",
                     ctsConfig::GetStatusTimeStamp(), error, failure_counter);
 
                 ctl::ctFatalCondition(
@@ -167,7 +164,7 @@ namespace ctsTraffic {
         // Cannot be holding the object_guard when calling into any pimpl-> methods
         // - will risk deadlocking the server
         // Will store the pimpl call to be made in this std function to be exeucted outside the lock
-        std::function<void(void)> pimpl_operation;
+        std::function<void(void)> pimpl_operation(nullptr);
 
         try {
             // scope to the object lock
@@ -183,22 +180,26 @@ namespace ctsTraffic {
                 DWORD bytes_received;
                 if (!::WSAGetOverlappedResult(this->socket.get(), _ov, &bytes_received, FALSE, &this->recv_flags)) {
                     // recvfrom failed
-                    auto gle = ::WSAGetLastError();
-                    if (WSAECONNRESET == gle) {
-                        ctsConfig::PrintErrorInfo(
-                            L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable\n",
-                            ctsConfig::GetStatusTimeStamp(),
-                            this->remote_addr.writeCompleteAddress().c_str());
-                    } else {
-                        ctsConfig::PrintErrorInfo(
-                            L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed [%d]\n",
-                            ctsConfig::GetStatusTimeStamp(),
-                            ::WSAGetLastError());
+                    try {
+                        auto gle = ::WSAGetLastError();
+                        if (WSAECONNRESET == gle) {
+                            ctsConfig::PrintErrorInfo(
+                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable\n",
+                                ctsConfig::GetStatusTimeStamp(),
+                                this->remote_addr.writeCompleteAddress().c_str());
+                        } else {
+                            ctsConfig::PrintErrorInfo(
+                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed [%d]\n",
+                                ctsConfig::GetStatusTimeStamp(),
+                                ::WSAGetLastError());
+                        }
                     }
-                    // cannot hold the object lock when remove this object through the pimpl
-                    pimpl_operation = [this, gle] () {
-                        ctsMediaStreamServerImpl::remove_socket(this->remote_addr, gle);
-                    };
+                    catch (const std::exception&) {
+                        // best effort
+                    }
+
+                    // this receive failed - do nothing immediately in response
+                    // - just attempt to post another recv at the end of this function
 
                 } else {
                     ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
@@ -222,7 +223,9 @@ namespace ctsTraffic {
             }
 
             // now execute the stored call outside the lock but inside the try/catch
-            pimpl_operation();
+            if (pimpl_operation) {
+                pimpl_operation();
+            }
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);

@@ -94,13 +94,13 @@ namespace ctsTraffic {
         //
         // Gets/Sets the local address of the SOCKET
         //
-        const ctl::ctSockaddr local_address() const NOEXCEPT;
+        const ctl::ctSockaddr& local_address() const NOEXCEPT;
         void set_local_address(const ctl::ctSockaddr& _local) NOEXCEPT;
 
         //
         // Gets/Sets the target address of the SOCKET, if there is one
         //
-        const ctl::ctSockaddr target_address() const NOEXCEPT;
+        const ctl::ctSockaddr& target_address() const NOEXCEPT;
         void set_target_address(const ctl::ctSockaddr& _target) NOEXCEPT;
 
         //

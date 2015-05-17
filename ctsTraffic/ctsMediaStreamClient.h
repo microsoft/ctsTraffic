@@ -24,15 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    struct IoImplStatus {
-        unsigned long error_code;
-        bool continue_io;
-
-        IoImplStatus() NOEXCEPT : error_code(0), continue_io(false)
-        {
-        }
-    };
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports

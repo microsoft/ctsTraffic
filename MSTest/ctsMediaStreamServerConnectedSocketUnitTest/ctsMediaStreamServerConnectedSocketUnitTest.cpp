@@ -216,6 +216,7 @@ namespace ctsTraffic {
     }
     void ctsSocket::complete_state(unsigned long)
     {
+        ::SetEvent(s_RemovedSocketEvent);
     }
 
     std::shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const
@@ -224,9 +225,8 @@ namespace ctsTraffic {
     }
 
     // one callout fake to ctsMediaStreamServerImpl
-    void ctsMediaStreamServerImpl::remove_socket(const ctl::ctSockaddr& _target_addr, unsigned long _error_code)
+    void ctsMediaStreamServerImpl::remove_socket(const ctl::ctSockaddr&)
     {
-        ::SetEvent(s_RemovedSocketEvent);
     }
 }
 ///

@@ -64,9 +64,12 @@ namespace ctsTraffic {
         ///
         /// Process the removal of a connected socket once it is completed
         /// - remove_socket takes the remote address to find the socket
+        /// - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
+        ///   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
+        ///   (which will wait for all TP threads to complete in the d'tor)
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void remove_socket(const ctl::ctSockaddr& _target_addr, unsigned long _error_code);
+        void remove_socket(const ctl::ctSockaddr& _target_addr);
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// Processes the incoming START request from the client
@@ -81,68 +84,21 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Called to 'accept' incoming connections
-    /// - adds them to accepting_sockets
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline
-    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
-    {
-        try {
-            ctsMediaStreamServerImpl::init_once();
-            // ctsMediaStreamServerImpl will complete the ctsSocket object
-            // when a client request comes in to be 'accepted'
-            ctsMediaStreamServerImpl::accept_socket(_weak_socket);
-        }
-        catch (const std::exception& e) {
-            ctsConfig::PrintException(e);
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket) {
-                shared_socket->complete_state(ERROR_OUTOFMEMORY);
-            }
-        }
-    }
+    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Called initiate IO on a datagram socket
-    /// - the original ctsSocket is already in the connected_sockets vector
-    /// - adding the next_io request to the IO queue
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline
-    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
-    {
-        ctsIOTask next_task;
-        try {
-            ctsMediaStreamServerImpl::init_once();
+    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
 
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket) {
-                // hold a reference on the iopattern
-                auto shared_pattern(shared_socket->io_pattern());
-                do {
-                    next_task = shared_pattern->initiate_io();
-                    if (next_task.ioAction != IOTaskAction::None) {
-                        ctsMediaStreamServerImpl::schedule_io(_weak_socket, next_task);
-                    }
-                } while (next_task.ioAction != IOTaskAction::None);
-            }
-        }
-        catch (const std::exception& e) {
-            ctsConfig::PrintException(e);
-            if (next_task.ioAction != IOTaskAction::None) {
-                auto exception_shared_socket(_weak_socket.lock());
-                if (exception_shared_socket) {
-                    // hold a reference on the iopattern
-                    auto exception_shared_pattern(exception_shared_socket->io_pattern());
-                    // must complete any IO that was requested but not scheduled
-                    exception_shared_pattern->complete_io(next_task, 0, WSAENOBUFS);
-                    if (0 == exception_shared_socket->pended_io()) {
-                        exception_shared_socket->complete_state(ERROR_OUTOFMEMORY);
-                    }
-                }
-            }
-        }
-    }
-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Called to remove that socket from the tracked vector of connected sockets
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void ctsMediaStreamServerClose(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
 } // ctsTraffic namespace

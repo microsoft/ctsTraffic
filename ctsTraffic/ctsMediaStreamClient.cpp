@@ -31,6 +31,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 
 namespace ctsTraffic {
+
+    struct IoImplStatus
+    {
+        unsigned long error_code;
+        bool continue_io;
+
+        IoImplStatus() NOEXCEPT : error_code(0), continue_io(false)
+        {
+        }
+    };
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Internal implementation functions

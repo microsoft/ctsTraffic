@@ -292,6 +292,7 @@ namespace ctsTraffic {
               ConnectFunction(nullptr),
               AcceptFunction(nullptr),
               IoFunction(nullptr),
+              ClosingFunction(nullptr),
               Protocol(ProtocolType::NoProtocolSet),
               TcpShutdown(TcpShutdownType::NoShutdownOptionSet),
               IoPattern(IoPatternType::NoIOSet),
@@ -333,6 +334,7 @@ namespace ctsTraffic {
             ctsSocketFunction ConnectFunction;
             ctsSocketFunction AcceptFunction;
             ctsSocketFunction IoFunction;
+            ctsSocketFunction ClosingFunction; // optional
 
             ProtocolType    Protocol;
             TcpShutdownType TcpShutdown;

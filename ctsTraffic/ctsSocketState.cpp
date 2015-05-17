@@ -298,6 +298,11 @@ namespace ctsTraffic {
                 context->state = InternalState::Closed;
                 ::LeaveCriticalSection(&context->state_guard);
 
+                if (ctsConfig::Settings->ClosingFunction) {
+                    ctsConfig::Settings->ClosingFunction(weak_ptr<ctsSocket>(context->socket));
+                }
+
+                ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
                 break;
             }
 

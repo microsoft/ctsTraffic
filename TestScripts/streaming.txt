@@ -1,11 +1,11 @@
 Simple test:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500 -serverexitlimit:1
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5
 
 
 30Gbps with fewer bits/sec but higher connection count
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -ConsoleVerbosity:1
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -connections:300 -ConsoleVerbosity:1 -verify:connection
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:300
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:300 
 
 40Gbps with smaller connection cound but higher bits/sec
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:5 -StreamLength:30 -ConsoleVerbosity:1

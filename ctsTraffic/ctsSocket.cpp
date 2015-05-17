@@ -149,7 +149,7 @@ namespace ctsTraffic {
         }
     }
 
-    const ctSockaddr ctsSocket::local_address() const NOEXCEPT
+    const ctSockaddr& ctsSocket::local_address() const NOEXCEPT
     {
         return this->local_sockaddr;
     }
@@ -159,7 +159,7 @@ namespace ctsTraffic {
         this->local_sockaddr = _local;
     }
 
-    const ctSockaddr ctsSocket::target_address() const NOEXCEPT
+    const ctSockaddr& ctsSocket::target_address() const NOEXCEPT
     {
         return this->target_sockaddr;
     }

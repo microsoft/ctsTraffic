@@ -52,8 +52,7 @@ namespace ctsTraffic {
             return WSAECONNABORTED;
         }
 
-        unsigned long bytes_transferred = 0UL;
-        int io_error = NO_ERROR;
+        wsIOResult return_result;
         try {
             auto io_thread_pool = _shared_socket->thread_pool();
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
@@ -64,9 +63,9 @@ namespace ctsTraffic {
 
             DWORD flags = 0;
             if (::WSARecvFrom(socket, &wsabuf, 1, NULL, &flags, NULL, NULL, pov, NULL) != 0) {
-                io_error = ::WSAGetLastError();
+                return_result.error_code = ::WSAGetLastError();
                 // IO pended == successfully initiating the IO
-                if (io_error != WSA_IO_PENDING) {
+                if (return_result.error_code != WSA_IO_PENDING) {
                     // must cancel the IOCP TP if the IO call fails
                     io_thread_pool->cancel_request(pov);
                 }
@@ -74,16 +73,16 @@ namespace ctsTraffic {
 
             } else {
                 if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                    return_result.error_code = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    return_result.bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
                     // completed inline, so the TP won't be notified
                     io_thread_pool->cancel_request(pov);
-                    io_error = ERROR_SUCCESS;
                 } else {
                     // WSARecvFrom returned success, but inline completions is not enabled
                     // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
-                    io_error = WSA_IO_PENDING;
+                    return_result.error_code = WSA_IO_PENDING;
                 }
             }
         }
@@ -92,7 +91,7 @@ namespace ctsTraffic {
             return WSAENOBUFS;
         }
 
-        return wsIOResult(io_error, bytes_transferred);
+        return return_result;
     }
 
     ///
@@ -109,8 +108,7 @@ namespace ctsTraffic {
             return WSAECONNABORTED;
         }
 
-        unsigned long bytes_transferred = 0UL;
-        int io_error = NO_ERROR;
+        wsIOResult return_result;
         try {
             const ctl::ctSockaddr& targetAddress = _shared_socket->target_address();
 
@@ -122,9 +120,9 @@ namespace ctsTraffic {
             wsabuf.len = _task.buffer_length;
 
             if (::WSASendTo(socket, &wsabuf, 1, NULL, 0, targetAddress.sockaddr(), targetAddress.length(), pov, NULL) != 0) {
-                io_error = ::WSAGetLastError();
+                return_result.error_code = ::WSAGetLastError();
                 // IO pended == successfully initiating the IO
-                if (io_error != WSA_IO_PENDING) {
+                if (return_result.error_code != WSA_IO_PENDING) {
                     // must cancel the IOCP TP if the IO call fails
                     io_thread_pool->cancel_request(pov);
                 }
@@ -132,16 +130,16 @@ namespace ctsTraffic {
 
             } else {
                 if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                    return_result.error_code = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    return_result.bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
                     // completed inline, so the TP won't be notified
                     io_thread_pool->cancel_request(pov);
-                    io_error = ERROR_SUCCESS;
                 } else {
-                    // WSASendTo returned success, but inline completions is not enabled
+                    // WSARecvFrom returned success, but inline completions is not enabled
                     // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
-                    io_error = WSA_IO_PENDING;
+                    return_result.error_code = WSA_IO_PENDING;
                 }
             }
         }
@@ -150,6 +148,6 @@ namespace ctsTraffic {
             return WSAENOBUFS;
         }
 
-        return wsIOResult(io_error, bytes_transferred);
+        return return_result;
     }
 }
