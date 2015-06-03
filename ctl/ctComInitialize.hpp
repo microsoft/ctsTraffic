@@ -1,5 +1,15 @@
-#ifndef _CTCOMINITIALIZE_HPP_
-#define _CTCOMINITIALIZE_HPP_
+/*
+
+Copyright (c) Microsoft Corporation
+All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
+
+*/
 
 #pragma once
 
@@ -10,13 +20,16 @@
 #include <utility>
 #include <string>
 #include <vector>
+
 // os headers
 #include <Windows.h>
 #include <Objbase.h>
+
 // local headers
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
 #include "cttime.hpp"
+#include "ctVersionConversion.hpp"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +91,7 @@ namespace ctl {
                     throw ctException(hr, L"CoInitializeEx", L"ctComInitialize::ctComInitialize", false);
             }
         }
-        ~ctComInitialize() throw()
+        ~ctComInitialize() NOEXCEPT
         {
             if (uninit_required) {
                 ::CoUninitialize();
@@ -139,8 +152,7 @@ namespace ctl {
                 0,
                 CLSCTX_INPROC_SERVER,
                 _riid,
-                reinterpret_cast<LPVOID*>(&temp.t)
-                );
+                reinterpret_cast<LPVOID*>(&temp.t));
             if (FAILED(hr)) {
                 throw ctException(hr, L"CoCreateInstance", L"ctComPtr::createInstance", false);
             }
@@ -156,16 +168,16 @@ namespace ctl {
         ///  (they should always match their addref's with their releases)
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr() throw() : t(nullptr)
+        ctComPtr() NOEXCEPT : t(nullptr)
         {
         }
-        ctComPtr(_In_opt_ T* _t) throw() : t(_t)
+        ctComPtr(_In_opt_ T* _t) NOEXCEPT : t(_t)
         {
             if (t != nullptr) {
                 t->AddRef();
             }
         }
-        ~ctComPtr() throw()
+        ~ctComPtr() NOEXCEPT
         {
             this->release();
         }
@@ -177,27 +189,18 @@ namespace ctl {
         /// All are no-throw/no-fail operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr(_In_ const ctComPtr& _obj) throw() : t(_obj.t)
+        ctComPtr(_In_ const ctComPtr& _obj) NOEXCEPT : t(_obj.t)
         {
             if (t != nullptr) {
                 t->AddRef();
             }
         }
-        ctComPtr& operator =(_In_ const ctComPtr& _obj) throw()
+        ctComPtr& operator =(_In_ const ctComPtr& _obj) NOEXCEPT
         {
             ctComPtr copy(_obj);
             this->swap(copy);
             return *this;
         }
-
-
-        // **************************************************************************************************
-        // **************************************************************************************************
-        //   only including move c'ors and operators for STL 10 and higher
-        //   - blocking STL 7 directly - anything prior is not supported
-        // **************************************************************************************************
-        // **************************************************************************************************
-#ifndef _STL70_
 
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -206,19 +209,17 @@ namespace ctl {
         /// All are no-throw/no-fail operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr(_In_ ctComPtr&& _obj) throw() : t(nullptr)
+        ctComPtr(_In_ ctComPtr&& _obj) NOEXCEPT : t(nullptr)
         {
             // initialized to nullptr ... swap with the [in] object
             this->swap(_obj);
         }
-        ctComPtr& operator =(_In_ ctComPtr&& _obj) throw()
+        ctComPtr& operator =(_In_ ctComPtr&& _obj) NOEXCEPT
         {
             ctComPtr temp(std::move(_obj));
             this->swap(temp);
             return *this;
         }
-#endif
-
 
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -229,11 +230,11 @@ namespace ctl {
         /// All are no-throw/no-fail operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        bool operator ==(_In_ const ctComPtr& _obj) const throw()
+        bool operator ==(_In_ const ctComPtr& _obj) const NOEXCEPT
         {
             return this->t == _obj.t;
         }
-        bool operator !=(_In_ const ctComPtr& _obj) const throw()
+        bool operator !=(_In_ const ctComPtr& _obj) const NOEXCEPT
         {
             return this->t != _obj.t;
         }
@@ -251,7 +252,7 @@ namespace ctl {
         /// A no-throw/no-fail operation
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void set(_In_ const T* _ptr) throw()
+        void set(_In_ const T* _ptr) NOEXCEPT
         {
             this->release();
             this->t = _ptr;
@@ -285,32 +286,32 @@ namespace ctl {
         /// All are no-throw/no-fail operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        T* operator ->() throw()
+        T* operator ->() NOEXCEPT
         {
             return t;
         }
-        const T* operator ->() const throw()
+        const T* operator ->() const NOEXCEPT
         {
             return t;
         }
-        T* get() throw()
+        T* get() NOEXCEPT
         {
             return t;
         }
-        const T* get() const throw()
+        const T* get() const NOEXCEPT
         {
             return t;
         }
-        T** get_addr_of() throw()
+        T** get_addr_of() NOEXCEPT
         {
             this->release();
             return (&t);
         }
-        IUnknown* get_IUnknown() throw()
+        IUnknown* get_IUnknown() NOEXCEPT
         {
             return t;
         }
-        const IUnknown* get_IUnknown() const throw()
+        const IUnknown* get_IUnknown() const NOEXCEPT
         {
             return t;
         }
@@ -325,7 +326,7 @@ namespace ctl {
         /// A no-throw/no-fail operation
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void release() throw()
+        void release() NOEXCEPT
         {
             if (t != nullptr) {
                 t->Release();
@@ -340,7 +341,7 @@ namespace ctl {
         /// A no-fail swap() operator to safely swap the internal values of 2 objects
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void swap(_Inout_ ctComPtr& _in) throw()
+        void swap(_Inout_ ctComPtr& _in) NOEXCEPT
         {
             using std::swap;
             swap(t, _in.t);
@@ -361,7 +362,7 @@ namespace ctl {
     ///
     ////////////////////////////////////////////////////////////////////////////////
     template <typename T>
-    inline void swap(_Inout_ ctComPtr<T>& _lhs, _Inout_ ctComPtr<T>& _rhs) throw()
+    inline void swap(_Inout_ ctComPtr<T>& _lhs, _Inout_ ctComPtr<T>& _rhs) NOEXCEPT
     {
         _lhs.swap(_rhs);
     }
@@ -385,7 +386,7 @@ namespace ctl {
         /// - on failure, will throw std::bad_alloc (derived from std::exception)
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComBstr() throw() : bstr(nullptr)
+        ctComBstr() NOEXCEPT : bstr(nullptr)
         {
         }
         ctComBstr(_In_opt_ LPCWSTR _string) : bstr(nullptr)
@@ -416,7 +417,7 @@ namespace ctl {
             }
         }
 
-        ~ctComBstr() throw()
+        ~ctComBstr() NOEXCEPT
         {
             ::SysFreeString(bstr);
         }
@@ -445,13 +446,6 @@ namespace ctl {
             return *this;
         }
 
-        // **************************************************************************************************
-        // **************************************************************************************************
-        //   only including move c'ors and operators for STL 10 and higher
-        //   - blocking STL 7 directly - anything prior is not supported
-        // **************************************************************************************************
-        // **************************************************************************************************
-#ifndef _STL70_
         ////////////////////////////////////////////////////////////////////////////////
         ///
         /// move c'tor and move assignment
@@ -459,17 +453,16 @@ namespace ctl {
         /// Both are no-fail
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComBstr(_In_ ctComBstr&& _obj) throw() : bstr(nullptr)
+        ctComBstr(_In_ ctComBstr&& _obj) NOEXCEPT : bstr(nullptr)
         {
             this->swap(_obj);
         }
-        ctComBstr& operator =(_In_ ctComBstr&& _obj) throw()
+        ctComBstr& operator =(_In_ ctComBstr&& _obj) NOEXCEPT
         {
             ctComBstr temp(std::move(_obj));
             this->swap(temp);
             return *this;
         }
-#endif
 
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -478,7 +471,7 @@ namespace ctl {
         /// retrieve and modify the internal size of the buffer containing the string
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        size_t size() const throw()
+        size_t size() const NOEXCEPT
         {
             // if bstr is nullptr, will return zero
             return ::SysStringLen(bstr);
@@ -504,7 +497,7 @@ namespace ctl {
         /// explicit BSTR access methods
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void reset() throw()
+        void reset() NOEXCEPT
         {
             ::SysFreeString(bstr);
             bstr = nullptr;
@@ -519,21 +512,21 @@ namespace ctl {
             ctComBstr temp(_bstr);
             this->swap(temp);
         }
-        BSTR get() throw()
+        BSTR get() NOEXCEPT
         {
             return bstr;
         }
-        const BSTR get() const throw()
+        const BSTR get() const NOEXCEPT
         {
             return bstr;
         }
-        BSTR* get_addr_of() throw()
+        BSTR* get_addr_of() NOEXCEPT
         {
             ::SysFreeString(bstr);
             bstr = nullptr;
             return &bstr;
         }
-        LPCWSTR c_str() const throw()
+        LPCWSTR c_str() const NOEXCEPT
         {
             return static_cast<LPCWSTR>(bstr);
         }
@@ -545,7 +538,7 @@ namespace ctl {
         /// A no-fail swap() operator to safely swap the internal values of 2 objects
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void swap(_Inout_ ctComBstr& _in) throw()
+        void swap(_Inout_ ctComBstr& _in) NOEXCEPT
         {
             using std::swap;
             swap(bstr, _in.bstr);
@@ -564,7 +557,7 @@ namespace ctl {
     /// swap(bstr1, bstr2);
     ///
     ////////////////////////////////////////////////////////////////////////////////
-    inline void swap(_Inout_ ctComBstr& _lhs, _Inout_ ctComBstr& _rhs) throw()
+    inline void swap(_Inout_ ctComBstr& _lhs, _Inout_ ctComBstr& _rhs) NOEXCEPT
     {
         _lhs.swap(_rhs);
     }
@@ -701,7 +694,7 @@ namespace ctl {
         ///  input type, streamlining coding requirements from the caller.
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComVariant() throw()
+        ctComVariant() NOEXCEPT
         {
             ::VariantInit(&variant);
         }
@@ -713,7 +706,7 @@ namespace ctl {
                 throw ctException(hr, L"VariantCopy", L"ctComVariant::ctComVariant", false);
             }
         }
-        ~ctComVariant() throw()
+        ~ctComVariant() NOEXCEPT
         {
             ::VariantClear(&variant);
         }
@@ -741,13 +734,6 @@ namespace ctl {
             return *this;
         }
 
-        // **************************************************************************************************
-        // **************************************************************************************************
-        //   only including move c'ors and operators for STL 10 and higher
-        //   - blocking STL 7 directly - anything prior is not supported
-        // **************************************************************************************************
-        // **************************************************************************************************
-#ifndef _STL70_
         ////////////////////////////////////////////////////////////////////////////////
         ///
         /// move c'tor and move assignment
@@ -766,7 +752,6 @@ namespace ctl {
             this->swap(temp);
             return *this;
         }
-#endif
 
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -775,7 +760,7 @@ namespace ctl {
         /// explicit VARIANT access methods
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void reset() throw()
+        void reset() NOEXCEPT
         {
             ::VariantClear(&variant);
             // reinitialize in case someone wants to immediately reuse
@@ -786,19 +771,19 @@ namespace ctl {
             ctComVariant temp(_vt);
             this->swap(temp);
         }
-        VARIANT* operator->() throw()
+        VARIANT* operator->() NOEXCEPT
         {
             return (&variant);
         }
-        const VARIANT* operator->() const throw()
+        const VARIANT* operator->() const NOEXCEPT
         {
             return (&variant);
         }
-        VARIANT* get() throw()
+        VARIANT* get() NOEXCEPT
         {
             return (&variant);
         }
-        const VARIANT* get() const throw()
+        const VARIANT* get() const NOEXCEPT
         {
             return (&variant);
         }
@@ -810,21 +795,21 @@ namespace ctl {
         /// all are const no-throw
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void set_empty() throw()
+        void set_empty() NOEXCEPT
         {
             this->reset();
             variant.vt = VT_EMPTY;
         }
-        void set_null() throw()
+        void set_null() NOEXCEPT
         {
             this->reset();
             variant.vt = VT_NULL;
         }
-        bool is_empty() const throw()
+        bool is_empty() const NOEXCEPT
         {
             return (variant.vt == VT_EMPTY);
         }
-        bool is_null() const throw()
+        bool is_null() const NOEXCEPT
         {
             return (variant.vt == VT_NULL);
         }
@@ -836,7 +821,7 @@ namespace ctl {
         /// A no-fail swap() operator to safely swap the internal values of 2 objects
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        void swap(_Inout_ ctComVariant& _in) throw()
+        void swap(_Inout_ ctComVariant& _in) NOEXCEPT
         {
             using std::swap;
             swap(variant, _in.variant);
@@ -847,14 +832,16 @@ namespace ctl {
         /// comparison operators
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        bool operator ==(_In_ const ctComVariant& _in) const throw()
+        bool operator ==(_In_ const ctComVariant& _in) const NOEXCEPT
         {
             if (variant.vt == VT_NULL) {
                 return (_in.variant.vt == VT_NULL);
             }
+
             if (variant.vt == VT_EMPTY) {
                 return (_in.variant.vt == VT_EMPTY);
             }
+            
             if (variant.vt == VT_BSTR) {
                 if (_in.variant.vt == VT_BSTR) {
                     return (0 == _wcsicmp(variant.bstrVal, _in.variant.bstrVal));
@@ -862,6 +849,7 @@ namespace ctl {
                     return false;
                 }
             }
+            
             if (variant.vt == VT_DATE) {
                 if (_in.variant.vt == VT_DATE) {
                     return (variant.date == _in.variant.date);
@@ -877,8 +865,7 @@ namespace ctl {
             //
             if ((variant.vt == VT_R4) || (_in.variant.vt == VT_R4) ||
                  (variant.vt == VT_R8) || (_in.variant.vt == VT_R8)) {
-                assert(FALSE & !"Not making equality comparisons on floating-point numbers");
-                return false;
+                ctAlwaysFatalCondition(L"Not making equality comparisons on floating-point numbers");
             }
             //
             // Comparing integer types - not tightly enforcing type by default
@@ -956,13 +943,14 @@ namespace ctl {
             if (variant.vt == VT_BOOL) {
                 return (variant.boolVal) ? (rhs != 0) : (rhs == 0);
             }
+
             if (_in.variant.vt == VT_BOOL) {
                 return (_in.variant.boolVal) ? (lhs != 0) : (lhs == 0);
             }
             return (lhs == rhs);
         }
 
-        bool operator !=(_In_ const ctComVariant& _in) const throw()
+        bool operator !=(_In_ const ctComVariant& _in) const NOEXCEPT
         {
             return !(*this == _in);
         }
@@ -1174,6 +1162,21 @@ namespace ctl {
             return *this;
         }
 
+
+        ////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// T retrieve<T>()
+        ///
+        /// inlined accessor to the internal value of the VARIANT
+        /// - offers simpler usage model than the below [out] ptr
+        ///
+        ////////////////////////////////////////////////////////////////////////////////
+        template <typename T>
+        T retrieve()
+        {
+            T t;
+            return this->retrieve(&t);
+        }
         ////////////////////////////////////////////////////////////////////////////////
         ///
         /// T& retrieve(T*)
@@ -1585,7 +1588,11 @@ namespace ctl {
         std::vector<std::wstring>& retrieve(_Inout_ std::vector<std::wstring>* _data) const
         {
             if (variant.vt != (VT_BSTR | VT_ARRAY)) {
-                throw ctException(variant.vt, L"Mismatching VARTYPE for std::vector<std::wstring>", L"ctComVariant::retrieve(std::vector<std::wstring>)", false);
+                throw ctException(
+                    variant.vt, 
+                    L"Mismatching VARTYPE for std::vector<std::wstring>", 
+                    L"ctComVariant::retrieve(std::vector<std::wstring>)", 
+                    false);
             }
 
             BSTR *stringArray;
@@ -1611,7 +1618,11 @@ namespace ctl {
         std::vector<unsigned long>& retrieve(__out std::vector<unsigned long> * _data) const
         {
             if (variant.vt != (VT_UI4 | VT_ARRAY)) {
-                throw ctException(variant.vt, L"Mismatching VARTYPE for std::vector<unsigned long>", L"ctl::ctComVariant::retrieve(std::vector<unsigned long>)", false);
+                throw ctException(
+                    variant.vt, 
+                    L"Mismatching VARTYPE for std::vector<unsigned long>", 
+                    L"ctl::ctComVariant::retrieve(std::vector<unsigned long>)", 
+                    false);
             }
 
             unsigned long *intArray;
@@ -1653,7 +1664,11 @@ namespace ctl {
         std::vector<ctComPtr<T>>& retrieve(_Inout_ std::vector<ctComPtr<T>>* _data) const
         {
             if (variant.vt != (VT_UNKNOWN | VT_ARRAY)) {
-                throw ctException(variant.vt, L"Mismatching VARTYPE for std::vector<ctComPtr<T>>", L"ctComVariant::retrieve(std::vector<ctComPtr<T>>)", false);
+                throw ctException(
+                    variant.vt, 
+                    L"Mismatching VARTYPE for std::vector<ctComPtr<T>>", 
+                    L"ctComVariant::retrieve(std::vector<ctComPtr<T>>)", 
+                    false);
             }
 
             IUnknown** iUnknownArray;
@@ -1686,71 +1701,72 @@ namespace ctl {
     private:
         VARIANT variant;
 
-        void assign_impl(bool _value) throw()
+        void assign_impl(bool _value) NOEXCEPT
         {
             variant.boolVal = (_value) ? VARIANT_TRUE : VARIANT_FALSE;
             variant.vt = VT_BOOL;
         }
-        void assign_impl(signed char _value) throw()
+        void assign_impl(signed char _value) NOEXCEPT
         {
             variant.cVal = _value;
             variant.vt = VT_I1;
         }
-        void assign_impl(unsigned char _value) throw()
+        void assign_impl(unsigned char _value) NOEXCEPT
         {
             variant.bVal = _value; // BYTE == unsigned char
             variant.vt = VT_UI1;
         }
-        void assign_impl(signed short _value) throw()
+        void assign_impl(signed short _value) NOEXCEPT
         {
             variant.iVal = _value;
             variant.vt = VT_I2;
         }
-        void assign_impl(unsigned short _value) throw()
+        void assign_impl(unsigned short _value) NOEXCEPT
         {
             variant.uiVal = _value;
             variant.vt = VT_UI2;
         }
-        void assign_impl(signed long _value) throw()
+        void assign_impl(signed long _value) NOEXCEPT
         {
             variant.lVal = _value;
             variant.vt = VT_I4;
         }
-        void assign_impl(unsigned long _value) throw()
+        void assign_impl(unsigned long _value) NOEXCEPT
         {
             variant.ulVal = _value;
             variant.vt = VT_UI4;
         }
-        void assign_impl(signed int _value) throw()
+        void assign_impl(signed int _value) NOEXCEPT
         {
             variant.intVal = _value;
             variant.vt = VT_INT;
         }
-        void assign_impl(unsigned int _value) throw()
+        void assign_impl(unsigned int _value) NOEXCEPT
         {
             variant.uintVal = _value;
             variant.vt = VT_UINT;
         }
-        void assign_impl(signed long long _value) throw()
+        void assign_impl(signed long long _value) NOEXCEPT
         {
             variant.llVal = _value;
             variant.vt = VT_I8;
         }
-        void assign_impl(unsigned long long _value) throw()
+        void assign_impl(unsigned long long _value) NOEXCEPT
         {
             variant.ullVal = _value;
             variant.vt = VT_UI8;
         }
-        void assign_impl(float _value) throw()
+        void assign_impl(float _value) NOEXCEPT
         {
             variant.fltVal = _value;
             variant.vt = VT_R4;
         }
-        void assign_impl(double _value) throw()
+        void assign_impl(double _value) NOEXCEPT
         {
             variant.dblVal = _value;
             variant.vt = VT_R8;
         }
+
         void assign_impl(_In_opt_ LPCWSTR _data)
         {
             BSTR temp = nullptr;
@@ -1763,6 +1779,7 @@ namespace ctl {
             variant.bstrVal = temp;
             variant.vt = VT_BSTR;
         }
+
         void assign_impl(SYSTEMTIME _data)
         {
             DOUBLE time;
@@ -1772,6 +1789,7 @@ namespace ctl {
             variant.date = time;
             variant.vt = VT_DATE;
         }
+
         void assign_impl(_In_ const std::vector<std::wstring>& _data)
         {
             SAFEARRAY* temp_safe_array = ::SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(_data.size()));
@@ -1885,12 +1903,13 @@ namespace ctl {
         }
 
         template <typename T>
-        void assign_impl(ctComPtr<T>& _value) throw()
+        void assign_impl(ctComPtr<T>& _value) NOEXCEPT
         {
             variant.punkVal = _value.get_IUnknown();
             variant.punkVal->AddRef();
             variant.vt = VT_UNKNOWN;
         }
+
         template <typename T>
         void assign_impl(std::vector<ctComPtr<T>>& _data)
         {
@@ -1945,7 +1964,7 @@ namespace ctl {
     /// swap(var1, var2);
     ///
     ////////////////////////////////////////////////////////////////////////////////
-    inline void swap(_Inout_ ctComVariant& _lhs, _Inout_ ctComVariant& _rhs) throw()
+    inline void swap(_Inout_ ctComVariant& _lhs, _Inout_ ctComVariant& _rhs) NOEXCEPT
     {
         _lhs.swap(_rhs);
     }
@@ -1974,5 +1993,3 @@ namespace ctl {
     } // namespace ctString::_detail
 
 } // namespace ctl
-
-#endif

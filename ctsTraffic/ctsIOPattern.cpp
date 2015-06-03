@@ -13,17 +13,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsIOPattern.h"
-// additional cpp headers
+
+// cpp headers
 #include <vector>
 #include <iterator>
-// additional ctl headers
+
+// ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctLocks.hpp>
 #include <ctTimer.hpp>
-// additional local headers
+
+// project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsIOBuffers.hpp"
+
 
 namespace ctsTraffic {
 

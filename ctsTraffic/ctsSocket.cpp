@@ -11,13 +11,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-/// parent header
+// parent header
 #include "ctsSocket.h"
 
-/// cpp headers
+// cpp headers
 #include <exception>
 
-/// ctl headers
+// ctl headers
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>

@@ -22,143 +22,138 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include "ctWmiErrorInfo.hpp"
 #include "ctException.hpp"
+#include "ctVersionConversion.hpp"
 
 
 namespace ctl {
 
-class ctWmiException : public ctException
-{
-public:
-    ///
-    /// constructors
-    ///
-    ctWmiException() throw() : ctException(), className(NULL), errorInfo()
+    class ctWmiException : public ctException
     {
-    }
-
-    explicit ctWmiException(HRESULT _ulCode)
-    : ctException(_ulCode),
-      className(NULL),
-      errorInfo()
-    {
-    }
-    explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject)
-    : ctException(_ulCode),
-      className(NULL),
-      errorInfo()
-    {
-        get_className(_classObject);
-    }
-
-    explicit ctWmiException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy  = true) throw()
-    : ctException(_wszMessage, _bMessageCopy),
-      className(NULL),
-      errorInfo()
-    {
-    }
-    explicit ctWmiException(_In_ LPCWSTR _wszMessage, _In_ const IWbemClassObject* _classObject, bool _bMessageCopy  = true) throw()
-    : ctException(_wszMessage, _bMessageCopy),
-      className(NULL),
-      errorInfo()
-    {
-        get_className(_classObject);
-    }
-
-    explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy  = true) throw()
-    : ctException(_ulCode, _wszMessage, _bMessageCopy),
-      className(NULL),
-      errorInfo()
-    {
-    }
-    explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, bool _bMessageCopy  = true) throw()
-    : ctException(_ulCode, _wszMessage, _bMessageCopy),
-      className(NULL),
-      errorInfo()
-    {
-        get_className(_classObject);
-    }
-
-    explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy  = true) throw()
-    : ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy),
-      className(NULL),
-      errorInfo()
-    {
-    }
-    explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy  = true) throw()
-    : ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy),
-      className(NULL),
-      errorInfo()
-    {
-        get_className(_classObject);
-    }
-    ///
-    /// Copy c'tor
-    ///
-    ctWmiException(_In_ const ctWmiException& e) throw()
-    : ctException(e),
-      className(NULL),
-      errorInfo(e.errorInfo)
-    {
-        // must do a deep copy, not just copy the ptr
-        // if this fails, we'll just have NULL instead of a class name
-        // - not failing this just because we can't get extra info
-        if (e.className != NULL) {
-            className = ::SysAllocString(e.className);
-        }
-    }
-
-    ///
-    /// destructor
-    ///
-    virtual ~ctWmiException() throw()
-    {
-        // SysFreeString handles NULL
-        ::SysFreeString(className);
-    }
-
-    // public accessors
-    virtual const wchar_t* class_w() const throw()
-    {
-        return (className == NULL) ? L"" : className;
-    }
-
-    virtual ctWmiErrorInfo error_info() const throw()
-    {
-        // copy c'tor of ctWmiErrorInfo is no-throw
-        // - so is safe to return a copy here
-        return errorInfo;
-    }
-
-private:
-    // using a raw BSTR to ensure no method will throw
-    BSTR className;
-    ctWmiErrorInfo errorInfo;
-
-    void get_className(_In_ const IWbemClassObject* _classObject) throw()
-    {
-        //
-        // protect against a null IWbemClassObject pointer
-        //
-        if(_classObject != NULL)
+    public:
+        ///
+        /// constructors
+        ///
+        ctWmiException() NOEXCEPT : ctException(), className(nullptr), errorInfo()
         {
-            assert(NULL == className);
-        
-            VARIANT variant;
-            ::VariantInit(&variant);
-            // the method should allow to be called from const() methods
-            // - forced to const-cast to make this const-correct
-            HRESULT hr = const_cast<IWbemClassObject*>(_classObject)->Get(
-                L"__CLASS", 0, &variant, 0, 0
-                );
-            if (SUCCEEDED(hr)) {
-                // copy the BSTR from the VARIANT
-                // - do NOT free the VARIANT
-                this->className = variant.bstrVal;
+        }
+
+        explicit ctWmiException(HRESULT _ulCode) : 
+            ctException(_ulCode),
+            className(nullptr),
+            errorInfo()
+        {
+        }
+        explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject) : 
+            ctException(_ulCode),
+            className(nullptr),
+            errorInfo()
+        {
+            get_className(_classObject);
+        }
+
+        explicit ctWmiException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT : 
+            ctException(_wszMessage, _bMessageCopy),
+            className(nullptr),
+            errorInfo()
+        {
+        }
+        explicit ctWmiException(_In_ LPCWSTR _wszMessage, _In_ const IWbemClassObject* _classObject, bool _bMessageCopy = true) NOEXCEPT : 
+            ctException(_wszMessage, _bMessageCopy),
+            className(nullptr),
+            errorInfo()
+        {
+            get_className(_classObject);
+        }
+
+        explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT : 
+            ctException(_ulCode, _wszMessage, _bMessageCopy),
+            className(nullptr),
+            errorInfo()
+        {
+        }
+        explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT : 
+            ctException(_ulCode, _wszMessage, _bMessageCopy),
+            className(nullptr),
+            errorInfo()
+        {
+            get_className(_classObject);
+        }
+
+        explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT : 
+            ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy),
+            className(nullptr),
+            errorInfo()
+        {
+        }
+        explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT : 
+            ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy),
+            className(nullptr),
+            errorInfo()
+        {
+            get_className(_classObject);
+        }
+        ///
+        /// Copy c'tor
+        ///
+        ctWmiException(_In_ const ctWmiException& e) NOEXCEPT : 
+            ctException(e),
+            className(nullptr),
+            errorInfo(e.errorInfo)
+        {
+            // must do a deep copy, not just copy the ptr
+            // if this fails, we'll just have nullptr instead of a class name
+            // - not failing this just because we can't get extra info
+            if (e.className != nullptr) {
+                className = ::SysAllocString(e.className);
             }
         }
-    }
-};
+
+        ///
+        /// destructor
+        ///
+        virtual ~ctWmiException() NOEXCEPT
+        {
+            // SysFreeString handles NULL
+            ::SysFreeString(className);
+        }
+
+        // public accessors
+        virtual const wchar_t* class_w() const NOEXCEPT
+        {
+            return (className == nullptr) ? L"" : className;
+        }
+
+        virtual ctWmiErrorInfo error_info() const NOEXCEPT
+        {
+            // copy c'tor of ctWmiErrorInfo is no-throw
+            // - so is safe to return a copy here
+            return errorInfo;
+        }
+
+    private:
+        // using a raw BSTR to ensure no method will throw
+        BSTR className;
+        ctWmiErrorInfo errorInfo;
+
+        void get_className(_In_ const IWbemClassObject* _classObject) NOEXCEPT
+        {
+            //
+            // protect against a null IWbemClassObject pointer
+            //
+            if (_classObject != nullptr) {
+                VARIANT variant;
+                ::VariantInit(&variant);
+                // the method should allow to be called from const() methods
+                // - forced to const-cast to make this const-correct
+                HRESULT hr = const_cast<IWbemClassObject*>(_classObject)->Get(
+                    L"__CLASS", 0, &variant, 0, 0);
+                if (SUCCEEDED(hr)) {
+                    // copy the BSTR from the VARIANT
+                    // - do NOT free the VARIANT
+                    this->className = variant.bstrVal;
+                }
+            }
+        }
+    };
 
 } // namespace
-
-#endif

@@ -13,16 +13,24 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsSocketBroker.h"
-// additional c++ headers
+
+// cpp headers
 #include <exception>
 #include <functional>
 #include <algorithm>
 #include <memory>
-// additional ctl headers
+
+// os headers
+#include <Windows.h>
+
+// ctl headers
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
-// additional project headers
+#include <ctThreadPoolTimer.hpp>
+#include <ctScopeGuard.hpp>
+
+// project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsSocketState.h"

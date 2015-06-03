@@ -84,13 +84,12 @@ namespace ctsTraffic {
         {
             NoOptionSet = 0x0000,
             LOOPBACK_FAST_PATH = 0x0001,
-            PHONE_SUBAPP_DATA = 0x0002,
-            KEEPALIVE = 0x0004,
-            NON_BLOCKING_IO = 0x0008,
-            HANDLE_INLINE_IOCP = 0x0010,
-            MAX_RECV_BUF = 0x0020
-            // val8 = 0x0040
-            // val9 = 0x0080
+            KEEPALIVE = 0x0002,
+            NON_BLOCKING_IO = 0x0004,
+            HANDLE_INLINE_IOCP = 0x0008,
+            MAX_RECV_BUF = 0x0010,
+            REUSE_UNICAST_PORT = 0x0020
+            // next enum  = 0x0040
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

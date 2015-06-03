@@ -26,6 +26,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctWmiService.hpp"
 #include "ctWmiInstance.hpp"
 #include "ctWmiException.hpp"
+#include "ctVersionConversion.hpp"
 
 
 namespace ctl
@@ -64,22 +65,22 @@ public:
         /// - c'tor can take a reference to the parent's WMI Enum interface (to traverse)
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        iterator(_In_ const ctWmiService& _services) throw()
-        : index(END_ITERATOR_INDEX),
-          wbemServices(_services),
-          wbemEnumerator(), 
-          ctInstance()
+        iterator(_In_ const ctWmiService& _services) NOEXCEPT : 
+            index(END_ITERATOR_INDEX),
+            wbemServices(_services),
+            wbemEnumerator(), 
+            ctInstance()
         {
         }
-        iterator(_In_ const ctWmiService& _services, _In_ const ctComPtr<IEnumWbemClassObject>& _wbemEnumerator)
-        : index(0), 
-          wbemServices(_services),
-          wbemEnumerator(_wbemEnumerator), 
-          ctInstance()
+        iterator(_In_ const ctWmiService& _services, _In_ const ctComPtr<IEnumWbemClassObject>& _wbemEnumerator) : 
+            index(0), 
+            wbemServices(_services),
+            wbemEnumerator(_wbemEnumerator), 
+            ctInstance()
         {
             this->increment();
         }
-        ~iterator() throw()
+        ~iterator() NOEXCEPT
         {
         }
 
@@ -90,21 +91,22 @@ public:
         /// Note that both are no-fail/no-throw operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        iterator(_In_ const iterator& _i) throw()
-        : index(_i.index),
-          wbemServices(_i.wbemServices),
-          wbemEnumerator(_i.wbemEnumerator),
-          ctInstance(_i.ctInstance)
+        iterator(_In_ const iterator& _i) NOEXCEPT : 
+            index(_i.index),
+            wbemServices(_i.wbemServices),
+            wbemEnumerator(_i.wbemEnumerator),
+            ctInstance(_i.ctInstance)
         {
         }
-        iterator& operator =(_In_ const iterator& _i) throw()
+
+        iterator& operator =(_In_ const iterator& _i) NOEXCEPT
         {
             iterator copy(_i);
             this->swap(copy);
             return *this;
         }
 
-        void swap(_Inout_ iterator& _i) throw()
+        void swap(_Inout_ iterator& _i) NOEXCEPT
         {
             using std::swap;
             swap(this->index, _i.index);
@@ -113,21 +115,22 @@ public:
             swap(this->ctInstance, _i.ctInstance);
         }
 
-        unsigned long location() const throw()
+        unsigned long location() const NOEXCEPT
         {
             return this->index;
         }
+        
         ////////////////////////////////////////////////////////////////////////////////
         ///
         /// accessors:
         /// - dereference operators to access the internal WMI class object
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctWmiInstance& operator*() throw()
+        ctWmiInstance& operator*() NOEXCEPT
         {
             return *this->ctInstance;
         }
-        ctWmiInstance* operator->() throw()
+        ctWmiInstance* operator->() NOEXCEPT
         {
             return this->ctInstance.get();
         }
@@ -141,8 +144,8 @@ public:
         /// - throwing a ctWmiException object capturing the WMI failures
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        bool operator==(_In_ const iterator&) const throw();
-        bool operator!=(_In_ const iterator&) const throw();
+        bool operator==(_In_ const iterator&) const NOEXCEPT;
+        bool operator!=(_In_ const iterator&) const NOEXCEPT;
 
         iterator& operator++(); // preincrement
         iterator  operator++(_In_ int); // postincrement
@@ -181,8 +184,9 @@ public:
     /// Default d'tor, copy c'tor, and copy assignment operators
     //
     ////////////////////////////////////////////////////////////////////////////////
-    ctWmiEnumerate(_In_ const ctWmiService& _wbemServices) throw()
-    : wbemServices(_wbemServices), wbemEnumerator()
+    ctWmiEnumerate(_In_ const ctWmiService& _wbemServices) NOEXCEPT :
+        wbemServices(_wbemServices),
+        wbemEnumerator()
     {
     }
 
@@ -208,8 +212,7 @@ public:
             query.get(),
             WBEM_FLAG_BIDIRECTIONAL, 
             NULL,
-            this->wbemEnumerator.get_addr_of()
-            );
+            this->wbemEnumerator.get_addr_of());
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::ExecQuery", L"ctWmiEnumerate::query", false);
         }
@@ -226,8 +229,7 @@ public:
             query.get(),
             WBEM_FLAG_BIDIRECTIONAL, 
             const_cast<IWbemContext*>(_context.get()),
-            this->wbemEnumerator.get_addr_of()
-            );
+            this->wbemEnumerator.get_addr_of());
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::ExecQuery", L"ctWmiEnumerate::query", false);
         }
@@ -251,31 +253,35 @@ public:
         if (NULL == this->wbemEnumerator.get()) {
             return end();
         }
+
         HRESULT hr = this->wbemEnumerator->Reset();
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IEnumWbemClassObject::Reset", L"ctWmiEnumerate::begin", false);
         }
+        
         return iterator(this->wbemServices, this->wbemEnumerator);
-    };
-    iterator end() const throw()
+    }
+    iterator end() const NOEXCEPT
     {
         return iterator(this->wbemServices);
-    };
+    }
     const iterator cbegin() const
     {
         if (NULL == this->wbemEnumerator.get()) {
             return cend();
         }
+
         HRESULT hr = this->wbemEnumerator->Reset();
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IEnumWbemClassObject::Reset", L"ctWmiEnumerate::cbegin", false);
         }
+
         return iterator(this->wbemServices, this->wbemEnumerator);
-    };
-    const iterator cend() const throw()
+    }
+    const iterator cend() const NOEXCEPT
     {
         return iterator(this->wbemServices);
-    };
+    }
 
 private:
     ctWmiService wbemServices;
@@ -293,7 +299,7 @@ private:
 ///
 ////////////////////////////////////////////////////////////////////////////////
 inline
-bool ctWmiEnumerate::iterator::operator==(_In_ const iterator& _iter) const throw()
+bool ctWmiEnumerate::iterator::operator==(_In_ const iterator& _iter) const NOEXCEPT
 {
     if (this->index != this->END_ITERATOR_INDEX) {
         return ( (this->index == _iter.index) && 
@@ -306,7 +312,7 @@ bool ctWmiEnumerate::iterator::operator==(_In_ const iterator& _iter) const thro
     }
 }
 inline
-bool ctWmiEnumerate::iterator::operator!=(_In_ const iterator& _iter) const throw()
+bool ctWmiEnumerate::iterator::operator!=(_In_ const iterator& _iter) const NOEXCEPT
 {
     return !(*this == _iter);
 }
@@ -350,11 +356,11 @@ void ctWmiEnumerate::iterator::increment()
         WBEM_INFINITE,
         1,
         wbemTarget.get_addr_of(),
-        &uReturn
-        );
+        &uReturn);
     if (FAILED(hr)) {
         throw ctWmiException(hr, L"IEnumWbemClassObject::Next", L"ctWmiEnumerate::iterator::increment", false);
     }
+
     if (0 == uReturn) {
         // at the end...
         this->index = END_ITERATOR_INDEX;
@@ -366,5 +372,3 @@ void ctWmiEnumerate::iterator::increment()
 }
 
 } // namespace ctl
-
-#endif

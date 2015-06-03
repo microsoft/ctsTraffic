@@ -23,6 +23,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // local headers
 #include "ctComInitialize.hpp"
 #include "ctWmiException.hpp"
+#include "ctWmiService.hpp"
+#include "ctVersionConversion.hpp"
 
 namespace ctl
 {
@@ -50,36 +52,37 @@ public:
     class method_iterator;
 
 
-    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _wbemClass)
-    : wbemServices(_wbemServices), wbemClass(_wbemClass)
+    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _wbemClass) :
+        wbemServices(_wbemServices), 
+        wbemClass(_wbemClass)
     {
     }
 
-    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className)
-    : wbemServices(_wbemServices), wbemClass()
+    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) : 
+        wbemServices(_wbemServices), 
+        wbemClass()
     {
         HRESULT hr = this->wbemServices->GetObject(
             ctComBstr(_className).get(),
             0,
             NULL,
             this->wbemClass.get_addr_of(),
-            NULL
-            );
+            NULL);
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiClassObject::ctWmiClassObject", false);
         }
     }
 
-    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ ctComBstr& _className)
-    : wbemServices(_wbemServices), wbemClass()
+    ctWmiClassObject(_In_ const ctWmiService& _wbemServices, _In_ const ctComBstr& _className) : 
+        wbemServices(_wbemServices), 
+        wbemClass()
     {
-        HRESULT hr = this->wbemServices->GetObject(
+        HRESULT hr = this->wbemServices->GetObjectW(
             _className.get(),
             0,
             NULL,
             this->wbemClass.get_addr_of(),
-            NULL
-            );
+            NULL);
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiClassObject::ctWmiClassObject", false);
         }
@@ -92,7 +95,7 @@ public:
     /// - returns the IWbemClassObject holding the class instance
     ///
     ////////////////////////////////////////////////////////////////////////////////
-    ctComPtr<IWbemClassObject> get_class_object() const throw()
+    ctComPtr<IWbemClassObject> get_class_object() const NOEXCEPT
     {
         return this->wbemClass;
     }
@@ -116,7 +119,7 @@ public:
     {
         return property_iterator(this->wbemClass, _fNonSystemPropertiesOnly);
     }
-    property_iterator property_end() throw()
+    property_iterator property_end() NOEXCEPT
     {
         return property_iterator();
     }
@@ -128,7 +131,7 @@ public:
     /// {
     ///     return method_iterator(this->wbemClass, _fLocalMethodsOnly);
     /// }
-    /// method_iterator method_end() throw()
+    /// method_iterator method_end() NOEXCEPT
     /// {
     ///     return method_iterator();
     /// }
@@ -161,18 +164,18 @@ public:
         /// - traversal requires the callers IWbemServices interface and class name
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        property_iterator() throw()
-        : wbemClassObj(), 
-          propName(),
-          propType(0),
-          dwIndex(END_ITERATOR_INDEX)
+        property_iterator() NOEXCEPT : 
+            wbemClassObj(), 
+            propName(),
+            propType(0),
+            dwIndex(END_ITERATOR_INDEX)
         {
         }
-        property_iterator(_In_ const ctComPtr<IWbemClassObject>& _classObj, _In_ bool _fNonSystemPropertiesOnly)
-        : dwIndex(0), 
-          wbemClassObj(_classObj), 
-          propName(),
-          propType(0)
+        property_iterator(_In_ const ctComPtr<IWbemClassObject>& _classObj, _In_ bool _fNonSystemPropertiesOnly) : 
+            dwIndex(0), 
+            wbemClassObj(_classObj), 
+            propName(),
+            propType(0)
         {
             HRESULT hr = wbemClassObj->BeginEnumeration((_fNonSystemPropertiesOnly) ? WBEM_FLAG_NONSYSTEM_ONLY : 0);
             if (FAILED(hr)) {
@@ -182,7 +185,7 @@ public:
             increment();
         }
 
-        ~property_iterator() throw()
+        ~property_iterator() NOEXCEPT
         {
         }
 
@@ -193,21 +196,21 @@ public:
         /// Note that both are no-fail/no-throw operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        property_iterator(_In_ const property_iterator& _i) throw()
-        : dwIndex(_i.dwIndex),
-          wbemClassObj(_i.wbemClassObj),
-          propName(_i.propName),
-          propType(_i.propType)
+        property_iterator(_In_ const property_iterator& _i) NOEXCEPT : 
+            dwIndex(_i.dwIndex),
+            wbemClassObj(_i.wbemClassObj),
+            propName(_i.propName),
+            propType(_i.propType)
         {
         }
-        property_iterator& operator =(_In_ const property_iterator& _i) throw()
+        property_iterator& operator =(_In_ const property_iterator& _i) NOEXCEPT
         {
             property_iterator copy(_i);
             this->swap(copy);
             return *this;
         }
 
-        void swap(_Inout_ property_iterator& _i) throw()
+        void swap(_Inout_ property_iterator& _i) NOEXCEPT
         {
             using std::swap;
             swap(this->dwIndex, _i.dwIndex);
@@ -268,7 +271,7 @@ public:
         /// - throwing a ctWmiException object capturing the WMI failures
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        bool operator==(_In_ const property_iterator& _iter) const throw()
+        bool operator==(_In_ const property_iterator& _iter) const NOEXCEPT
         {
             if (this->dwIndex != this->END_ITERATOR_INDEX) {
                 return ( (this->dwIndex == _iter.dwIndex) && 
@@ -277,7 +280,7 @@ public:
                 return ( this->dwIndex == _iter.dwIndex );
             }
         }
-        bool operator!=(_In_ const property_iterator& _iter) const throw()
+        bool operator!=(_In_ const property_iterator& _iter) const NOEXCEPT
         {
             return !(*this == _iter);
         }
@@ -335,9 +338,7 @@ public:
                 next_name.get_addr_of(),
                 next_value.get(),
                 &next_cimtype,
-                NULL
-                );
-
+                NULL);
             switch (hr) {
                 case WBEM_S_NO_ERROR: {
                     // update the instance members
@@ -357,12 +358,15 @@ public:
                 }
 
                 default:
-                    throw ctWmiException(hr, this->wbemClassObj.get(), L"IEnumWbemClassObject::Next", L"ctWmiClassObject::property_iterator::increment", false);
+                    throw ctWmiException(
+                        hr, 
+                        this->wbemClassObj.get(), 
+                        L"IEnumWbemClassObject::Next", 
+                        L"ctWmiClassObject::property_iterator::increment", 
+                        false);
             }
         }
     };
 };
 
 } // namespace ctl
-
-#endif

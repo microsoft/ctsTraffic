@@ -28,11 +28,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctWmiService.hpp"
 #include "ctWmiClassObject.hpp"
 #include "ctWmiException.hpp"
+#include "ctVersionConversion.hpp"
 
 
 namespace ctl {
 
-    class ctWmiInstance {
+    class ctWmiInstance
+    {
     public:
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -46,20 +48,20 @@ namespace ctl {
         /// Default d'tor, copy c'tor, and copy assignment operator
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices)
-        : wbemServices(_wbemServices),
-          instanceObject()
+        ctWmiInstance(_In_ const ctWmiService& _wbemServices) : 
+            wbemServices(_wbemServices),
+            instanceObject()
         {
         }
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className)
-        : wbemServices(_wbemServices),
-          instanceObject()
+        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) : 
+            wbemServices(_wbemServices),
+            instanceObject()
         {
             create_instance(_className);
         }
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _instance) throw()
-        : wbemServices(_wbemServices),
-          instanceObject(_instance)
+        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _instance) NOEXCEPT : 
+            wbemServices(_wbemServices),
+            instanceObject(_instance)
         {
         }
 
@@ -68,12 +70,12 @@ namespace ctl {
         /// comparison operators
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        bool operator ==(_In_ const ctWmiInstance& _obj) const throw()
+        bool operator ==(_In_ const ctWmiInstance& _obj) const NOEXCEPT
         {
             return ((this->wbemServices == _obj.wbemServices) &&
-                     (this->instanceObject == _obj.instanceObject));
+                    (this->instanceObject == _obj.instanceObject));
         }
-        bool operator !=(_In_ const ctWmiInstance& _obj) const throw()
+        bool operator !=(_In_ const ctWmiInstance& _obj) const NOEXCEPT
         {
             return !(*this == _obj);
         }
@@ -85,7 +87,7 @@ namespace ctl {
         /// - returns the IWbemClassObject holding the instantiated class instance
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr<IWbemClassObject> get_instance() const throw()
+        ctComPtr<IWbemClassObject> get_instance() const NOEXCEPT
         {
             return this->instanceObject;
         }
@@ -94,6 +96,7 @@ namespace ctl {
         {
             ctComVariant object_path_var;
             ctComBstr object_path_bstr;
+
             this->get(L"__RELPATH", &object_path_var);
             if (!object_path_var.is_empty() && !object_path_var.is_null()) {
                 object_path_var.retrieve(&object_path_bstr);
@@ -102,7 +105,7 @@ namespace ctl {
             return object_path_bstr;
         }
 
-        ctWmiService get_service() const throw()
+        ctWmiService get_service() const NOEXCEPT
         {
             return this->wbemServices;
         }
@@ -116,6 +119,7 @@ namespace ctl {
         {
             ctComVariant class_var;
             ctComBstr class_name;
+
             this->get(L"__CLASS", &class_var);
             if (!class_var.is_empty() && !class_var.is_null()) {
                 class_var.retrieve(&class_name);
@@ -131,9 +135,7 @@ namespace ctl {
         ////////////////////////////////////////////////////////////////////////////////
         ctWmiClassObject get_class_object() const
         {
-            ctWmiClassObject class_object(this->wbemServices, this->instanceObject);
-
-            return class_object;
+            return ctWmiClassObject(this->wbemServices, this->instanceObject);
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -149,18 +151,17 @@ namespace ctl {
         void write_instance(_In_opt_ const ctComPtr<IWbemContext>& _context, _In_ LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
             ctComPtr<IWbemCallResult> result;
-            assert(this->instanceObject.get() != NULL);
             // forced to const-cast to make this const-correct as COM does not have
             //   an expression for saying a method call is const
             HRESULT hr = this->wbemServices->PutInstance(
                 this->instanceObject.get(),
                 _wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
                 const_cast<IWbemContext*>(_context.get()),
-                result.get_addr_of()
-                );
+                result.get_addr_of());
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::PutInstance", L"ctWmiInstance::write_instance", false);
             }
+
             // wait for the call to complete
             HRESULT status;
             hr = result->GetCallStatus(WBEM_INFINITE, &status);
@@ -192,12 +193,12 @@ namespace ctl {
             HRESULT hr = this->wbemServices->DeleteInstance(
                 bstrObjectPath.get(),
                 WBEM_FLAG_RETURN_IMMEDIATELY,
-                NULL,
-                result.get_addr_of()
-                );
+                nullptr,
+                result.get_addr_of());
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::DeleteInstance", L"ctWmiInstance::delete_instance", false);
             }
+
             // wait for the call to complete
             HRESULT status;
             hr = result->GetCallStatus(WBEM_INFINITE, &status);
@@ -226,7 +227,7 @@ namespace ctl {
         ////////////////////////////////////////////////////////////////////////////////
         ctWmiInstance execute_method(_In_ LPCWSTR _method)
         {
-            return this->execute_method_private(_method, NULL);
+            return this->execute_method_private(_method, nullptr);
         }
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -250,8 +251,7 @@ namespace ctl {
             //
             ctComPtr<IWbemClassObject> inParamsDefinition;
             HRESULT hr = this->instanceObject->GetMethod(
-                _method, 0, inParamsDefinition.get_addr_of(), NULL
-                );
+                _method, 0, inParamsDefinition.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
             }
@@ -300,8 +300,7 @@ namespace ctl {
             //
             ctComPtr<IWbemClassObject> inParamsDefinition;
             HRESULT hr = this->instanceObject->GetMethod(
-                _method, 0, inParamsDefinition.get_addr_of(), NULL
-                );
+                _method, 0, inParamsDefinition.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
             }
@@ -352,8 +351,7 @@ namespace ctl {
             //
             ctComPtr<IWbemClassObject> inParamsDefinition;
             HRESULT hr = this->instanceObject->GetMethod(
-                _method, 0, inParamsDefinition.get_addr_of(), NULL
-                );
+                _method, 0, inParamsDefinition.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
             }
@@ -406,8 +404,7 @@ namespace ctl {
             //
             ctComPtr<IWbemClassObject> inParamsDefinition;
             HRESULT hr = this->instanceObject->GetMethod(
-                _method, 0, inParamsDefinition.get_addr_of(), NULL
-                );
+                _method, 0, inParamsDefinition.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
             }
@@ -462,8 +459,7 @@ namespace ctl {
             //
             ctComPtr<IWbemClassObject> inParamsDefinition;
             HRESULT hr = this->instanceObject->GetMethod(
-                _method, 0, inParamsDefinition.get_addr_of(), NULL
-                );
+                _method, 0, inParamsDefinition.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
             }
@@ -616,14 +612,14 @@ namespace ctl {
         {
             ctComBstr intermediaryStr;
             this->get(_propname, &intermediaryStr);
-            *_t = _wcstoui64(intermediaryStr.get(), NULL, 10);
+            *_t = _wcstoui64(intermediaryStr.get(), nullptr, 10);
         }
 
         void get(_In_ LPCWSTR _propname, _Out_ INT64* _t) const
         {
             ctComBstr intermediaryStr;
             this->get(_propname, &intermediaryStr);
-            *_t = _wcstoi64(intermediaryStr.get(), NULL, 10);
+            *_t = _wcstoi64(intermediaryStr.get(), nullptr, 10);
         }
 
         ///
@@ -659,8 +655,7 @@ namespace ctl {
         {
             // IWbemClassObject::Put should have declared the VARIANT member const
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, const_cast<VARIANT*>(_vtProp), 0
-                );
+                _propname, 0, const_cast<VARIANT*>(_vtProp), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -670,8 +665,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_BOOL>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -681,8 +675,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_UI1>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -692,8 +685,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_UI1>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -703,8 +695,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I2>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -714,8 +705,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I2>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -725,8 +715,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I4>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -736,8 +725,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I4>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -747,8 +735,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I4>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -758,8 +745,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_I4>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -769,8 +755,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_R4>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -780,8 +765,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_R8>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -791,8 +775,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_DATE>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -802,8 +785,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_BSTR>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -813,8 +795,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_BSTR>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -824,8 +805,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_BSTR | VT_ARRAY>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
             }
@@ -836,8 +816,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_UI4 | VT_ARRAY>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
             }
@@ -848,8 +827,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_UI1 | VT_ARRAY>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
             }
@@ -860,8 +838,7 @@ namespace ctl {
             ctComVariant local_variant;
             local_variant.assign<VT_UI2 | VT_ARRAY>(_vtProp);
             HRESULT hr = this->instanceObject->Put(
-                _propname, 0, local_variant.get(), 0
-                );
+                _propname, 0, local_variant.get(), 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
             }
@@ -891,8 +868,7 @@ namespace ctl {
         {
             // since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
             HRESULT hr = const_cast<IWbemClassObject*>(this->instanceObject.get())->Get(
-                _propname, 0, _variant, 0, 0
-                );
+                _propname, 0, _variant, 0, 0);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Get", L"ctWmiInstance::get", false);
             }
@@ -903,15 +879,14 @@ namespace ctl {
             ctComPtr<IWbemClassObject> classObject;
             // get the object from the WMI service
             HRESULT hr = this->wbemServices->GetObject(
-                classBstr.get(), 0, NULL, classObject.get_addr_of(), NULL
-                );
+                classBstr.get(), 0, nullptr, classObject.get_addr_of(), nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::GetObject", L"ctWmiInstance::ctWmiInstance", false);
             }
+
             // spawn an instance of this object
             hr = classObject->SpawnInstance(
-                0, this->instanceObject.get_addr_of()
-                );
+                0, this->instanceObject.get_addr_of());
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::ctWmiInstance", false);
             }
@@ -928,11 +903,10 @@ namespace ctl {
                 bstrObjectPath.get(),
                 ctComBstr(_method).get(),
                 WBEM_FLAG_RETURN_IMMEDIATELY,
-                NULL,
+                nullptr,
                 _inParams,
-                NULL,
-                result.get_addr_of()
-                );
+                nullptr,
+                result.get_addr_of());
             if (FAILED(hr)) {
                 throw ctWmiException(hr, L"IWbemServices::ExecMethod", L"ctWmiInstance::execute_method", false);
             }

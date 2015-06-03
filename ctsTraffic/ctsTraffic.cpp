@@ -139,5 +139,3 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     return static_cast<int>(error_count);
 }
-
-#pragma warning(default:4447)

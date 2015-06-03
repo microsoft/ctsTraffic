@@ -568,7 +568,7 @@ namespace ctl {
     {
         CHAR address[64];
         DWORD addressLength = 64;
-#pragma warning( disable : 4996) 
+#pragma warning( suppress : 4996) 
         if (0 == ::WSAAddressToStringA(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 CHAR* end = address + addressLength;

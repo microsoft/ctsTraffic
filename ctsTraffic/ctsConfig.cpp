@@ -28,14 +28,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctNetAdapterAddresses.hpp>
 #include <ctTimer.hpp>
 #include <ctRandom.hpp>
+#include <ctWmiInitialize.hpp>
 
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsLogger.hpp"
 #include "ctsIOPattern.h"
 #include "ctsPrintStatus.hpp"
 
-// local functors
+// project functors
 #include "ctsConnectEx.hpp"
 #include "ctsSimpleConnect.hpp"
 #include "ctsWSASocket.hpp"
@@ -168,6 +169,42 @@ namespace ctsTraffic {
             ctFatalCondition(
                 !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, NULL, NULL),
                 L"ctsConfig InitOnceExecuteOnce failed: %lu", ::GetLastError());
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// parses the configuration of the local system for options dependent on deployments
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static void check_system_settings() NOEXCEPT
+        {
+            // Windows 10+ exposes a new socket option: SO_REUSE_UNICASTPORT
+            // - this allows for much greater reuse of local ports, but also requires
+            //   the system having been deliberately configured to take advantege of it
+            // - looking for corresponding the WMI class property, which only exists in Win10+
+            try {
+                ctl::ctComInitialize init_com;
+                ctl::ctWmiService wmi_service(L"ROOT\\StandardCimv2");
+
+                ctl::ctWmiEnumerate tcpSettings(wmi_service);
+                tcpSettings.query(L"SELECT * FROM MSFT_NetTCPSetting");
+                for (const auto& instance : tcpSettings) {
+                    // ctl::ctWmiInstance& instance
+                    ctl::ctComVariant var_value;
+                    instance.get(L"AutoReusePortRangeNumberOfPorts", &var_value);
+                    if (!var_value.is_empty() && !var_value.is_null()) {
+                        if (var_value.retrieve<long>() != 0) {
+                            Settings->Options |= OptionType::REUSE_UNICAST_PORT;
+                        }
+                    }
+                }
+            }
+            catch (const exception& e) {
+                // will assume is not configured if any exception is thrown
+                // - could be the class doesn't exist (Win7)
+                //   or the property doesn't exit (Win8 and 8.1)
+                PrintExceptionOverride(e);
+            }
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -529,8 +566,6 @@ namespace ctsTraffic {
         ///
         /// -Protocol:tcp
         /// -Protocol:udp
-        /// -Protocol:raw
-        /// -Protocol:multicast
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
         static
@@ -561,7 +596,7 @@ namespace ctsTraffic {
         ///
         /// Parses for socket Options
         /// - allows for more than one option to be set
-        /// -Options:<keepalive,tcpfastpath,phonesubappdata> [-Options:<...>] [-Options:<...>]
+        /// -Options:<keepalive,tcpfastpath [-Options:<...>] [-Options:<...>]
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
         static
@@ -2089,6 +2124,13 @@ namespace ctsTraffic {
             ///
             set_error(args);
             set_logging(args);
+
+            ///
+            /// Next: check for static machine configuration
+            /// - note these are checking system settings, not user arguments
+            ///
+            check_system_settings();
+
             ///
             /// Next: establish the address and port # to be used
             ///
@@ -2114,6 +2156,7 @@ namespace ctsTraffic {
             /// Next: gather the protocol and Pattern to be used
             /// - set the threadpool value after identifying the pattern
             set_protocol(args);
+
             ///
             /// verify logging matches the protocol
             ///
@@ -2145,6 +2188,7 @@ namespace ctsTraffic {
             } else {
                 s_PrintStatusInformation = std::make_shared<ctsUdpStatusInformation>();
             }
+
             ///
             /// Next: capture other various settings which do not have explicit dependencies
             ///
@@ -2182,7 +2226,7 @@ namespace ctsTraffic {
             }
 
             ///
-            /// Set the default values as this setting is optional
+            /// Set the default buffer values as these settings are optional
             ///
             Settings->ShouldVerifyBuffers = true;
             Settings->UseSharedBuffer = false;
@@ -2201,6 +2245,7 @@ namespace ctsTraffic {
             if (ProtocolType::TCP == Settings->Protocol && Settings->ShouldVerifyBuffers && Settings->PrePostRecvs > 1) {
                 throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
             }
+
             ///
             /// finally set the functions to use once all other settings are established
             /// set_ioFunction changes global options for socket operation for instance WSA_FLAG_REGISTERED_IO flag
@@ -3089,20 +3134,44 @@ namespace ctsTraffic {
             /// this option is also not used if the user is binding to an explicit port #
             /// - since the port scalability rules no longer apply
             ///
-            if (ProtocolType::TCP == Settings->Protocol && !_local_address.isAddressAny() && _local_address.port() == 0) {
-                DWORD optval = 1; // BOOL
-                int optlen = static_cast<int>(sizeof optval);
+            /// these only are applicable for outgoing connections
+            ///
+            if (ProtocolType::TCP == Settings->Protocol && !IsListening()) {
+                if (Settings->Options & OptionType::REUSE_UNICAST_PORT) {
+                    // the admin configured the system to use this socket option
+                    // it is not compatible with SO_PORT_SCALABILITY
+                    DWORD optval = 1; // BOOL
+                    int optlen = static_cast<int>(sizeof optval);
+#ifndef SO_REUSE_UNICASTPORT
+#define SO_REUSE_UNICASTPORT (SO_PORT_SCALABILITY + 1)
+#endif
+                    auto error = ::setsockopt(
+                        _s,
+                        SOL_SOCKET,   // level
+                        SO_REUSE_UNICASTPORT, // optname
+                        reinterpret_cast<const char *>(&optval),
+                        optlen);
+                    if (error != 0) {
+                        int gle = ::WSAGetLastError();
+                        PrintErrorIfFailed(L"setsockopt(SO_REUSE_UNICASTPORT)", gle);
+                        return gle;
+                    }
 
-                if (0 != ::setsockopt(
-                    _s,
-                    SOL_SOCKET,   // level
-                    SO_PORT_SCALABILITY, // optname
-                    reinterpret_cast<const char *>(&optval),
-                    optlen)) {
-                    int gle = ::WSAGetLastError();
+                } else if (!_local_address.isAddressAny() && _local_address.port() == 0) {
+                    DWORD optval = 1; // BOOL
+                    int optlen = static_cast<int>(sizeof optval);
 
-                    PrintErrorIfFailed(L"setsockopt(SO_PORT_SCALABILITY)", gle);
-                    return gle;
+                    auto error = ::setsockopt(
+                        _s,
+                        SOL_SOCKET,   // level
+                        SO_PORT_SCALABILITY, // optname
+                        reinterpret_cast<const char *>(&optval),
+                        optlen);
+                    if (error != 0) {
+                        int gle = ::WSAGetLastError();
+                        PrintErrorIfFailed(L"setsockopt(SO_PORT_SCALABILITY)", gle);
+                        return gle;
+                    }
                 }
             }
 
@@ -3114,14 +3183,14 @@ namespace ctsTraffic {
                 int optval = s_CompartmentId;
                 int optlen = static_cast<int>(sizeof optval);
 
-                if (0 != ::setsockopt(
+                auto error = ::setsockopt(
                   _s,
                   SOL_SOCKET,   // level
                   SO_COMPARTMENT_ID, // optname
                   reinterpret_cast<const char *>(&optval),
-                  optlen)) {
+                  optlen);
+                if (error != 0) {
                     int gle = ::WSAGetLastError();
-
                     PrintErrorIfFailed(L"setsockopt(SO_COMPARTMENT_ID)", gle);
                     return gle;
                 }
@@ -3132,14 +3201,15 @@ namespace ctsTraffic {
                 DWORD out_value;
                 DWORD bytes_returned;
 
-                if (0 != ::WSAIoctl(
+                auto error = ::WSAIoctl(
                     _s,
                     SIO_LOOPBACK_FAST_PATH,
                     &in_value, static_cast<DWORD>(sizeof(in_value)),
                     &out_value, static_cast<DWORD>(sizeof(out_value)),
                     &bytes_returned,
                     NULL,
-                    NULL)) {
+                    NULL);
+                if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"WSAIoctl(SIO_LOOPBACK_FAST_PATH)", gle);
                     return gle;
@@ -3150,12 +3220,13 @@ namespace ctsTraffic {
                 int optval = 1;
                 int optlen = static_cast<int>(sizeof optval);
 
-                if (0 != ::setsockopt(
+                auto error = ::setsockopt(
                   _s,
                   SOL_SOCKET,   // level
                   SO_KEEPALIVE, // optname
                   reinterpret_cast<const char *>(&optval),
-                  optlen)) {
+                  optlen);
+                if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"setsockopt(SO_KEEPALIVE)", gle);
                     return gle;
@@ -3164,12 +3235,14 @@ namespace ctsTraffic {
 
             if (Settings->Options & OptionType::MAX_RECV_BUF) {
                 static const int recv_buff = 1048576;
-                if (0 != setsockopt(
+                
+                auto error = setsockopt(
                     _s,
                     SOL_SOCKET,
                     SO_RCVBUF,
                     reinterpret_cast<char *>(const_cast<int*>(&recv_buff)),
-                    static_cast<int>(sizeof(recv_buff)))) {
+                    static_cast<int>(sizeof(recv_buff)));
+                if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"setsockopt(SO_RCVBUF)", gle);
                     return gle;
@@ -3178,10 +3251,11 @@ namespace ctsTraffic {
 
             if (Settings->Options & OptionType::NON_BLOCKING_IO) {
                 u_long EnableNonBlocking = 1;
-                if (0 != ::ioctlsocket(
+                auto error = ::ioctlsocket(
                     _s,
                     FIONBIO,
-                    &EnableNonBlocking)) {
+                    &EnableNonBlocking);
+                if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"ioctlsocket(FIONBIO)", gle);
                     return gle;
@@ -3195,6 +3269,7 @@ namespace ctsTraffic {
                     return gle;
                 }
             }
+
             return NO_ERROR;
         }
 
@@ -3251,11 +3326,23 @@ namespace ctsTraffic {
             if (OptionType::NoOptionSet == Settings->Options) {
                 setting_string.append(L" None");
             } else {
+                if (Settings->Options & OptionType::LOOPBACK_FAST_PATH) {
+                    setting_string.append(L" TCPFastPath");
+                }
                 if (Settings->Options & OptionType::KEEPALIVE) {
                     setting_string.append(L" KeepAlive");
                 }
-                if (Settings->Options & OptionType::LOOPBACK_FAST_PATH) {
-                    setting_string.append(L" TCPFastPath");
+                if (Settings->Options & OptionType::NON_BLOCKING_IO) {
+                    setting_string.append(L" NonBlockingIO");
+                }
+                if (Settings->Options & OptionType::HANDLE_INLINE_IOCP) {
+                    setting_string.append(L" HandlingInlineIOCP");
+                }
+                if (Settings->Options & OptionType::MAX_RECV_BUF) {
+                    setting_string.append(L" SettingMaxRecvBuf");
+                }
+                if (Settings->Options & OptionType::REUSE_UNICAST_PORT) {
+                    setting_string.append(L" ReuseUnicastPort");
                 }
             }
             setting_string.append(L"\n");
