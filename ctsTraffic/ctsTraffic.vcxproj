@@ -267,6 +267,7 @@
     <ClInclude Include="ctsConfig.h" />
     <ClInclude Include="ctsIOBuffers.hpp" />
     <ClInclude Include="ctsIOPattern.h" />
+    <ClInclude Include="ctsIOPatternBufferPolicy.hpp" />
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp" />
     <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp" />
     <ClInclude Include="ctsIOPatternState.hpp" />

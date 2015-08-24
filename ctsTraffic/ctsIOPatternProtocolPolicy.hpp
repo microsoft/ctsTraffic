@@ -102,7 +102,7 @@ namespace ctsTraffic {
 
     typedef struct ctsIOPatternProtocolTcpClient_t ctsIOPatternProtocolTcpClient;
     typedef struct ctsIOPatternProtocolTcpServer_t ctsIOPatternProtocolTcpServer;
-    typedef struct ctsIOPatternProtocolUdp_t ctsIOPatternProtocolUdp;
+    typedef struct ctsIOPatternProtocolUdp_t       ctsIOPatternProtocolUdp;
 
     template <typename Protocol>
     class ctsIOPatternProtocolPolicy

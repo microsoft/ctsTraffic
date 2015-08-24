@@ -24,7 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    typedef struct ctsIOPatternRateLimitThrottle_t ctsIOPatternRateLimitThrottle;
+    typedef struct ctsIOPatternRateLimitThrottle_t     ctsIOPatternRateLimitThrottle;
     typedef struct ctsIOPatternRateLimitDontThrottle_t ctsIOPatternRateLimitDontThrottle;
 
     template <typename Protocol>
