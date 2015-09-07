@@ -223,7 +223,6 @@ namespace ctsTraffic {
 
                 ctsConfig::PrintDebug(
                     L"\t\tctsIOPatternMediaStreamClient recevieved **an unknown** seq number (%lld) (outside the final frame %lu)\n",
-                    ctsConfig::GetStatusTimeStamp(),
                     received_seq_number,
                     this->final_frame);
             } else {
@@ -264,7 +263,6 @@ namespace ctsTraffic {
 
                         ctsConfig::PrintDebug(
                             L"\t\tctsIOPatternMediaStreamClient received **a duplicate frame** for seq number (%lld)\n",
-                            ctsConfig::GetStatusTimeStamp(),
                             received_seq_number);
                     }
 
@@ -276,13 +274,11 @@ namespace ctsTraffic {
                     if (received_seq_number < this->head_entry->sequence_number) {
                         ctsConfig::PrintDebug(
                             L"\t\tctsIOPatternMediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
-                            ctsConfig::GetStatusTimeStamp(),
                             received_seq_number,
                             static_cast<long long>(this->head_entry->sequence_number));
                     } else {
                         ctsConfig::PrintDebug(
                             L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
-                            ctsConfig::GetStatusTimeStamp(),
                             received_seq_number,
                             static_cast<long long>(this->head_entry->sequence_number),
                             static_cast<long long>(this->head_entry->sequence_number + this->frame_entries.size() - 1));

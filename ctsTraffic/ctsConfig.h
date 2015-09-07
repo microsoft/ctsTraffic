@@ -281,7 +281,7 @@ namespace ctsTraffic {
             ctsUnsignedLong StreamLengthFrames;
             ctsUnsignedLong BufferedFrames;
         };
-        const MediaStreamSettings& GetMediaStream();
+        const MediaStreamSettings& GetMediaStream() NOEXCEPT;
 
         struct ctsConfigSettings {
             ctsConfigSettings()

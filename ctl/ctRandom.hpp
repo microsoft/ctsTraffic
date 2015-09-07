@@ -115,19 +115,19 @@ namespace ctl {
     {
     }
 
-    inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) : 
+    inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) NOEXCEPT :
         engine(std::move(other.engine))
     {
     }
 
-    inline ctRandomTwister& ctRandomTwister::operator=(ctRandomTwister&& other)
+    inline ctRandomTwister& ctRandomTwister::operator=(ctRandomTwister&& other) NOEXCEPT
     {
         ctRandomTwister temp(std::move(other));
         temp.swap(*this);
         return *this;
     }
 
-    inline void ctRandomTwister::swap(ctRandomTwister& other)
+    inline void ctRandomTwister::swap(ctRandomTwister& other) NOEXCEPT
     {
         using std::swap;
         swap(this->engine, other.engine);

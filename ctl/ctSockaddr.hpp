@@ -65,7 +65,7 @@ namespace ctl {
         // constructors can throw if WSAStartup fails under low-resources
         // - copy c'tor and copy assignment can't fail
         //
-        ctSockaddr(short family = AF_UNSPEC);
+        ctSockaddr(short family = AF_UNSPEC) NOEXCEPT;
 
         explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) NOEXCEPT;
         explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) NOEXCEPT;

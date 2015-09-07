@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 
 #include <ctScopeGuard.hpp>
+#include <ctVersionConversion.hpp>
 
 #include "ctsIOBuffers.hpp"
 
@@ -32,34 +33,34 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
         }
-        void PrintException(const std::exception& e) throw()
+        void PrintException(const std::exception& e) NOEXCEPT
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) throw()
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
         }
 
-        bool IsListening( ) throw()
+        bool IsListening( ) NOEXCEPT
         {
             return s_Listening;
         }
 
-        ctsUnsignedLongLong GetTransferSize( ) throw()
+        ctsUnsignedLongLong GetTransferSize( ) NOEXCEPT
         {
             return s_TransferSize;
         }

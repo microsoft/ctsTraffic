@@ -16,6 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include "ctScopeGuard.hpp"
 #include "ctString.hpp"
+#include "../../ctl/ctVersionConversion.hpp"
+#include "../../ctl/ctScopeGuard.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -111,7 +113,7 @@ namespace ctsUnitTest
         {
             struct TestStruct {
                 int counter;
-                TestStruct() throw() :
+                TestStruct() NOEXCEPT :
                     counter(0)
                 {
                 }

@@ -48,8 +48,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IoImplStatus ctsMediaStreamClientIoImpl(
-        _In_ std::shared_ptr<ctsSocket>& _shared_socket,
-        _In_ const ctsIOTask& _next_io) NOEXCEPT;
+        std::shared_ptr<ctsSocket>& _shared_socket,
+        const ctsIOTask& _next_io) NOEXCEPT;
 
     void ctsMediaStreamClientIoCompletionCallback(
         OVERLAPPED* _overlapped,
@@ -401,7 +401,8 @@ namespace ctsTraffic {
                     ctsConfig::PrintErrorInfo(
                         L"[%.3f] MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%d)\n",
                         ctsConfig::GetStatusTimeStamp(),
-                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo");
+                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
+                        shared_pattern->get_last_error());
                 }
                 shared_socket->close_socket();
                 gle = shared_pattern->get_last_error();

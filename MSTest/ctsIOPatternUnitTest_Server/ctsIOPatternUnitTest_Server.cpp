@@ -16,7 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // ctl headers
-#include "ctTimer.hpp"
+#include <ctTimer.hpp>
+#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
@@ -88,64 +89,64 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
         }
-        void PrintException(const std::exception& e) throw()
+        void PrintException(const std::exception& e) NOEXCEPT
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) throw()
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) throw()
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
         }
 
-        bool IsListening() throw()
+        bool IsListening() NOEXCEPT
         {
             return s_IsListening;
         }
 
 
-        void UpdateGlobalStats(const ctsTcpStatistics&) throw()
+        void UpdateGlobalStats(const ctsTcpStatistics&) NOEXCEPT
         {
         }
-        void UpdateGlobalStats(const ctsUdpStatistics&) throw()
+        void UpdateGlobalStats(const ctsUdpStatistics&) NOEXCEPT
         {
         }
 
-        const MediaStreamSettings& GetMediaStream()
+        const MediaStreamSettings& GetMediaStream() NOEXCEPT
         {
             return s_MediaStreamSettings;
         }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() throw()
+        ctsSignedLongLong GetTcpBytesPerSecond() NOEXCEPT
         {
             return s_TcpBytesPerSecond;
         }
-        ctsUnsignedLong GetMaxBufferSize() throw()
+        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
         {
             return s_MaxBufferSize;
         }
-        ctsUnsignedLong GetBufferSize() throw()
+        ctsUnsignedLong GetBufferSize() NOEXCEPT
         {
             return s_BufferSize;
         }
-        ctsUnsignedLongLong GetTransferSize() throw()
+        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
         {
             return s_TransferSize;
         }
 
-        float GetStatusTimeStamp() throw()
+        float GetStatusTimeStamp() NOEXCEPT
         {
             return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }

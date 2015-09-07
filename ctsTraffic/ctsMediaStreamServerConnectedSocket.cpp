@@ -208,7 +208,6 @@ namespace ctsTraffic {
             try {
                 ctsConfig::PrintDebug(
                     L"\t\tctsMediaStreamServerConnectedSocket socket (%s) has completed its stream - closing this 'connection'",
-                    ctsConfig::GetStatusTimeStamp(),
                     this_ptr->remote_addr.writeCompleteAddress().c_str());
             }
             catch (const std::exception&) {

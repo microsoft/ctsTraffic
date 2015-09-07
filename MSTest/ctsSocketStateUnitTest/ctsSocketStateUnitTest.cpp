@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 
 #include <ctLocks.hpp>
+#include <ctVersionConversion.hpp>
 
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -39,7 +40,7 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(_In_ LPCWSTR _text, ...) throw()
+        void PrintDebug(_In_ LPCWSTR _text, ...) NOEXCEPT
         {
             va_list args;
             va_start(args, _text);
@@ -49,29 +50,29 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        bool IsListening() throw()
+        bool IsListening() NOEXCEPT
         {
             return false;
         }
     }
 
     /// ctsSocketBroker stubs - when ctsSocketState calls out to update the broker
-    void ctsSocketBroker::initiating_io() throw()
+    void ctsSocketBroker::initiating_io() NOEXCEPT
     {
     }
-    void ctsSocketBroker::closing(bool _was_active) throw()
+    void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
     {
     }
 }
@@ -96,7 +97,7 @@ void ResetStatics(DWORD _create = s_ShouldNeverHitErrorCode, DWORD _connect = s_
     s_IOReturnCode = _io;
 }
 
-void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) throw()
+void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());
@@ -109,7 +110,7 @@ void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) throw()
     }
 }
 
-void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) throw()
+void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());
@@ -122,7 +123,7 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) throw()
     }
 }
 
-void IoFunctionHook(std::weak_ptr<ctsSocket> _socket) throw()
+void IoFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());

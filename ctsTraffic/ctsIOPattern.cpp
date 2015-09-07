@@ -259,8 +259,7 @@ namespace ctsTraffic {
 
     ctsIOPattern::~ctsIOPattern() NOEXCEPT
     {
-        if (recv_rio_bufferid != RIO_INVALID_BUFFERID &&
-            recv_rio_bufferid != s_SharedBufferId) {
+        if (recv_rio_bufferid != RIO_INVALID_BUFFERID && recv_rio_bufferid != s_SharedBufferId) {
             ctRIODeregisterBuffer(recv_rio_bufferid);
         }
 
@@ -679,7 +678,7 @@ namespace ctsTraffic {
 
         return return_task;
     }
-    bool ctsIOPattern::verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes)
+    bool ctsIOPattern::verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) NOEXCEPT
     {
         // only doing deep verification if the user asked us to
         if (!ctsConfig::Settings->ShouldVerifyBuffers) {

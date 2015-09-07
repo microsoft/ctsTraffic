@@ -15,6 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 #include <ctString.hpp>
+#include <ctVersionConversion.hpp>
 
 #include "ctsSocket.h"
 #include "ctsSocketGuard.hpp"
@@ -56,7 +57,7 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-    void ctsSocketState::complete_state(DWORD) throw()
+    void ctsSocketState::complete_state(DWORD) NOEXCEPT
     {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
@@ -64,15 +65,15 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }

@@ -20,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <ctString.hpp>
 #include <ctLocks.hpp>
+#include <ctVersionConversion.hpp>
 
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"
@@ -59,7 +60,7 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(_In_ LPCWSTR _text, ...) throw()
+        void PrintDebug(_In_ LPCWSTR _text, ...) NOEXCEPT
         {
             va_list args;
             va_start(args, _text);
@@ -69,15 +70,15 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) throw()
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
@@ -110,7 +111,7 @@ public:
     {
         ::InitializeCriticalSectionAndSpinCount(&cs, 2000);
     }
-    ~SocketStatePool() throw()
+    ~SocketStatePool() NOEXCEPT
     {
         ::DeleteCriticalSection(&cs);
     }
@@ -121,7 +122,7 @@ public:
         ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
         state_objects.push_back(_state_object);
     }
-    void remove_deleted_objects() throw()
+    void remove_deleted_objects() NOEXCEPT
     {
         ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
         state_objects.erase(
@@ -131,7 +132,7 @@ public:
                 [&] (const std::weak_ptr<ctsSocketState>& _weak_ptr) { return _weak_ptr.expired(); }),
             std::end(state_objects));
     }
-    void reset() throw()
+    void reset() NOEXCEPT
     {
         ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
 
@@ -205,17 +206,17 @@ thread_pool_worker(nullptr),
     this->broker = _broker;
 }
 
-ctsSocketState::~ctsSocketState() throw()
+ctsSocketState::~ctsSocketState() NOEXCEPT
 {
     s_SocketPool->remove_deleted_objects();
 }
 
-void ctsSocketState::start() throw()
+void ctsSocketState::start() NOEXCEPT
 {
     s_SocketPool->add_object(this->shared_from_this());
 }
 
-void ctsSocketState::complete_state(DWORD _error_code) throw()
+void ctsSocketState::complete_state(DWORD _error_code) NOEXCEPT
 {
     if (NO_ERROR == _error_code) {
         // walk states from creating -> InitiatingIO -> Closed
@@ -244,11 +245,11 @@ void ctsSocketState::complete_state(DWORD _error_code) throw()
     }
 }
 
-ctsSocketState::InternalState ctsSocketState::current_state() const throw()
+ctsSocketState::InternalState ctsSocketState::current_state() const NOEXCEPT
 {
     return this->state;
 }
-void ctsSocketState::detach() throw()
+void ctsSocketState::detach() NOEXCEPT
 {
     this->broker = nullptr;
 }
