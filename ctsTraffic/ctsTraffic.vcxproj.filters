@@ -244,5 +244,8 @@
     <ClInclude Include="..\ctl\ctWmiService.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
+    <ClInclude Include="ctsIOPatternBufferPolicy.hpp">
+      <Filter>IOPattern</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
