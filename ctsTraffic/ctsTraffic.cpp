@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // CRT headers
 #include <stdio.h>
-#include <wchar.h>
 #include <exception>
 // os headers
 #include <Windows.h>

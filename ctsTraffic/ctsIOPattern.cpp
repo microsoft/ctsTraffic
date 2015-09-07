@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <vector>
-#include <iterator>
 
 // ctl headers
 #include <ctSocketExtensions.hpp>
@@ -151,29 +150,26 @@ namespace ctsTraffic {
         switch (ctsConfig::Settings->IoPattern) {
             case ctsConfig::IoPatternType::Pull:
                 return make_shared<ctsIOPatternPull>();
-                break;
 
-            case ctsConfig::IoPatternType::Push:
+        case ctsConfig::IoPatternType::Push:
                 return make_shared<ctsIOPatternPush>();
-                break;
 
-            case ctsConfig::IoPatternType::PushPull:
+        case ctsConfig::IoPatternType::PushPull:
                 return make_shared<ctsIOPatternPushPull>();
-                break;
 
-            case ctsConfig::IoPatternType::Duplex:
+        case ctsConfig::IoPatternType::Duplex:
                 return make_shared<ctsIOPatternDuplex>();
-                break;
 
-            case ctsConfig::IoPatternType::MediaStream:
+        case ctsConfig::IoPatternType::MediaStream:
+            {
                 if (ctsConfig::IsListening()) {
                     return make_shared<ctsIOPatternMediaStreamServer>();
-                } else {
-                    return make_shared<ctsIOPatternMediaStreamClient>();
                 }
-                break;
+                // if is not listening, running as a client
+                return make_shared<ctsIOPatternMediaStreamClient>();
+            }
 
-            default:
+        default:
                 ctAlwaysFatalCondition(L"ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::Settings->IoPattern);
                 return nullptr;
         }
@@ -548,11 +544,11 @@ namespace ctsTraffic {
         // with TCP, we need to calculate the buffer size based off bytes remaining
         // with UDP, we're always posting the same size buffer
         //
-        ctsSignedLongLong new_buffer_size = 0LL;
+
         //
         // first: calculate the next buffer size assuming no max ceiling specified by the protocol
         //
-        new_buffer_size = min<ctsUnsignedLongLong>(
+         ctsSignedLongLong new_buffer_size = min<ctsUnsignedLongLong>(
             this->buffer_size,
             this->pattern_state.get_remaining_transfer());
         //

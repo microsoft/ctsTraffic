@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 // local headers
 #include "ctsSocket.h"
-#include "ctsMediaStreamProtocol.hpp"
 
 
 namespace ctsTraffic {

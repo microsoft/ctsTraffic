@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
-#include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 // local headers
@@ -99,7 +98,7 @@ namespace ctsTraffic {
                 break;
 
             default:
-                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO
@@ -194,11 +193,11 @@ namespace ctsTraffic {
                     /////////////////////////////////////////////////////////////
                     char* io_buffer = next_io.buffer + next_io.buffer_offset;
                     if (IOTaskAction::Send == next_io.ioAction) {
-                        if (!::WriteFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, NULL, pov)) {
+                        if (!::WriteFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov)) {
                             io_error = ::GetLastError();
                         }
                     } else {
-                        if (!::ReadFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, NULL, pov)) {
+                        if (!::ReadFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov)) {
                             io_error = ::GetLastError();
                         }
                     }
@@ -244,7 +243,7 @@ namespace ctsTraffic {
                                 break;
 
                             default:
-                                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+                                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                         }
                     }
                 }

@@ -25,11 +25,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
-#include "ctsPrintStatus.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsIOPatternState.hpp"
 #include "ctsStatistics.hpp"
-#include "ctsIOBuffers.hpp"
 
 namespace ctsTraffic {
 
@@ -97,6 +95,22 @@ namespace ctsTraffic {
         virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT = 0;
 
         ///
+        /// Some derived IO types require callbacks to the IO functions
+        /// - to request tasks from the normal initiate_io / complete_io pattern
+        ///
+        virtual void register_callback(std::function<void(const ctsIOTask&)> _callback)
+        {
+            ctl::ctAutoReleaseCriticalSection local_cs(&cs);
+            this->callback = _callback;
+        }
+
+        virtual unsigned long get_last_error() const NOEXCEPT
+        {
+            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            return this->last_error;
+        }
+
+        ///
         /// none of these *_io functions can throw
         /// failures are critical and will RaiseException to be debugged
         /// - the task given by initiate_io should be returned through complete_io
@@ -116,22 +130,6 @@ namespace ctsTraffic {
         ///
         ctsIOTask initiate_io() NOEXCEPT;
         ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT;
-
-        ///
-        /// Some derived IO types require callbacks to the IO functions
-        /// - to request tasks from the normal initiate_io / complete_io pattern
-        ///
-        void register_callback(std::function<void(const ctsIOTask&)> _callback)
-        {
-            ctl::ctAutoReleaseCriticalSection local_cs(&cs);
-            this->callback = _callback;
-        }
-
-        unsigned long get_last_error() const NOEXCEPT
-        {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
-            return this->last_error;
-        }
 
         /// no default c'tor
         ctsIOPattern() = delete;
@@ -221,7 +219,7 @@ namespace ctsTraffic {
         /// - only applicable for the derived types to indicate if will need send or recv buffers
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsIOPattern(unsigned long _recv_count);
+        explicit ctsIOPattern(unsigned long _recv_count);
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// The derived template class for tracking statistics must implement these pure virtual functions
@@ -363,7 +361,7 @@ namespace ctsTraffic {
     template <typename S>
     class ctsIOPatternStatistics : public ctsIOPattern {
     public:
-        ctsIOPatternStatistics(unsigned long _recv_count) : ctsIOPattern(_recv_count)
+        explicit ctsIOPatternStatistics(unsigned long _recv_count) : ctsIOPattern(_recv_count)
         {
             // servers need to generate a unique connection ID
             if (ctsConfig::IsListening()) {
@@ -373,12 +371,12 @@ namespace ctsTraffic {
         virtual ~ctsIOPatternStatistics() NOEXCEPT
         {
             // guarantee that end_pattern has been called at least once
-            end_stats();
+            ctsIOPatternStatistics<S>::end_stats();
         }
         ///
         /// Printing of results is controlled by the applicable statistics type
         ///
-        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT
+        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
@@ -396,7 +394,7 @@ namespace ctsTraffic {
         /// ensures that the pattern has started
         /// - provides the method in this way so the caller doesn't have to track if it has started yet
         ///
-        void start_stats() NOEXCEPT
+        void start_stats() NOEXCEPT override
         {
             if (0LL == stats.start_time.get()) {
                 // only calculate the QPC the first time
@@ -409,7 +407,7 @@ namespace ctsTraffic {
         /// Exposed to the caller to control when to set the end_time
         /// - if the end_time was previously zero, will also update historic stats
         ///
-        void end_stats() NOEXCEPT
+        void end_stats() NOEXCEPT override
         {
             long long prior_end_time = stats.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
             if (0LL == prior_end_time) {
@@ -419,7 +417,7 @@ namespace ctsTraffic {
         ///
         /// Access the ConnectionId stored in the Stats object
         ///
-        char* connection_id() NOEXCEPT
+        char* connection_id() NOEXCEPT override
         {
             return stats.connection_identifier;
         }
@@ -446,8 +444,8 @@ namespace ctsTraffic {
         ~ctsIOPatternPull() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         ctsUnsignedLong io_needed;
@@ -468,8 +466,8 @@ namespace ctsTraffic {
         ~ctsIOPatternPush() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         ctsUnsignedLong io_needed;
@@ -490,8 +488,8 @@ namespace ctsTraffic {
         ctsIOPatternPushPull();
         ~ctsIOPatternPushPull() NOEXCEPT;
 
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         const unsigned long push_segment_size;
@@ -518,8 +516,8 @@ namespace ctsTraffic {
         ~ctsIOPatternDuplex() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         // need to know when to stop sending
@@ -545,8 +543,8 @@ namespace ctsTraffic {
         ~ctsIOPatternMediaStreamServer() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         ctsUnsignedLong frame_size_bytes;
@@ -581,8 +579,8 @@ namespace ctsTraffic {
         ~ctsIOPatternMediaStreamClient() NOEXCEPT;
 
         // required virtual functions
-        ctsIOTask next_task() NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+        ctsIOTask next_task() NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
         struct FrameEntry {

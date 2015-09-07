@@ -123,13 +123,13 @@ namespace ctl {
         inline
         std::string convert_to_string(const std::wstring& _wstr)
         {
-            int len = ::WideCharToMultiByte(CP_UTF8, 0, _wstr.c_str(), -1, 0, 0, 0, 0);
+            int len = ::WideCharToMultiByte(CP_UTF8, 0, _wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
             if (len == 0) {
                 throw ctl::ctException(::GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::convert_to_string", false);
             }
 
             std::string buf(len, '\0');
-            len = ::WideCharToMultiByte(CP_UTF8, 0, _wstr.c_str(), -1, &buf[0], len, 0, 0);
+            len = ::WideCharToMultiByte(CP_UTF8, 0, _wstr.c_str(), -1, &buf[0], len, nullptr, nullptr);
             if (len == 0) {
                 throw ctl::ctException(::GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::convert_to_string", false);
             }
@@ -140,7 +140,7 @@ namespace ctl {
         inline
         std::wstring convert_to_wstring(const std::string& _str)
         {
-            int len = ::MultiByteToWideChar(CP_UTF8, 0, _str.c_str(), -1, 0, 0);
+            int len = ::MultiByteToWideChar(CP_UTF8, 0, _str.c_str(), -1, nullptr, 0);
             if (len == 0) {
                 throw ctl::ctException(::GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::convert_to_wstring", false);
             }

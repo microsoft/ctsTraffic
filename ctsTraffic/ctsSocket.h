@@ -24,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctThreadIocp.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctSockaddr.hpp>
-#include <ctException.hpp>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
@@ -47,7 +46,7 @@ namespace ctsTraffic {
         //
         // c'tor requiring a parent ctsSocket reference
         //
-        ctsSocket(_In_ std::weak_ptr<ctsSocketState> _parent);
+        explicit ctsSocket(_In_ std::weak_ptr<ctsSocketState> _parent);
 
         _No_competing_thread_
         ~ctsSocket() NOEXCEPT;

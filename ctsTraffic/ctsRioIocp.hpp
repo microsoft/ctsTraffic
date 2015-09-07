@@ -67,7 +67,7 @@ namespace ctsTraffic {
     static RIO_CQ  s_rio_cq = RIO_INVALID_CQ;
     static ULONG   s_rio_cq_size = 0;
     static ULONG   s_rio_cq_used = 0;
-    static HANDLE* s_rio_worker_threads = NULL;
+    static HANDLE* s_rio_worker_threads = nullptr;
     static DWORD   s_rio_worker_thread_count = 0;
 
 
@@ -193,7 +193,7 @@ namespace ctsTraffic {
         // send an exit key to all threads, then wait on all threads to exit
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
             // queue an exit key to the worker thread
-            if (s_rio_worker_threads[loop_workers] != NULL) {
+            if (s_rio_worker_threads[loop_workers] != nullptr) {
                 ++threads_alive;
                 if (!PostQueuedCompletionStatus(
                     s_rio_notify_setttings.Iocp.IocpHandle,
@@ -222,7 +222,7 @@ namespace ctsTraffic {
         }
         // now can close the thread handles
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
-            if (s_rio_worker_threads[loop_workers] != NULL) {
+            if (s_rio_worker_threads[loop_workers] != nullptr) {
                 ::CloseHandle(s_rio_worker_threads[loop_workers]);
             }
         }
@@ -242,7 +242,7 @@ namespace ctsTraffic {
         }
 
         ::free(s_rio_notify_setttings.Iocp.Overlapped);
-        s_rio_notify_setttings.Iocp.Overlapped = NULL;
+        s_rio_notify_setttings.Iocp.Overlapped = nullptr;
 
         delete s_prioritized_cs;
         s_prioritized_cs = nullptr;
@@ -273,8 +273,8 @@ namespace ctsTraffic {
         ::ZeroMemory(&s_rio_notify_setttings, sizeof s_rio_notify_setttings);
         // completion key for RioNotify IOCP is the ctsRioIocpImpl*
         s_rio_notify_setttings.Type = RIO_NOTIFICATION_COMPLETION_TYPE::RIO_IOCP_COMPLETION;
-        s_rio_notify_setttings.Iocp.CompletionKey = NULL;
-        s_rio_notify_setttings.Iocp.Overlapped = NULL;
+        s_rio_notify_setttings.Iocp.CompletionKey = nullptr;
+        s_rio_notify_setttings.Iocp.Overlapped = nullptr;
         s_rio_notify_setttings.Iocp.IocpHandle = NULL;
 
         s_rio_notify_setttings.Iocp.Overlapped = ::calloc(1, sizeof OVERLAPPED);
@@ -333,7 +333,7 @@ namespace ctsTraffic {
 
         // now that we are ready to go, kick off our thread-pool
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
-            s_rio_worker_threads[loop_workers] = ::CreateThread(NULL, 0, RioIocpThreadProc, NULL, 0, NULL);
+            s_rio_worker_threads[loop_workers] = ::CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
             if (NULL == s_rio_worker_threads[loop_workers]) {
                 DWORD gle = ::GetLastError();
                 ctsConfig::PrintException(ctl::ctException(gle, L"CreateThread", L"ctsRioIocp", false));
@@ -436,7 +436,7 @@ namespace ctsTraffic {
         }
 
     public:
-        RioSocketContext(const std::weak_ptr<ctsSocket>& _weak_socket)
+        explicit RioSocketContext(const std::weak_ptr<ctsSocket>& _weak_socket)
         : weak_socket(_weak_socket),
           remote_sockaddr(),
           rio_rq(RIO_INVALID_RQ),
@@ -587,7 +587,7 @@ namespace ctsTraffic {
                     break;
 
                 default:
-                    ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+                    ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
             }
             //
             // finally decrement the IO counter for the completed IO that triggered this complete_io function call
@@ -701,14 +701,14 @@ namespace ctsTraffic {
                         switch (request_context->ioAction) {
                             case IOTaskAction::Recv:
                                 RIOFunction = L"RIOReceiveEx";
-                                if (!ctl::ctRIOReceiveEx(this->rio_rq, &rio_buffer, 1, NULL, NULL, NULL, NULL, 0, request_context.get())) {
+                                if (!ctl::ctRIOReceiveEx(this->rio_rq, &rio_buffer, 1, nullptr, nullptr, nullptr, nullptr, 0, request_context.get())) {
                                     error = ::WSAGetLastError();
                                 }
                                 break;
                             case IOTaskAction::Send:
                                 RIOFunction = L"RIOSendEx";
                                 PRIO_BUF premote = &this->rio_remote_address;
-                                if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, NULL, premote, NULL, NULL, 0, request_context.get())) {
+                                if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, premote, nullptr, nullptr, 0, request_context.get())) {
                                     error = ::WSAGetLastError();
                                 }
                                 break;

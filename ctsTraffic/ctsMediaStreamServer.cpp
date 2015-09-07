@@ -14,7 +14,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <vector>
-#include <string>
 #include <algorithm>
 // os headers
 #include <Windows.h>
@@ -25,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctScopeGuard.hpp>
 #include <ctHandle.hpp>
 #include <ctSockaddr.hpp>
-#include <ctScopeGuard.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -34,6 +32,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamServer.h"
 #include "ctsMediaStreamServerConnectedSocket.h"
 #include "ctsMediaStreamServerListeningSocket.h"
+#include "ctsMediaStreamProtocol.hpp"
 
 
 namespace ctsTraffic {
@@ -165,7 +164,7 @@ namespace ctsTraffic {
 
                 // 'listen' to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
-                    ctl::ctScopedSocket listening(::WSASocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, NULL, 0, ctsConfig::Settings->SocketFlags));
+                    ctl::ctScopedSocket listening(::WSASocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, ctsConfig::Settings->SocketFlags));
                     if (INVALID_SOCKET == listening.get()) {
                         throw ctl::ctException(::WSAGetLastError(), L"socket", L"ctsMediaStreamServer", false);
                     }
@@ -211,7 +210,7 @@ namespace ctsTraffic {
             return TRUE;
         }
 
-        void init_once()
+        void ctsMediaStreamServerImpl::init_once()
         {
             if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, nullptr, nullptr)) {
                 throw std::runtime_error("ctsMediaStreamServerListener could not be instantiated");
@@ -416,7 +415,7 @@ namespace ctsTraffic {
             auto this_socket_lock(ctsGuardSocket(this_ptr));
             SOCKET socket = this_socket_lock.get();
             if (INVALID_SOCKET == socket) {
-                return WSA_OPERATION_ABORTED;
+                return wsIOResult(WSA_OPERATION_ABORTED);
             }
 
             const ctl::ctSockaddr& remote_addr(this_ptr->get_address());
@@ -453,7 +452,7 @@ namespace ctsTraffic {
                     catch (const std::exception&) {
                         // best effort
                     }
-                    return error;
+                    return wsIOResult(error);
                 }
 
             } else {
@@ -512,7 +511,7 @@ namespace ctsTraffic {
                         catch (const std::exception&) {
                             // best effort
                         }
-                        return error;
+                        return wsIOResult(error);
                     }
                     
                     // successfully completed synchronously

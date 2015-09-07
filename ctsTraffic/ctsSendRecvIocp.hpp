@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctScopeGuard.hpp>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -107,7 +106,7 @@ namespace ctsTraffic {
                 break;
 
             default:
-                ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", protocol_status);
+                ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO : the prior IO is now formally "done"
@@ -159,7 +158,6 @@ namespace ctsTraffic {
                 return_status.io_errorcode = ::WSAGetLastError();
             }
             _shared_socket->close_socket();
-            socket = INVALID_SOCKET;
 
             return_status.io_done = (shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
             return_status.io_started = false;
@@ -199,13 +197,13 @@ namespace ctsTraffic {
             const wchar_t* function_name = nullptr;
             if (IOTaskAction::Send == next_io.ioAction) {
                 function_name = L"WSASend";
-                if (::WSASend(socket, &wsabuf, 1, NULL, 0, pov, NULL) != 0) {
+                if (::WSASend(socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0) {
                     return_status.io_errorcode = ::WSAGetLastError();
                 }
             } else {
                 function_name = L"WSARecv";
                 DWORD flags = 0;
-                if (::WSARecv(socket, &wsabuf, 1, NULL, &flags, pov, NULL) != 0) {
+                if (::WSARecv(socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0) {
                     return_status.io_errorcode = ::WSAGetLastError();
                 }
             }
@@ -259,7 +257,7 @@ namespace ctsTraffic {
                         break;
 
                     default:
-                        ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+                        ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                 }
             }
         }

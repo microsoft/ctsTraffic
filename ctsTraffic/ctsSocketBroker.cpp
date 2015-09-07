@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <exception>
-#include <functional>
 #include <algorithm>
 #include <memory>
 
@@ -26,13 +25,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctException.hpp>
 #include <ctLocks.hpp>
-#include <ctString.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctScopeGuard.hpp>
 
 // project headers
 #include "ctsConfig.h"
-#include "ctsSocket.h"
 #include "ctsSocketState.h"
 
 
@@ -77,7 +74,7 @@ namespace ctsTraffic {
         ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
 
         // create our manual-reset notification event
-        done_event.reset(::CreateEvent(NULL, TRUE, FALSE, NULL));
+        done_event.reset(::CreateEvent(nullptr, TRUE, FALSE, nullptr));
         if (NULL == done_event.get()) {
             throw ctException(::GetLastError(), L"CreateEvent", L"ctsSocketBroker", false);
         }

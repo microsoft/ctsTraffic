@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <array>
 #include <string>
-#include <memory>
 // os headers
 #include <windows.h>
 #include <WinSock2.h>
@@ -26,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctException.hpp>
 // local headers
-#include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
@@ -271,7 +269,7 @@ namespace ctsTraffic {
         long long sequence_number;
         MediaStreamAction action;
 
-        ctsMediaStreamMessage(MediaStreamAction _action) NOEXCEPT
+        explicit ctsMediaStreamMessage(MediaStreamAction _action) NOEXCEPT
         : sequence_number(0LL),
           action(_action)
         {

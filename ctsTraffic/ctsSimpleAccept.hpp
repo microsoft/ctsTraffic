@@ -14,10 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <algorithm>
 #include <vector>
 #include <memory>
-#include <string>
 #include <exception>
 // os headers
 #include <windows.h>
@@ -124,7 +122,7 @@ namespace ctsTraffic {
             // listen to each address
             for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
 #pragma warning(suppress: 28193) // PREFast isn't seeing that listening is indeed evaluated before being referenced
-                SOCKET listening(::WSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags));
+                SOCKET listening(::WSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags));
                 ctlScopeGuard(closeSocketOnError, { if (listening != INVALID_SOCKET) ::closesocket(listening); });
 
                 if (INVALID_SOCKET == listening) {

@@ -146,7 +146,7 @@ namespace ctl {
                 // the method should allow to be called from const() methods
                 // - forced to const-cast to make this const-correct
                 HRESULT hr = const_cast<IWbemClassObject*>(_classObject)->Get(
-                    L"__CLASS", 0, &variant, 0, 0);
+                    L"__CLASS", 0, &variant, nullptr, nullptr);
                 if (SUCCEEDED(hr)) {
                     // copy the BSTR from the VARIANT
                     // - do NOT free the VARIANT

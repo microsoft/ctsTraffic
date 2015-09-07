@@ -57,7 +57,7 @@ namespace ctl {
         {
         }
         // non-explicit by design
-        ctScopedT(T const& t) NOEXCEPT : closeFunctor(), tValue(t)
+        explicit ctScopedT(T const& t) NOEXCEPT : closeFunctor(), tValue(t)
         {
         }
         ctScopedT(T const& t, Fn const& f) NOEXCEPT : closeFunctor(f), tValue(t)

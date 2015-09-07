@@ -295,7 +295,7 @@ namespace ctsUnitTest {
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
-                return WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
             });
 
             ctsIOTask test_task;
@@ -343,7 +343,7 @@ namespace ctsUnitTest {
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
-                return WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
             });
 
             ctsIOTask test_task;
@@ -393,7 +393,7 @@ namespace ctsUnitTest {
                     s_IOStatus = ctsIOStatus::CompletedIo;
                 }
                 s_IOStatusCode = WSAENOBUFS;
-                return WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
             });
 
             ctsIOTask test_task;
@@ -441,7 +441,7 @@ namespace ctsUnitTest {
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
-                return WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
             });
 
             ctsIOTask test_task;
@@ -492,7 +492,7 @@ namespace ctsUnitTest {
                     s_IOStatus = ctsIOStatus::FailedIo;
                 }
                 s_IOStatusCode = WSAENOBUFS;
-                return WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
             });
 
             ctsIOTask test_task;

@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <vector>
-#include <string>
 #include <queue>
 // os headers
 #include <Windows.h>
@@ -29,7 +28,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctLocks.hpp>
-#include <ctTimer.hpp>
 // project headers
 #include "ctsSocket.h"
 
@@ -103,7 +101,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         struct ctsListenSocketInfo {
             // c'tor throws a ctException or bad_alloc on failure
-            ctsListenSocketInfo(const ctl::ctSockaddr& _listening_addr);
+            explicit ctsListenSocketInfo(const ctl::ctSockaddr& _listening_addr);
             ~ctsListenSocketInfo() NOEXCEPT;
 
             // attempt to restart any accept sockets which failed last time they were attempted
@@ -126,7 +124,7 @@ namespace ctsTraffic {
         class ctsAcceptSocketInfo {
         public:
             // c'tor throws ctException on failure
-            ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo>& _listen_socket);
+            explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo>& _listen_socket);
             ~ctsAcceptSocketInfo() NOEXCEPT;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
@@ -396,7 +394,7 @@ namespace ctsTraffic {
         //
         // Create, Bind, Listen, create an IOCP thread pool
         //
-        socket = ::WSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags);
+        socket = ::WSASocketW(addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
         if (INVALID_SOCKET == socket) {
             throw ctl::ctException(::WSAGetLastError(), L"socket", L"ctsAcceptEx", false);
         }
@@ -449,7 +447,7 @@ namespace ctsTraffic {
     ctsAcceptEx::ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsAcceptEx::ctsListenSocketInfo>& _listen_socket)
     : socket(INVALID_SOCKET),
       cs(),
-      pov(NULL),
+      pov(nullptr),
       listening_socket(_listen_socket->socket),
       listening_addr(_listen_socket->addr),
       listening_iocp(_listen_socket->iocp)
@@ -478,7 +476,7 @@ namespace ctsTraffic {
             return;
         }
 
-        SOCKET new_socket = ::WSASocket(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags);
+        SOCKET new_socket = ::WSASocketW(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
         if (INVALID_SOCKET == new_socket) {
             throw ctl::ctException(::WSAGetLastError(), L"WSASocket", L"ctsAcceptEx", false);
         }

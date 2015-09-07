@@ -159,7 +159,7 @@ namespace ctsTraffic {
         ctStatsTracking connection_error_count;
         ctStatsTracking protocol_error_count;
 
-        ctsConnectionStatistics(long long _start_time = 0LL) NOEXCEPT :
+        explicit ctsConnectionStatistics(long long _start_time = 0LL) NOEXCEPT :
             start_time(_start_time),
             end_time(0LL),
             active_connection_count(0LL),
@@ -234,7 +234,7 @@ namespace ctsTraffic {
         // unique connection identifier
         char connection_identifier[ctsStatistics::ConnectionIdLength];
 
-        ctsUdpStatistics(long long _start_time = 0LL) NOEXCEPT :
+        explicit ctsUdpStatistics(long long _start_time = 0LL) NOEXCEPT :
             start_time(_start_time),
             end_time(0LL),
             bits_received(0LL),
@@ -323,7 +323,7 @@ namespace ctsTraffic {
         // unique connection identifier
         char connection_identifier[ctsStatistics::ConnectionIdLength];
 
-        ctsTcpStatistics(long long _current_time = 0LL) NOEXCEPT :
+        explicit ctsTcpStatistics(long long _current_time = 0LL) NOEXCEPT :
             start_time(_current_time),
             end_time(0LL),
             bytes_sent(0LL),
@@ -419,16 +419,16 @@ namespace ctsTraffic {
             // - willing to take the cost of 2 interlocked operations the first time this is initialized
             //   versus taking a QPC hit on every IO request
             if (0LL == _statistics_object.start_time.get()) {
-                _statistics_object.start_time.set_conditionally(ctl::ctTimer::snap_qpc_msec(), 0LL);
+                _statistics_object.start_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
             }
         }
 
         template <typename T>
         void End(_In_ T& _statistics_object) NOEXCEPT
         {
-            long long prior_end_time = _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_msec(), 0LL);
+            long long prior_end_time = _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
             if (0LL == prior_end_time) {
-                ctsConfig::UpdateGlobalStats(stats);
+                ctsConfig::UpdateGlobalStats(_statistics_object);
             }
         }
     }

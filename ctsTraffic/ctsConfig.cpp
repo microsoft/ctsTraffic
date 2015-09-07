@@ -19,6 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 #include <winsock2.h>
+#include <mstcpip.h>
 #include <iphlpapi.h>
 #include <Mmsystem.h>
 
@@ -167,7 +168,7 @@ namespace ctsTraffic {
         static void ctsConfigInitOnce() NOEXCEPT
         {
             ctFatalCondition(
-                !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, NULL, NULL),
+                !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, nullptr, nullptr),
                 L"ctsConfig InitOnceExecuteOnce failed: %lu", ::GetLastError());
         }
 
@@ -259,7 +260,12 @@ namespace ctsTraffic {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         template <typename T>
-        T as_integral(const std::wstring& _string);
+        T as_integral(const std::wstring& _string)
+        {
+            static_assert(false, "Only supports the below specializations");
+            return {};
+        }
+
         /// LONG and ULONG
         template <>
         long as_integral<long>(const std::wstring& _string)
@@ -1584,7 +1590,7 @@ namespace ctsTraffic {
             ::GetSystemInfo(&system_info);
             s_ThreadPoolThreadCount = system_info.dwNumberOfProcessors * s_DefaultThreadpoolFactor;
 
-            s_ThreadPool = ::CreateThreadpool(NULL);
+            s_ThreadPool = ::CreateThreadpool(nullptr);
             if (NULL == s_ThreadPool) {
                 throw ctException(::GetLastError(), L"CreateThreadPool", L"ctsConfig", false);
             }
@@ -2107,7 +2113,7 @@ namespace ctsTraffic {
             ///
             /// create the handle for ctrl-c
             ///
-            Settings->CtrlCHandle = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+            Settings->CtrlCHandle = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
             if (Settings->CtrlCHandle == NULL) {
                 throw ctException(::GetLastError(), L"CreateEvent", L"ctsConfig::Startup", false);
             }
@@ -3207,8 +3213,8 @@ namespace ctsTraffic {
                     &in_value, static_cast<DWORD>(sizeof(in_value)),
                     &out_value, static_cast<DWORD>(sizeof(out_value)),
                     &bytes_returned,
-                    NULL,
-                    NULL);
+                    nullptr,
+                    nullptr);
                 if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"WSAIoctl(SIO_LOOPBACK_FAST_PATH)", gle);
@@ -3319,6 +3325,9 @@ namespace ctsTraffic {
                 case ProtocolType::UDP:
                     setting_string.append(L"UDP");
                     break;
+            case ProtocolType::NoProtocolSet:// fall-through
+            default: 
+                ctl::ctAlwaysFatalCondition(L"Unexpected Settings Protocol");
             }
             setting_string.append(L"\n");
 
@@ -3367,6 +3376,10 @@ namespace ctsTraffic {
                     break;
                 case IoPatternType::MediaStream:
                     setting_string.append(L"MediaStream <UDP controlled stream from server to client>\n");
+
+                case IoPatternType::NoIOSet: // fall-through
+                default:
+                    ctl::ctAlwaysFatalCondition(L"Unexpected Settings IoPattern");
             }
 
             setting_string.append(

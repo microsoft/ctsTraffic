@@ -15,19 +15,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <exception>
-// os headers
-#include <windows.h>
-#include <winsock2.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctHandle.hpp>
 // project headers
-#include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
-#include "ctsMediaStreamProtocol.hpp"
 
 
 ///

@@ -85,7 +85,8 @@ namespace ctl {
         {
             get_error_info();
         }
-        ctWmiErrorInfo(_In_ const ctComPtr<IWbemClassObject>& _error_info) NOEXCEPT : error_info(_error_info)
+
+        explicit ctWmiErrorInfo(_In_ const ctComPtr<IWbemClassObject>& _error_info) NOEXCEPT : error_info(_error_info)
         {
         }
         ~ctWmiErrorInfo() NOEXCEPT

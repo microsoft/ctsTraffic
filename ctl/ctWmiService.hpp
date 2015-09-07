@@ -54,21 +54,20 @@ namespace ctl {
         /// LPCWSTR _path: this is the WMI namespace path to connect with
         ///
         /////////////////////////////////////////////////////////////////////////////////////
-        ctWmiService(_In_ LPCWSTR _path) : coinit(), wbemLocator(), wbemServices()
+        explicit ctWmiService(_In_ LPCWSTR _path) : coinit(), wbemLocator(), wbemServices()
         {
             this->wbemLocator = ctComPtr<IWbemLocator>::createInstance(CLSID_WbemLocator, IID_IWbemLocator);
 
             ctComBstr path(_path);
             HRESULT hr = this->wbemLocator->ConnectServer(
                 path.get(),              // Object path of WMI namespace
-                NULL,                    // User name. NULL = current user
-                NULL,                    // User password. NULL = current
-                0,                       // Locale. NULL indicates current
-                NULL,                    // Security flags.
-                0,                       // Authority (e.g. Kerberos)
-                0,                       // Context object 
-                this->wbemServices.get_addr_of()   // receive pointer to IWbemServices proxy
-                );
+                nullptr,                 // User name. NULL = current user
+                nullptr,                 // User password. NULL = current
+                nullptr,                 // Locale. NULL indicates current
+                0,                    // Security flags.
+                nullptr,                 // Authority (e.g. Kerberos)
+                nullptr,                 // Context object 
+                this->wbemServices.get_addr_of());  // receive pointer to IWbemServices proxy
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemLocator::ConnectServer", L"ctWmiService::connect", false);
             }
@@ -77,10 +76,10 @@ namespace ctl {
                 this->wbemServices.get_IUnknown(), // Indicates the proxy to set
                 RPC_C_AUTHN_WINNT,           // RPC_C_AUTHN_xxx
                 RPC_C_AUTHZ_NONE,            // RPC_C_AUTHZ_xxx
-                NULL,                        // Server principal name 
+                nullptr,                     // Server principal name 
                 RPC_C_AUTHN_LEVEL_CALL,      // RPC_C_AUTHN_LEVEL_xxx 
                 RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
-                NULL,                        // client identity
+                nullptr,                     // client identity
                 EOAC_NONE                    // proxy capabilities 
                 );
             if (FAILED(hr)) {

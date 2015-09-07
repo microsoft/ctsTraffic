@@ -14,7 +14,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <string>
 #include <exception>
 #include <memory>
 // os headers
@@ -46,7 +45,7 @@ namespace ctsTraffic {
 
     class ctsLogger {
     public:
-        ctsLogger(ctsConfig::StatusFormatting _format) NOEXCEPT :
+        explicit ctsLogger(ctsConfig::StatusFormatting _format) NOEXCEPT :
             format(_format)
         {
         }
@@ -142,7 +141,8 @@ namespace ctsTraffic {
                 &BOM_UTF16,
                 static_cast<DWORD>(sizeof WCHAR),
                 &BytesWritten,
-                NULL)) {
+                nullptr)) 
+            {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", L"ctsTextLogger", false);
             }
 
@@ -156,12 +156,12 @@ namespace ctsTraffic {
             ::DeleteCriticalSection(&file_cs);
         }
 
-        void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT
+        void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT override
         {
             write_impl(_message);
         }
 
-        void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT
+        void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT override
         {
             write_impl(_message);
         }
@@ -180,8 +180,8 @@ namespace ctsTraffic {
                     converted_string.c_str(),
                     static_cast<DWORD>(converted_string.length() * sizeof(WCHAR)),
                     &BytesWritten,
-                    NULL
-                    )) {
+                    nullptr)) 
+                {
                     ctl::ctException write_error(::GetLastError(), L"WriteFile", L"ctsTextLogger", false);
                     ctsConfig::PrintException(write_error);
                 }

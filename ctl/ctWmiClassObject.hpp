@@ -65,9 +65,9 @@ public:
         HRESULT hr = this->wbemServices->GetObject(
             ctComBstr(_className).get(),
             0,
-            NULL,
+            nullptr,
             this->wbemClass.get_addr_of(),
-            NULL);
+            nullptr);
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiClassObject::ctWmiClassObject", false);
         }
@@ -80,9 +80,9 @@ public:
         HRESULT hr = this->wbemServices->GetObjectW(
             _className.get(),
             0,
-            NULL,
+            nullptr,
             this->wbemClass.get_addr_of(),
-            NULL);
+            nullptr);
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiClassObject::ctWmiClassObject", false);
         }
@@ -338,7 +338,7 @@ public:
                 next_name.get_addr_of(),
                 next_value.get(),
                 &next_cimtype,
-                NULL);
+                nullptr);
             switch (hr) {
                 case WBEM_S_NO_ERROR: {
                     // update the instance members
@@ -348,7 +348,9 @@ public:
                     swap(propType, next_cimtype);
                     break;
                 }
-
+#pragma warning (suppress : 6221)
+                // "Implicit cast between semantically different integer types:  comparing HRESULT to an integer.  Consider using SUCCEEDED or FAILED macros instead."
+                // Directly comparing the HRESULT return to WBEM_S_NO_ERROR, even though WBEM did not properly define that constant as an HRESULT
                 case WBEM_S_NO_MORE_DATA: {
                     // at the end...
                     dwIndex = END_ITERATOR_INDEX;

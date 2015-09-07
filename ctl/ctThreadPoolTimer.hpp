@@ -112,7 +112,7 @@ namespace ctl {
         /// These c'tors can fail under low resources
         /// - ctl::ctException (from the ThreadPool APIs)
         ///
-        ctThreadpoolTimer(_In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
+        explicit ctThreadpoolTimer(_In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
             tp_environment(_ptp_env),
             timer_lock(),
             tp_timers(),

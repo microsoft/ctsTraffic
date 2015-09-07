@@ -14,13 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // parent header
 #include "ctsSocket.h"
 
-// cpp headers
-#include <exception>
-
 // ctl headers
 #include <ctLocks.hpp>
-#include <ctString.hpp>
-#include <ctTimer.hpp>
 #include <ctThreadPoolTimer.hpp>
 
 // project headers

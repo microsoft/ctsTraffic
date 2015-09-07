@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctException.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
@@ -203,7 +202,7 @@ namespace ctsTraffic {
             default:
                 ctl::ctAlwaysFatalCondition(
                     L"ctsIOPatternState::get_next_task was called in an invalid state (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                    this->internal_state, this);
+                    static_cast<unsigned>(this->internal_state), this);
                 return ctsIOPatternProtocolTask::NoIo;
         }
     }
@@ -366,7 +365,7 @@ namespace ctsTraffic {
                         default:
                             ctl::ctAlwaysFatalCondition(
                                 L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                                this->internal_state, this);
+                                static_cast<unsigned>(this->internal_state), this);
                     }
                 } else {
                     // clients will recv the server status, then process their shutdown sequence
@@ -423,7 +422,7 @@ namespace ctsTraffic {
                         default:
                             ctl::ctAlwaysFatalCondition(
                                 L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
-                                this->internal_state, this, &_completed_task);
+                                static_cast<unsigned>(this->internal_state), this, &_completed_task);
                     }
                 }
 

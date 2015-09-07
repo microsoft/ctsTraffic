@@ -59,12 +59,12 @@ namespace ctl {
         ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) : 
             wbemServices(_wbemServices), wbemClass()
         {
-            HRESULT hr = this->wbemServices->GetObject(
+            HRESULT hr = this->wbemServices->GetObjectW(
                 ctComBstr(_className).get(),
                 0,
-                NULL,
+                nullptr,
                 this->wbemClass.get_addr_of(),
-                NULL);
+                nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiProperties::ctWmiProperties", false);
             }
@@ -73,12 +73,12 @@ namespace ctl {
         ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ const ctComBstr& _className)
             : wbemServices(_wbemServices), wbemClass()
         {
-            HRESULT hr = this->wbemServices->GetObject(
+            HRESULT hr = this->wbemServices->GetObjectW(
                 _className.get(),
                 0,
-                NULL,
+                nullptr,
                 this->wbemClass.get_addr_of(),
-                NULL);
+                nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, L"IWbemServices::GetObject", L"ctWmiProperties::ctWmiProperties", false);
             }
@@ -296,7 +296,7 @@ namespace ctl {
                     next_name.get_addr_of(),
                     next_value.get(),
                     &next_cimtype,
-                    NULL);
+                    nullptr);
 
                 switch (hr) {
                     case WBEM_S_NO_ERROR: {
@@ -308,6 +308,9 @@ namespace ctl {
                         break;
                     }
 
+#pragma warning (suppress : 6221)
+                    // "Implicit cast between semantically different integer types:  comparing HRESULT to an integer.  Consider using SUCCEEDED or FAILED macros instead."
+                    // Directly comparing the HRESULT return to WBEM_S_NO_ERROR, even though WBEM did not properly define that constant as an HRESULT
                     case WBEM_S_NO_MORE_DATA: {
                         // at the end...
                         dwIndex = END_ITERATOR_INDEX;

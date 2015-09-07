@@ -76,12 +76,12 @@ namespace ctl {
                 static_cast<double>(*(_begin + 2)));
         }
 
-        auto split_section = [&] (const BidirectionalIterator& _begin, const BidirectionalIterator& _end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
-            size_t numeric_count = _end - _begin + 1; // this is the N + 1 value
+        auto split_section = [&] (const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
+            size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
             // if begin and end are already right next to each other, immediately return the same values
             if (numeric_count < 3) {
-                return std::make_tuple(_begin, _end);
+                return std::make_tuple(split_begin, split_end);
             }
 
             // choose the (N+1)/2 value
@@ -91,12 +91,12 @@ namespace ctl {
             BidirectionalIterator rhs;
             if (numeric_count % 2 == 0) {
                 // before and after the median
-                lhs = _begin + (numeric_count / 2) - 2;
-                rhs = _begin + (numeric_count / 2);
+                lhs = split_begin + (numeric_count / 2) - 2;
+                rhs = split_begin + (numeric_count / 2);
             } else {
                 // the 2 consecutive center iterators
-                lhs = _begin + (numeric_count / 2) - 1;
-                rhs = _begin + (numeric_count / 2);
+                lhs = split_begin + (numeric_count / 2) - 1;
+                rhs = split_begin + (numeric_count / 2);
             }
             return std::make_tuple(lhs, rhs);
         };

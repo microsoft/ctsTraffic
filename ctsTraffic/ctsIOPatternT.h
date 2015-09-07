@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctLocks.hpp>
-#include <ctTimer.hpp>
 #include <ctVersionConversion.hpp>
 // project headers
 #include "ctsConfig.h"
@@ -40,6 +39,10 @@ namespace ctsTraffic {
     class ctsIOPattern
     {
     public:
+        virtual ~ctsIOPattern()
+        {
+        }
+
         ///
         /// none of these *_io functions can throw
         /// failures are critical and will RaiseException to be debugged
@@ -88,7 +91,7 @@ namespace ctsTraffic {
         ctsIOPatternT()
         {
             if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
-                throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
+                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
             }
         }
 
@@ -118,8 +121,7 @@ namespace ctsTraffic {
             return this->protocol_policy.get_last_error();
         }
 
-        /// no default c'tor, copy c'tor or copy assignment
-        ctsIOPatternT() = delete;
+        /// no copy c'tor or copy assignment
         ctsIOPatternT(const ctsIOPatternT&) = delete;
         ctsIOPatternT& operator= (const ctsIOPatternT&) = delete;
 

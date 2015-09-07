@@ -65,7 +65,7 @@ public:
         /// - c'tor can take a reference to the parent's WMI Enum interface (to traverse)
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        iterator(_In_ const ctWmiService& _services) NOEXCEPT : 
+        explicit iterator(_In_ const ctWmiService& _services) NOEXCEPT : 
             index(END_ITERATOR_INDEX),
             wbemServices(_services),
             wbemEnumerator(), 
@@ -184,7 +184,7 @@ public:
     /// Default d'tor, copy c'tor, and copy assignment operators
     //
     ////////////////////////////////////////////////////////////////////////////////
-    ctWmiEnumerate(_In_ const ctWmiService& _wbemServices) NOEXCEPT :
+    explicit ctWmiEnumerate(_In_ const ctWmiService& _wbemServices) NOEXCEPT :
         wbemServices(_wbemServices),
         wbemEnumerator()
     {
@@ -211,7 +211,7 @@ public:
             wql.get(), 
             query.get(),
             WBEM_FLAG_BIDIRECTIONAL, 
-            NULL,
+            nullptr,
             this->wbemEnumerator.get_addr_of());
         if (FAILED(hr)) {
             throw ctWmiException(hr, L"IWbemServices::ExecQuery", L"ctWmiEnumerate::query", false);

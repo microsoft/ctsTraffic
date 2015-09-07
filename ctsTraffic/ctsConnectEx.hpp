@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <vector>
-#include <string>
 // os headers
 #include <Windows.h>
 #include <winsock2.h>
@@ -26,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
-#include <ctTimer.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsSocketGuard.hpp"
@@ -64,7 +62,7 @@ namespace ctsTraffic {
                 }
                 // update the socket context if completed successfully - necessary with ConnectEx
                 if (NO_ERROR == gle) {
-                    int err = ::setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+                    int err = ::setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
                     ctl::ctFatalCondition(
                         (err != 0),
                         L"setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
@@ -116,7 +114,7 @@ namespace ctsTraffic {
                         [_weak_socket, targetAddress] (OVERLAPPED* _ov) 
                         { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
-                    if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), NULL, 0, NULL, pov)) {
+                    if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {
                         error = ::WSAGetLastError();
                         if (ERROR_IO_PENDING == error) {
                             // pended is not failure

@@ -45,7 +45,8 @@ namespace ctl {
         PVOID _padding; // required padding before the std::function for the below C_ASSERT alignment/sizing to be correct
         ctThreadIocpCallback_t callback;
 
-        ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback)
+        // ReSharper disable once CppPossiblyUninitializedMember
+        explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback)
         : callback(std::move(_callback))
         {
             ::ZeroMemory(&ov, sizeof ov);
@@ -95,14 +96,15 @@ namespace ctl {
         // These c'tors can fail under low resources
         // - ctl::ctException (from the ThreadPool APIs)
         //
-        ctThreadIocp(_In_ HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = NULL)
+        explicit ctThreadIocp(_In_ HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
         {
             ptp_io = ::CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
             if (nullptr == ptp_io) {
                 throw ctException(::GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
             }
         }
-        ctThreadIocp(_In_ SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = NULL)
+
+        explicit ctThreadIocp(_In_ SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
         {
             ptp_io = ::CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
             if (nullptr == ptp_io) {

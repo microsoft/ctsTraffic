@@ -22,8 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 
 // ctl headers
-#include <ctString.hpp>
-#include <ctTimer.hpp>
 #include <ctLocks.hpp>
 #include <ctException.hpp>
 

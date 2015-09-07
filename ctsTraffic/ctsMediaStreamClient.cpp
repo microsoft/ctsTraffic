@@ -28,6 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 #include "ctsSocket.h"
 #include "ctsConfig.h"
+#include "ctsMediaStreamProtocol.hpp"
 
 
 namespace ctsTraffic {
@@ -283,7 +284,7 @@ namespace ctsTraffic {
                             break;
 
                         default:
-                            ctl::ctAlwaysFatalCondition(L"ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %u\n", protocol_status);
+                            ctl::ctAlwaysFatalCondition(L"ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                     }
 
                     // decrement the IO count if failed and/or inlined-completed
@@ -399,7 +400,7 @@ namespace ctsTraffic {
                         gle);
                 } else {
                     ctsConfig::PrintErrorInfo(
-                        L"[%.3f] MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%d)\n",
+                        L"[%.3f] MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%u)\n",
                         ctsConfig::GetStatusTimeStamp(),
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
                         shared_pattern->get_last_error());
@@ -411,7 +412,7 @@ namespace ctsTraffic {
             default:
                 ctl::ctAlwaysFatalCondition(
                     L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n", 
-                    protocol_status);
+                    static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO - the prior IO is now formally "done"

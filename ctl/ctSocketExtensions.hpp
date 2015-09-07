@@ -34,14 +34,14 @@ namespace ctl {
         /// function pointers accessable from only this file (anonymous namespace)
         ///
         const unsigned fn_ptr_count = 9;
-        LPFN_TRANSMITFILE            transmitfile = NULL; // WSAID_TRANSMITFILE
-        LPFN_ACCEPTEX                acceptex = NULL; // WSAID_ACCEPTEX
-        LPFN_GETACCEPTEXSOCKADDRS    getacceptexsockaddrs = NULL; // WSAID_GETACCEPTEXSOCKADDRS
-        LPFN_TRANSMITPACKETS         transmitpackets = NULL; // WSAID_TRANSMITPACKETS
-        LPFN_CONNECTEX               connectex = NULL; // WSAID_CONNECTEX
-        LPFN_DISCONNECTEX            disconnectex = NULL; // WSAID_DISCONNECTEX
-        LPFN_WSARECVMSG              wsarecvmsg = NULL; // WSAID_WSARECVMSG
-        LPFN_WSASENDMSG              wsasendmsg = NULL; // WSAID_WSASENDMSG
+        LPFN_TRANSMITFILE            transmitfile = nullptr; // WSAID_TRANSMITFILE
+        LPFN_ACCEPTEX                acceptex = nullptr; // WSAID_ACCEPTEX
+        LPFN_GETACCEPTEXSOCKADDRS    getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
+        LPFN_TRANSMITPACKETS         transmitpackets = nullptr; // WSAID_TRANSMITPACKETS
+        LPFN_CONNECTEX               connectex = nullptr; // WSAID_CONNECTEX
+        LPFN_DISCONNECTEX            disconnectex = nullptr; // WSAID_DISCONNECTEX
+        LPFN_WSARECVMSG              wsarecvmsg = nullptr; // WSAID_WSARECVMSG
+        LPFN_WSASENDMSG              wsasendmsg = nullptr; // WSAID_WSASENDMSG
         RIO_EXTENSION_FUNCTION_TABLE rioextensionfunctiontable = { 0 }; // WSAID_MULTIPLE_RIO
 
         ///
@@ -72,7 +72,7 @@ namespace ctl {
             // control code and the size to fetch the extension function pointers
             for (unsigned fn_loop = 0; fn_loop < fn_ptr_count; ++fn_loop) {
 
-                VOID*  function_ptr = NULL;
+                VOID*  function_ptr = nullptr;
                 DWORD controlCode = SIO_GET_EXTENSION_FUNCTION_POINTER;
                 DWORD bytes = static_cast<DWORD>(sizeof(VOID*));
                 // must declare GUID explicitly at a global scope as some commonly used test libraries
@@ -148,8 +148,8 @@ namespace ctl {
                     function_ptr,
                     bytes,
                     &bytes,
-                    NULL, // lpOverlapped
-                    NULL  // lpCompletionRoutine
+                    nullptr, // lpOverlapped
+                    nullptr  // lpCompletionRoutine
                     )) 
                 {
                     DWORD errorCode = ::WSAGetLastError();

@@ -48,7 +48,7 @@ namespace ctl {
         /// Default d'tor, copy c'tor, and copy assignment operator
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices) : 
+        explicit ctWmiInstance(_In_ const ctWmiService& _wbemServices) : 
             wbemServices(_wbemServices),
             instanceObject()
         {
@@ -868,7 +868,7 @@ namespace ctl {
         {
             // since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
             HRESULT hr = const_cast<IWbemClassObject*>(this->instanceObject.get())->Get(
-                _propname, 0, _variant, 0, 0);
+                _propname, 0, _variant, nullptr, nullptr);
             if (FAILED(hr)) {
                 throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Get", L"ctWmiInstance::get", false);
             }

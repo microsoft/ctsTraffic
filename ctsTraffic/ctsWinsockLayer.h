@@ -44,7 +44,7 @@ namespace ctsTraffic {
         {
         }
 
-        wsIOResult(int _error) NOEXCEPT : error_code(_error), bytes_transferred(0)
+        explicit wsIOResult(int _error) NOEXCEPT : error_code(_error), bytes_transferred(0)
         {
         }
     };

@@ -134,11 +134,11 @@ namespace ctsTraffic {
         this->base_unlock();
 
         // stop both timers
-        ::SetThreadpoolTimer(this->start_timer, NULL, 0, 0);
+        ::SetThreadpoolTimer(this->start_timer, nullptr, 0, 0);
         ::WaitForThreadpoolTimerCallbacks(this->start_timer, FALSE);
         ::CloseThreadpoolTimer(this->start_timer);
 
-        ::SetThreadpoolTimer(original_timer, NULL, 0, 0);
+        ::SetThreadpoolTimer(original_timer, nullptr, 0, 0);
         ::WaitForThreadpoolTimerCallbacks(original_timer, FALSE);
         ::CloseThreadpoolTimer(original_timer);
     }

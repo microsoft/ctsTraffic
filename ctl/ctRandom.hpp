@@ -45,7 +45,7 @@ namespace ctl {
         /// with an appropriately random seed
         ///
         /// This allocates a large (5kb) chunk of heap memory and may throw std::bad_alloc
-        ctRandomTwister(unsigned long _seed);
+        explicit ctRandomTwister(unsigned long _seed);
 
         /// Seeds itself randomly with std::random_device
         ///

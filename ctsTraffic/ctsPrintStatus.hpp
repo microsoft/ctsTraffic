@@ -20,8 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctException.hpp>
-#include <ctLocks.hpp>
-#include <ctString.hpp>
 // project headers
 #include "ctsConfig.h"
 
@@ -293,7 +291,6 @@ namespace ctsTraffic {
             if (_add_comma) {
                 ++converted;
                 *output_reference = L',';
-                ++output_reference;
             }
             return converted;
         }
@@ -327,7 +324,6 @@ namespace ctsTraffic {
             if (_add_comma) {
                 ++converted;
                 *output_reference = L',';
-                ++output_reference;
             }
             return converted;
         }
@@ -371,7 +367,7 @@ namespace ctsTraffic {
         ///
         /// Pure-Virtual functions required to be defined
         ///
-        LPCWSTR format_legend() NOEXCEPT
+        LPCWSTR format_legend() NOEXCEPT override
         {
             return
                 L"Legend:\n"
@@ -384,7 +380,7 @@ namespace ctsTraffic {
                 L"\n";
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return
@@ -400,7 +396,7 @@ namespace ctsTraffic {
             }
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
+        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
 
@@ -491,7 +487,7 @@ namespace ctsTraffic {
             return nullptr;
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
         {
             ctl::ctFatalCondition(
                 ctsConfig::StatusFormatting::Csv != _format,
@@ -499,7 +495,7 @@ namespace ctsTraffic {
             return L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\n";
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting, long long, bool) NOEXCEPT
+        PrintingStatus format_data(ctsConfig::StatusFormatting, long long, bool) NOEXCEPT override
         {
             return PrintingStatus::NoPrint;
         }
@@ -522,7 +518,7 @@ namespace ctsTraffic {
         {
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
+        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
             ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
@@ -576,7 +572,7 @@ namespace ctsTraffic {
             return PrintingStatus::PrintComplete;
         }
 
-        LPCWSTR format_legend() NOEXCEPT
+        LPCWSTR format_legend() NOEXCEPT override
         {
             return
                 L"Legend:\n"
@@ -589,7 +585,7 @@ namespace ctsTraffic {
                 L"\n";
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT
+        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
         {
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 return

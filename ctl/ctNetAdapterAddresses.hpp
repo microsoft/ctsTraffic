@@ -41,9 +41,10 @@ namespace ctl {
             ///
             ////////////////////////////////////////////////////////////////////////////////
             iterator() = default;
-            iterator(_In_ std::shared_ptr<std::vector<BYTE>> _ipAdapter) NOEXCEPT : buffer(_ipAdapter)
+
+            explicit iterator(_In_ std::shared_ptr<std::vector<BYTE>> _ipAdapter) NOEXCEPT : buffer(_ipAdapter)
             {
-                if ((buffer.get() != NULL) && (buffer->size() > 0)) {
+                if ((buffer.get() != nullptr) && (buffer->size() > 0)) {
                     current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0)));
                 }
             }
@@ -68,14 +69,14 @@ namespace ctl {
             ////////////////////////////////////////////////////////////////////////////////
             IP_ADAPTER_ADDRESSES& operator*()
             {
-                if (this->current == NULL) {
+                if (this->current == nullptr) {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator*");
                 }
                 return *(this->current);
             }
             IP_ADAPTER_ADDRESSES* operator->()
             {
-                if (this->current == NULL) {
+                if (this->current == nullptr) {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator->");
                 }
                 return this->current;
@@ -92,7 +93,7 @@ namespace ctl {
             bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
                 // for comparison of 'end' iterators, just look at current
-                if (this->current == NULL) {
+                if (this->current == nullptr) {
                     return (this->current == _iter.current);
                 } else {
                     return ((this->buffer == _iter.buffer) &&
@@ -106,7 +107,7 @@ namespace ctl {
             // preincrement
             iterator& operator++()
             {
-                if (this->current == NULL) {
+                if (this->current == nullptr) {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator++");
                 }
                 // increment
@@ -123,10 +124,10 @@ namespace ctl {
             // increment by integer
             iterator& operator+=(DWORD _inc)
             {
-                for (unsigned loop = 0; (loop < _inc) && (this->current != NULL); ++loop) {
+                for (unsigned loop = 0; (loop < _inc) && (this->current != nullptr); ++loop) {
                     current = current->Next;
                 }
-                if (this->current == NULL) {
+                if (this->current == nullptr) {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator+=");
                 }
                 return *this;
@@ -160,7 +161,7 @@ namespace ctl {
         ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) : 
+        explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) : 
             buffer(new std::vector<BYTE>(16384))
         {
             this->refresh(_family, _gaaFlags);
@@ -187,7 +188,7 @@ namespace ctl {
             ULONG err = ::GetAdaptersAddresses(
                 _family,   // Family
                 _gaaFlags, // Flags
-                NULL,      // Reserved
+                nullptr,   // Reserved
                 reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
                 &byteSize
                 );
@@ -196,7 +197,7 @@ namespace ctl {
                 err = ::GetAdaptersAddresses(
                     _family,   // Family
                     _gaaFlags, // Flags
-                    NULL,      // Reserved
+                    nullptr,   // Reserved
                     reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
                     &byteSize
                     );
@@ -236,7 +237,7 @@ namespace ctl {
     /// - to find the first interface that has the specified address assigned
     ///
     struct ctNetAdapterMatchingAddrPredicate {
-        ctNetAdapterMatchingAddrPredicate(_In_ const ctl::ctSockaddr& _addr) : 
+        explicit ctNetAdapterMatchingAddrPredicate(_In_ const ctl::ctSockaddr& _addr) : 
             targetAddr(_addr)
         {
         }

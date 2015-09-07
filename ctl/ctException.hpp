@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <malloc.h>
 #include <memory.h>
 #include <intrin.h>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <string>
 #include <exception>
 // os headers
@@ -67,7 +68,7 @@ namespace ctl {
         explicit ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) NOEXCEPT;
 
         ctException() NOEXCEPT;
-        ctException(_In_ const std::exception& e) NOEXCEPT;
+        explicit ctException(_In_ const std::exception& e) NOEXCEPT;
         ctException(_In_ const ctException& e) NOEXCEPT;
 
         // operator= implementations
@@ -79,7 +80,7 @@ namespace ctl {
 
         // public accessors
         virtual const unsigned long why() const NOEXCEPT;
-        virtual const char* what() const NOEXCEPT;
+        virtual const char* what() const NOEXCEPT override;
         virtual const wchar_t* what_w() const NOEXCEPT;
         virtual const wchar_t* where_w() const NOEXCEPT;
 
@@ -314,7 +315,7 @@ namespace ctl {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     inline ctException::~ctException() NOEXCEPT
     {
-        this->reset();
+        this->ctException::reset();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////

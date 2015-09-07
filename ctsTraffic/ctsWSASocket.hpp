@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 #include <winsock2.h>
-#include <mstcpip.h> // for the fast-path ioctl
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
@@ -77,14 +76,14 @@ namespace ctsTraffic {
         const wchar_t* function = L"WSASocket";
         switch (ctsConfig::Settings->Protocol) {
             case ctsConfig::ProtocolType::TCP:
-                socket = ::WSASocketW(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, NULL, 0, ctsConfig::Settings->SocketFlags);
+                socket = ::WSASocketW(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
                 if (INVALID_SOCKET == socket) {
                     gle = ::WSAGetLastError();
                 }
                 break;
 
             case ctsConfig::ProtocolType::UDP:
-                socket = ::WSASocketW(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, NULL, 0, ctsConfig::Settings->SocketFlags);
+                socket = ::WSASocketW(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, ctsConfig::Settings->SocketFlags);
                 if (INVALID_SOCKET == socket) {
                     gle = ::WSAGetLastError();
                 }

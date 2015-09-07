@@ -50,7 +50,7 @@ namespace ctsTraffic {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
-            return WSAECONNABORTED;
+            return wsIOResult(WSAECONNABORTED);
         }
 
         wsIOResult return_result;
@@ -63,7 +63,7 @@ namespace ctsTraffic {
             wsabuf.len = _task.buffer_length;
 
             DWORD flags = 0;
-            if (::WSARecvFrom(socket, &wsabuf, 1, NULL, &flags, NULL, NULL, pov, NULL) != 0) {
+            if (::WSARecvFrom(socket, &wsabuf, 1, nullptr, &flags, nullptr, nullptr, pov, nullptr) != 0) {
                 return_result.error_code = ::WSAGetLastError();
                 // IO pended == successfully initiating the IO
                 if (return_result.error_code != WSA_IO_PENDING) {
@@ -89,7 +89,7 @@ namespace ctsTraffic {
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            return WSAENOBUFS;
+            return wsIOResult(WSAENOBUFS);
         }
 
         return return_result;
@@ -106,7 +106,7 @@ namespace ctsTraffic {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
-            return WSAECONNABORTED;
+            return wsIOResult(WSAECONNABORTED);
         }
 
         wsIOResult return_result;
@@ -120,7 +120,7 @@ namespace ctsTraffic {
             wsabuf.buf = _task.buffer + _task.buffer_offset;
             wsabuf.len = _task.buffer_length;
 
-            if (::WSASendTo(socket, &wsabuf, 1, NULL, 0, targetAddress.sockaddr(), targetAddress.length(), pov, NULL) != 0) {
+            if (::WSASendTo(socket, &wsabuf, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pov, nullptr) != 0) {
                 return_result.error_code = ::WSAGetLastError();
                 // IO pended == successfully initiating the IO
                 if (return_result.error_code != WSA_IO_PENDING) {
@@ -146,7 +146,7 @@ namespace ctsTraffic {
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            return WSAENOBUFS;
+            return wsIOResult(WSAENOBUFS);
         }
 
         return return_result;

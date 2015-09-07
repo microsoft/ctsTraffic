@@ -244,8 +244,5 @@
     <ClInclude Include="..\ctl\ctWmiService.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\cttime.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

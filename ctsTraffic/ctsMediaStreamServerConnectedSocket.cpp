@@ -25,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 // project headers
 #include "ctsMediaStreamServerConnectedSocket.h"
-#include "ctsMediaStreamServer.h"
 #include "ctsWinsockLayer.h"
 
 using namespace ctl;

@@ -13,10 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// cpp headers
-#include <memory>
-#include <utility>
-
 // os headers
 #include <WinSock2.h>
 // ctl headers
@@ -87,7 +83,7 @@ namespace ctsTraffic {
         // private c'tor guarded by the factory function
         // _Acquires_lock_
         template <typename R>
-        ctsSocketGuard(R _r) NOEXCEPT : t(std::forward<R>(_r))
+        explicit ctsSocketGuard(R _r) NOEXCEPT : t(std::forward<R>(_r))
         {
             t->lock_socket();
         }
