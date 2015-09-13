@@ -223,9 +223,6 @@
     <ClInclude Include="..\ctl\ctWmiEnumerate.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiErrorInfo.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiException.hpp">
       <Filter>ctl</Filter>
     </ClInclude>

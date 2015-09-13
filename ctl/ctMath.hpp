@@ -14,7 +14,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <tuple>
 #include <vector>
 #include <numeric>
-#include <iterator>
 #include <math.h>
 
 #include <ctException.hpp>

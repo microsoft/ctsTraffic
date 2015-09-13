@@ -192,6 +192,7 @@ namespace ctl {
                 _request->callback(static_cast<OVERLAPPED*>(_overlapped));
                 delete _request;
             }
+            // ReSharper disable once CppAssignedValueIsNeverUsed (exr is used in the except handler)
             __except ((exr = GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
             {
                 __try {

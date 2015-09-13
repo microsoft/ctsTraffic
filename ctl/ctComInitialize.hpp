@@ -77,9 +77,9 @@ namespace ctl
         /// - thus defaulting to COINIT_MULTITHREADED as they can be used with either
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////
-        ctComInitialize(DWORD _threading_model = COINIT_MULTITHREADED) : uninit_required(false)
+        explicit ctComInitialize(DWORD _threading_model = COINIT_MULTITHREADED) : uninit_required(false)
         {
-            HRESULT hr = ::CoInitializeEx(0, _threading_model);
+            HRESULT hr = ::CoInitializeEx(nullptr, _threading_model);
             switch (hr) {
             case S_OK:
             case S_FALSE:
@@ -150,7 +150,7 @@ namespace ctl
             ctComPtr temp;
             HRESULT hr = ::CoCreateInstance(
                 _clsid,
-                0,
+                nullptr,
                 CLSCTX_INPROC_SERVER,
                 _riid,
                 reinterpret_cast<LPVOID*>(&temp.t));
@@ -172,12 +172,14 @@ namespace ctl
         ctComPtr() NOEXCEPT : t(nullptr)
         {
         }
-        ctComPtr(_In_opt_ T* _t) NOEXCEPT : t(_t)
+
+        explicit ctComPtr(_In_opt_ T* _t) NOEXCEPT : t(_t)
         {
             if (t != nullptr) {
                 t->AddRef();
             }
         }
+
         ~ctComPtr() NOEXCEPT
         {
             this->release();
@@ -390,7 +392,8 @@ namespace ctl
         ctComBstr() NOEXCEPT : bstr(nullptr)
         {
         }
-        ctComBstr(_In_opt_ LPCWSTR _string) : bstr(nullptr)
+
+        explicit ctComBstr(_In_opt_ LPCWSTR _string) : bstr(nullptr)
         {
             if (_string != nullptr) {
                 bstr = ::SysAllocString(_string);
@@ -399,7 +402,8 @@ namespace ctl
                 }
             }
         }
-        ctComBstr(_In_opt_ const BSTR _string) : bstr(nullptr)
+
+        explicit ctComBstr(_In_opt_ const BSTR _string) : bstr(nullptr)
         {
             if (_string != nullptr) {
                 bstr = ::SysAllocString(_string);
@@ -408,6 +412,7 @@ namespace ctl
                 }
             }
         }
+
         ctComBstr(_In_reads_z_(_len) LPCWSTR _string, _In_ size_t _len) : bstr(nullptr)
         {
             if (_string != nullptr) {
@@ -699,7 +704,8 @@ namespace ctl
         {
             ::VariantInit(&variant);
         }
-        ctComVariant(_In_ const VARIANT* _vt) : variant()
+
+        explicit ctComVariant(_In_ const VARIANT* _vt) : variant()
         {
             ::VariantInit(&variant);
             HRESULT hr = ::VariantCopy(&variant, _vt);
@@ -707,6 +713,7 @@ namespace ctl
                 throw ctException(hr, L"VariantCopy", L"ctComVariant::ctComVariant", false);
             }
         }
+
         ~ctComVariant() NOEXCEPT
         {
             ::VariantClear(&variant);
@@ -1031,7 +1038,7 @@ namespace ctl
                 }
                 float_str.resize(strlen(&float_str[0]));
 
-                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, 0, 0);
+                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
                 if (len == 0) {
                     throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
                 }
@@ -1053,7 +1060,7 @@ namespace ctl
                 }
                 float_str.resize(strlen(&float_str[0]));
 
-                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, 0, 0);
+                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
                 if (len == 0) {
                     throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
                 }
@@ -1079,7 +1086,7 @@ namespace ctl
                 wchar_t sz_time[25];
                 if (-1 == ::_snwprintf_s(
                     sz_time, 25, 24,
-                    L"%04d-%02d-%02d %02d:%02d:%02d.%03d",
+                    L"%04u-%02u-%02u %02u:%02u:%02u.%03u",
                     st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
                     )) {
                     throw ctException(errno, L"_snwprintf_s VT_DATE conversion", L"ctComVariant::write", false);

@@ -23,6 +23,5 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctWmiClassObject.hpp"
 #include "ctWmiInstance.hpp"
 #include "ctWmiEnumerate.hpp"
-#include "ctWmiErrorInfo.hpp"
 #include "ctWmiException.hpp"
 #include "ctWmiMakeVariant.hpp"

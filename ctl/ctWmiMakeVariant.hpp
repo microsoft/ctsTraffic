@@ -30,7 +30,7 @@ namespace ctl {
 
     //////////////////////////////////////////////////////////////////////////////////////////
     ///
-    /// ctWmiMakeVariant() template functions are specializations designed to help
+    /// ctWmiMakeVariant() functions are specializations designed to help
     ///   callers who want a way to construct a VARIANT (ctComVariant) that is 
     ///   safe for passing into WMI - since WMI has limitations on what VARIANT
     ///   types it accepts.
@@ -38,130 +38,122 @@ namespace ctl {
     /// Note: all explicit specializations marked inline to avoid ODR violations
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    ctComVariant ctWmiMakeVariant(T t);
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<bool>(bool t)
+    inline ctComVariant ctWmiMakeVariant(bool t)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_BOOL>(t);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<char>(char _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(char _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_UI1>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<unsigned char>(unsigned char _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(unsigned char _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_UI1>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<short>(short _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(short _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I2>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<unsigned short>(unsigned short _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(unsigned short _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I2>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<long>(long _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(long _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I4>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<unsigned long>(unsigned long _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(unsigned long _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I4>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<int>(int _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(int _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I4>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<unsigned int>(unsigned int _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(unsigned int _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_I4>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<float>(float _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(float _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_R4>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<double>(double _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(double _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_R8>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<SYSTEMTIME>(SYSTEMTIME _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(SYSTEMTIME _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_DATE>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<BSTR>(BSTR _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(BSTR _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_BSTR>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<LPCWSTR>(LPCWSTR _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(LPCWSTR _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_BSTR>(_vtProp);
     }
-    template <>
-    inline ctComVariant ctWmiMakeVariant<std::vector<std::wstring>&>(std::vector<std::wstring>& _vtProp)
+
+    inline ctComVariant ctWmiMakeVariant(std::vector<std::wstring>& _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_BSTR | VT_ARRAY>(_vtProp);
     }
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<std::vector<unsigned long>&>(std::vector<unsigned long>& _vtProp)
+    inline ctComVariant ctWmiMakeVariant(std::vector<unsigned long>& _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_UI4 | VT_ARRAY>(_vtProp);
     }
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<std::vector<unsigned short>&>(std::vector<unsigned short>& _vtProp)
+    inline ctComVariant ctWmiMakeVariant(std::vector<unsigned short>& _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_UI2 | VT_ARRAY>(_vtProp);
     }
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<std::vector<unsigned char>&>(std::vector<unsigned char>& _vtProp)
+    inline ctComVariant ctWmiMakeVariant(std::vector<unsigned char>& _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign<VT_UI1 | VT_ARRAY>(_vtProp);
     }
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<ctWmiInstance&>(ctWmiInstance& _vtProp)
+    inline ctComVariant ctWmiMakeVariant(ctWmiInstance& _vtProp)
     {
         ctComVariant local_variant;
         return local_variant.assign(_vtProp.get_instance());
     }
 
-    template <>
-    inline ctComVariant ctWmiMakeVariant<std::vector<ctWmiInstance>&>(std::vector<ctWmiInstance>& _vtProp)
+    inline ctComVariant ctWmiMakeVariant(std::vector<ctWmiInstance>& _vtProp)
     {
         ctComVariant local_variant;
         std::vector<ctComPtr<IWbemClassObject>> local_prop;

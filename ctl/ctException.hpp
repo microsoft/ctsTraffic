@@ -14,10 +14,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <malloc.h>
-#include <memory.h>
+#include <stdlib.h>
+#include <wchar.h>
 #include <intrin.h>
-// ReSharper disable once CppUnusedIncludeDirective
 #include <string>
 #include <exception>
 // os headers
@@ -72,6 +71,8 @@ namespace ctl {
         ctException(_In_ const ctException& e) NOEXCEPT;
 
         // operator= implementations
+
+        // ReSharper disable once CppHidingFunction
         virtual ctException& operator=(_In_ const std::exception& e) NOEXCEPT;
         virtual ctException& operator=(_In_ const ctException& e) NOEXCEPT;
 
