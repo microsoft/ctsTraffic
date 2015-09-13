@@ -117,13 +117,6 @@ namespace ctsTraffic {
         }
 
 
-        void UpdateGlobalStats(const ctsTcpStatistics&) NOEXCEPT
-        {
-        }
-        void UpdateGlobalStats(const ctsUdpStatistics&) NOEXCEPT
-        {
-        }
-
         const MediaStreamSettings& GetMediaStream() NOEXCEPT
         {
             return s_MediaStreamSettings;

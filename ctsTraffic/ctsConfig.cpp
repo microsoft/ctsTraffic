@@ -3242,7 +3242,7 @@ namespace ctsTraffic {
             if (Settings->Options & OptionType::MAX_RECV_BUF) {
                 static const int recv_buff = 1048576;
                 
-                auto error = setsockopt(
+                auto error = ::setsockopt(
                     _s,
                     SOL_SOCKET,
                     SO_RCVBUF,
@@ -3286,23 +3286,6 @@ namespace ctsTraffic {
             return 0;
         }
 
-        void UpdateGlobalStats(const ctsTcpStatistics& _in_stats) NOEXCEPT
-        {
-            Settings->HistoricTcpDetails.total_time.add(_in_stats.end_time.get() - _in_stats.start_time.get());
-            Settings->HistoricTcpDetails.bytes_recv.add(_in_stats.bytes_recv.get());
-            Settings->HistoricTcpDetails.bytes_sent.add(_in_stats.bytes_sent.get());
-        }
-        void UpdateGlobalStats(const ctsUdpStatistics& _in_stats) NOEXCEPT
-        {
-            Settings->HistoricUdpDetails.total_time.add(_in_stats.end_time.get() - _in_stats.start_time.get());
-            Settings->HistoricUdpDetails.bits_received.add(_in_stats.bits_received.get());
-            Settings->HistoricUdpDetails.dropped_frames.add(_in_stats.dropped_frames.get());
-            Settings->HistoricUdpDetails.error_frames.add(_in_stats.error_frames.get());
-            Settings->HistoricUdpDetails.duplicate_frames.add(_in_stats.duplicate_frames.get());
-            Settings->HistoricUdpDetails.retry_attempts.add(_in_stats.retry_attempts.get());
-            Settings->HistoricUdpDetails.successful_frames.add(_in_stats.successful_frames.get());
-        }
-
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// PrintSettings
@@ -3325,9 +3308,10 @@ namespace ctsTraffic {
                 case ProtocolType::UDP:
                     setting_string.append(L"UDP");
                     break;
-            case ProtocolType::NoProtocolSet:// fall-through
-            default: 
-                ctl::ctAlwaysFatalCondition(L"Unexpected Settings Protocol");
+
+                case ProtocolType::NoProtocolSet:// fall-through
+                default: 
+                    ctl::ctAlwaysFatalCondition(L"Unexpected Settings Protocol");
             }
             setting_string.append(L"\n");
 
@@ -3376,6 +3360,7 @@ namespace ctsTraffic {
                     break;
                 case IoPatternType::MediaStream:
                     setting_string.append(L"MediaStream <UDP controlled stream from server to client>\n");
+                    break;
 
                 case IoPatternType::NoIOSet: // fall-through
                 default:

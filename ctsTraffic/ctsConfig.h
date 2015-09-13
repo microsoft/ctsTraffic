@@ -194,9 +194,6 @@ namespace ctsTraffic {
         int  GetListenBacklog() NOEXCEPT;
         bool IsListening() NOEXCEPT;
 
-        void UpdateGlobalStats(const ctsTcpStatistics&) NOEXCEPT;
-        void UpdateGlobalStats(const ctsUdpStatistics&) NOEXCEPT;
-
         // Set* functions
         int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address);
         int SetPreConnectOptions(SOCKET _s);
@@ -309,9 +306,6 @@ namespace ctsTraffic {
               ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec()),
               TcpStatusDetails(),
               UdpStatusDetails(),
-              HistoricConnectionDetails(),
-              HistoricTcpDetails(),
-              HistoricUdpDetails(),
               StatusUpdateFrequencyMilliseconds(0UL),
               TcpBytesPerSecondPeriod(100LL),
               StartTimeMilliseconds(0LL),
@@ -353,14 +347,10 @@ namespace ctsTraffic {
             std::vector<ctl::ctSockaddr> TargetAddresses;
             std::vector<ctl::ctSockaddr> BindAddresses;
 
-            // stats used only for status updates
+            // stats for status updates and summaries
             ctsConnectionStatistics ConnectionStatusDetails;
             ctsTcpStatistics TcpStatusDetails;
             ctsUdpStatistics UdpStatusDetails;
-            // stats for global tracking
-            ctsConnectionHistoritcStatistics HistoricConnectionDetails;
-            ctsTcpHistoricStatistics HistoricTcpDetails;
-            ctsUdpHistoricStatistics HistoricUdpDetails;
 
             ctsUnsignedLong StatusUpdateFrequencyMilliseconds;
 

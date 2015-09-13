@@ -409,10 +409,7 @@ namespace ctsTraffic {
         ///
         void end_stats() NOEXCEPT override
         {
-            long long prior_end_time = stats.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
-            if (0LL == prior_end_time) {
-                ctsConfig::UpdateGlobalStats(stats);
-            }
+            stats.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
         }
         ///
         /// Access the ConnectionId stored in the Stats object

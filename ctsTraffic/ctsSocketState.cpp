@@ -280,21 +280,17 @@ namespace ctsTraffic {
 
                     // Update the historic stats for this connection
                     if (0 == context->last_error) {
-                        ctsConfig::Settings->HistoricConnectionDetails.successful_connections.increment();
                         ctsConfig::Settings->ConnectionStatusDetails.successful_completion_count.increment();
 
                     } else if (ctsIOPattern::IsProtocolError(context->last_error)) {
-                        ctsConfig::Settings->HistoricConnectionDetails.protocol_errors.increment();
                         ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.increment();
 
                     } else {
-                        ctsConfig::Settings->HistoricConnectionDetails.connection_errors.increment();
                         ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                     }
                 } else {
                     // if this socket never started IO, it never created an io_pattern to track stats
                     // - in this case, directly track the failures in the global stats
-                    ctsConfig::Settings->HistoricConnectionDetails.connection_errors.increment();
                     ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                 }
 

@@ -116,9 +116,6 @@ namespace ctsUnitTest {
             ctsTcpStatistics tcp_stats;
             ctsUdpStatistics udp_stats;
             ctsConnectionStatistics conn_stats;
-            ctsConnectionHistoritcStatistics historic_conn_stats;
-            ctsTcpHistoricStatistics historic_tcp_stats;
-            ctsUdpHistoricStatistics historic_udp_stats;
         }
     };
 }

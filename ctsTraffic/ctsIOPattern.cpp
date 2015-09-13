@@ -151,23 +151,22 @@ namespace ctsTraffic {
             case ctsConfig::IoPatternType::Pull:
                 return make_shared<ctsIOPatternPull>();
 
-        case ctsConfig::IoPatternType::Push:
+            case ctsConfig::IoPatternType::Push:
                 return make_shared<ctsIOPatternPush>();
 
-        case ctsConfig::IoPatternType::PushPull:
+            case ctsConfig::IoPatternType::PushPull:
                 return make_shared<ctsIOPatternPushPull>();
 
-        case ctsConfig::IoPatternType::Duplex:
+            case ctsConfig::IoPatternType::Duplex:
                 return make_shared<ctsIOPatternDuplex>();
 
-        case ctsConfig::IoPatternType::MediaStream:
-            {
+            case ctsConfig::IoPatternType::MediaStream:
                 if (ctsConfig::IsListening()) {
                     return make_shared<ctsIOPatternMediaStreamServer>();
+                } else {
+                    // if is not listening, running as a client
+                    return make_shared<ctsIOPatternMediaStreamClient>();
                 }
-                // if is not listening, running as a client
-                return make_shared<ctsIOPatternMediaStreamClient>();
-            }
 
         default:
                 ctAlwaysFatalCondition(L"ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::Settings->IoPattern);
@@ -442,6 +441,16 @@ namespace ctsTraffic {
                         }
 
                         this->update_last_protocol_error(this->pattern_state.completed_task(_original_task, _current_transfer));
+
+                        // update the global counters of bytes transferred, since the stats on this individual connection won't be
+                        // - UDP currently isn't tracking hard against these numbers - only updating TCP
+                        if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP) {
+                            if (_original_task.ioAction == IOTaskAction::Send) {
+                                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
+                            } else {
+                                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
+                            }
+                        }
                     }
                     ctsIOBuffers::ReleaseConnectionIdBuffer(_original_task);
 
@@ -1090,6 +1099,7 @@ namespace ctsTraffic {
 
                     current_frame_requested += return_task.buffer_length;
                 }
+                break;
         }
         return return_task;
     }

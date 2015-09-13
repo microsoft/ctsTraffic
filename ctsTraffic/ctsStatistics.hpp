@@ -20,22 +20,59 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
 
-namespace ctsTraffic {
-    namespace ctsStatistics {
+namespace ctsTraffic
+{
+    namespace ctsStatistics
+    {
         static const unsigned long ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
         template <typename T>
-        void GenerateConnectionId(_In_ T& _statistics_object);
+        void GenerateConnectionId(_In_ T& _statistics_object)
+        {
+            UUID connection_id;
+            RPC_STATUS status = ::UuidCreate(&connection_id);
+            if (status != RPC_S_OK) {
+                throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
+            }
+            RPC_CSTR connection_id_string = nullptr;
+            status = ::UuidToStringA(&connection_id, &connection_id_string);
+            if (status != RPC_S_OK) {
+                throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
+            }
+
+            ctl::ctFatalCondition(
+                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
+                L"UuidToString returned a string not 36 characters long (%Iu)",
+                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)));
+
+            auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
+            ctl::ctFatalCondition(
+                copy_error != 0,
+                L"memcpy_s failed trying to copy a UUID string (%d)", copy_error);
+
+            ::RpcStringFreeA(&connection_id_string);
+            _statistics_object.connection_identifier[ConnectionIdLength - 1] = '\0';
+        }
 
         template <typename T>
-        void Start(_In_ T& _statistics_object) NOEXCEPT;
+        void Start(_In_ T& _statistics_object) NOEXCEPT
+        {
+            // only calculate the QPC the first time
+            // - willing to take the cost of 2 interlocked operations the first time this is initialized
+            //   versus taking a QPC hit on every IO request
+            if (0LL == _statistics_object.start_time.get()) {
+                _statistics_object.start_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+            }
+        }
 
         template <typename T>
-        void End(_In_ T& _statistics_object) NOEXCEPT;
+        void End(_In_ T& _statistics_object) NOEXCEPT
+        {
+            _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+        }
     }
 
-    struct ctStatsTracking
-    {
+    struct ctStatsTracking {
     private:
         // not allowing assignment operator - must be explicit
         ctStatsTracking& operator=(const ctStatsTracking& _in) NOEXCEPT;
@@ -136,16 +173,7 @@ namespace ctsTraffic {
     };
 
 
-    struct ctsConnectionHistoritcStatistics
-    {
-        ctStatsTracking total_time;
-        ctStatsTracking active_connections;
-        ctStatsTracking successful_connections;
-        ctStatsTracking connection_errors;
-        ctStatsTracking protocol_errors;
-    };
-    struct ctsConnectionStatistics
-    {
+    struct ctsConnectionStatistics {
     private:
         // not implementing the assignment operator
         // only implemeting the copy c'tor (due to maintaining memory barriers)
@@ -206,19 +234,7 @@ namespace ctsTraffic {
         }
     };
 
-    struct ctsUdpHistoricStatistics
-    {
-        ctStatsTracking total_time;
-        ctStatsTracking bits_received;
-        ctStatsTracking successful_frames;
-        ctStatsTracking retry_attempts;
-        ctStatsTracking dropped_frames;
-        ctStatsTracking duplicate_frames;
-        ctStatsTracking error_frames;
-    };
-
-    struct ctsUdpStatistics
-    {
+    struct ctsUdpStatistics {
     private:
         ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
 
@@ -303,15 +319,7 @@ namespace ctsTraffic {
         }
     };
 
-    struct ctsTcpHistoricStatistics
-    {
-        ctStatsTracking total_time;
-        ctStatsTracking bytes_sent;
-        ctStatsTracking bytes_recv;
-    };
-
-    struct ctsTcpStatistics
-    {
+    struct ctsTcpStatistics {
     private:
         ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
 
@@ -376,60 +384,4 @@ namespace ctsTraffic {
             return return_stats;
         }
     };
-}
-
-//
-// including ctsConfig after the above declarations to avoid circular references between the 2 headers
-//
-#include "ctsConfig.h"
-namespace ctsTraffic {
-    namespace ctsStatistics {
-        template <typename T>
-        void GenerateConnectionId(_In_ T& _statistics_object)
-        {
-            UUID connection_id;
-            RPC_STATUS status = ::UuidCreate(&connection_id);
-            if (status != RPC_S_OK) {
-                throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
-            }
-            RPC_CSTR connection_id_string = nullptr;
-            status = ::UuidToStringA(&connection_id, &connection_id_string);
-            if (status != RPC_S_OK) {
-                throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
-            }
-
-            ctl::ctFatalCondition(
-                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
-                L"UuidToString returned a string not 36 characters long (%Iu)",
-                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)));
-
-            auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
-            ctl::ctFatalCondition(
-                copy_error != 0,
-                L"memcpy_s failed trying to copy a UUID string (%d)", copy_error);
-
-            ::RpcStringFreeA(&connection_id_string);
-            _statistics_object.connection_identifier[ConnectionIdLength - 1] = '\0';
-        }
-
-        template <typename T>
-        void Start(_In_ T& _statistics_object) NOEXCEPT
-        {
-            // only calculate the QPC the first time
-            // - willing to take the cost of 2 interlocked operations the first time this is initialized
-            //   versus taking a QPC hit on every IO request
-            if (0LL == _statistics_object.start_time.get()) {
-                _statistics_object.start_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
-            }
-        }
-
-        template <typename T>
-        void End(_In_ T& _statistics_object) NOEXCEPT
-        {
-            long long prior_end_time = _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
-            if (0LL == prior_end_time) {
-                ctsConfig::UpdateGlobalStats(_statistics_object);
-            }
-        }
-    }
 }

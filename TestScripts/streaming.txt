@@ -3,19 +3,35 @@ ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -buf
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5
 
 
+
+
+
 30Gbps with fewer bits/sec but higher connection count
+
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:300
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:300 
+
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:300
+
+
+
 
 40Gbps with smaller connection cound but higher bits/sec
+
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:5 -StreamLength:30 -ConsoleVerbosity:1
+
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:5 -StreamLength:30 -iterations:1 -connections:40 -ConsoleVerbosity:1 -verify:connection
+
+
+
 
 45Gbps
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:45 -ConsoleVerbosity:1 -verify:connection
 
+
 UDP logging:
+
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500 -connectionfilename:udpserver_conn.log -statusfilename:udpserver_status.log -errorfilename:udpserver_error.log
+
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -connectionfilename:udpclient_conn.csv -statusfilename:udpclient_status.csv -jitterfilename:udpclient_jitter.csv
 

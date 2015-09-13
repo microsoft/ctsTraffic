@@ -125,14 +125,40 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         L"\n\n"
         L"  Historic Connection Statistics (all connections over the complete lifetime)  \n"
         L"-------------------------------------------------------------------------------\n"
-        L"SuccessfulConnections [%lld]   NetworkErrors [%lld]   ProtocolErrors [%lld]\n",
-        ctsConfig::Settings->HistoricConnectionDetails.successful_connections.get(),
-        ctsConfig::Settings->HistoricConnectionDetails.connection_errors.get(),
-        ctsConfig::Settings->HistoricConnectionDetails.protocol_errors.get());
+        L"  SuccessfulConnections [%lld]   NetworkErrors [%lld]   ProtocolErrors [%lld]\n",
+        ctsConfig::Settings->ConnectionStatusDetails.successful_completion_count.get(),
+        ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get(),
+        ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get());
+
+    if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP) {
+        ctsConfig::PrintSummary(
+            L"\n"
+            L"  Total Bytes Recv : %lld\n"
+            L"  Total Bytes Sent : %lld\n",
+            ctsConfig::Settings->TcpStatusDetails.bytes_recv.get(),
+            ctsConfig::Settings->TcpStatusDetails.bytes_sent.get());
+    } else {
+        // currently don't track UDP server stats
+        if (!ctsConfig::IsListening()) {
+            ctsConfig::PrintSummary(
+                L"\n"
+                L"  Total Bytes Recv : %lld\n"
+                L"  Total Successful Frames : %lld\n"
+                L"  Total Dropped Frames : %lld\n"
+                L"  Total Duplicate Frames : %lld\n"
+                L"  Total Error Frames : %lld\n",
+                ctsConfig::Settings->UdpStatusDetails.bits_received.get() / 8LL,
+                ctsConfig::Settings->UdpStatusDetails.successful_frames.get(),
+                ctsConfig::Settings->UdpStatusDetails.dropped_frames.get(),
+                ctsConfig::Settings->UdpStatusDetails.duplicate_frames.get(),
+                ctsConfig::Settings->UdpStatusDetails.error_frames.get());
+        }
+    }
+
 
     long long error_count =
-        ctsConfig::Settings->HistoricConnectionDetails.connection_errors.get() +
-        ctsConfig::Settings->HistoricConnectionDetails.protocol_errors.get();
+        ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get() +
+        ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get();
     if (error_count > MAXINT) {
         error_count = MAXINT;
     }
