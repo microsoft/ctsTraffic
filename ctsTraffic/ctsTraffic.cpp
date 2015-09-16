@@ -116,6 +116,8 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_CANCELLED;
     }
 
+    auto total_time_run = ctTimer::snap_qpc_as_msec() - ctsConfig::Settings->StartTimeMilliseconds;
+
     // write out the final status update
     ctsConfig::PrintStatusUpdate();
 
@@ -154,7 +156,9 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 ctsConfig::Settings->UdpStatusDetails.error_frames.get());
         }
     }
-
+    ctsConfig::PrintSummary(
+        L"  Total Time : %lld ms.\n",
+        static_cast<long long>(total_time_run));
 
     long long error_count =
         ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get() +
