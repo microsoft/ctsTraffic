@@ -534,12 +534,12 @@ namespace ctsTraffic {
                 characters_written += this->append_csvoutput(
                     characters_written,
                     SendBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<unsigned long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
+                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 characters_written += this->append_csvoutput(
                     characters_written,
                     RecvBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<unsigned long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
+                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
 
                 characters_written += this->append_csvoutput(characters_written, CurrentTransactionsLength, connection_data.active_connection_count.get());
                 characters_written += this->append_csvoutput(characters_written, CompletedTransactionsLength, connection_data.successful_completion_count.get());
@@ -555,12 +555,12 @@ namespace ctsTraffic {
                 this->right_justify_output(
                     SendBytesPerSecondOffset,
                     SendBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<unsigned long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
+                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 this->right_justify_output(
                     RecvBytesPerSecondOffset,
                     RecvBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<unsigned long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
+                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
 
                 this->right_justify_output(CurrentTransactionsOffset, CurrentTransactionsLength, connection_data.active_connection_count.get());
                 this->right_justify_output(CompletedTransactionsOffset, CompletedTransactionsLength, connection_data.successful_completion_count.get());
@@ -593,45 +593,44 @@ namespace ctsTraffic {
 
             } else {
                 return
-                    L" TimeSlice      SendBps     RecvBps   In-Flight  Completed  NetError  DataError \n";
-                ///    00000000.0...0000000000..0000000000.....0000000....0000000...0000000....0000000.        
-                ///    1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
-                ///            10        20        30        40        50        60        70        80
+                    L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \n";
+                ///   00000000.0..00000000000..00000000000....0000000....0000000...0000000....0000000.        
+                ///   1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
+                ///           10        20        30        40        50        60        70        80
             }
         }
 
     private:
         // constant offsets for each numeric value to print
-        static const int TimeSliceOffset = 10;
-        static const int TimeSliceLength = 10;
+        static const unsigned long TimeSliceOffset = 10;
+        static const unsigned long TimeSliceLength = 10;
 
-        static const int SendBytesPerSecondOffset = 23;
-        static const int SendBytesPerSecondLength = 10;
+        static const unsigned long SendBytesPerSecondOffset = 23;
+        static const unsigned long SendBytesPerSecondLength = 11;
 
-        static const int RecvBytesPerSecondOffset = 35;
-        static const int RecvBytesPerSecondLength = 10;
+        static const unsigned long RecvBytesPerSecondOffset = 36;
+        static const unsigned long RecvBytesPerSecondLength = 11;
 
-        static const int CurrentTransactionsOffset = 47;
-        static const int CurrentTransactionsLength = 7;
+        static const unsigned long CurrentTransactionsOffset = 47;
+        static const unsigned long CurrentTransactionsLength = 7;
 
-        static const int CompletedTransactionsOffset = 58;
-        static const int CompletedTransactionsLength = 7;
+        static const unsigned long CompletedTransactionsOffset = 58;
+        static const unsigned long CompletedTransactionsLength = 7;
 
-        static const int ConnectionErrorsOffset = 68;
-        static const int ConnectionErrorsLength = 7;
+        static const unsigned long ConnectionErrorsOffset = 68;
+        static const unsigned long ConnectionErrorsLength = 7;
 
-        static const int ProtocolErrorsOffset = 79;
-        static const int ProtocolErrorsLength = 7;
+        static const unsigned long ProtocolErrorsOffset = 79;
+        static const unsigned long ProtocolErrorsLength = 7;
 
-        static const int DetailedSentOffset = 23;
-        static const int DetailedSentLength = 10;
+        static const unsigned long DetailedSentOffset = 23;
+        static const unsigned long DetailedSentLength = 10;
 
-        static const int DetailedRecvOffset = 35;
-        static const int DetailedRecvLength = 10;
+        static const unsigned long DetailedRecvOffset = 35;
+        static const unsigned long DetailedRecvLength = 10;
 
-        static const int DetailedAddressOffset = 39;
-        static const int DetailedAddressLength = 46;
+        static const unsigned long DetailedAddressOffset = 39;
+        static const unsigned long DetailedAddressLength = 46;
     };
-
 
 } // namespace
