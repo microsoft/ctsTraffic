@@ -186,7 +186,6 @@ namespace ctsTraffic {
         recv_buffer_container(),
         callback(nullptr),
         pattern_state(),
-        buffer_size(ctsConfig::GetBufferSize()),
         send_pattern_offset(0),
         recv_pattern_offset(0),
         recv_rio_bufferid(RIO_INVALID_BUFFERID),
@@ -225,10 +224,10 @@ namespace ctsTraffic {
                 }
             } else {
                 if (_recv_count > 0) {
-                    recv_buffer_container.resize(buffer_size * _recv_count);
+                    recv_buffer_container.resize(ctsConfig::GetMaxBufferSize() * _recv_count);
                     char* raw_recv_buffer = &recv_buffer_container[0];
                     for (unsigned long free_list = 0; free_list < _recv_count; ++free_list) {
-                        recv_buffer_free_list.push_back(raw_recv_buffer + static_cast<size_t>(free_list * buffer_size));
+                        recv_buffer_free_list.push_back(raw_recv_buffer + static_cast<size_t>(free_list * ctsConfig::GetMaxBufferSize()));
                     }
                 } else {
                     // just use the shared buffer to capture the FIN since recv_count == 0
@@ -240,7 +239,7 @@ namespace ctsTraffic {
             if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO &&
                 recv_rio_bufferid != s_SharedBufferId) {
                 ctFatalCondition(_recv_count > 1, L"Current not supporting >1 concurrent IO requests with RIO");
-                recv_rio_bufferid = ctRIORegisterBuffer(recv_buffer_free_list[0], static_cast<DWORD>(buffer_size));
+                recv_rio_bufferid = ctRIORegisterBuffer(recv_buffer_free_list[0], static_cast<DWORD>(ctsConfig::GetMaxBufferSize()));
                 if (RIO_INVALID_BUFFERID == recv_rio_bufferid) {
                     throw ctException(::WSAGetLastError(), L"RIORegisterBuffer", L"ctsIOPattern", false);
                 }
@@ -557,8 +556,8 @@ namespace ctsTraffic {
         //
         // first: calculate the next buffer size assuming no max ceiling specified by the protocol
         //
-         ctsSignedLongLong new_buffer_size = min<ctsUnsignedLongLong>(
-            this->buffer_size,
+        ctsSignedLongLong new_buffer_size = min<ctsUnsignedLongLong>(
+            ctsConfig::GetBufferSize(),
             this->pattern_state.get_remaining_transfer());
         //
         // second: if the protocol specified a ceiling, recalculate given their ceiling
@@ -676,9 +675,9 @@ namespace ctsTraffic {
                 this->recv_pattern_offset >= BufferPatternSize,
                 L"pattern_offset being too large means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
             ctFatalCondition(
-                return_task.buffer_length + return_task.buffer_offset > this->buffer_size,
-                L"return_task (%p) for a Recv request is specifying a buffer that is larger than this->buffer_size (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
-                &return_task, static_cast<unsigned long>(this->buffer_size), this);
+                return_task.buffer_length + return_task.buffer_offset > new_buffer_size,
+                L"return_task (%p) for a Recv request is specifying a buffer that is larger than buffer_size (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                &return_task, static_cast<unsigned long>(new_buffer_size), this);
         }
 
         return return_task;

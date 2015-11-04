@@ -195,8 +195,6 @@ namespace ctsTraffic {
         // track the state of the L4 protocol (TCP or UDP)
         ctsIOPatternState pattern_state;
 
-        // need to know buffer size for each transfer
-        const ctsUnsignedLong buffer_size;
         // need to track the current offset into the buffer pattern
         // these are separate as we could have both sends and receive operations on the same connection
         ctsSizeT send_pattern_offset;
