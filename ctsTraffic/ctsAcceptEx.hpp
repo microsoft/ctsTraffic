@@ -210,7 +210,6 @@ namespace ctsTraffic {
 
         std::shared_ptr<ctsAcceptExImpl> pimpl;
 
-
     public:
         ///
         ///
@@ -318,12 +317,10 @@ namespace ctsTraffic {
 
 
     private:
-        static
-        void ctsAcceptExIoCompletionCallback(
+        static void ctsAcceptExIoCompletionCallback(
             OVERLAPPED* /*_overlapped*/,
             std::shared_ptr<ctsAcceptExImpl> _pimpl,
-            ctsAcceptSocketInfo* _accept_info
-            ) NOEXCEPT
+            ctsAcceptSocketInfo* _accept_info) NOEXCEPT
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
@@ -387,21 +384,20 @@ namespace ctsTraffic {
     ///
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline
-    ctsAcceptEx::ctsListenSocketInfo::ctsListenSocketInfo(const ctl::ctSockaddr& _addr)
-    : socket(INVALID_SOCKET), addr(_addr), iocp(), accept_sockets()
+    inline ctsAcceptEx::ctsListenSocketInfo::ctsListenSocketInfo(const ctl::ctSockaddr& _addr)
+        : socket(INVALID_SOCKET), addr(_addr), iocp(), accept_sockets()
     {
         //
         // Create, Bind, Listen, create an IOCP thread pool
         //
-        socket = ::WSASocketW(addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
+        DWORD error = ctsConfig::CreateWSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
         if (INVALID_SOCKET == socket) {
-            throw ctl::ctException(::WSAGetLastError(), L"socket", L"ctsAcceptEx", false);
+            throw ctl::ctException(error, L"CreateWSASocket", L"ctsAcceptEx", false);
         }
         // close the socket on failure
         ctlScopeGuard(closeListenSocketOnFailure, { ::closesocket(socket); socket = INVALID_SOCKET; });
 
-        auto error = ctsConfig::SetPreBindOptions(socket, addr);
+        error = ctsConfig::SetPreBindOptions(socket, addr);
         if (error != 0) {
             throw ctl::ctException(error, L"ctsConfig::SetPreBindOptions", L"ctsAcceptEx", false);
         }
@@ -420,16 +416,14 @@ namespace ctsTraffic {
         closeListenSocketOnFailure.dismiss();
     }
 
-    inline
-    ctsAcceptEx::ctsListenSocketInfo::~ctsListenSocketInfo() NOEXCEPT
+    inline ctsAcceptEx::ctsListenSocketInfo::~ctsListenSocketInfo() NOEXCEPT
     {
         if (socket != INVALID_SOCKET) {
             ::closesocket(socket);
         }
     }
 
-    inline
-    void ctsAcceptEx::ctsListenSocketInfo::RestartStalledAccepts(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
+    inline void ctsAcceptEx::ctsListenSocketInfo::RestartStalledAccepts(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
     {
         for (auto& _socket : accept_sockets) {
             _socket->InitatiateAcceptEx(_pimpl);
@@ -443,22 +437,20 @@ namespace ctsTraffic {
     ///
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline
-    ctsAcceptEx::ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsAcceptEx::ctsListenSocketInfo>& _listen_socket)
-    : socket(INVALID_SOCKET),
-      cs(),
-      pov(nullptr),
-      listening_socket(_listen_socket->socket),
-      listening_addr(_listen_socket->addr),
-      listening_iocp(_listen_socket->iocp)
+    inline ctsAcceptEx::ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsAcceptEx::ctsListenSocketInfo>& _listen_socket)
+        : socket(INVALID_SOCKET),
+        cs(),
+        pov(nullptr),
+        listening_socket(_listen_socket->socket),
+        listening_addr(_listen_socket->addr),
+        listening_iocp(_listen_socket->iocp)
     {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
         }
     }
 
-    inline
-    ctsAcceptEx::ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
+    inline ctsAcceptEx::ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
     {
         if (socket != INVALID_SOCKET) {
             ::closesocket(socket);
@@ -466,8 +458,7 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&cs);
     }
 
-    inline
-    void ctsAcceptEx::ctsAcceptSocketInfo::InitatiateAcceptEx(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
+    inline void ctsAcceptEx::ctsAcceptSocketInfo::InitatiateAcceptEx(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
     {
         ctl::ctAutoReleaseCriticalSection lock(&this->cs);
 
@@ -476,38 +467,39 @@ namespace ctsTraffic {
             return;
         }
 
-        SOCKET new_socket = ::WSASocketW(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
+        SOCKET new_socket = INVALID_SOCKET;
+        DWORD error = ctsConfig::CreateWSASocket(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &new_socket);
         if (INVALID_SOCKET == new_socket) {
-            throw ctl::ctException(::WSAGetLastError(), L"WSASocket", L"ctsAcceptEx", false);
+            throw ctl::ctException(error, L"CreateWSASocket", L"ctsAcceptEx", false);
         }
         ctlScopeGuard(closeSocketOnError, { ::closesocket(new_socket); });
 
         // since not inheriting from the listening socket, must explicity set options on the accept socket
         // - passing the listening address since that will be the local address of this accepted socket
-        auto options = ctsConfig::SetPreBindOptions(new_socket, this->listening_addr);
-        if (options != 0) {
-            throw ctl::ctException(options, L"SetPreBindOptions", L"ctsAcceptEx", false);
+        error = ctsConfig::SetPreBindOptions(new_socket, this->listening_addr);
+        if (error != 0) {
+            throw ctl::ctException(error, L"SetPreBindOptions", L"ctsAcceptEx", false);
         }
-        options = ctsConfig::SetPreConnectOptions(new_socket);
-        if (options != 0) {
-            throw ctl::ctException(options, L"SetPreConnectOptions", L"ctsAcceptEx", false);
+        error = ctsConfig::SetPreConnectOptions(new_socket);
+        if (error != 0) {
+            throw ctl::ctException(error, L"SetPreConnectOptions", L"ctsAcceptEx", false);
         }
 
         ::ZeroMemory(this->OutputBuffer, SingleOutputBufferSize * 2);
         DWORD bytes_received;
 
         this->pov = this->listening_iocp->new_request(
-            [_pimpl, this] (OVERLAPPED* _ov) 
-            { ctsAcceptExIoCompletionCallback(_ov, _pimpl, this);  });
+            [_pimpl, this](OVERLAPPED* _ov)
+        { ctsAcceptExIoCompletionCallback(_ov, _pimpl, this);  });
 
         if (!ctl::ctAcceptEx(
-                this->listening_socket,
-                new_socket,
-                this->OutputBuffer,
-                0, SingleOutputBufferSize, SingleOutputBufferSize,
-                &bytes_received,
-                this->pov)) {
-            int error = ::WSAGetLastError();
+            this->listening_socket,
+            new_socket,
+            this->OutputBuffer,
+            0, SingleOutputBufferSize, SingleOutputBufferSize,
+            &bytes_received,
+            this->pov)) {
+            error = ::WSAGetLastError();
             if (ERROR_IO_PENDING != error) {
                 // a real failure - must abort the IO
                 this->listening_iocp->cancel_request(this->pov);
@@ -530,8 +522,7 @@ namespace ctsTraffic {
         this->socket = new_socket;
     }
 
-    inline
-    ctsAcceptEx::ctsAcceptedConnection ctsAcceptEx::ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
+    inline ctsAcceptEx::ctsAcceptedConnection ctsAcceptEx::ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
     {
         ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
 
@@ -561,11 +552,11 @@ namespace ctsTraffic {
         // if successful, update the socket context
         // this should never fail - break if it does to debug it
         int err = ::setsockopt(
-                socket,
-                SOL_SOCKET,
-                SO_UPDATE_ACCEPT_CONTEXT,
-                reinterpret_cast<char *>(&this->listening_socket),
-                sizeof(this->listening_socket));
+            socket,
+            SOL_SOCKET,
+            SO_UPDATE_ACCEPT_CONTEXT,
+            reinterpret_cast<char *>(&this->listening_socket),
+            sizeof(this->listening_socket));
         ctl::ctFatalCondition(
             (err != 0),
             L"setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%lld], listen socket [%lld]",
@@ -579,8 +570,7 @@ namespace ctsTraffic {
         return return_details;
     }
 
-    inline
-    ctsAcceptEx::ctsAcceptedConnection ctsAcceptEx::ctsAcceptSocketInfo::make_sockaddr_details() NOEXCEPT
+    inline ctsAcceptEx::ctsAcceptedConnection ctsAcceptEx::ctsAcceptSocketInfo::make_sockaddr_details() NOEXCEPT
     {
         SOCKADDR_INET* local_addr;
         int local_addr_len = static_cast<int>(sizeof SOCKADDR_INET);

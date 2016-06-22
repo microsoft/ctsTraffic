@@ -32,8 +32,12 @@ namespace ctl {
     {
         auto size = _end - _begin;
         if (size < 2) {
-            throw std::runtime_error("ntsSampledStandardDeviation requires a data set larger than 1");
+            return std::make_tuple(
+                static_cast<double>(0),
+                static_cast<double>(0),
+                static_cast<double>(0));
         }
+
         double sum = std::accumulate(_begin, _end, 0.0);
         double mean = sum / size;
         double accum = 0.0;
@@ -41,6 +45,7 @@ namespace ctl {
             auto& value = *iter;
             accum += (value - mean) * (value - mean);
         }
+
         double stdev = std::sqrt(static_cast<double>(accum / (size - 1.0)));
         return std::make_tuple(
             mean - stdev,
@@ -66,8 +71,12 @@ namespace ctl {
     {
         auto size = _end - _begin;
         if (size < 3) {
-            throw std::runtime_error("ntsInterquartileRange requires a data set larger than 2");
+            return std::make_tuple(
+                static_cast<double>(0),
+                static_cast<double>(0),
+                static_cast<double>(0));
         }
+
         if (size == 3) {
             return std::make_tuple(
                 static_cast<double>(*_begin),
@@ -78,7 +87,7 @@ namespace ctl {
         auto split_section = [&] (const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
             size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
-            // if begin and end are already right next to each other, immediately return the same values
+                                                                // if begin and end are already right next to each other, immediately return the same values
             if (numeric_count < 3) {
                 return std::make_tuple(split_begin, split_end);
             }
@@ -99,35 +108,36 @@ namespace ctl {
             }
             return std::make_tuple(lhs, rhs);
         };
+
         auto find_median = [&] (const std::tuple<BidirectionalIterator, BidirectionalIterator>& _split) -> double {
             const BidirectionalIterator& lhs = std::get<0>(_split);
             const BidirectionalIterator& rhs = std::get<1>(_split);
 
             double median_value = 0.0;
             switch (rhs - lhs) {
-                case 1: {
-                    // next to each other: take the average for the median
-                    // must guard against overflow
-                    auto lhs_value = *lhs;
-                    auto rhs_value = *rhs;
-                    auto sum = lhs_value + rhs_value;
-                    if (sum < lhs_value || sum < rhs_value) {
-                        // overflow - divide first, then add
-                        median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
-                    } else {
-                        median_value = static_cast<double>(sum) / 2.0;
-                    }
+            case 1: {
+                // next to each other: take the average for the median
+                // must guard against overflow
+                auto lhs_value = *lhs;
+                auto rhs_value = *rhs;
+                auto sum = lhs_value + rhs_value;
+                if (sum < lhs_value || sum < rhs_value) {
+                    // overflow - divide first, then add
+                    median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
+                } else {
+                    median_value = static_cast<double>(sum) / 2.0;
                 }
-                break;
-
-                case 2: {
-                    // two apart: the one in the middle is the median
-                    median_value = static_cast<double>(*(lhs + 1));
+            }
                     break;
-                }
 
-                default:
-                    ctl::ctAlwaysFatalCondition(L"ntsInterquartileRange internal error - returned iterators more than one apart [%Iu]", rhs - lhs);
+            case 2: {
+                // two apart: the one in the middle is the median
+                median_value = static_cast<double>(*(lhs + 1));
+                break;
+            }
+
+            default:
+                ctl::ctAlwaysFatalCondition(L"ntsInterquartileRange internal error - returned iterators more than one apart [%Iu]", rhs - lhs);
             }
             return median_value;
         };
@@ -135,7 +145,7 @@ namespace ctl {
         auto median_split = split_section(_begin, _end);
         double median = find_median(median_split);
 
-        auto lhs_split = split_section(_begin, std::get<0>(median_split) +1);
+        auto lhs_split = split_section(_begin, std::get<0>(median_split) + 1);
         double lower_quartile = find_median(lhs_split);
 
         auto rhs_split = split_section(std::get<1>(median_split), _end);
@@ -146,5 +156,4 @@ namespace ctl {
             median,
             higher_quartile);
     }
-
 }

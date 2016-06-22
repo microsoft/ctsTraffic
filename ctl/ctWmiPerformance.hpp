@@ -218,11 +218,11 @@ namespace ctl {
                 return this->accessor_objects.end();
             }
 
-        private:
             // non-copyable
-            ctWmiPerformanceDataAccessor(const ctWmiPerformanceDataAccessor&);
-            ctWmiPerformanceDataAccessor& operator=(const ctWmiPerformanceDataAccessor&);
+            ctWmiPerformanceDataAccessor(const ctWmiPerformanceDataAccessor&) = delete;
+            ctWmiPerformanceDataAccessor& operator=(const ctWmiPerformanceDataAccessor&) = delete;
 
+        private:
             // members
             ctComPtr<TEnum> enumeration_object;
             // TAccess pointers are returned through enumeration_object::GetObjects, reusing the same vector for each refresh call
@@ -506,12 +506,9 @@ namespace ctl {
                 this->counter_data.clear();
             }
 
-        private:
-            // no default c'tor
-            // blocking copying
-            ctWmiPeformanceCounterData();
-            ctWmiPeformanceCounterData(const ctWmiPeformanceCounterData&);
-            ctWmiPeformanceCounterData& operator= (const ctWmiPeformanceCounterData&);
+            // non-copyable
+            ctWmiPeformanceCounterData(const ctWmiPeformanceCounterData&) = delete;
+            ctWmiPeformanceCounterData& operator= (const ctWmiPeformanceCounterData&) = delete;
         };
 
         ///
@@ -642,6 +639,18 @@ namespace ctl {
             {
                 this->current = std::move(_i.current);
                 this->is_empty = std::move(_i.is_empty);
+                return *this;
+            }
+
+            iterator(_In_ const iterator& _i) throw()
+            : current(_i.current),
+              is_empty(_i.is_empty)
+            {
+            }
+            iterator& operator =(_In_ const iterator& i) throw()
+            {
+                iterator local_copy(i);
+                *this = std::move(local_copy);
                 return *this;
             }
 
@@ -776,7 +785,7 @@ namespace ctl {
         void add_filter(_In_ LPCWSTR _counter_name, _In_ T _property_value)
         {
             ctAutoReleaseCriticalSection guard(&this->filter_guard);
-            this->instance_filter.emplace_back(_counter_name, ctWmiMakeVariant<T>(_property_value));
+            this->instance_filter.emplace_back(_counter_name, ctWmiMakeVariant(_property_value));
         }
 
         ///
@@ -867,9 +876,16 @@ namespace ctl {
                 if (FAILED(hr)) {
                     throw ctException(hr, L"IWbemClassObject::Get(counter_name)", L"ctWmiPerformanceCounterData", false);
                 }
+                // if the filter currently doesn't match anything we have, return not equal
+                if (value->vt == VT_NULL)
+                {
+                    return false;
+                }
                 ctFatalCondition(
                     value->vt != property_value->vt,
-                    L"VARIANT types do not match to make a comparison");
+                    L"VARIANT types do not match to make a comparison : Counter name '%s', retrieved type '%u', expected type '%u'",
+                    counter_name.c_str(), value->vt, property_value->vt);
+
                 return (this->property_value == value);
             }
             bool operator!=(_In_ IWbemClassObject* _instance)
@@ -878,10 +894,11 @@ namespace ctl {
             }
         };
 
-    private:
         // non-copyable
-        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&);
-        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&);
+        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
+        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
+
+    private:
         // CS's must be mutable to allow internal locks to be taken in const methods
         mutable CRITICAL_SECTION counter_guard;
         mutable CRITICAL_SECTION filter_guard;
@@ -1002,15 +1019,11 @@ namespace ctl {
         {
         }
 
-    private:
-        ///
-        /// no default c'tor
-        /// non-copyable
-        ///
-        ctWmiPerformanceCounterImpl();
-        ctWmiPerformanceCounterImpl(const ctWmiPerformanceCounterImpl&);
-        ctWmiPerformanceCounterImpl& operator=(const ctWmiPerformanceCounterImpl&);
+        // non-copyable
+        ctWmiPerformanceCounterImpl(const ctWmiPerformanceCounterImpl&) = delete;
+        ctWmiPerformanceCounterImpl& operator=(const ctWmiPerformanceCounterImpl&) = delete;
 
+    private:
         ///
         /// this concrete template class serves to capture the Enum and Access template types
         /// - so can instantiate the appropriate accessor object
@@ -1147,10 +1160,11 @@ namespace ctl {
             }
         }
 
-    private:
-        ctWmiPerformance(const ctWmiPerformance&);
-        ctWmiPerformance& operator=(const ctWmiPerformance&);
+        // non-copyable
+        ctWmiPerformance(const ctWmiPerformance&) = delete;
+        ctWmiPerformance& operator=(const ctWmiPerformance&) = delete;
 
+    private:
         ctComInitialize com_init;
         ctWmiService wmi_service;
         ctComPtr<IWbemRefresher> refresher;

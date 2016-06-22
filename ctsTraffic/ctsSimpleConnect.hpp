@@ -55,6 +55,8 @@ namespace ctsTraffic {
             if (socket != INVALID_SOCKET) {
                 try {
                     const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
+                    ctl::ctSockaddr local_addr;
+
                     error = ctsConfig::SetPreConnectOptions(socket);
                     if (error != NO_ERROR) {
                         throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
@@ -65,12 +67,13 @@ namespace ctsTraffic {
                         ctsConfig::PrintErrorIfFailed(L"connect", error);
                     } else {
                         // set the local address
-                        ctl::ctSockaddr local_addr;
                         int local_addr_len = local_addr.length();
                         if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
                             shared_socket->set_local_address(local_addr);
                         }
                     }
+
+                    ctsConfig::PrintNewConnection(local_addr, targetAddress);
                 }
                 catch (const ctl::ctException& e) {
                     ctsConfig::PrintException(e);

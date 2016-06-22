@@ -1,2 +1,13 @@
-*/*.aps
-*/*.suo
+/ctsTraffic/Debug
+/ctsTraffic/Release
+/ctsTraffic/x64
+/.vs/ctsTraffic/v14/.suo
+/Debug
+*.user
+/MSTest/*/Debug
+/MSTest/*/Release
+/MSTest/*/x64
+/Release
+*.db
+/x64/Debug
+/x64/Release

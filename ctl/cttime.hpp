@@ -323,7 +323,7 @@ namespace ctl {
     //    - will throw a ctException if the Win32 call fails
     //
     ///////////////////////////////////////////////////////////////////////////////
-    inline ctTime ctTime::operator+(_In_ const ctTime& _refTime) const
+    inline ctTime ctTime::operator+(_In_ const ctTime& _refTime) const NOEXCEPT
     {
         ULARGE_INTEGER ulIntThis;
         ulIntThis.LowPart = fileUTCTime.dwLowDateTime;
@@ -342,7 +342,7 @@ namespace ctl {
 
         return ctTime(ftTemp);
     }
-    inline ctTime ctTime::operator-(_In_ const ctTime& _refTime) const
+    inline ctTime ctTime::operator-(_In_ const ctTime& _refTime) const NOEXCEPT
     {
         ULARGE_INTEGER ulIntThis;
         ulIntThis.LowPart = fileUTCTime.dwLowDateTime;

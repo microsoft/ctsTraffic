@@ -383,5 +383,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         extern ctsConfigSettings* Settings;
 
+        DWORD CreateWSASocket(int af, int type, int protocol, DWORD dwFlags, _Out_ SOCKET *socket);
+
     } // namespace ctsConfig
 } // namespace ctsTraffic

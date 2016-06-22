@@ -123,6 +123,10 @@ namespace ctl {
         inline
         std::string convert_to_string(const std::wstring& _wstr)
         {
+            if (_wstr.length() == 0) {
+                return std::string();
+            }
+
             int len = ::WideCharToMultiByte(CP_UTF8, 0, _wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
             if (len == 0) {
                 throw ctl::ctException(::GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::convert_to_string", false);
@@ -140,6 +144,10 @@ namespace ctl {
         inline
         std::wstring convert_to_wstring(const std::string& _str)
         {
+            if (_str.length() == 0) {
+                return std::wstring();
+            }
+
             int len = ::MultiByteToWideChar(CP_UTF8, 0, _str.c_str(), -1, nullptr, 0);
             if (len == 0) {
                 throw ctl::ctException(::GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::convert_to_wstring", false);
@@ -196,8 +204,7 @@ namespace ctl {
             /// hidden implementation which all variations call
             /// - different containers have different sources of information for their length values
             ///
-            inline
-            bool impl_ordinal_equals(
+            inline bool impl_ordinal_equals(
                 _In_NLS_string_(_lhs_size) const wchar_t* _lhs,
                 size_t _lhs_size,
                 _In_NLS_string_(_rhs_size) const wchar_t* _rhs,
@@ -226,8 +233,7 @@ namespace ctl {
 #pragma region Desktop Family
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             // CompareStringA is not available for Modern Apps
-            inline
-            bool impl_ordinal_equals(
+            inline bool impl_ordinal_equals(
                 _In_reads_z_(_lhs_size) const char* _lhs,
                 size_t _lhs_size,
                 _In_reads_z_(_rhs_size) const char* _rhs,
@@ -241,6 +247,7 @@ namespace ctl {
                     static_cast<int>(_lhs_size),
                     _rhs,
                     static_cast<int>(_rhs_size))) {
+
                     case CSTR_EQUAL:
                         return true;
 

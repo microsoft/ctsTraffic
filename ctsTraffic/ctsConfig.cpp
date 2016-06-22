@@ -420,7 +420,7 @@ namespace ctsTraffic {
                     throw invalid_argument("-conn (only applicable to TCP)");
                 }
 
-                const wchar_t* value = ParseArgument(*found_arg, L"--conn");
+                const wchar_t* value = ParseArgument(*found_arg, L"-conn");
                 if (ctString::iordinal_equals(L"ConnectEx", value)) {
                     Settings->ConnectFunction = ctsConnectEx;
                     s_ConnectFunctionName = L"ConnectEx";
@@ -472,7 +472,7 @@ namespace ctsTraffic {
                     throw invalid_argument("-acc (only applicable to TCP)");
                 }
 
-                const wchar_t* value = ParseArgument(*found_arg, L"--acc");
+                const wchar_t* value = ParseArgument(*found_arg, L"-acc");
                 if (ctString::iordinal_equals(L"accept", value)) {
                     Settings->AcceptFunction = ctsSimpleAccept();
                     s_AcceptFunctionName = L"accept";
@@ -3181,27 +3181,6 @@ namespace ctsTraffic {
                 }
             }
 
-            ///
-            /// s_NetAdapterAddresses is created when the user has requested a compartment Id
-            /// - since we would have had to lookup the interface
-            ///
-            if (s_NetAdapterAddresses != nullptr) {
-                int optval = s_CompartmentId;
-                int optlen = static_cast<int>(sizeof optval);
-
-                auto error = ::setsockopt(
-                  _s,
-                  SOL_SOCKET,   // level
-                  SO_COMPARTMENT_ID, // optname
-                  reinterpret_cast<const char *>(&optval),
-                  optlen);
-                if (error != 0) {
-                    int gle = ::WSAGetLastError();
-                    PrintErrorIfFailed(L"setsockopt(SO_COMPARTMENT_ID)", gle);
-                    return gle;
-                }
-            }
-
             if (Settings->Options & OptionType::LOOPBACK_FAST_PATH) {
                 DWORD in_value = 1;
                 DWORD out_value;
@@ -3560,6 +3539,46 @@ namespace ctsTraffic {
             if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
                 s_ConnectionLogger->LogMessage(setting_string.c_str());
             }
+        }
+
+        DWORD CreateWSASocket(int af, int type, int protocol, DWORD dwFlags, _Out_ SOCKET *socket)
+        {
+            NET_IF_COMPARTMENT_ID  oldCompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
+            DWORD dwErr = NO_ERROR;
+            bool bCompartmentIdSet = FALSE;
+            *socket = INVALID_SOCKET;
+
+            ///
+            /// s_NetAdapterAddresses is created when the user has requested a compartment Id
+            /// - since we would have had to lookup the interface
+            ///
+            if (s_NetAdapterAddresses != nullptr) {
+                oldCompartmentId = GetCurrentThreadCompartmentId();
+                if (oldCompartmentId != s_CompartmentId) {
+                    dwErr = SetCurrentThreadCompartmentId(s_CompartmentId);
+                    if (dwErr != NO_ERROR) {
+                        PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", s_CompartmentId, dwErr);
+                    } else {
+                        bCompartmentIdSet = TRUE;
+                    }
+                }
+            }
+
+            *socket = ::WSASocket(af, type, protocol, NULL, 0, dwFlags);
+
+            if (bCompartmentIdSet) {
+                dwErr = SetCurrentThreadCompartmentId(oldCompartmentId);
+                if (dwErr != NO_ERROR) {
+                    PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, dwErr);
+                }
+            }
+
+            if (INVALID_SOCKET == *socket) {
+                dwErr = ::WSAGetLastError();
+            } else {
+                dwErr = NO_ERROR;
+            }
+            return dwErr;
         }
 
     } // namespace ctsConfig

@@ -73,22 +73,15 @@ namespace ctsTraffic {
 
         SOCKET socket = INVALID_SOCKET;
         int gle = 0;
-        const wchar_t* function = L"WSASocket";
+        const wchar_t* function = L"CreateWSASocket";
         switch (ctsConfig::Settings->Protocol) {
             case ctsConfig::ProtocolType::TCP:
-                socket = ::WSASocketW(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags);
-                if (INVALID_SOCKET == socket) {
-                    gle = ::WSAGetLastError();
-                }
+                gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
                 break;
 
             case ctsConfig::ProtocolType::UDP:
-                socket = ::WSASocketW(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, ctsConfig::Settings->SocketFlags);
-                if (INVALID_SOCKET == socket) {
-                    gle = ::WSAGetLastError();
-                }
+                gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags, &socket);
                 break;
-
 
             default: {
                 ctsConfig::PrintErrorInfo(

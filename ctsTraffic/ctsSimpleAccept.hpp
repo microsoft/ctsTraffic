@@ -58,9 +58,9 @@ namespace ctsTraffic {
             std::vector<LONG> listening_sockets_refcount;
 
             _Guarded_by_(accepting_cs)
-            std::vector<SOCKET> listening_sockets;
+                std::vector<SOCKET> listening_sockets;
             _Guarded_by_(accepting_cs)
-            std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
+                std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
 
             ctsSimpleAcceptImpl() :
                 thread_pool_worker(nullptr),
@@ -112,7 +112,7 @@ namespace ctsTraffic {
             // will use the global threadpool, but will mark these work-items as running long
             ::InitializeThreadpoolEnvironment(&pimpl->thread_pool_environment);
             ::SetThreadpoolCallbackRunsLong(&pimpl->thread_pool_environment);
-        
+
             // can *not* pass the this ptr to the threadpool, since this object can be copied
             pimpl->thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, pimpl.get(), &pimpl->thread_pool_environment);
             if (nullptr == pimpl->thread_pool_worker) {
@@ -122,14 +122,15 @@ namespace ctsTraffic {
             // listen to each address
             for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
 #pragma warning(suppress: 28193) // PREFast isn't seeing that listening is indeed evaluated before being referenced
-                SOCKET listening(::WSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, ctsConfig::Settings->SocketFlags));
+                SOCKET listening = INVALID_SOCKET;
+                DWORD gle = ctsConfig::CreateWSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &listening);
                 ctlScopeGuard(closeSocketOnError, { if (listening != INVALID_SOCKET) ::closesocket(listening); });
 
                 if (INVALID_SOCKET == listening) {
-                    throw ctl::ctException(::WSAGetLastError(), L"socket", L"ctsSimpleAccept", false);
+                    throw ctl::ctException(gle, L"CreateWSASocket", L"ctsSimpleAccept", false);
                 }
-            
-                int gle = ctsConfig::SetPreBindOptions(listening, addr);
+
+                gle = ctsConfig::SetPreBindOptions(listening, addr);
                 if (gle != NO_ERROR) {
                     throw ctl::ctException(gle, L"SetPreBindOptions", L"ctsSimpleAccept", false);
                 }
@@ -189,8 +190,7 @@ namespace ctsTraffic {
             }
         }
 
-        static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
+        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
         {
             ctsSimpleAcceptImpl* pimpl = reinterpret_cast<ctsSimpleAcceptImpl*>(_context);
 
@@ -217,7 +217,7 @@ namespace ctsTraffic {
                     listener_position = listener_counter;
                 }
                 ++listener_counter;
-            } 
+            }
 
             SOCKET listener = pimpl->listening_sockets[listener_position];
             if (INVALID_SOCKET == listener) {
@@ -241,7 +241,7 @@ namespace ctsTraffic {
                 accept_socket->complete_state(gle);
                 return;
             }
-            
+
             // successfully accepted a connection
             accept_socket->set_socket(new_socket);
             accept_socket->set_target_address(remote_addr);
