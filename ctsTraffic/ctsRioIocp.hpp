@@ -827,8 +827,7 @@ namespace ctsTraffic {
     } // RioIocpThreadProc
 
 
-    inline
-    void ctsRioIocp(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    inline void ctsRioIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());

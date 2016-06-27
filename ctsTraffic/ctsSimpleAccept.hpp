@@ -167,7 +167,7 @@ namespace ctsTraffic {
         /// ctsSocketFunction functor operator()
         /// - Needs to not block ctsSocketState - will just schedule work on its own TP
         ///
-        void operator() (std::weak_ptr<ctsSocket> _weak_socket)
+        void operator() (const std::weak_ptr<ctsSocket>& _weak_socket)
         {
             bool bSubmittedWork = false;
             ::EnterCriticalSection(&pimpl->accepting_cs);

@@ -33,28 +33,8 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    // buffer pattern to transfer
-    static const unsigned long BufferPatternSize = 128;
-    static const unsigned char BufferPattern[] =
-    {
-        0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00,
-        0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00,
-        0x09, 0x00, 0x0a, 0x00, 0x0b, 0x00, 0x0c, 0x00,
-        0x0d, 0x00, 0x0e, 0x00, 0x0f, 0x00, 0x0f, 0x0f,
-        0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00,
-        0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00,
-        0x09, 0x00, 0x0a, 0x00, 0x0b, 0x00, 0x0c, 0x00,
-        0x0d, 0x00, 0x0e, 0x00, 0x0f, 0x00, 0x0f, 0x0f,
-
-        0xf1, 0xff, 0xf2, 0xff, 0xf3, 0xff, 0xf4, 0xff,
-        0xf5, 0xff, 0xf6, 0xff, 0xf7, 0xff, 0xf8, 0xff,
-        0xf9, 0xff, 0xfa, 0xff, 0xfb, 0xff, 0xfc, 0xff,
-        0xfd, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xf1, 0xff, 0xf2, 0xff, 0xf3, 0xff, 0xf4, 0xff,
-        0xf5, 0xff, 0xf6, 0xff, 0xf7, 0xff, 0xf8, 0xff,
-        0xf9, 0xff, 0xfa, 0xff, 0xfb, 0xff, 0xfc, 0xff,
-        0xfd, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff
-    };
+    static const unsigned long BufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
+    static unsigned char BufferPattern[BufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
 
     /// SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
     /// will be memcmp'ing against for validity checks.
@@ -76,6 +56,12 @@ namespace ctsTraffic {
 
     BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
     {
+        // first create the buffer pattern
+        for (unsigned long fill_slot = 0; fill_slot < BufferPatternSize; ++fill_slot)
+        {
+            *reinterpret_cast<unsigned short*>(&BufferPattern[fill_slot * 2]) = static_cast<unsigned short>(fill_slot);
+        }
+
         s_SharedBufferSize = BufferPatternSize + ctsConfig::GetMaxBufferSize() + s_CompletionMessageSize;
 
         s_ProtectedSharedBuffer = reinterpret_cast<char*>(::VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
@@ -148,29 +134,29 @@ namespace ctsTraffic {
     shared_ptr<ctsIOPattern> ctsIOPattern::MakeIOPattern()
     {
         switch (ctsConfig::Settings->IoPattern) {
-            case ctsConfig::IoPatternType::Pull:
-                return make_shared<ctsIOPatternPull>();
+        case ctsConfig::IoPatternType::Pull:
+            return make_shared<ctsIOPatternPull>();
 
-            case ctsConfig::IoPatternType::Push:
-                return make_shared<ctsIOPatternPush>();
+        case ctsConfig::IoPatternType::Push:
+            return make_shared<ctsIOPatternPush>();
 
-            case ctsConfig::IoPatternType::PushPull:
-                return make_shared<ctsIOPatternPushPull>();
+        case ctsConfig::IoPatternType::PushPull:
+            return make_shared<ctsIOPatternPushPull>();
 
-            case ctsConfig::IoPatternType::Duplex:
-                return make_shared<ctsIOPatternDuplex>();
+        case ctsConfig::IoPatternType::Duplex:
+            return make_shared<ctsIOPatternDuplex>();
 
-            case ctsConfig::IoPatternType::MediaStream:
-                if (ctsConfig::IsListening()) {
-                    return make_shared<ctsIOPatternMediaStreamServer>();
-                } else {
-                    // if is not listening, running as a client
-                    return make_shared<ctsIOPatternMediaStreamClient>();
-                }
+        case ctsConfig::IoPatternType::MediaStream:
+            if (ctsConfig::IsListening()) {
+                return make_shared<ctsIOPatternMediaStreamServer>();
+            } else {
+                // if is not listening, running as a client
+                return make_shared<ctsIOPatternMediaStreamClient>();
+            }
 
         default:
-                ctAlwaysFatalCondition(L"ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::Settings->IoPattern);
-                return nullptr;
+            ctAlwaysFatalCondition(L"ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::Settings->IoPattern);
+            return nullptr;
         }
     }
     char* ctsIOPattern::AccessSharedBuffer() NOEXCEPT
@@ -268,106 +254,106 @@ namespace ctsTraffic {
         ctAutoReleaseCriticalSection local_cs(&this->cs);
         ctsIOTask return_task;
         switch (this->pattern_state.get_next_task()) {
-            case ctsIOPatternProtocolTask::MoreIo:
-                return_task = this->next_task();
-                break;
+        case ctsIOPatternProtocolTask::MoreIo:
+            return_task = this->next_task();
+            break;
 
-            case ctsIOPatternProtocolTask::NoIo:
-                break;
+        case ctsIOPatternProtocolTask::NoIo:
+            break;
 
-            case ctsIOPatternProtocolTask::SendConnectionId: {
-                return_task = ctsIOBuffers::NewConnectionIdBuffer(this->connection_id());
-                return_task.ioAction = IOTaskAction::Send;
-                break;
+        case ctsIOPatternProtocolTask::SendConnectionId: {
+            return_task = ctsIOBuffers::NewConnectionIdBuffer(this->connection_id());
+            return_task.ioAction = IOTaskAction::Send;
+            break;
+        }
+
+        case ctsIOPatternProtocolTask::RecvConnectionId:
+            return_task = ctsIOBuffers::NewConnectionIdBuffer(this->connection_id());
+            return_task.ioAction = IOTaskAction::Recv;
+            break;
+
+        case ctsIOPatternProtocolTask::SendCompletion:
+            // end-stats as early as possible after the actual IO finished
+            this->end_stats();
+
+            // using the static buffer - identical for both RIO and non-RIO
+            // - currently won't be validating the completion message
+            return_task.ioAction = IOTaskAction::Send;
+            return_task.buffer = s_ProtectedSharedBuffer;
+            return_task.rio_bufferid = s_SharedBufferId;
+            return_task.buffer_length = s_CompletionMessageSize;
+            return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+            return_task.track_io = false;
+            return_task.buffer_type = ctsIOTask::BufferType::Static;
+            break;
+
+        case ctsIOPatternProtocolTask::RecvCompletion:
+            // end-stats as early as possible after the actual IO finished
+            this->end_stats();
+
+            // using the static buffer - identical for both RIO and non-RIO
+            // - currently won't be validating the completion message
+            return_task.ioAction = IOTaskAction::Recv;
+            return_task.buffer = s_WriteableSharedBuffer;
+            return_task.rio_bufferid = s_SharedBufferId;
+            return_task.buffer_length = s_CompletionMessageSize;
+            return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+            return_task.track_io = false;
+            return_task.buffer_type = ctsIOTask::BufferType::Static;
+            break;
+
+        case ctsIOPatternProtocolTask::HardShutdown:
+            // end-stats as early as possible after the actual IO finished
+            this->end_stats();
+
+            return_task.ioAction = IOTaskAction::HardShutdown;
+            return_task.buffer = nullptr;
+            return_task.buffer_length = 0;
+            return_task.buffer_offset = 0;
+            return_task.track_io = false;
+            return_task.buffer_type = ctsIOTask::BufferType::Null;
+            break;
+
+        case ctsIOPatternProtocolTask::GracefulShutdown:
+            // end-stats as early as possible after the actual IO finished
+            this->end_stats();
+
+            return_task.ioAction = IOTaskAction::GracefulShutdown;
+            return_task.buffer = nullptr;
+            return_task.buffer_length = 0;
+            return_task.buffer_offset = 0;
+            return_task.track_io = false;
+            return_task.buffer_type = ctsIOTask::BufferType::Null;
+            break;
+
+        case ctsIOPatternProtocolTask::RequestFIN:
+            // post one final recv for the zero byte FIN
+            // end-stats as early as possible after the actual IO finished
+            this->end_stats();
+
+            ctFatalCondition(
+                this->recv_buffer_free_list.empty(),
+                L"ctsIOPattern::initiate_io : (%p) recv_buffer_free_list is empty", this);
+
+            if (this->recv_rio_bufferid != RIO_INVALID_BUFFERID) {
+                // RIO must always use the allocated buffers which were registered
+                return_task.buffer = *this->recv_buffer_free_list.rbegin();
+                this->recv_buffer_free_list.pop_back();
+                return_task.rio_bufferid = this->recv_rio_bufferid;
+                return_task.buffer_type = ctsIOTask::BufferType::Tracked;
+            } else {
+                return_task.buffer = s_FinBuffer;
+                return_task.buffer_type = ctsIOTask::BufferType::Static;
             }
 
-            case ctsIOPatternProtocolTask::RecvConnectionId:
-                return_task = ctsIOBuffers::NewConnectionIdBuffer(this->connection_id());
-                return_task.ioAction = IOTaskAction::Recv;
-                break;
+            return_task.ioAction = IOTaskAction::Recv;
+            return_task.buffer_length = s_FinBufferSize;
+            return_task.buffer_offset = 0;
+            return_task.track_io = false;
+            break;
 
-            case ctsIOPatternProtocolTask::SendCompletion:
-                // end-stats as early as possible after the actual IO finished
-                this->end_stats();
-
-                // using the static buffer - identical for both RIO and non-RIO
-                // - currently won't be validating the completion message
-                return_task.ioAction = IOTaskAction::Send;
-                return_task.buffer = s_ProtectedSharedBuffer;
-                return_task.rio_bufferid = s_SharedBufferId;
-                return_task.buffer_length = s_CompletionMessageSize;
-                return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
-                return_task.track_io = false;
-                return_task.buffer_type = ctsIOTask::BufferType::Static;
-                break;
-
-            case ctsIOPatternProtocolTask::RecvCompletion:
-                // end-stats as early as possible after the actual IO finished
-                this->end_stats();
-
-                // using the static buffer - identical for both RIO and non-RIO
-                // - currently won't be validating the completion message
-                return_task.ioAction = IOTaskAction::Recv;
-                return_task.buffer = s_WriteableSharedBuffer;
-                return_task.rio_bufferid = s_SharedBufferId;
-                return_task.buffer_length = s_CompletionMessageSize;
-                return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
-                return_task.track_io = false;
-                return_task.buffer_type = ctsIOTask::BufferType::Static;
-                break;
-
-            case ctsIOPatternProtocolTask::HardShutdown:
-                // end-stats as early as possible after the actual IO finished
-                this->end_stats();
-
-                return_task.ioAction = IOTaskAction::HardShutdown;
-                return_task.buffer = nullptr;
-                return_task.buffer_length = 0;
-                return_task.buffer_offset = 0;
-                return_task.track_io = false;
-                return_task.buffer_type = ctsIOTask::BufferType::Null;
-                break;
-
-            case ctsIOPatternProtocolTask::GracefulShutdown:
-                // end-stats as early as possible after the actual IO finished
-                this->end_stats();
-
-                return_task.ioAction = IOTaskAction::GracefulShutdown;
-                return_task.buffer = nullptr;
-                return_task.buffer_length = 0;
-                return_task.buffer_offset = 0;
-                return_task.track_io = false;
-                return_task.buffer_type = ctsIOTask::BufferType::Null;
-                break;
-
-            case ctsIOPatternProtocolTask::RequestFIN:
-                // post one final recv for the zero byte FIN
-                // end-stats as early as possible after the actual IO finished
-                this->end_stats();
-
-                ctFatalCondition(
-                    this->recv_buffer_free_list.empty(),
-                    L"ctsIOPattern::initiate_io : (%p) recv_buffer_free_list is empty", this);
-
-                if (this->recv_rio_bufferid != RIO_INVALID_BUFFERID) {
-                    // RIO must always use the allocated buffers which were registered
-                    return_task.buffer = *this->recv_buffer_free_list.rbegin();
-                    this->recv_buffer_free_list.pop_back();
-                    return_task.rio_bufferid = this->recv_rio_bufferid;
-                    return_task.buffer_type = ctsIOTask::BufferType::Tracked;
-                } else {
-                    return_task.buffer = s_FinBuffer;
-                    return_task.buffer_type = ctsIOTask::BufferType::Static;
-                }
-
-                return_task.ioAction = IOTaskAction::Recv;
-                return_task.buffer_length = s_FinBufferSize;
-                return_task.buffer_offset = 0;
-                return_task.track_io = false;
-                break;
-
-            default:
-                ctAlwaysFatalCondition(L"ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
+        default:
+            ctAlwaysFatalCondition(L"ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
         }
 
         this->pattern_state.notify_next_task(return_task);
@@ -401,108 +387,104 @@ namespace ctsTraffic {
         }
 
         switch (_original_task.ioAction) {
-            case IOTaskAction::None:
-                // ignore completions for tasks on None
-                break;
+        case IOTaskAction::None:
+            // ignore completions for tasks on None
+            break;
 
-            case IOTaskAction::FatalAbort:
-                ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a FatalAbort\n");
-                this->update_last_error(ctsStatusErrorNotAllDataTransferred);
-                break;
+        case IOTaskAction::FatalAbort:
+            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a FatalAbort\n");
+            this->update_last_error(ctsStatusErrorNotAllDataTransferred);
+            break;
 
-            case IOTaskAction::Abort:
-                ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing an Abort\n");
-                break;
+        case IOTaskAction::Abort:
+            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing an Abort\n");
+            break;
 
-            case IOTaskAction::GracefulShutdown:
-            case IOTaskAction::HardShutdown:
-                // Fall-through to be processed like send or recv IO
-            case IOTaskAction::Recv:
+        case IOTaskAction::GracefulShutdown:
+            // Fall-through to be processed like send or recv IO
+            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
+        case IOTaskAction::HardShutdown:
+            // Fall-through to be processed like send or recv IO
+            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a HardShutdown\n");
+        case IOTaskAction::Recv:
+            //
+            // Fall-through to Send - where the IO will be processed
+            //
+        case IOTaskAction::Send:
+            bool verify_io = true;
+            if (ctsIOTask::BufferType::TcpConnectionId == _original_task.buffer_type) {
                 //
-                // Fall-through to Send - where the IO will be processed
+                // not verifying the IO buffer if this is the connection id request
+                // - but must complete the task to update the protocol
                 //
-            case IOTaskAction::Send:
-                bool verify_io = true;
-                if (ctsIOTask::BufferType::TcpConnectionId == _original_task.buffer_type) {
-                    //
-                    // not verifying the IO buffer if this is the connection id request
-                    // - but must complete the task to update the protocol
-                    //
-                    verify_io = false;
-                    if (_status_code != NO_ERROR) {
-                        this->update_last_error(_status_code);
+                verify_io = false;
+
+                if (_status_code != NO_ERROR) {
+                    this->update_last_error(_status_code);
+                } else {
+                    if (IOTaskAction::Recv == _original_task.ioAction) {
+                        // save off the connection ID when we receive it
+                        if (!ctsIOBuffers::SetConnectionId(this->connection_id(), _original_task, _current_transfer)) {
+                            this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
+                        }
+                    }
+
+                    // process the TCP protocol state machine in pattern_state after receiving the connection id
+                    this->update_last_protocol_error(this->pattern_state.completed_task(_original_task, _current_transfer));
+
+                    if (_original_task.ioAction == IOTaskAction::Send) {
+                        ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
                     } else {
-                        if (IOTaskAction::Recv == _original_task.ioAction) {
-                            // save off the connection ID when we receive it
-                            if (!ctsIOBuffers::SetConnectionId(this->connection_id(), _original_task, _current_transfer)) {
-                                this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
-                            }
-                        }
-
-                        this->update_last_protocol_error(this->pattern_state.completed_task(_original_task, _current_transfer));
-
-                        // update the global counters of bytes transferred, since the stats on this individual connection won't be
-                        // - UDP currently isn't tracking hard against these numbers - only updating TCP
-                        if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP) {
-                            if (_original_task.ioAction == IOTaskAction::Send) {
-                                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
-                            } else {
-                                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
-                            }
-                        }
-                    }
-                    ctsIOBuffers::ReleaseConnectionIdBuffer(_original_task);
-
-                } else if (_status_code != NO_ERROR) {
-                    //
-                    // if the IO task failed, the entire IO pattern is now failed
-                    // - unless this is an extra recv that was canceled once we completed the transfer
-                    //
-                    if (!(IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed())) {
-                        if (this->update_last_error(_status_code) != ctsStatusIORunning) {
-                            verify_io = false;
-                        }
+                        ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
                     }
                 }
+                ctsIOBuffers::ReleaseConnectionIdBuffer(_original_task);
 
-                if (verify_io) {
-                    //
-                    // IO succeeded - update state machine with the completed task if this task had IO
-                    //
-                    auto pattern_status = this->pattern_state.completed_task(_original_task, _current_transfer);
-                    // update the last_error if the pattern_state detected an error
-                    this->update_last_protocol_error(pattern_status);
-
-                    if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
-                        (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status) &&
-                        _original_task.track_io &&
-                        ctsConfig::Settings->ShouldVerifyBuffers) {
-                        //
-                        // no protocol error, so process the IO
-                        //
-                        switch (_original_task.ioAction) {
-                            case IOTaskAction::Recv:
-                                ctFatalCondition(
-                                    _original_task.expected_pattern_offset != this->recv_pattern_offset,
-                                    L"ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%Iu)",
-                                    &_original_task, _original_task.expected_pattern_offset, static_cast<size_t>(this->recv_pattern_offset));
-
-                                if (!this->verify_buffer(_original_task, _current_transfer)) {
-                                    this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
-                                }
-
-                                this->recv_pattern_offset += _current_transfer;
-                                this->recv_pattern_offset %= BufferPatternSize;
-                                break;
-
-                            case IOTaskAction::Send:
-                                this->send_pattern_offset += _current_transfer;
-                                this->send_pattern_offset %= BufferPatternSize;
-                                break;
-                        }
+            } else if (_status_code != NO_ERROR) {
+                //
+                // if the IO task failed, the entire IO pattern is now failed
+                // - unless this is an extra recv that was canceled once we completed the transfer
+                //
+                if (!(IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed())) {
+                    if (this->update_last_error(_status_code) != ctsStatusIORunning) {
+                        verify_io = false;
                     }
                 }
-                break;
+            }
+
+            if (verify_io) {
+                //
+                // IO succeeded - update state machine with the completed task if this task had IO
+                //
+                auto pattern_status = this->pattern_state.completed_task(_original_task, _current_transfer);
+                // update the last_error if the pattern_state detected an error
+                this->update_last_protocol_error(pattern_status);
+                //
+                // if this is a TCP receive completion
+                // and no IO or protocol errors
+                // and the user requested to verify buffers
+                // then actually validate the received completion
+                //
+                if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
+                    _original_task.ioAction == IOTaskAction::Recv &&
+                    (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status) &&
+                    _original_task.track_io &&
+                    ctsConfig::Settings->ShouldVerifyBuffers) {
+
+                    ctFatalCondition(
+                        _original_task.expected_pattern_offset != this->recv_pattern_offset,
+                        L"ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%Iu)",
+                        &_original_task, _original_task.expected_pattern_offset, static_cast<size_t>(this->recv_pattern_offset));
+
+                    if (!this->verify_buffer(_original_task, _current_transfer)) {
+                        this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
+                    }
+
+                    this->recv_pattern_offset += _current_transfer;
+                    this->recv_pattern_offset %= BufferPatternSize;
+                }
+            }
+            break;
         }
         //
         // Notify the derived interface that the task completed
@@ -647,6 +629,10 @@ namespace ctsTraffic {
             return_task.expected_pattern_offset = 0; // The sender shouldn't be validating this
             return_task.buffer_type = ctsIOTask::BufferType::Static;
 
+            // now that we are indicating this buffer to send, increment the offset for the next send request
+            this->send_pattern_offset += new_buffer_size;
+            this->send_pattern_offset %= BufferPatternSize;
+
             ctFatalCondition(
                 this->send_pattern_offset >= BufferPatternSize,
                 L"this->pattern_offset being too large (larger than BufferPatternSize %lu) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
@@ -725,8 +711,8 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternPull::ctsIOPatternPull() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
-        io_needed(ctsConfig::IsListening() ? 1 : ctsConfig::Settings->PrePostRecvs),
-        sending(ctsConfig::IsListening())
+        io_action(ctsConfig::IsListening() ? IOTaskAction::Send : IOTaskAction::Recv),
+        io_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostSends : ctsConfig::Settings->PrePostRecvs)
     {
     }
     ctsIOPatternPull::~ctsIOPatternPull() NOEXCEPT
@@ -746,13 +732,7 @@ namespace ctsTraffic {
     {
         if (this->io_needed > 0) {
             --this->io_needed;
-            IOTaskAction next_ioaction;
-            if (this->sending) {
-                next_ioaction = IOTaskAction::Send;
-            } else {
-                next_ioaction = IOTaskAction::Recv;
-            }
-            return this->tracked_task(next_ioaction);
+            return this->tracked_task(this->io_action);
         } else {
             return ctsIOTask();
         }
@@ -784,8 +764,8 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternPush::ctsIOPatternPush() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
-        io_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 1),
-        sending(!ctsConfig::IsListening())
+        io_action(ctsConfig::IsListening() ? IOTaskAction::Recv : IOTaskAction::Send),
+        io_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : ctsConfig::Settings->PrePostSends)
     {
     }
     ctsIOPatternPush::~ctsIOPatternPush() NOEXCEPT
@@ -805,13 +785,7 @@ namespace ctsTraffic {
     {
         if (this->io_needed > 0) {
             --this->io_needed;
-            IOTaskAction next_ioaction;
-            if (this->sending) {
-                next_ioaction = IOTaskAction::Send;
-            } else {
-                next_ioaction = IOTaskAction::Recv;
-            }
-            return this->tracked_task(next_ioaction);
+            return this->tracked_task(this->io_action);
         } else {
             return ctsIOTask();
         }
@@ -949,7 +923,7 @@ namespace ctsTraffic {
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
         remaining_send_bytes(0),
         remaining_recv_bytes(0),
-        send_needed(1),
+        send_needed(ctsConfig::Settings->PrePostSends),
         recv_needed(ctsConfig::Settings->PrePostRecvs)
     {
         // max transfer bytes must be an even # so send bytes and recv bytes are balanced
@@ -1016,27 +990,27 @@ namespace ctsTraffic {
     ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         switch (_task.ioAction) {
-            case IOTaskAction::Send:
-                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
-                this->stats.bytes_sent.add(_completed_bytes);
+        case IOTaskAction::Send:
+            ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
+            this->stats.bytes_sent.add(_completed_bytes);
 
-                // first, we need to adjust the total back from our over-subscription guard when this task was created
-                this->remaining_send_bytes += _task.buffer_length;
-                // then we need to subtract back out the actual number of bytes sent
-                this->remaining_send_bytes -= _completed_bytes;
-                ++this->send_needed;
-                break;
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
+            this->remaining_send_bytes += _task.buffer_length;
+            // then we need to subtract back out the actual number of bytes sent
+            this->remaining_send_bytes -= _completed_bytes;
+            ++this->send_needed;
+            break;
 
-            case IOTaskAction::Recv:
-                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_completed_bytes);
-                this->stats.bytes_recv.add(_completed_bytes);
+        case IOTaskAction::Recv:
+            ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_completed_bytes);
+            this->stats.bytes_recv.add(_completed_bytes);
 
-                // first, we need to adjust the total back from our over-subscription guard when this task was created
-                this->remaining_recv_bytes += _task.buffer_length;
-                // then we need to subtract back out the actual number of bytes received
-                this->remaining_recv_bytes -= _completed_bytes;
-                ++this->recv_needed;
-                break;
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
+            this->remaining_recv_bytes += _task.buffer_length;
+            // then we need to subtract back out the actual number of bytes received
+            this->remaining_recv_bytes -= _completed_bytes;
+            ++this->recv_needed;
+            break;
         }
         return ctsIOPatternProtocolError::NoError;
     }
@@ -1074,31 +1048,31 @@ namespace ctsTraffic {
     {
         ctsIOTask return_task;
         switch (this->state) {
-            case ServerState::NotStarted:
-                // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
-                return_task = ctsMediaStreamMessage::MakeConnectionIdTask(
-                    this->untracked_task(IOTaskAction::Recv, UdpDatagramConnectionIdHeaderLength),
-                    this->connection_id());
-                this->state = ServerState::IdSent;
-                break;
+        case ServerState::NotStarted:
+            // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
+            return_task = ctsMediaStreamMessage::MakeConnectionIdTask(
+                this->untracked_task(IOTaskAction::Recv, UdpDatagramConnectionIdHeaderLength),
+                this->connection_id());
+            this->state = ServerState::IdSent;
+            break;
 
-            case ServerState::IdSent:
-                this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
-                this->state = ServerState::IoStarted;
-                // fall-through
-            case ServerState::IoStarted:
-                if (current_frame_requested < frame_size_bytes) {
-                    return_task = this->tracked_task(IOTaskAction::Send, frame_size_bytes);
-                    // calculate the future time to initiate the IO
-                    // - then subtract the start time to give the difference
-                    return_task.time_offset_milliseconds =
-                        this->base_time_milliseconds
-                        + static_cast<long long>(this->current_frame * 1000UL / this->frame_rate_fps)
-                        - ctTimer::snap_qpc_as_msec();
+        case ServerState::IdSent:
+            this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
+            this->state = ServerState::IoStarted;
+            // fall-through
+        case ServerState::IoStarted:
+            if (current_frame_requested < frame_size_bytes) {
+                return_task = this->tracked_task(IOTaskAction::Send, frame_size_bytes);
+                // calculate the future time to initiate the IO
+                // - then subtract the start time to give the difference
+                return_task.time_offset_milliseconds =
+                    this->base_time_milliseconds
+                    + static_cast<long long>(this->current_frame) * 1000LL / static_cast<long long>(this->frame_rate_fps)
+                    - ctTimer::snap_qpc_as_msec();
 
-                    current_frame_requested += return_task.buffer_length;
-                }
-                break;
+                current_frame_requested += return_task.buffer_length;
+            }
+            break;
         }
         return return_task;
     }

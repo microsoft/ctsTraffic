@@ -37,15 +37,15 @@ namespace ctsTraffic {
 
     struct wsIOResult
     {
-        int error_code;
-        unsigned long bytes_transferred;
+        int error_code = 0;
+        unsigned long bytes_transferred = 0;
 
-        wsIOResult() NOEXCEPT : error_code(0), bytes_transferred(0)
+        wsIOResult() NOEXCEPT
         {
         }
-
-        explicit wsIOResult(int _error) NOEXCEPT : error_code(_error), bytes_transferred(0)
+        explicit wsIOResult(int _error) NOEXCEPT
         {
+            error_code = _error;
         }
     };
 
@@ -53,15 +53,15 @@ namespace ctsTraffic {
     /// WSARecvFrom
     ///
     wsIOResult ctsWSARecvFrom(
-        std::shared_ptr<ctsSocket>& _shared_socket,
+        const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT;
+        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
 
     ///
     /// WSASendTo
     ///
     wsIOResult ctsWSASendTo(
-        std::shared_ptr<ctsSocket>& _shared_socket,
+        const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT;
+        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
 }

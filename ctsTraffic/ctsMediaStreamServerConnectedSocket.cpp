@@ -31,7 +31,7 @@ using namespace ctl;
 
 namespace ctsTraffic {
     ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
-        std::weak_ptr<ctsSocket> _weak_socket, 
+        const std::weak_ptr<ctsSocket>& _weak_socket, 
         SOCKET _sending_socket,
         const ctSockaddr& _remote_addr,
         ctsMediaStreamConnectedSocketIoFunctor _io_functor)

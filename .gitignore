@@ -11,3 +11,4 @@
 *.db
 /x64/Debug
 /x64/Release
+*.opendb

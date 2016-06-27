@@ -43,9 +43,9 @@ namespace ctsTraffic {
     /// WSARecvFrom
     ///
     wsIOResult ctsWSARecvFrom(
-        std::shared_ptr<ctsSocket>& _shared_socket,
+        const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
@@ -55,7 +55,7 @@ namespace ctsTraffic {
 
         wsIOResult return_result;
         try {
-            auto io_thread_pool = _shared_socket->thread_pool();
+            const auto& io_thread_pool = _shared_socket->thread_pool();
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
 
             WSABUF wsabuf;
@@ -99,9 +99,9 @@ namespace ctsTraffic {
     /// WSASendTo
     ///
     wsIOResult ctsWSASendTo(
-        std::shared_ptr<ctsSocket>& _shared_socket,
+        const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)> _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         SOCKET socket = socket_lock.get();
@@ -113,7 +113,7 @@ namespace ctsTraffic {
         try {
             const ctl::ctSockaddr& targetAddress = _shared_socket->target_address();
 
-            auto io_thread_pool = _shared_socket->thread_pool();
+            const auto& io_thread_pool = _shared_socket->thread_pool();
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
 
             WSABUF wsabuf;

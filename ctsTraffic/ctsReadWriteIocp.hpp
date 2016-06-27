@@ -34,7 +34,7 @@ namespace ctsTraffic {
 
     /// forward delcaration
     inline
-    void ctsReadWriteIocp(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
     ///
     /// IO Threadpool completion callback 
@@ -42,9 +42,9 @@ namespace ctsTraffic {
     static
     inline
     void ctsReadWriteIocpIoCompletionCallback(
-        OVERLAPPED* _overlapped,
-        std::weak_ptr<ctsSocket> _weak_socket,
-        ctsIOTask _io_task
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctsIOTask& _io_task
         ) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
@@ -113,7 +113,7 @@ namespace ctsTraffic {
     /// The registered function with ctsConfig
     ///
     inline
-    void ctsReadWriteIocp(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // must get a reference to the socket and the IO pattern
         auto shared_socket(_weak_socket.lock());

@@ -21,26 +21,25 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
     //
-    // Callers should call LockSocket() in order to gain access to the SOCKET.
+    // Callers should call ctsGuardSocket() in order to gain access to the SOCKET.
     // Callers then have exclusive access to the SOCKET through the returned ctsSocketGuard
     // - ctsSocketGuard's d'tor will release the lock on the socket
     // Callers are expected to hold this lock just long enough to make API calls with the SOCKET
     //
     // Callers are *not* allowed to call closesocket() with the returned SOCKET, even under a lock
     // - as doing so changes this SOCKET state outside of this container's knowledge
+    // - callers must call close_socket on the ctsSocket object
     //
     // Callers may call any other method in ctsSocket with or without this lock
     //
-
-    //
-    // type T must implement ->lock_socket() to acquire a lock over its encapsulated SOCKET
-    // type T must implement ->unlock_socket() to release the lock
-    //
+    // ctsSocketGuard holds a const reference to the const ctsSocket& that it was given
+    // - thus the ctsSocket object must out-live this ctsSocketGuard object
+    // 
     template <typename T>
     class ctsSocketGuard;
 
     template <typename T>
-    static ctsSocketGuard<T> ctsGuardSocket(T _t)
+    static ctsSocketGuard<T> ctsGuardSocket(const T& _t)
     {
         return ctsSocketGuard<T>(_t);
     }
@@ -53,15 +52,16 @@ namespace ctsTraffic {
         ~ctsSocketGuard() NOEXCEPT
         {
             // will be null if moved-from
-            if (t) {
+            if (!movedFrom) {
                 t->unlock_socket();
             }
         }
 
         // movable
-        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT : t(std::move(_rvalue.t))
+        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT
+        : t(std::move(_rvalue.t)), movedFrom(false)
         {
-            _rvalue.t = nullptr;
+            _rvalue.movedFrom = true;
         }
 
         SOCKET get() const NOEXCEPT
@@ -76,14 +76,16 @@ namespace ctsTraffic {
         ctsSocketGuard& operator=(const ctsSocketGuard&) = delete;
 
     private:
-        template <typename R>
-        friend ctsSocketGuard<R> ctsGuardSocket(R);
-        T t;
+        template <typename T>
+        friend ctsSocketGuard<T> ctsGuardSocket(const T&);
+        const T& t;
+        // tracking moved from by hand, as we cannot modify the const ref
+        bool movedFrom;
 
         // private c'tor guarded by the factory function
         // _Acquires_lock_
-        template <typename R>
-        explicit ctsSocketGuard(R _r) NOEXCEPT : t(std::forward<R>(_r))
+        explicit ctsSocketGuard(const T& _t) NOEXCEPT 
+        : t(_t), movedFrom(false)
         {
             t->lock_socket();
         }

@@ -63,8 +63,7 @@ namespace ctsTraffic {
 
         void initiate_recv() NOEXCEPT;
 
-        // non-copyable, no default c'tor
-        ctsMediaStreamServerListeningSocket() = delete;
+        // non-copyable
         ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;
         ctsMediaStreamServerListeningSocket& operator=(const ctsMediaStreamServerListeningSocket&) = delete;
     };

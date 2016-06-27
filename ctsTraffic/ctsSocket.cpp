@@ -28,7 +28,7 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    ctsSocket::ctsSocket(_In_ weak_ptr<ctsSocketState> _parent) : 
+    ctsSocket::ctsSocket(const weak_ptr<ctsSocketState>& _parent) : 
         socket_cs(),
         socket(INVALID_SOCKET),
         io_count(0),
@@ -94,7 +94,7 @@ namespace ctsTraffic {
         }
     }
 
-    shared_ptr<ctThreadIocp> ctsSocket::thread_pool()
+    const shared_ptr<ctThreadIocp>& ctsSocket::thread_pool()
     {
         // use the SOCKET cs to also guard creation of this TP object
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
@@ -223,7 +223,7 @@ namespace ctsTraffic {
         weak_ptr<ctsSocket> weak_reference(this->shared_from_this());
 
         this->tp_timer->schedule_singleton(
-            [_func, weak_reference, _task] () { _func(weak_reference, _task); },
+            [_func = std::move(_func), weak_reference, _task] () { _func(weak_reference, _task); },
             _task.time_offset_milliseconds);
     }
 

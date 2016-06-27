@@ -257,6 +257,9 @@ namespace ctsTraffic {
                 }
 
                 FrameSizeBytes = static_cast<unsigned long>(total_frame_size_bytes);
+                if (FrameSizeBytes < 40) {
+                    throw std::invalid_argument("The frame size is too small - it must be at least 40 bytes");
+                }
                 StreamLengthFrames = static_cast<unsigned long>(total_stream_length_frames);
 
                 // guarantee frame alignment
@@ -311,6 +314,7 @@ namespace ctsTraffic {
               StartTimeMilliseconds(0LL),
               TimeLimit(0UL),
               PrePostRecvs(0UL),
+              PrePostSends(0UL),
               UseSharedBuffer(false),
               ShouldVerifyBuffers(false),
               LocalPortLow(0),
@@ -359,6 +363,7 @@ namespace ctsTraffic {
 
             ctsUnsignedLong TimeLimit;
             ctsUnsignedLong PrePostRecvs;
+            ctsUnsignedLong PrePostSends;
 
             bool UseSharedBuffer;
             bool ShouldVerifyBuffers;

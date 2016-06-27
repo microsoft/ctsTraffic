@@ -38,8 +38,7 @@ namespace ctsTraffic {
     /// Its intended use is either for UDP sockets, or for very few concurrent connections
     ///
 
-    inline
-    void ctsSimpleConnect(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    inline void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());

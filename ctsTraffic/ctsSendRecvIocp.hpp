@@ -31,27 +31,22 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 
     /// forward delcaration
-    inline
-    void ctsSendRecvIocp(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT;
+    inline void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
-    struct  ctsSendRecvStatus {
-        ctsSendRecvStatus() NOEXCEPT : io_errorcode(NO_ERROR), io_done(false), io_started(false)
-        {
-        }
-
+    struct ctsSendRecvStatus
+    {
         // Winsock error code
-        unsigned long io_errorcode;
+        unsigned long io_errorcode = NO_ERROR;
         // flag if to request another ctsIOTask
-        bool io_done;
+        bool io_done = false;
         // returns if IO was started (since can return !io_done, but I/O wasn't started yet)
-        bool io_started;
+        bool io_started = false;
     };
 
     ///
     /// IO Threadpool completion callback 
     ///
-    static inline
-    void ctsIoCompletionCallback(_In_ OVERLAPPED* _overlapped, std::weak_ptr<ctsSocket> _weak_socket, ctsIOTask _io_task) NOEXCEPT
+    static inline void ctsIoCompletionCallback(_In_ OVERLAPPED* _overlapped, const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _io_task) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -84,29 +79,29 @@ namespace ctsTraffic {
         // see if complete_io requests more IO
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
-            case ctsIOStatus::ContinueIo:
-                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
-                // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
-                ctsSendRecvIocp(_weak_socket);
-                break;
+        case ctsIOStatus::ContinueIo:
+            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
+            ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
+            // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
+            ctsSendRecvIocp(_weak_socket);
+            break;
 
-            case ctsIOStatus::CompletedIo:
-                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
-                // no more IO is requested from the protocol : indicate success
-                gle = NO_ERROR;
-                break;
+        case ctsIOStatus::CompletedIo:
+            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
+            ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
+            // no more IO is requested from the protocol : indicate success
+            gle = NO_ERROR;
+            break;
 
-            case ctsIOStatus::FailedIo:
-                // write out the error to the error log since the protocol sees this as a hard error
-                ctsConfig::PrintErrorIfFailed(function, gle);
-                // protocol sees this as a failure : capture the error the protocol recorded
-                gle = shared_pattern->get_last_error();
-                break;
+        case ctsIOStatus::FailedIo:
+            // write out the error to the error log since the protocol sees this as a hard error
+            ctsConfig::PrintErrorIfFailed(function, gle);
+            // protocol sees this as a failure : capture the error the protocol recorded
+            gle = shared_pattern->get_last_error();
+            break;
 
-            default:
-                ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
+        default:
+            ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO : the prior IO is now formally "done"
@@ -123,117 +118,92 @@ namespace ctsTraffic {
     /// ** ctsSocket::increment_io must have been called before this function was invoked
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static inline
-    ctsSendRecvStatus ctsProcessIOTask(std::shared_ptr<ctsSocket> _shared_socket, const ctsIOTask& next_io) NOEXCEPT
+    static inline ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) NOEXCEPT
     {
         ctsSendRecvStatus return_status;
 
-        // hold a reference on the iopattern
-        auto shared_pattern(_shared_socket->io_pattern());
-        // take a lock on the socket before accessing it
-        auto socketlock(ctsGuardSocket(_shared_socket));
-        SOCKET socket = socketlock.get();
         // if we no longer have a valid socket return early
-        if (INVALID_SOCKET == socket) {
+        if (INVALID_SOCKET == _socket) {
             return_status.io_errorcode = WSAECONNABORTED;
             return_status.io_started = false;
             return_status.io_done = true;
             // even if the socket was closed we still must complete the IO request
-            shared_pattern->complete_io(next_io, 0, return_status.io_errorcode);
+            _shared_pattern->complete_io(next_io, 0, return_status.io_errorcode);
             return return_status;
         }
 
         if (IOTaskAction::GracefulShutdown == next_io.ioAction) {
-            if (0 != ::shutdown(socket, SD_SEND)) {
+            if (0 != ::shutdown(_socket, SD_SEND)) {
                 return_status.io_errorcode = ::WSAGetLastError();
             }
-            return_status.io_done = (shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
+            return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
             return_status.io_started = false;
 
         } else if (IOTaskAction::HardShutdown == next_io.ioAction) {
             ::linger linger_option;
             linger_option.l_onoff = 1;
             linger_option.l_linger = 0;
-            if (0 != ::setsockopt(socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option)))) {
+            if (0 != ::setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option)))) {
                 return_status.io_errorcode = ::WSAGetLastError();
             }
             _shared_socket->close_socket();
 
-            return_status.io_done = (shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
+            return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
             return_status.io_started = false;
 
         } else {
-            // attempt to allocate an IO thread-pool object
-            std::shared_ptr<ctl::ctThreadIocp> io_thread_pool;
-            OVERLAPPED* pov = nullptr;
             try {
-                // these are the only calls which can throw in this function
-                io_thread_pool = _shared_socket->thread_pool();
-                std::weak_ptr<ctsSocket> weak_reference(_shared_socket);
+                OVERLAPPED* pov = nullptr;
+                // attempt to allocate an IO thread-pool object
+                const std::shared_ptr<ctl::ctThreadIocp>& io_thread_pool(_shared_socket->thread_pool());
                 pov = io_thread_pool->new_request(
-                    [weak_reference, next_io] (OVERLAPPED* _ov) 
-                    { ctsIoCompletionCallback(_ov, weak_reference, next_io); });
-            }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                return_status.io_errorcode = (0 == e.why()) ? WSAENOBUFS : e.why();
-            }
-            catch (const std::bad_alloc& e) {
-                ctsConfig::PrintException(e);
-                return_status.io_errorcode = WSAENOBUFS;
-            }
+                    [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), next_io](OVERLAPPED* _ov)
+                { ctsIoCompletionCallback(_ov, weak_reference, next_io); });
 
-            // if an exception prevented this IO from initiating, return back to the IO Pattern that it failed
-            if (return_status.io_errorcode != NO_ERROR) {
-                return_status.io_done = (shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
-                return_status.io_started = false;
-                return return_status;
-            }
+                WSABUF wsabuf;
+                wsabuf.buf = next_io.buffer + next_io.buffer_offset;
+                wsabuf.len = next_io.buffer_length;
 
-            WSABUF wsabuf;
-            wsabuf.buf = next_io.buffer + next_io.buffer_offset;
-            wsabuf.len = next_io.buffer_length;
-
-            const wchar_t* function_name = nullptr;
-            if (IOTaskAction::Send == next_io.ioAction) {
-                function_name = L"WSASend";
-                if (::WSASend(socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0) {
-                    return_status.io_errorcode = ::WSAGetLastError();
-                }
-            } else {
-                function_name = L"WSARecv";
-                DWORD flags = 0;
-                if (::WSARecv(socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0) {
-                    return_status.io_errorcode = ::WSAGetLastError();
-                }
-            }
-            //
-            // not calling complete_io if returned IO pended 
-            // not calling complete_io if returned success but not handling inline completions
-            //
-            if ((WSA_IO_PENDING == return_status.io_errorcode) ||
-                (NO_ERROR == return_status.io_errorcode && !(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP))) {
-                return_status.io_errorcode = NO_ERROR;
-                return_status.io_started = true;
-                return_status.io_done = false;
-
-            } else {
-                // process the completion if the API call failed, or if it succeeded and we're handling the completion inline, 
-                return_status.io_started = false;
-                // determine # of bytes transferred, if any
-                DWORD bytes_transferred = 0;
-                if (NO_ERROR == return_status.io_errorcode) {
-                    DWORD flags;
-                    if (!::WSAGetOverlappedResult(socket, pov, &bytes_transferred, FALSE, &flags)) {
-                        ctl::ctAlwaysFatalCondition(
-                            L"WSAGetOverlappedResult failed (%d) after the IO request (%s) succeeded", ::WSAGetLastError(), function_name);
+                const wchar_t* function_name = nullptr;
+                if (IOTaskAction::Send == next_io.ioAction) {
+                    function_name = L"WSASend";
+                    if (::WSASend(_socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0) {
+                        return_status.io_errorcode = ::WSAGetLastError();
+                    }
+                } else {
+                    function_name = L"WSARecv";
+                    DWORD flags = 0;
+                    if (::WSARecv(_socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0) {
+                        return_status.io_errorcode = ::WSAGetLastError();
                     }
                 }
-                // must cancel the IOCP TP since IO is not pended
-                io_thread_pool->cancel_request(pov);
-                // call back to the socket to see if wants more IO
-                ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, bytes_transferred, return_status.io_errorcode);
-                switch (protocol_status) {
+                //
+                // not calling complete_io if returned IO pended 
+                // not calling complete_io if returned success but not handling inline completions
+                //
+                if ((WSA_IO_PENDING == return_status.io_errorcode) ||
+                    (NO_ERROR == return_status.io_errorcode && !(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP))) {
+                    return_status.io_errorcode = NO_ERROR;
+                    return_status.io_started = true;
+                    return_status.io_done = false;
+
+                } else {
+                    // process the completion if the API call failed, or if it succeeded and we're handling the completion inline, 
+                    return_status.io_started = false;
+                    // determine # of bytes transferred, if any
+                    DWORD bytes_transferred = 0;
+                    if (NO_ERROR == return_status.io_errorcode) {
+                        DWORD flags;
+                        if (!::WSAGetOverlappedResult(_socket, pov, &bytes_transferred, FALSE, &flags)) {
+                            ctl::ctAlwaysFatalCondition(
+                                L"WSAGetOverlappedResult failed (%d) after the IO request (%s) succeeded", ::WSAGetLastError(), function_name);
+                        }
+                    }
+                    // must cancel the IOCP TP since IO is not pended
+                    io_thread_pool->cancel_request(pov);
+                    // call back to the socket to see if wants more IO
+                    ctsIOStatus protocol_status = _shared_pattern->complete_io(next_io, bytes_transferred, return_status.io_errorcode);
+                    switch (protocol_status) {
                     case ctsIOStatus::ContinueIo:
                         // The protocol layer wants to transfer more data
                         // if prior IO failed, the protocol wants to ignore the error
@@ -250,15 +220,28 @@ namespace ctsTraffic {
 
                     case ctsIOStatus::FailedIo:
                         // write out the error
-                        ctsConfig::PrintErrorIfFailed(function_name, shared_pattern->get_last_error());
+                        ctsConfig::PrintErrorIfFailed(function_name, _shared_pattern->get_last_error());
                         // the protocol acknoledged the failure - socket is done with IO
-                        return_status.io_errorcode = shared_pattern->get_last_error();
+                        return_status.io_errorcode = _shared_pattern->get_last_error();
                         return_status.io_done = true;
                         break;
 
                     default:
                         ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                    }
                 }
+            }
+            catch (const ctl::ctException& e) {
+                ctsConfig::PrintException(e);
+                return_status.io_errorcode = (0 == e.why()) ? WSAENOBUFS : e.why();
+                return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
+                return_status.io_started = false;
+            }
+            catch (const std::bad_alloc& e) {
+                ctsConfig::PrintException(e);
+                return_status.io_errorcode = WSAENOBUFS;
+                return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
+                return_status.io_started = false;
             }
         }
 
@@ -271,19 +254,20 @@ namespace ctsTraffic {
     /// Processes the given task and then calls ctsSendRecvIocp function to deal with any additional tasks
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static inline
-    void ctsProcessIOTaskCallback(std::weak_ptr<ctsSocket> _weak_socket, const ctsIOTask& next_io) NOEXCEPT
+    static inline void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
             return;
         }
+        // take a lock on the socket before working with it
+        auto socketlock(ctsGuardSocket(shared_socket));
         // increment IO for this IO request
         shared_socket->increment_io();
+
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
-        // - not incrementing first as the refcount was incremented before scheduling this IO
-        ctsSendRecvStatus status = ctsProcessIOTask(shared_socket, next_io);
+        ctsSendRecvStatus status = ctsProcessIOTask(socketlock.get(), shared_socket, shared_socket->io_pattern(), next_io);
         // if no IO was started, decrement the IO counter
         if (!status.io_started) {
             if (0 == shared_socket->decrement_io()) {
@@ -306,14 +290,15 @@ namespace ctsTraffic {
     ///
     /// The function registered with ctsConfig
     ///
-    inline
-    void ctsSendRecvIocp(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    inline void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
             return;
         }
+        // take a lock on the socket before working with it
+        auto socketlock(ctsGuardSocket(shared_socket));
         // hold a reference on the iopattern
         auto shared_pattern(shared_socket->io_pattern());
         //
@@ -356,7 +341,7 @@ namespace ctsTraffic {
                 }
 
             } else {
-                status = ctsProcessIOTask(shared_socket, next_io);
+                status = ctsProcessIOTask(socketlock.get(), shared_socket, shared_pattern, next_io);
             }
 
             // if no IO was started, decrement the IO counter

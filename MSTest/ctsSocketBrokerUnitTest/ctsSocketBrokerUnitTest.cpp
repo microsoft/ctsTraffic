@@ -266,6 +266,8 @@ namespace ctsUnitTest {
 
             ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
             ctsConfig::Settings->CtrlCHandle = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 1;
             Assert::AreNotEqual(static_cast<HANDLE>(NULL), ctsConfig::Settings->CtrlCHandle);
         }
         TEST_CLASS_CLEANUP(Cleanup)
@@ -391,7 +393,7 @@ namespace ctsUnitTest {
             s_SocketPool->complete_state(NO_ERROR);
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            auto completed = test_broker->wait(1000);
+            auto completed = test_broker->wait(2000);
             Assert::IsTrue(completed);
             s_SocketPool->validate_expected_count(0);
         }

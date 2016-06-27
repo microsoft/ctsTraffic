@@ -35,12 +35,8 @@ namespace ctsTraffic {
 
     struct IoImplStatus
     {
-        unsigned long error_code;
-        bool continue_io;
-
-        IoImplStatus() NOEXCEPT : error_code(0), continue_io(false)
-        {
-        }
+        unsigned long error_code = 0;
+        bool continue_io = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,19 +45,19 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IoImplStatus ctsMediaStreamClientIoImpl(
-        std::shared_ptr<ctsSocket>& _shared_socket,
+        const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _next_io) NOEXCEPT;
 
     void ctsMediaStreamClientIoCompletionCallback(
-        OVERLAPPED* _overlapped,
-        std::weak_ptr<ctsSocket> _weak_socket,
-        ctsIOTask _io_task
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctsIOTask& _io_task
         ) NOEXCEPT;
 
     void ctsMediaStreamClientConnectionCompletionCallback(
-        OVERLAPPED* _overlapped,
-        std::weak_ptr<ctsSocket> _weak_socket,
-        ctl::ctSockaddr _target_address
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctl::ctSockaddr& _target_address
         ) NOEXCEPT;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,7 +66,7 @@ namespace ctsTraffic {
     /// - with the specified ctsSocket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClient(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -136,7 +132,7 @@ namespace ctsTraffic {
     /// using IO Completion Ports
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClientConnect(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -211,7 +207,7 @@ namespace ctsTraffic {
     /// implementation of processing a ctsIOTask
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    IoImplStatus ctsMediaStreamClientIoImpl(std::shared_ptr<ctsSocket>& _shared_socket, const ctsIOTask& _next_io) NOEXCEPT
+    IoImplStatus ctsMediaStreamClientIoImpl(const std::shared_ptr<ctsSocket>& _shared_socket, const ctsIOTask& _next_io) NOEXCEPT
     {
         IoImplStatus return_status;
 
@@ -220,9 +216,7 @@ namespace ctsTraffic {
             case IOTaskAction::Recv: {
                 // add-ref the IO about to start
                 LONG io_count = _shared_socket->increment_io();
-
-                std::weak_ptr<ctsSocket> weak_reference(_shared_socket);
-                auto callback = [weak_reference, _next_io] (OVERLAPPED* _ov) {
+                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) {
                     ctsMediaStreamClientIoCompletionCallback(_ov, weak_reference, _next_io);
                 };
 
@@ -230,10 +224,10 @@ namespace ctsTraffic {
                 wsIOResult result;
                 if (IOTaskAction::Send == _next_io.ioAction) {
                     function_name = L"WSASendTo";
-                    result = ctsWSASendTo(_shared_socket, _next_io, callback);
+                    result = ctsWSASendTo(_shared_socket, _next_io, std::move(callback));
                 } else if (IOTaskAction::Recv == _next_io.ioAction) {
                     function_name = L"WSARecvFrom";
-                    result = ctsWSARecvFrom(_shared_socket, _next_io, callback);
+                    result = ctsWSARecvFrom(_shared_socket, _next_io, std::move(callback));
                 } else {
                     ctl::ctAlwaysFatalCondition(
                         L"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)",
@@ -327,7 +321,6 @@ namespace ctsTraffic {
                 return_status.continue_io = false;
                 break;
             }
-
         }
 
         return return_status;
@@ -340,9 +333,9 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientIoCompletionCallback(
-        OVERLAPPED* _overlapped,
-        std::weak_ptr<ctsSocket> _weak_socket,
-        ctsIOTask _io_task
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctsIOTask& _io_task
         ) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
@@ -428,9 +421,9 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientConnectionCompletionCallback(
-        OVERLAPPED* _overlapped,
-        std::weak_ptr<ctsSocket> _weak_socket,
-        ctl::ctSockaddr _target_address
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctl::ctSockaddr& _target_address
         ) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());

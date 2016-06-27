@@ -32,8 +32,7 @@ namespace ctsTraffic {
     static long long s_TargetCounter = 0LL;
     static long long s_PortCounter = 0LL;
 
-    inline
-    void ctsWSASocket(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    inline void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -75,21 +74,21 @@ namespace ctsTraffic {
         int gle = 0;
         const wchar_t* function = L"CreateWSASocket";
         switch (ctsConfig::Settings->Protocol) {
-            case ctsConfig::ProtocolType::TCP:
-                gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
-                break;
+        case ctsConfig::ProtocolType::TCP:
+            gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
+            break;
 
-            case ctsConfig::ProtocolType::UDP:
-                gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags, &socket);
-                break;
+        case ctsConfig::ProtocolType::UDP:
+            gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags, &socket);
+            break;
 
-            default: {
-                ctsConfig::PrintErrorInfo(
-                    L"[%.3f] Unknown socket protocol (%u)", 
-                    ctsConfig::GetStatusTimeStamp(),
-                    static_cast<unsigned>(ctsConfig::Settings->Protocol));
-                gle = WSAEINVAL;
-            }
+        default: {
+            ctsConfig::PrintErrorInfo(
+                L"[%.3f] Unknown socket protocol (%u)",
+                ctsConfig::GetStatusTimeStamp(),
+                static_cast<unsigned>(ctsConfig::Settings->Protocol));
+            gle = WSAEINVAL;
+        }
         }
 
         if (NO_ERROR == gle) {

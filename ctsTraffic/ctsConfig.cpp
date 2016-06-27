@@ -1531,7 +1531,33 @@ namespace ctsTraffic {
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             } else {
-                Settings->PrePostRecvs = 1;
+                Settings->PrePostRecvs = (ProtocolType::TCP == Settings->Protocol) ? 1 : 2;
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Sets optional prepostsends value
+        ///
+        /// -PrePostSends:#####
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static void set_prepostsends(vector<const wchar_t*>& _args)
+        {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
+                const wchar_t* value = ParseArgument(parameter, L"-PrePostSends");
+                return (value != nullptr);
+            });
+            if (found_arg != end(_args)) {
+                Settings->PrePostSends = as_integral<unsigned long>(ParseArgument(*found_arg, L"-PrePostSends"));
+                if (0 == Settings->PrePostSends) {
+                    throw invalid_argument("-PrePostSends");
+                }
+
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            } else {
+                Settings->PrePostSends = (ProtocolType::TCP == Settings->Protocol) ? 2 : 1;
             }
         }
 
@@ -1977,8 +2003,8 @@ namespace ctsTraffic {
                                  L"  * these options target specific scenario requirements               \n"
                                  L"                                                                      \n"
                                  L" -Acc, -Bind, -Compartment, -Conn, -IO, -LocalPort,                   \n"
-                                 L" -OnError, -Options, -Pattern, -PrePostRecvs, -RateLimitPeriod        \n"
-                                 L" -ThrottleConnections, -TimeLimit                                     \n"
+                                 L" -OnError, -Options, -Pattern, -PrePostRecvs, -PrePostSends,          \n"
+                                 L" -RateLimitPeriod, -ThrottleConnections, -TimeLimit                   \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Acc:<accept,AcceptEx>\n"
@@ -2036,11 +2062,18 @@ namespace ctsTraffic {
                                  L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
                                  L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
                                  L"\t     one after another, immediately posting a recv after the prior completed.\n"
-                                 L"\t     With -pattern:pull -PrePostRecvs:2, 2 recv calls will be kept in-flight at all times.\n"
+                                 L"\t     with -pattern:pull -PrePostRecvs:2, clients will keep 2 recv calls in-flight at all times.\n"
                                  L"\t- <default> == 1 for TCP (one recv request at a time)\n"
                                  L"\t- <default> == 2 for UDP (two recv requests kept in-flight)\n"
                                  L"\t  note : with TCP patterns, -verify:connection must be specified in order to specify\n"
                                  L"\t         more than one -PrePostRecvs (UDP can always support any number)\n"
+                                 L"-PrePostSends:#####\n"
+                                 L"   - specifies the number of send requests to issue concurrently within an IO Pattern\n"
+                                 L"   - for example, with the default -pattern:pull, the servers will post send calls \n"
+                                 L"\t     one after another, immediately posting a send after the prior completed.\n"
+                                 L"\t     With -pattern:pull -PrePostSends:2, servers will keep 2 send calls in-flight at all times.\n"
+                                 L"\t- <default> == 2 for TCP (two send request at a time)\n"
+                                 L"\t- <default> == 1 for UDP (one send request on each timer tick)\n"
                                  L"-RateLimitPeriod:#####\n"
                                  L"   - the # of milliseconds describing the granularity by which -RateLimit bytes/second is enforced\n"
                                  L"\t     the -RateLimit bytes/second will be evenly split across -RateLimitPeriod milliseconds\n"
@@ -2251,6 +2284,7 @@ namespace ctsTraffic {
             if (ProtocolType::TCP == Settings->Protocol && Settings->ShouldVerifyBuffers && Settings->PrePostRecvs > 1) {
                 throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
             }
+            set_prepostsends(args);
 
             ///
             /// finally set the functions to use once all other settings are established
@@ -3344,6 +3378,14 @@ namespace ctsTraffic {
                 case IoPatternType::NoIOSet: // fall-through
                 default:
                     ctl::ctAlwaysFatalCondition(L"Unexpected Settings IoPattern");
+            }
+
+            if (Settings->PrePostRecvs > 1) {
+                setting_string.append(ctString::format_string(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
+            }
+
+            if (Settings->PrePostSends > 1) {
+                setting_string.append(ctString::format_string(L"\tPrePostSends: %u\n", static_cast<unsigned long>(Settings->PrePostSends)));
             }
 
             setting_string.append(

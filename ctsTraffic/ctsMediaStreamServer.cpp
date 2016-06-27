@@ -42,7 +42,7 @@ namespace ctsTraffic {
     /// Called to 'accept' incoming connections
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerListener(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         try {
             ctsMediaStreamServerImpl::init_once();
@@ -64,7 +64,7 @@ namespace ctsTraffic {
     /// Called initiate IO on a datagram socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerIo(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         ctsIOTask next_task;
         try {
@@ -104,7 +104,7 @@ namespace ctsTraffic {
     /// Called to remove that socket from the tracked vector of connected sockets
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerClose(std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         try {
             ctsMediaStreamServerImpl::init_once();
@@ -123,7 +123,7 @@ namespace ctsTraffic {
         std::vector<std::unique_ptr<ctsMediaStreamServerListeningSocket>> listening_sockets;
         
         // function for doing the actual IO for a UDP media stream datagram connection
-        wsIOResult ConnectedSocketIo(ctsMediaStreamServerConnectedSocket* this_ptr);
+        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr);
 
         CRITICAL_SECTION connected_object_guard;
         _Guarded_by_(connected_object_guard)
@@ -411,7 +411,7 @@ namespace ctsTraffic {
         }
 
 
-        wsIOResult ctsMediaStreamServerImpl::ConnectedSocketIo(ctsMediaStreamServerConnectedSocket* this_ptr)
+        wsIOResult ctsMediaStreamServerImpl::ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr)
         {
             auto this_socket_lock(ctsGuardSocket(this_ptr));
             SOCKET socket = this_socket_lock.get();

@@ -46,7 +46,7 @@ namespace ctsTraffic {
         //
         // c'tor requiring a parent ctsSocket reference
         //
-        explicit ctsSocket(_In_ std::weak_ptr<ctsSocketState> _parent);
+        explicit ctsSocket(const std::weak_ptr<ctsSocketState>& _parent);
 
         _No_competing_thread_
         ~ctsSocket() NOEXCEPT;
@@ -81,7 +81,7 @@ namespace ctsTraffic {
         // This can fail under low-resource conditions
         // - can throw std::bad_alloc or ctl::ctException
         //
-        std::shared_ptr<ctl::ctThreadIocp> thread_pool();
+        const std::shared_ptr<ctl::ctThreadIocp>& thread_pool();
 
         //
         // Callers are expected to call this when their 'stage' is complete for this SOCKET
@@ -130,8 +130,7 @@ namespace ctsTraffic {
         //
         void set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> _func);
 
-        // no default c'tor, not copyable
-        ctsSocket() = delete;
+        // not copyable
         ctsSocket(const ctsSocket&) = delete;
         ctsSocket& operator= (const ctsSocket&) = delete;
 

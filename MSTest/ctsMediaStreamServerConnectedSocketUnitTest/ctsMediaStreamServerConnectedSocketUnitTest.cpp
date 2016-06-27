@@ -197,7 +197,7 @@ namespace ctsTraffic {
     {
     }
     // ctsSocket fakes
-    ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>)
+    ctsSocket::ctsSocket(const std::weak_ptr<ctsSocketState>&)
     {
         this->pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
     }

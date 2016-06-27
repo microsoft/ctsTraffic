@@ -69,7 +69,7 @@ namespace ctsTraffic {
 
     public:
         ctsMediaStreamServerConnectedSocket(
-            std::weak_ptr<ctsSocket> _weak_socket, 
+            const std::weak_ptr<ctsSocket>& _weak_socket, 
             SOCKET _sending_socket, 
             const ctl::ctSockaddr& _remote_addr, 
             ctsMediaStreamConnectedSocketIoFunctor _io_functor);
@@ -88,8 +88,7 @@ namespace ctsTraffic {
 
         void complete_state(unsigned long _error_code) NOEXCEPT;
 
-        // non-copyable, no default c'tor
-        ctsMediaStreamServerConnectedSocket() = delete;
+        // non-copyable
         ctsMediaStreamServerConnectedSocket(const ctsMediaStreamServerConnectedSocket&) = delete;
         ctsMediaStreamServerConnectedSocket& operator=(const ctsMediaStreamServerConnectedSocket&) = delete;
 

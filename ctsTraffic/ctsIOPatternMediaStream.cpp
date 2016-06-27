@@ -59,9 +59,9 @@ namespace ctsTraffic {
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
         renderer_timer(nullptr),
         start_timer(nullptr),
-        frame_size_bytes(ctsConfig::GetMediaStream().FrameSizeBytes < UdpDatagramDataHeaderLength ? UdpDatagramDataHeaderLength : ctsConfig::GetMediaStream().FrameSizeBytes),
+        frame_size_bytes(ctsConfig::GetMediaStream().FrameSizeBytes),
         final_frame(ctsConfig::GetMediaStream().StreamLengthFrames),
-        initial_buffer_frames(0UL),
+        initial_buffer_frames(ctsConfig::GetMediaStream().BufferedFrames),
         timer_wheel_offset_frames(0UL),
         recv_needed(ctsConfig::Settings->PrePostRecvs),
         base_time_milliseconds(0LL),
@@ -70,7 +70,6 @@ namespace ctsTraffic {
         head_entry(),
         finished_stream(false)
     {
-        initial_buffer_frames = ctsConfig::GetMediaStream().BufferedFrames;
         // if the entire session fits in the inital buffer, update accordingly
         if (final_frame < initial_buffer_frames) {
             initial_buffer_frames = final_frame;
@@ -89,7 +88,7 @@ namespace ctsTraffic {
         }
 
         ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - queue size for this new connection is %d\n", static_cast<long>(queue_size));
-        ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(frame_rate_ms_per_frame));
+        ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - frame rate in milliseconds per frame : %f\n", frame_rate_ms_per_frame);
 
         frame_entries.resize(queue_size);
         head_entry = frame_entries.begin();
@@ -173,6 +172,9 @@ namespace ctsTraffic {
 
     ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
+        LARGE_INTEGER qpc;
+        ::QueryPerformanceCounter(&qpc);
+
         if (_task.ioAction == IOTaskAction::Abort) {
             // the stream should now be done
             ctFatalCondition(
@@ -182,10 +184,17 @@ namespace ctsTraffic {
         }
 
         if (_task.ioAction == IOTaskAction::Recv) {
-            if (0 == _completed_bytes && this->finished_stream) {
-                // the final WSARecvFrom can complete with a zero-byte recv on loopback after the sender closes
-                // TODO: verify on non-loopback
-                return ctsIOPatternProtocolError::NoError;
+            if (0 == _completed_bytes) {
+                if (this->finished_stream) {
+                    // the final WSARecvFrom can complete with a zero-byte recv on loopback after the sender closes
+                    // TODO: verify on non-loopback
+                    return ctsIOPatternProtocolError::NoError;
+                } else {
+                    ctsConfig::PrintErrorInfo(
+                        L"[%.3f] ctsIOPatternMediaStreamClient received a zero-byte datagram\n",
+                        ctsConfig::GetStatusTimeStamp());
+                    return ctsIOPatternProtocolError::TooFewBytes;
+                }
             }
 
             if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(_task, _completed_bytes)) {
@@ -236,8 +245,6 @@ namespace ctsTraffic {
                         long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
                         long long buffered_qpf = *reinterpret_cast<long long*>(_task.buffer + 16);
 
-                        LARGE_INTEGER qpc;
-                        ::QueryPerformanceCounter(&qpc);
                         // always overwrite qpc & qpf values with the latest datagram details
                         found_slot->sender_qpc = buffered_qpc;
                         found_slot->sender_qpf = buffered_qpf;
@@ -350,10 +357,10 @@ namespace ctsTraffic {
         if (this->renderer_timer != nullptr) {
             // calculate when that time should be relative to base_time_milliseconds 
             // (base_time_milliseconds is the start milliseconds from ctTimer::snap_qpc_msec())
-            long long timer_offset = this->base_time_milliseconds;
+            unsigned long long timer_offset = this->base_time_milliseconds;
             // offset to the time when we need to check the next frame
             // - we'll also render a frame at the same time if the initial buffer is full
-            timer_offset += static_cast<long long>(static_cast<unsigned long>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
+            timer_offset += static_cast<unsigned long long>(static_cast<double>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
             // subtract out the current time to get the delta # of milliseconds
             timer_offset -= ctTimer::snap_qpc_as_msec();
             // can't let it go negative
@@ -374,7 +381,7 @@ namespace ctsTraffic {
         if (this->start_timer != nullptr) {
             // convert to filetime from milliseconds
             // - make a 'relative' for SetThreadpoolTimer
-            FILETIME file_time(ctTimer::convert_msec_relative_filetime(500));
+            FILETIME file_time(ctTimer::convert_msec_relative_filetime(static_cast<long long>(frame_rate_ms_per_frame) + 500LL));
             // TP Timer APIs work off of the UTC time
             ::SetThreadpoolTimer(this->start_timer, &file_time, 0, 0);
         }
@@ -476,16 +483,19 @@ namespace ctsTraffic {
 
         ++this_ptr->timer_wheel_offset_frames;
 
-        bool aborted = false;
+        bool fatal_aborted = false;
         if (this_ptr->timer_wheel_offset_frames >= this_ptr->initial_buffer_frames &&
             this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
             // if we haven't yet received *anything* from the server, abort this connection
             if (!this_ptr->received_buffered_frames()) {
-                ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server\n");
+                ctsConfig::PrintErrorInfo(
+                    L"[%.3f] ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server\n",
+                    ctsConfig::GetStatusTimeStamp());
+                this_ptr->finished_stream = true;
                 ctsIOTask abort_task;
                 abort_task.ioAction = IOTaskAction::FatalAbort;
                 this_ptr->send_callback(abort_task);
-                aborted = true;
+                fatal_aborted = true;
 
             } else {
                 // if the initial buffer has already been filled, "render" the frame
@@ -493,7 +503,7 @@ namespace ctsTraffic {
             }
         }
 
-        if (!aborted) {
+        if (!fatal_aborted) {
             // wait for the precise number of milliseconds for the next frame
             if (this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
                 this_ptr->set_next_timer();

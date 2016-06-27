@@ -112,7 +112,7 @@ namespace ctsTraffic {
         virtual void register_callback(std::function<void(const ctsIOTask&)> _callback) override final
         {
             ctl::ctAutoReleaseCriticalSection take_lock(&this->cs);
-            this->callback = _callback;
+            this->callback = std::move(_callback);
         }
 
         virtual unsigned long get_last_error() const NOEXCEPT override final

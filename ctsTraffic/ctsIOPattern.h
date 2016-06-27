@@ -101,7 +101,7 @@ namespace ctsTraffic {
         virtual void register_callback(std::function<void(const ctsIOTask&)> _callback)
         {
             ctl::ctAutoReleaseCriticalSection local_cs(&cs);
-            this->callback = _callback;
+            this->callback = std::move(_callback);
         }
 
         virtual unsigned long get_last_error() const NOEXCEPT
@@ -443,8 +443,8 @@ namespace ctsTraffic {
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
+        const IOTaskAction io_action;
         ctsUnsignedLong io_needed;
-        bool sending;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -465,8 +465,8 @@ namespace ctsTraffic {
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
+        const IOTaskAction io_action;
         ctsUnsignedLong io_needed;
-        bool sending;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -579,17 +579,13 @@ namespace ctsTraffic {
 
     private:
         struct FrameEntry {
-            FrameEntry() : sequence_number(0LL), retried(false), received(false)
-            {
-            }
-
-            ctsSignedLongLong sequence_number;
-            ctsSignedLongLong sender_qpc;
-            ctsSignedLongLong sender_qpf;
-            ctsSignedLongLong receiver_qpc;
-            ctsSignedLongLong receiver_qpf;
-            ctsUnsignedLong received;
-            bool retried;
+            long long sequence_number = 0LL;
+            long long sender_qpc = 0LL;
+            long long sender_qpf = 0LL;
+            long long receiver_qpc = 0LL;
+            long long receiver_qpf = 0LL;
+            unsigned long received = 0UL;
+            bool retried = false;
         };
 
         // private member variables
@@ -600,11 +596,10 @@ namespace ctsTraffic {
         const unsigned long final_frame;
 
         unsigned long initial_buffer_frames;
+        unsigned long timer_wheel_offset_frames;
+        unsigned long recv_needed;
 
-        ctsUnsignedLong timer_wheel_offset_frames;
-        ctsUnsignedLong recv_needed;
-
-        ctsSignedLongLong base_time_milliseconds;
+        long long base_time_milliseconds;
 
         const double frame_rate_ms_per_frame;
         bool finished_stream;

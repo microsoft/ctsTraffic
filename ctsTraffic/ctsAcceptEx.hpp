@@ -75,23 +75,17 @@ namespace ctsTraffic {
         struct ctsAcceptExImpl;
         class ctsAcceptSocketInfo;
 
-
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// struct to capture relevant details of an accepted connection
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         struct ctsAcceptedConnection {
-            SOCKET accept_socket;
-            DWORD  gle;
+            SOCKET accept_socket = INVALID_SOCKET;
+            DWORD  gle = 0;
             ctl::ctSockaddr local_addr;
             ctl::ctSockaddr remote_addr;
-
-            ctsAcceptedConnection() : accept_socket(INVALID_SOCKET), gle(0), local_addr(), remote_addr()
-            {
-            }
         };
-
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -105,14 +99,13 @@ namespace ctsTraffic {
             ~ctsListenSocketInfo() NOEXCEPT;
 
             // attempt to restart any accept sockets which failed last time they were attempted
-            void RestartStalledAccepts(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl);
+            void RestartStalledAccepts(const std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl>& _pimpl);
 
             SOCKET socket;
             ctl::ctSockaddr addr;
             std::shared_ptr<ctl::ctThreadIocp> iocp;
             std::vector<std::shared_ptr<ctsAcceptSocketInfo>> accept_sockets;
         };
-
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -124,11 +117,11 @@ namespace ctsTraffic {
         class ctsAcceptSocketInfo {
         public:
             // c'tor throws ctException on failure
-            explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo>& _listen_socket);
+            explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket);
             ~ctsAcceptSocketInfo() NOEXCEPT;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
-            void InitatiateAcceptEx(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl);
+            void InitatiateAcceptEx(const std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl>& _pimpl);
 
             // returns a ctsAcceptedConnection struct describing the result of an AcceptEx call
             // - must be called only after the previous AcceptEx call has completed its OVERLAPPED call
@@ -139,7 +132,7 @@ namespace ctsTraffic {
             ctsAcceptSocketInfo& operator=(const ctsAcceptSocketInfo&) = delete;
 
         private:
-            static const size_t SingleOutputBufferSize = sizeof (SOCKADDR_INET) +16;
+            static const size_t SingleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
 
             SOCKET socket;
             // the lock to guard access to the SOCKET
@@ -158,8 +151,6 @@ namespace ctsTraffic {
             // returns details of the addresses on an accepted socket after AcceptEx has completed successfully
             ctsAcceptedConnection make_sockaddr_details() NOEXCEPT;
         };
-
-
 
     private:
         ///
@@ -260,7 +251,7 @@ namespace ctsTraffic {
         // - else store the weak_ptr<ctsSocket> to be fulfilled later
         //
         //
-        void operator() (std::weak_ptr<ctsSocket> _weak_socket) NOEXCEPT
+        void operator() (const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
         {
             auto shared_socket(_weak_socket.lock());
             if (!shared_socket) {
@@ -315,12 +306,11 @@ namespace ctsTraffic {
             }
         }
 
-
     private:
         static void ctsAcceptExIoCompletionCallback(
             OVERLAPPED* /*_overlapped*/,
-            std::shared_ptr<ctsAcceptExImpl> _pimpl,
-            ctsAcceptSocketInfo* _accept_info) NOEXCEPT
+            const std::shared_ptr<ctsAcceptExImpl>& _pimpl,
+            _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
@@ -423,7 +413,7 @@ namespace ctsTraffic {
         }
     }
 
-    inline void ctsAcceptEx::ctsListenSocketInfo::RestartStalledAccepts(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
+    inline void ctsAcceptEx::ctsListenSocketInfo::RestartStalledAccepts(const std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl>& _pimpl)
     {
         for (auto& _socket : accept_sockets) {
             _socket->InitatiateAcceptEx(_pimpl);
@@ -437,13 +427,13 @@ namespace ctsTraffic {
     ///
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline ctsAcceptEx::ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsAcceptEx::ctsListenSocketInfo>& _listen_socket)
-        : socket(INVALID_SOCKET),
-        cs(),
-        pov(nullptr),
-        listening_socket(_listen_socket->socket),
-        listening_addr(_listen_socket->addr),
-        listening_iocp(_listen_socket->iocp)
+    inline ctsAcceptEx::ctsAcceptSocketInfo::ctsAcceptSocketInfo(const std::shared_ptr<ctsAcceptEx::ctsListenSocketInfo>& _listen_socket)
+    : socket(INVALID_SOCKET),
+      cs(),
+      pov(nullptr),
+      listening_socket(_listen_socket->socket),
+      listening_addr(_listen_socket->addr),
+      listening_iocp(_listen_socket->iocp)
     {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
@@ -458,7 +448,7 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&cs);
     }
 
-    inline void ctsAcceptEx::ctsAcceptSocketInfo::InitatiateAcceptEx(std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl> _pimpl)
+    inline void ctsAcceptEx::ctsAcceptSocketInfo::InitatiateAcceptEx(const std::shared_ptr<ctsAcceptEx::ctsAcceptExImpl>& _pimpl)
     {
         ctl::ctAutoReleaseCriticalSection lock(&this->cs);
 

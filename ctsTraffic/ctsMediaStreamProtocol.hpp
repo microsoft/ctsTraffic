@@ -25,6 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctException.hpp>
 // local headers
+#include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
@@ -279,23 +280,44 @@ namespace ctsTraffic {
         static bool ValidateBufferLengthFromTask(_In_ const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
         {
             if (_completed_bytes < UdpDatagramProtocolHeaderFlagLength) {
+                ctsConfig::PrintErrorInfo(
+                    L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram: the datagram size (%u) is less than UdpDatagramProtocolHeaderFlagLength (%u)\n",
+                    ctsConfig::GetStatusTimeStamp(),
+                    _completed_bytes,
+                    UdpDatagramProtocolHeaderFlagLength);
                 return false;
             }
 
             switch (GetProtocolHeaderFromTask(_task)) {
                 case UdpDatagramProtocolHeaderFlagData:
                     if (_completed_bytes < UdpDatagramDataHeaderLength) {
+                        ctsConfig::PrintErrorInfo(
+                            L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagData: the datagram size (%u) is less than UdpDatagramDataHeaderLength (%u)\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            _completed_bytes,
+                            UdpDatagramDataHeaderLength);
                         return false;
                     }
                     break;
 
                 case UdpDatagramProtocolHeaderFlagId:
                     if (_completed_bytes < UdpDatagramConnectionIdHeaderLength) {
+                        ctsConfig::PrintErrorInfo(
+                            L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagId: the datagram size (%u) is less than UdpDatagramConnectionIdHeaderLength (%u)\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            _completed_bytes,
+                            UdpDatagramConnectionIdHeaderLength);
                         return false;
                     }
                     break;
 
                 default:
+                    ctsConfig::PrintErrorInfo(
+                        L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram of unknown frame type (%u) - expecting UdpDatagramProtocolHeaderFlagData (%u) or UdpDatagramProtocolHeaderFlagId (%u)\n",
+                        ctsConfig::GetStatusTimeStamp(),
+                        GetProtocolHeaderFromTask(_task),
+                        UdpDatagramProtocolHeaderFlagData,
+                        UdpDatagramProtocolHeaderFlagId);
                     return false;
             }
 
