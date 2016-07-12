@@ -87,9 +87,10 @@ namespace ctsTraffic {
             KEEPALIVE = 0x0002,
             NON_BLOCKING_IO = 0x0004,
             HANDLE_INLINE_IOCP = 0x0008,
-            MAX_RECV_BUF = 0x0010,
-            REUSE_UNICAST_PORT = 0x0020
-            // next enum  = 0x0040
+            REUSE_UNICAST_PORT = 0x0010,
+            SET_RECV_BUF = 0x0020,
+            SET_SEND_BUF = 0x0040,
+            // next enum  = 0x0200
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -284,68 +285,38 @@ namespace ctsTraffic {
         const MediaStreamSettings& GetMediaStream() NOEXCEPT;
 
         struct ctsConfigSettings {
-            ctsConfigSettings()
-            : CtrlCHandle(NULL),
-              PTPEnvironment(nullptr),
-              CreateFunction(nullptr),
-              ConnectFunction(nullptr),
-              AcceptFunction(nullptr),
-              IoFunction(nullptr),
-              ClosingFunction(nullptr),
-              Protocol(ProtocolType::NoProtocolSet),
-              TcpShutdown(TcpShutdownType::NoShutdownOptionSet),
-              IoPattern(IoPatternType::NoIOSet),
-              Options(OptionType::NoOptionSet),
-              SocketFlags(0UL),
-              Port(0),
-              Iterations(0ULL),
-              AcceptLimit(0UL),
-              ConnectionLimit(0UL),
-              ConnectionThrottleLimit(0UL),
-              ServerExitLimit(0ULL),
-              ListenAddresses(),
-              TargetAddresses(),
-              BindAddresses(),
-              ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec()),
-              TcpStatusDetails(),
-              UdpStatusDetails(),
-              StatusUpdateFrequencyMilliseconds(0UL),
-              TcpBytesPerSecondPeriod(100LL),
-              StartTimeMilliseconds(0LL),
-              TimeLimit(0UL),
-              PrePostRecvs(0UL),
-              PrePostSends(0UL),
-              UseSharedBuffer(false),
-              ShouldVerifyBuffers(false),
-              LocalPortLow(0),
-              LocalPortHigh(0),
-              PushBytes(0UL),
-              PullBytes(0UL)
+            ctsConfigSettings() NOEXCEPT :
+                // dynamically initialize status details with current qpc
+                ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
             {
             }
 
-            HANDLE CtrlCHandle;
-            PTP_CALLBACK_ENVIRON PTPEnvironment;
+            // non-copyable
+            ctsConfigSettings(const ctsConfigSettings&) = delete;
+            ctsConfigSettings& operator=(const ctsConfigSettings&) = delete;
 
-            ctsSocketFunction CreateFunction;
-            ctsSocketFunction ConnectFunction;
-            ctsSocketFunction AcceptFunction;
-            ctsSocketFunction IoFunction;
-            ctsSocketFunction ClosingFunction; // optional
+            HANDLE CtrlCHandle = NULL;
+            PTP_CALLBACK_ENVIRON PTPEnvironment = nullptr;
 
-            ProtocolType    Protocol;
-            TcpShutdownType TcpShutdown;
-            IoPatternType   IoPattern;
-            OptionType      Options;
+            ctsSocketFunction CreateFunction = nullptr;
+            ctsSocketFunction ConnectFunction = nullptr;
+            ctsSocketFunction AcceptFunction = nullptr;
+            ctsSocketFunction IoFunction = nullptr;
+            ctsSocketFunction ClosingFunction = nullptr; // optional
 
-            DWORD SocketFlags;
-            unsigned short Port;
+            ProtocolType    Protocol = ProtocolType::NoProtocolSet;
+            TcpShutdownType TcpShutdown = TcpShutdownType::NoShutdownOptionSet;
+            IoPatternType   IoPattern = IoPatternType::NoIOSet;
+            OptionType      Options = OptionType::NoOptionSet;
 
-            ctsUnsignedLongLong Iterations;
-            ctsUnsignedLong AcceptLimit;
-            ctsUnsignedLong ConnectionLimit;
-            ctsUnsignedLong ConnectionThrottleLimit;
-            ctsUnsignedLongLong ServerExitLimit;
+            DWORD SocketFlags = 0;
+            unsigned short Port = 0;
+
+            ctsUnsignedLongLong Iterations = 0;
+            ctsUnsignedLong AcceptLimit = 0;
+            ctsUnsignedLong ConnectionLimit = 0;
+            ctsUnsignedLong ConnectionThrottleLimit = 0;
+            ctsUnsignedLongLong ServerExitLimit = 0;
 
             std::vector<ctl::ctSockaddr> ListenAddresses;
             std::vector<ctl::ctSockaddr> TargetAddresses;
@@ -356,28 +327,26 @@ namespace ctsTraffic {
             ctsTcpStatistics TcpStatusDetails;
             ctsUdpStatistics UdpStatusDetails;
 
-            ctsUnsignedLong StatusUpdateFrequencyMilliseconds;
+            ctsUnsignedLong StatusUpdateFrequencyMilliseconds = 0;
 
-            ctsSignedLongLong TcpBytesPerSecondPeriod;
-            ctsSignedLongLong StartTimeMilliseconds;
+            ctsSignedLongLong TcpBytesPerSecondPeriod = 100LL;
+            ctsSignedLongLong StartTimeMilliseconds = 0;
 
-            ctsUnsignedLong TimeLimit;
-            ctsUnsignedLong PrePostRecvs;
-            ctsUnsignedLong PrePostSends;
+            ctsUnsignedLong TimeLimit = 0;
+            ctsUnsignedLong PrePostRecvs = 0;
+            ctsUnsignedLong PrePostSends = 0;
+            ctsUnsignedLong RecvBufValue = 0;
+            ctsUnsignedLong SendBufValue = 0;
 
-            bool UseSharedBuffer;
-            bool ShouldVerifyBuffers;
+            bool UseSharedBuffer = false;
+            bool ShouldVerifyBuffers = false;
 
 
-            USHORT LocalPortLow;
-            USHORT LocalPortHigh;
+            USHORT LocalPortLow = 0;
+            USHORT LocalPortHigh = 0;
 
-            ctsUnsignedLong PushBytes;
-            ctsUnsignedLong PullBytes;
-
-            // non-copyable
-            ctsConfigSettings(const ctsConfigSettings&) = delete;
-            ctsConfigSettings& operator=(const ctsConfigSettings&) = delete;
+            ctsUnsignedLong PushBytes = 0;
+            ctsUnsignedLong PullBytes = 0;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -34,12 +34,12 @@ namespace ctsTraffic
             if (status != RPC_S_OK) {
                 throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
             }
+
             RPC_CSTR connection_id_string = nullptr;
             status = ::UuidToStringA(&connection_id, &connection_id_string);
             if (status != RPC_S_OK) {
                 throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
             }
-
             ctl::ctFatalCondition(
                 ::strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
                 L"UuidToString returned a string not 36 characters long (%Iu)",
@@ -74,8 +74,6 @@ namespace ctsTraffic
 
     struct ctStatsTracking {
     private:
-        // not allowing assignment operator - must be explicit
-        ctStatsTracking& operator=(const ctStatsTracking& _in) NOEXCEPT;
         long long current_value;
         long long previous_value;
 
@@ -95,6 +93,8 @@ namespace ctsTraffic
             previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
         {
         }
+        // not allowing assignment operator - must be explicit
+        ctStatsTracking& operator=(const ctStatsTracking& _in) = delete;
 
         long long get() const NOEXCEPT
         {

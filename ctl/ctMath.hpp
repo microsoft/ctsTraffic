@@ -87,7 +87,7 @@ namespace ctl {
         auto split_section = [&] (const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
             size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
-                                                                // if begin and end are already right next to each other, immediately return the same values
+            // if begin and end are already right next to each other, immediately return the same values
             if (numeric_count < 3) {
                 return std::make_tuple(split_begin, split_end);
             }

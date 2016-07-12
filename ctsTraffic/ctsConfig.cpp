@@ -21,6 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 #include <mstcpip.h>
 #include <iphlpapi.h>
+// multimedia timer
 #include <Mmsystem.h>
 
 // ctl headers
@@ -411,7 +412,7 @@ namespace ctsTraffic {
         void set_connect(vector<const wchar_t*>& _args)
         {
             bool connect_specifed = false;
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-conn");
                 return (value != nullptr);
             });
@@ -463,7 +464,7 @@ namespace ctsTraffic {
         {
             Settings->AcceptLimit = s_DefaultAcceptExLimit;
 
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-acc");
                 return (value != nullptr);
             });
@@ -513,7 +514,7 @@ namespace ctsTraffic {
         static
         void set_ioFunction(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-io");
                 return (value != nullptr);
             });
@@ -557,8 +558,10 @@ namespace ctsTraffic {
                         Settings->ClosingFunction = ctsMediaStreamServerClose;
                         s_IoFunctionName = L"MediaStream Server";
                     } else {
+                        static const int UDP_RECV_BUFF = 1048576;
                         Settings->IoFunction = ctsMediaStreamClient;
-                        Settings->Options |= OptionType::MAX_RECV_BUF;
+                        Settings->Options |= OptionType::SET_RECV_BUF;
+                        Settings->RecvBufValue = UDP_RECV_BUFF;
                         Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
                         s_IoFunctionName = L"MediaStream Client";
                     }
@@ -577,7 +580,7 @@ namespace ctsTraffic {
         static
         void set_protocol(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-Protocol");
                 return (value != nullptr);
             });
@@ -610,7 +613,7 @@ namespace ctsTraffic {
         {
             for (;;) {
                 // loop until cannot fine -Options
-                auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+                auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                     const wchar_t* value = ParseArgument(parameter, L"-Options");
                     return (value != nullptr);
                 });
@@ -657,7 +660,7 @@ namespace ctsTraffic {
         static
         void set_ioPattern(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-pattern");
                 return (value != nullptr);
             });
@@ -697,7 +700,7 @@ namespace ctsTraffic {
             }
 
             // Now look for options tightly coupled to Protocol
-            auto found_pushbytes = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_pushbytes = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-pushbytes");
                 return (value != nullptr);
             });
@@ -712,7 +715,7 @@ namespace ctsTraffic {
                 Settings->PushBytes = s_DefaultPushBytes;
             }
 
-            auto found_pullbytes = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_pullbytes = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-pullbytes");
                 return (value != nullptr);
             });
@@ -731,7 +734,7 @@ namespace ctsTraffic {
             // Options for the UDP protocol
             //
 
-            found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-BitsPerSecond");
                 return (value != nullptr);
             });
@@ -748,7 +751,7 @@ namespace ctsTraffic {
                 _args.erase(found_arg);
             }
 
-            found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-FrameRate");
                 return (value != nullptr);
             });
@@ -761,7 +764,7 @@ namespace ctsTraffic {
                 _args.erase(found_arg);
             }
 
-            found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-BufferDepth");
                 return (value != nullptr);
             });
@@ -774,7 +777,7 @@ namespace ctsTraffic {
                 _args.erase(found_arg);
             }
 
-            found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-StreamLength");
                 return (value != nullptr);
             });
@@ -830,7 +833,7 @@ namespace ctsTraffic {
             // -listen:<addr> 
             auto found_listen = begin(_args);
             while (found_listen != end(_args)) {
-                found_listen = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+                found_listen = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                     const wchar_t* value = ParseArgument(parameter, L"-listen");
                     return (value != nullptr);
                 });
@@ -866,7 +869,7 @@ namespace ctsTraffic {
             // -target:<addr> 
             auto found_target = begin(_args);
             while (found_target != end(_args)) {
-                found_target = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+                found_target = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                     const wchar_t* value = ParseArgument(parameter, L"-target");
                     return (value != nullptr);
                 });
@@ -890,7 +893,7 @@ namespace ctsTraffic {
             // -bind:<addr> 
             auto found_bind = begin(_args);
             while (found_bind != end(_args)) {
-                found_bind = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+                found_bind = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                     const wchar_t* value = ParseArgument(parameter, L"-bind");
                     return (value != nullptr);
                 });
@@ -970,7 +973,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [&] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
+                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
                         Settings->TargetAddresses.end()
                     );
                 } else if (0 == target_v4) {
@@ -978,7 +981,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [&] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
+                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
                         Settings->BindAddresses.end()
                     );
                 }
@@ -988,7 +991,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [&] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
+                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
                         Settings->TargetAddresses.end()
                     );
                 } else if (0 == target_v6) {
@@ -996,7 +999,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [&] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
+                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
                         Settings->BindAddresses.end()
                     );
                 }
@@ -1019,7 +1022,7 @@ namespace ctsTraffic {
         static
         void set_port(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-Port");
                 return (value != nullptr);
             });
@@ -1043,7 +1046,7 @@ namespace ctsTraffic {
         static
         void set_connections(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-connections");
                 return (value != nullptr);
             });
@@ -1069,7 +1072,7 @@ namespace ctsTraffic {
         static
         void set_serverExitLimit(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-ServerExitLimit");
                 return (value != nullptr);
             });
@@ -1096,7 +1099,7 @@ namespace ctsTraffic {
         static
         void set_throttleConnections(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-throttleconnections");
                 return (value != nullptr);
             });
@@ -1156,7 +1159,7 @@ namespace ctsTraffic {
         static
         void set_buffer(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-buffer");
                 return (value != nullptr);
             });
@@ -1195,7 +1198,7 @@ namespace ctsTraffic {
         static
         void set_transfer(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-transfer");
                 return (value != nullptr);
             });
@@ -1230,7 +1233,7 @@ namespace ctsTraffic {
         static
         void set_localport(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-LocalPort");
                 return (value != nullptr);
             });
@@ -1266,7 +1269,7 @@ namespace ctsTraffic {
         static
         void set_ratelimit(vector<const wchar_t*>& _args)
         {
-            auto found_ratelimit = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_ratelimit = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-RateLimit");
                 return (value != nullptr);
             });
@@ -1288,7 +1291,7 @@ namespace ctsTraffic {
                 _args.erase(found_ratelimit);
             }
 
-            auto found_ratelimit_period = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_ratelimit_period = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-RateLimitPeriod");
                 return (value != nullptr);
             });
@@ -1315,7 +1318,7 @@ namespace ctsTraffic {
         static
         void set_iterations(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-Iterations");
                 return (value != nullptr);
             });
@@ -1343,7 +1346,7 @@ namespace ctsTraffic {
         static
         void set_logging(vector<const wchar_t*>& _args)
         {
-            auto found_verbosity = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_verbosity = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-ConsoleVerbosity");
                 return (value != nullptr);
             });
@@ -1357,7 +1360,7 @@ namespace ctsTraffic {
                 _args.erase(found_verbosity);
             }
 
-            auto found_status_update = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_status_update = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-StatusUpdate");
                 return (value != nullptr);
             });
@@ -1376,7 +1379,7 @@ namespace ctsTraffic {
             wstring statusFilename;
             wstring jitterFilename;
 
-            auto found_connection_filename = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_connection_filename = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-ConnectionFilename");
                 return (value != nullptr);
             });
@@ -1386,7 +1389,7 @@ namespace ctsTraffic {
                 _args.erase(found_connection_filename);
             }
 
-            auto found_error_filename = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_error_filename = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-ErrorFilename");
                 return (value != nullptr);
             });
@@ -1396,7 +1399,7 @@ namespace ctsTraffic {
                 _args.erase(found_error_filename);
             }
 
-            auto found_status_filename = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_status_filename = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-StatusFilename");
                 return (value != nullptr);
             });
@@ -1406,7 +1409,7 @@ namespace ctsTraffic {
                 _args.erase(found_status_filename);
             }
 
-            auto found_jitter_filename = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_jitter_filename = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-JitterFilename");
                 return (value != nullptr);
             });
@@ -1489,7 +1492,7 @@ namespace ctsTraffic {
         static
         void set_error(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-OnError");
                 return (value != nullptr);
             });
@@ -1518,7 +1521,7 @@ namespace ctsTraffic {
         static
         void set_prepostrecvs(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-PrePostRecvs");
                 return (value != nullptr);
             });
@@ -1563,7 +1566,51 @@ namespace ctsTraffic {
 
         //////////////////////////////////////////////////////////////////////////////////////////
         ///
-        /// Sets a threadpool environment for TP APIs
+        /// Sets optional SO_RCVBUF value
+        ///
+        /// -RecvBufValue:#####
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static void set_recvbufvalue(vector<const wchar_t*>& _args)
+        {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
+                const wchar_t* value = ParseArgument(parameter, L"-RecvBufValue");
+                return (value != nullptr);
+            });
+            if (found_arg != end(_args)) {
+                Settings->RecvBufValue = as_integral<unsigned long>(ParseArgument(*found_arg, L"-RecvBufValue"));
+                Settings->Options |= OptionType::SET_RECV_BUF;
+
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Sets optional SO_SNDBUF value
+        ///
+        /// -SendBufValue:#####
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static void set_sendbufvalue(vector<const wchar_t*>& _args)
+        {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
+                const wchar_t* value = ParseArgument(parameter, L"-SendBufValue");
+                return (value != nullptr);
+            });
+            if (found_arg != end(_args)) {
+                Settings->SendBufValue = as_integral<unsigned long>(ParseArgument(*found_arg, L"-SendBufValue"));
+                Settings->Options |= OptionType::SET_SEND_BUF;
+
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Sets an IP Compartment (routing domain)
         ///
         /// -Compartment:<ifalias>
         ///
@@ -1571,7 +1618,7 @@ namespace ctsTraffic {
         static
         void set_compartment(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-Compartment");
                 return (value != nullptr);
             });
@@ -1602,7 +1649,7 @@ namespace ctsTraffic {
 
         //////////////////////////////////////////////////////////////////////////////////////////
         ///
-        /// Sets the compartment to use for incoming and outgoing connections
+        /// Sets a threadpool environment for TP APIs to consume
         ///
         /// Configuring for max threads == number of processors * 2
         ///
@@ -1643,7 +1690,7 @@ namespace ctsTraffic {
         static
         void set_shouldVerifyBuffers(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-verify");
                 return (value != nullptr);
             });
@@ -1678,7 +1725,7 @@ namespace ctsTraffic {
                 Settings->TcpShutdown = TcpShutdownType::ServerSideShutdown;
             }
 
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-shutdown");
                 return (value != nullptr);
             });
@@ -1710,7 +1757,7 @@ namespace ctsTraffic {
         static
         void set_timelimit(vector<const wchar_t*>& _args)
         {
-            auto found_arg = find_if(begin(_args), end(_args), [&] (const wchar_t* parameter) -> bool {
+            auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-timelimit");
                 return (value != nullptr);
             });
@@ -2004,7 +2051,8 @@ namespace ctsTraffic {
                                  L"                                                                      \n"
                                  L" -Acc, -Bind, -Compartment, -Conn, -IO, -LocalPort,                   \n"
                                  L" -OnError, -Options, -Pattern, -PrePostRecvs, -PrePostSends,          \n"
-                                 L" -RateLimitPeriod, -ThrottleConnections, -TimeLimit                   \n"
+                                 L" -RateLimitPeriod, -RecvBufValue, -SendBufValue,                      \n"
+                                 L" -ThrottleConnections, -TimeLimit                                     \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Acc:<accept,AcceptEx>\n"
@@ -2081,6 +2129,16 @@ namespace ctsTraffic {
                                  L"\t- <default> == 100 (-RateLimit bytes/second will be split out across 100 ms. time slices)\n"
                                  L"\t  note : only applicable to TCP connections\n"
                                  L"\t  note : only applicable is -RateLimit is set (default is not to rate limit)\n"
+                                 L"-RecvBufValue:#####\n"
+                                 L"   - specifies the value to pass to the SO_RCVBUF socket option\n"
+                                 L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
+                                 L"\t     the default receive buffering is optimal for the majority of scenarios\n"
+                                 L"\t- <default> == <not set>\n"
+                                 L"-SendBufValue:#####\n"
+                                 L"   - specifies the value to pass to the SO_SNDBUF socket option\n"
+                                 L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
+                                 L"\t     the default send buffering is optimal for the majority of scenarios\n"
+                                 L"\t- <default> == <not set>\n"
                                  L"-ThrottleConnections:####\n"
                                  L"   - gates currently pended connection attempts\n"
                                  L"\t- <default> == 1000  (there will be at most 1000 sockets trying to connect at any one time)\n"
@@ -2281,10 +2339,12 @@ namespace ctsTraffic {
             set_shutdownOption(args);
 
             set_prepostrecvs(args);
-            if (ProtocolType::TCP == Settings->Protocol && Settings->ShouldVerifyBuffers && Settings->PrePostRecvs > 1) {
+            if ((ProtocolType::TCP == Settings->Protocol) && Settings->ShouldVerifyBuffers && (Settings->PrePostRecvs > 1)) {
                 throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
             }
             set_prepostsends(args);
+            set_recvbufvalue(args);
+            set_sendbufvalue(args);
 
             ///
             /// finally set the functions to use once all other settings are established
@@ -3217,14 +3277,13 @@ namespace ctsTraffic {
 
             if (Settings->Options & OptionType::LOOPBACK_FAST_PATH) {
                 DWORD in_value = 1;
-                DWORD out_value;
                 DWORD bytes_returned;
 
                 auto error = ::WSAIoctl(
                     _s,
                     SIO_LOOPBACK_FAST_PATH,
                     &in_value, static_cast<DWORD>(sizeof(in_value)),
-                    &out_value, static_cast<DWORD>(sizeof(out_value)),
+                    nullptr, 0,
                     &bytes_returned,
                     nullptr,
                     nullptr);
@@ -3252,18 +3311,32 @@ namespace ctsTraffic {
                 }
             }
 
-            if (Settings->Options & OptionType::MAX_RECV_BUF) {
-                static const int recv_buff = 1048576;
-                
+            if (Settings->Options & OptionType::SET_RECV_BUF) {
+                int recv_buff = Settings->RecvBufValue;
                 auto error = ::setsockopt(
                     _s,
                     SOL_SOCKET,
                     SO_RCVBUF,
-                    reinterpret_cast<char *>(const_cast<int*>(&recv_buff)),
+                    reinterpret_cast<char *>(&recv_buff),
                     static_cast<int>(sizeof(recv_buff)));
                 if (error != 0) {
                     int gle = ::WSAGetLastError();
                     PrintErrorIfFailed(L"setsockopt(SO_RCVBUF)", gle);
+                    return gle;
+                }
+            }
+
+            if (Settings->Options & OptionType::SET_SEND_BUF) {
+                int send_buff = Settings->SendBufValue;
+                auto error = ::setsockopt(
+                    _s,
+                    SOL_SOCKET,
+                    SO_SNDBUF,
+                    reinterpret_cast<char *>(&send_buff),
+                    static_cast<int>(sizeof(send_buff)));
+                if (error != 0) {
+                    int gle = ::WSAGetLastError();
+                    PrintErrorIfFailed(L"setsockopt(SO_SNDBUF)", gle);
                     return gle;
                 }
             }
@@ -3342,13 +3415,16 @@ namespace ctsTraffic {
                     setting_string.append(L" NonBlockingIO");
                 }
                 if (Settings->Options & OptionType::HANDLE_INLINE_IOCP) {
-                    setting_string.append(L" HandlingInlineIOCP");
-                }
-                if (Settings->Options & OptionType::MAX_RECV_BUF) {
-                    setting_string.append(L" SettingMaxRecvBuf");
+                    setting_string.append(L" InlineIOCP");
                 }
                 if (Settings->Options & OptionType::REUSE_UNICAST_PORT) {
                     setting_string.append(L" ReuseUnicastPort");
+                }
+                if (Settings->Options & OptionType::SET_RECV_BUF) {
+                    setting_string.append(ctString::format_string(L" SO_RCVBUF(%lu)", static_cast<unsigned long>(Settings->RecvBufValue)));
+                }
+                if (Settings->Options & OptionType::SET_SEND_BUF) {
+                    setting_string.append(ctString::format_string(L" SO_SNDBUF(%lu)", static_cast<unsigned long>(Settings->SendBufValue)));
                 }
             }
             setting_string.append(L"\n");
