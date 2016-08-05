@@ -28,6 +28,9 @@
     <Filter Include="WinsockCallouts">
       <UniqueIdentifier>{b3e62cb3-4bce-4b76-9db0-21b6538f2a45}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SdkChanges">
+      <UniqueIdentifier>{40fe5a12-4000-433d-afa4-7e5ac166ed06}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp">
@@ -243,6 +246,9 @@
     </ClInclude>
     <ClInclude Include="ctsIOPatternBufferPolicy.hpp">
       <Filter>IOPattern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SdkChanges\WbemDisp.h">
+      <Filter>SdkChanges</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
