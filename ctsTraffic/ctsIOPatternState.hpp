@@ -84,6 +84,7 @@ namespace ctsTraffic {
 
         bool is_completed() const NOEXCEPT;
 
+        bool is_current_task_more_io() NOEXCEPT;
         ctsIOPatternProtocolTask get_next_task() NOEXCEPT;
         void notify_next_task(const ctsIOTask& _next_task) NOEXCEPT;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT;
@@ -139,6 +140,11 @@ namespace ctsTraffic {
     inline bool ctsIOPatternState::is_completed() const NOEXCEPT
     {
         return (InternalPatternState::CompletedTransfer == this->internal_state || InternalPatternState::ErrorIOFailed == this->internal_state);
+    }
+
+    inline bool ctsIOPatternState::is_current_task_more_io() NOEXCEPT
+    {
+        return (this->internal_state == InternalPatternState::MoreIo);
     }
 
     inline ctsIOPatternProtocolTask ctsIOPatternState::get_next_task() NOEXCEPT

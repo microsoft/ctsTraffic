@@ -386,6 +386,9 @@ namespace ctsTraffic {
             this->recv_buffer_free_list.push_back(_original_task.buffer);
         }
 
+        // preserve the previous task
+        bool task_was_more_io = this->pattern_state.is_current_task_more_io();
+
         switch (_original_task.ioAction) {
         case IOTaskAction::None:
             // ignore completions for tasks on None
@@ -493,11 +496,18 @@ namespace ctsTraffic {
         // If the derived interface returns an error,
         // - update the last_error status
         //
-        if ((_original_task.buffer_type != ctsIOTask::BufferType::TcpConnectionId) &&
-            (_original_task.ioAction != IOTaskAction::None) &&
+        if ((_original_task.ioAction != IOTaskAction::None) &&
             (NO_ERROR == _status_code)) {
-            this->update_last_protocol_error(
-                this->completed_task(_original_task, _current_transfer));
+            if (IOTaskAction::Send == _original_task.ioAction) {
+                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
+            } else {
+                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
+            }
+            // only complete tasks that were requested
+            if (task_was_more_io) {
+                this->update_last_protocol_error(
+                    this->completed_task(_original_task, _current_transfer));
+            }
         }
         //
         // If the state machine has verified the connection has completed, 
@@ -740,10 +750,8 @@ namespace ctsTraffic {
     ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
-            ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
             this->stats.bytes_sent.add(_completed_bytes);
         } else {
-            ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_completed_bytes);
             this->stats.bytes_recv.add(_completed_bytes);
         }
 
@@ -793,10 +801,8 @@ namespace ctsTraffic {
     ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
-            ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
             this->stats.bytes_sent.add(_completed_bytes);
         } else {
-            ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_completed_bytes);
             this->stats.bytes_recv.add(_completed_bytes);
         }
 
@@ -877,10 +883,8 @@ namespace ctsTraffic {
     ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
     {
         if (IOTaskAction::Send == _task.ioAction) {
-            ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
             this->stats.bytes_sent.add(_current_transfer);
         } else {
-            ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
             this->stats.bytes_recv.add(_current_transfer);
         }
 
@@ -991,7 +995,6 @@ namespace ctsTraffic {
     {
         switch (_task.ioAction) {
         case IOTaskAction::Send:
-            ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_completed_bytes);
             this->stats.bytes_sent.add(_completed_bytes);
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
@@ -1002,7 +1005,6 @@ namespace ctsTraffic {
             break;
 
         case IOTaskAction::Recv:
-            ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_completed_bytes);
             this->stats.bytes_recv.add(_completed_bytes);
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
