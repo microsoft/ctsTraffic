@@ -1560,7 +1560,8 @@ namespace ctsTraffic {
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             } else {
-                Settings->PrePostSends = (ProtocolType::TCP == Settings->Protocol) ? 2 : 1;
+                // 0 PrePostSends == rely on ISB
+                Settings->PrePostSends = (ProtocolType::TCP == Settings->Protocol) ? 0 : 1;
             }
         }
 
@@ -3456,12 +3457,12 @@ namespace ctsTraffic {
                     ctl::ctAlwaysFatalCondition(L"Unexpected Settings IoPattern");
             }
 
-            if (Settings->PrePostRecvs > 1) {
-                setting_string.append(ctString::format_string(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
-            }
+            setting_string.append(ctString::format_string(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
 
-            if (Settings->PrePostSends > 1) {
+            if (Settings->PrePostSends > 0) {
                 setting_string.append(ctString::format_string(L"\tPrePostSends: %u\n", static_cast<unsigned long>(Settings->PrePostSends)));
+            } else {
+                setting_string.append(ctString::format_string(L"\tPrePostSends: Following Ideal Send Backlog\n"));
             }
 
             setting_string.append(

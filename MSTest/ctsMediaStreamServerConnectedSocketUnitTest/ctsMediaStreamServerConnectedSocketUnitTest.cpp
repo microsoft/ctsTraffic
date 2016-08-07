@@ -89,6 +89,11 @@ namespace ctsTraffic {
             return s_TransferSize;
         }
 
+        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
+        {
+            return s_TransferSize;
+        }
+
         float GetStatusTimeStamp() NOEXCEPT
         {
             return 0.0f;

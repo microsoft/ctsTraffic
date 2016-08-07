@@ -146,12 +146,15 @@ namespace ctsTraffic {
         _Acquires_lock_(socket_cs) void lock_socket() const NOEXCEPT;
         _Releases_lock_(socket_cs) void unlock_socket() const NOEXCEPT;
 
+        void initiate_isb_notification();
+        void process_isb_notification();
+
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
         mutable CRITICAL_SECTION socket_cs;
-        _Guarded_by_(socket_cs) SOCKET socket;
-        _Interlocked_ long io_count;
+        _Guarded_by_(socket_cs) SOCKET socket = INVALID_SOCKET;
+        _Interlocked_ long io_count = 0L;
 
         // maintain a weak-reference to the parent and child
         std::weak_ptr<ctsSocketState> parent;

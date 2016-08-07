@@ -972,7 +972,309 @@ namespace ctsUnitTest {
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
         }
+        TEST_METHOD(PushClient_MultipleSendsWithISBEnabled)
+        {
+            ctsConfig::Settings->IoPattern = ctsConfig::IoPatternType::Push;
+            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::Settings->UseSharedBuffer = false;
+            ctsConfig::Settings->ShouldVerifyBuffers = false;
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 0;
+            s_TcpBytesPerSecond = 0LL;
+            s_MaxBufferSize = 1024;
+            s_BufferSize = 1024;
+            s_TransferSize = 1024 * 10;
+            s_IsListening = false;
 
+            std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
+            // ISB should indicate to keep 2 sends in flight
+            test_pattern->set_ideal_send_backlog(1024 * 2);
+
+            ctsIOTask test_task = test_pattern->initiate_io();
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
+
+            for (unsigned long io_count = 0; io_count < 5; ++io_count) {
+                ctsIOTask test_task_one = test_pattern->initiate_io();
+                Assert::AreEqual(1024UL, test_task_one.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task_one).c_str()).c_str());
+
+                ctsIOTask test_task_two = test_pattern->initiate_io();
+                Assert::AreEqual(1024UL, test_task_two.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task_two.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task_two).c_str()).c_str());
+
+                ctsIOTask test_task_three = test_pattern->initiate_io();
+                Assert::AreEqual(0UL, test_task_three.buffer_length);
+                Assert::AreEqual(IOTaskAction::None, test_task_three.ioAction);
+
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task_one, 1024, 0));
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task_two, 1024, 0));
+            }
+
+            // recv server completion
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(4UL, test_task.buffer_length);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 4, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 0, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
+        }
+        TEST_METHOD(PushClient_MultipleSendsWithISBEnabledInterleaving)
+        {
+            ctsConfig::Settings->IoPattern = ctsConfig::IoPatternType::Push;
+            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::Settings->UseSharedBuffer = false;
+            ctsConfig::Settings->ShouldVerifyBuffers = false;
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 0;
+            s_TcpBytesPerSecond = 0LL;
+            s_MaxBufferSize = 1024;
+            s_BufferSize = 1024;
+            s_TransferSize = 1024 * 10;
+            s_IsListening = false;
+
+            std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
+            // ISB should indicate to keep 2 sends in flight
+            test_pattern->set_ideal_send_backlog(1024 * 2);
+
+            ctsIOTask test_task = test_pattern->initiate_io();
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(1024UL, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
+            Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", 0, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+
+            for (unsigned long io_count = 1; io_count < 10; ++io_count) {
+                ctsIOTask test_task_one = test_pattern->initiate_io();
+                Assert::AreEqual(1024UL, test_task_one.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task_one).c_str()).c_str());
+
+                ctsIOTask test_task_three = test_pattern->initiate_io();
+                Assert::AreEqual(0UL, test_task_three.buffer_length);
+                Assert::AreEqual(IOTaskAction::None, test_task_three.ioAction);
+
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task_one, 1024, 0));
+            }
+
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 1024, 0));
+
+            // recv server completion
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(4UL, test_task.buffer_length);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 4, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 0, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
+        }
+        TEST_METHOD(PushClient_LargeNumberOfSendsWithISBEnabled)
+        {
+            ctsConfig::Settings->IoPattern = ctsConfig::IoPatternType::Push;
+            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::Settings->UseSharedBuffer = false;
+            ctsConfig::Settings->ShouldVerifyBuffers = false;
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 0;
+            s_TcpBytesPerSecond = 0LL;
+            s_MaxBufferSize = 1024;
+            s_BufferSize = 1024;
+            s_TransferSize = 1024 * 10;
+            s_IsListening = false;
+
+            std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
+            // ISB should indicate to keep 2 sends in flight
+            test_pattern->set_ideal_send_backlog(s_TransferSize);
+
+            ctsIOTask test_task = test_pattern->initiate_io();
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
+
+            std::vector<ctsIOTask> pended_tasks;
+            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+                test_task = test_pattern->initiate_io();
+                Assert::AreEqual(1024UL, test_task.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+
+                pended_tasks.push_back(test_task);
+            }
+
+            // all are now pended, next should be empty
+            ctsIOTask test_task_empty = test_pattern->initiate_io();
+            Assert::AreEqual(0UL, test_task_empty.buffer_length);
+            Assert::AreEqual(IOTaskAction::None, test_task_empty.ioAction);
+
+            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(pended_tasks[io_count], 1024, 0));
+
+                // after the 10th completion, it will move to the below protocol
+                if (io_count < 9) {
+                    test_task_empty = test_pattern->initiate_io();
+                    Assert::AreEqual(0UL, test_task_empty.buffer_length);
+                    Assert::AreEqual(IOTaskAction::None, test_task_empty.ioAction);
+                }
+            }
+
+            // recv server completion
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(4UL, test_task.buffer_length);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 4, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 0, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
+        }
+        TEST_METHOD(PushClient_OneSendInFlightWithISBEnabledWhenISBIsSmallerThanBufferSize)
+        {
+            ctsConfig::Settings->IoPattern = ctsConfig::IoPatternType::Push;
+            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::Settings->UseSharedBuffer = false;
+            ctsConfig::Settings->ShouldVerifyBuffers = false;
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 0;
+            s_TcpBytesPerSecond = 0LL;
+            s_MaxBufferSize = 1024;
+            s_BufferSize = 1024;
+            s_TransferSize = 1024 * 10;
+            s_IsListening = false;
+
+            std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
+            // ISB should indicate to keep 1 send in flight because buffer is larger than ISB
+            test_pattern->set_ideal_send_backlog(1024 / 2);
+
+            ctsIOTask test_task = test_pattern->initiate_io();
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
+
+            for (unsigned long io_count = 0; io_count < 20; ++io_count) {
+                ctsIOTask test_task = test_pattern->initiate_io();
+                Assert::AreEqual(512UL, test_task.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+
+                ctsIOTask test_task_three = test_pattern->initiate_io();
+                Assert::AreEqual(0UL, test_task_three.buffer_length);
+                Assert::AreEqual(IOTaskAction::None, test_task_three.ioAction);
+
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 512UL, 0));
+            }
+
+            // recv server completion
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(4UL, test_task.buffer_length);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 4, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 0, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
+        }
+        TEST_METHOD(PushClient_MultipleSendsWithISBEnabledOffsetFromBufferSize)
+        {
+            ctsConfig::Settings->IoPattern = ctsConfig::IoPatternType::Push;
+            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::Settings->UseSharedBuffer = false;
+            ctsConfig::Settings->ShouldVerifyBuffers = false;
+            ctsConfig::Settings->PrePostRecvs = 1;
+            ctsConfig::Settings->PrePostSends = 0;
+            s_TcpBytesPerSecond = 0LL;
+            s_MaxBufferSize = 1024;
+            s_BufferSize = 1024;
+            s_TransferSize = 1024 * 10;
+            s_IsListening = false;
+
+            std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
+            // ISB should indicate to keep 2 sends in flight
+            test_pattern->set_ideal_send_backlog(1024 * 2 - 1);
+
+            ctsIOTask test_task = test_pattern->initiate_io();
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
+
+            for (unsigned long io_count = 0; io_count < 5; ++io_count) {
+                ctsIOTask test_task_one = test_pattern->initiate_io();
+                Assert::AreEqual(1024UL, test_task_one.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task_one).c_str()).c_str());
+
+                ctsIOTask test_task_two = test_pattern->initiate_io();
+                Assert::AreEqual(1023UL, test_task_two.buffer_length);
+                Assert::AreEqual(IOTaskAction::Send, test_task_two.ioAction);
+                Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", io_count, ToString<ctsTraffic::ctsIOTask>(test_task_two).c_str()).c_str());
+
+                ctsIOTask test_task_three = test_pattern->initiate_io();
+                Assert::AreEqual(0UL, test_task_three.buffer_length);
+                Assert::AreEqual(IOTaskAction::None, test_task_three.ioAction);
+
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task_one, 1024, 0));
+                Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task_two, 1023, 0));
+            }
+            // there are still 5 bytes remaining to be sent
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(5UL, test_task.buffer_length);
+            Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
+            Logger::WriteMessage(ctl::ctString::format_string(L"%u: %s", 6, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 5, 0));
+
+            // recv server completion
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Assert::AreEqual(4UL, test_task.buffer_length);
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 4, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 0, 0));
+
+            test_task = test_pattern->initiate_io();
+            Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
+            Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
+            Assert::AreEqual(ctsIOStatus::CompletedIo, test_pattern->complete_io(test_task, 0, 0));
+        }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         ///

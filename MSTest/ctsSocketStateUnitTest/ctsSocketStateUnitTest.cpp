@@ -62,6 +62,17 @@ namespace ctsTraffic {
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
+        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) NOEXCEPT
+        {
+            Logger::WriteMessage(
+                ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+        }
+        void PrintException(const std::exception& e) NOEXCEPT
+        {
+            Logger::WriteMessage(
+                ctl::ctString::format_string(L"ctsConfig::PrintException(%s)",
+                ctl::ctString::format_exception(e).c_str()).c_str());
+        }
         bool IsListening() NOEXCEPT
         {
             return false;
@@ -117,6 +128,10 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
 
     Assert::AreNotEqual(s_ShouldNeverHitErrorCode, s_ConnectReturnCode);
 
+    SOCKET s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    Assert::AreNotEqual(INVALID_SOCKET, s);
+    shared_socket->set_socket(s);
+
     ctl::ctMemoryGuardIncrement(&s_CallbackCount);
     if (shared_socket) {
         shared_socket->complete_state(s_ConnectReturnCode);
@@ -143,6 +158,10 @@ namespace ctsUnitTest {
     public:
         TEST_CLASS_INITIALIZE(Setup)
         {
+            WSADATA wsadata;
+            int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+            Assert::AreEqual(0, wsError);
+
             ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
             ctsConfig::Settings->CreateFunction = CreateFunctionHook;
             ctsConfig::Settings->ConnectFunction = ConnectFunctionHook;
@@ -151,6 +170,7 @@ namespace ctsUnitTest {
         TEST_CLASS_CLEANUP(Cleanup)
         {
             delete ctsConfig::Settings;
+            ::WSACleanup();
         }
 
         TEST_METHOD(AllIOSucceed)

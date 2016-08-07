@@ -722,10 +722,8 @@ namespace ctsTraffic {
     ctsIOPatternPull::ctsIOPatternPull() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
         io_action(ctsConfig::IsListening() ? IOTaskAction::Send : IOTaskAction::Recv),
-        io_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostSends : ctsConfig::Settings->PrePostRecvs)
-    {
-    }
-    ctsIOPatternPull::~ctsIOPatternPull() NOEXCEPT
+        recv_needed(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
+        send_bytes_inflight(0)
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -740,9 +738,14 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOTask ctsIOPatternPull::next_task() NOEXCEPT
     {
-        if (this->io_needed > 0) {
-            --this->io_needed;
+        if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
+            --this->recv_needed;
             return this->tracked_task(this->io_action);
+        } else if (this->io_action == IOTaskAction::Send && this->get_ideal_send_backlog() > this->send_bytes_inflight) {
+            ctsUnsignedLong max_bytes_to_send = this->get_ideal_send_backlog() - this->send_bytes_inflight;
+            auto return_task(this->tracked_task(this->io_action, max_bytes_to_send));
+            this->send_bytes_inflight += return_task.buffer_length;
+            return return_task;
         } else {
             return ctsIOTask();
         }
@@ -751,11 +754,12 @@ namespace ctsTraffic {
     {
         if (IOTaskAction::Send == _task.ioAction) {
             this->stats.bytes_sent.add(_completed_bytes);
+            this->send_bytes_inflight -= _completed_bytes;
         } else {
             this->stats.bytes_recv.add(_completed_bytes);
+            ++this->recv_needed;
         }
 
-        ++this->io_needed;
         return ctsIOPatternProtocolError::NoError;
     }
 
@@ -773,10 +777,8 @@ namespace ctsTraffic {
     ctsIOPatternPush::ctsIOPatternPush() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
         io_action(ctsConfig::IsListening() ? IOTaskAction::Recv : IOTaskAction::Send),
-        io_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : ctsConfig::Settings->PrePostSends)
-    {
-    }
-    ctsIOPatternPush::~ctsIOPatternPush() NOEXCEPT
+        recv_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
+        send_bytes_inflight(0)
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -791,9 +793,14 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOTask ctsIOPatternPush::next_task() NOEXCEPT
     {
-        if (this->io_needed > 0) {
-            --this->io_needed;
+        if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
+            --this->recv_needed;
             return this->tracked_task(this->io_action);
+        } else if (this->io_action == IOTaskAction::Send && this->get_ideal_send_backlog() > send_bytes_inflight) {
+            ctsUnsignedLong max_bytes_to_send = this->get_ideal_send_backlog() - send_bytes_inflight;
+            auto return_task(this->tracked_task(this->io_action, max_bytes_to_send));
+            send_bytes_inflight += return_task.buffer_length;
+            return return_task;
         } else {
             return ctsIOTask();
         }
@@ -802,11 +809,12 @@ namespace ctsTraffic {
     {
         if (IOTaskAction::Send == _task.ioAction) {
             this->stats.bytes_sent.add(_completed_bytes);
+            send_bytes_inflight -= _completed_bytes;
         } else {
             this->stats.bytes_recv.add(_completed_bytes);
+            ++this->recv_needed;
         }
 
-        ++this->io_needed;
         return ctsIOPatternProtocolError::NoError;
     }
 
@@ -833,9 +841,6 @@ namespace ctsTraffic {
         listening(ctsConfig::IsListening()),
         io_needed(true),
         sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
-    {
-    }
-    ctsIOPatternPushPull::~ctsIOPatternPushPull() NOEXCEPT
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -927,8 +932,8 @@ namespace ctsTraffic {
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
         remaining_send_bytes(0),
         remaining_recv_bytes(0),
-        send_needed(ctsConfig::Settings->PrePostSends),
-        recv_needed(ctsConfig::Settings->PrePostRecvs)
+        recv_needed(ctsConfig::Settings->PrePostRecvs),
+        send_bytes_inflight(0)
     {
         // max transfer bytes must be an even # so send bytes and recv bytes are balanced
         auto current_max_transfer = this->get_total_transfer();
@@ -946,9 +951,6 @@ namespace ctsTraffic {
             static_cast<ULONGLONG>(remaining_recv_bytes),
             static_cast<ULONGLONG>(this->get_total_transfer()));
     }
-    ctsIOPatternDuplex::~ctsIOPatternDuplex() NOEXCEPT
-    {
-    }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// virtual methods from the base class:
@@ -964,27 +966,31 @@ namespace ctsTraffic {
         ctsIOTask return_task;
 
         // since we can have multiple receives in flight, must also check that we have remaining_recv_bytes
-        if (this->recv_needed > 0 && this->remaining_recv_bytes > 0) {
-            /// for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow
-            /// - when we cast it to unsigned long
-            return_task = this->tracked_task(
-                IOTaskAction::Recv,
-                remaining_recv_bytes > MAXLONG ? MAXLONG : static_cast<unsigned long>(this->remaining_recv_bytes));
+        if (this->remaining_recv_bytes > 0 && this->recv_needed > 0) {
+            // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
+            // to unsigned long when passed to tracked_task()
+            ctsUnsignedLong max_remaining_bytes = this->remaining_recv_bytes > MAXLONG ?
+                MAXLONG :
+                static_cast<unsigned long>(this->remaining_recv_bytes);
+            return_task = this->tracked_task(IOTaskAction::Recv, max_remaining_bytes);
             // for tracking purposes, assume that this recv *might* end up receiving the entire buffer size
             // - only on completion will we adjust to the actual # of bytes received
-            // this logic was added to avoid over-subscription for remaining recv bytes when recv_needed > 1
             this->remaining_recv_bytes -= return_task.buffer_length;
             --this->recv_needed;
 
-        } else if (this->send_needed > 0 && this->remaining_send_bytes > 0) {
-            /// for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow
-            /// - when we cast it to unsigned long
-            return_task = this->tracked_task(
-                IOTaskAction::Send,
-                remaining_send_bytes > MAXLONG ? MAXLONG : static_cast<unsigned long>(this->remaining_send_bytes));
-            // as above, this logic was added to avoid over-subscription for remaining send bytes when send_needed > 1
+        } else if (this->remaining_send_bytes > 0 && this->get_ideal_send_backlog() > this->send_bytes_inflight) {
+            // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
+            // to unsigned long when passed to tracked_task()
+            ctsUnsignedLong max_remaining_bytes = this->remaining_send_bytes > MAXLONG ? 
+                MAXLONG : 
+                static_cast<unsigned long>(this->remaining_send_bytes);
+            ctsUnsignedLong max_send = this->get_ideal_send_backlog() - this->send_bytes_inflight;
+            if (max_send > max_remaining_bytes) {
+                max_send = max_remaining_bytes;
+            }
+            return_task = this->tracked_task(IOTaskAction::Send, max_remaining_bytes);
             this->remaining_send_bytes -= return_task.buffer_length;
-            --this->send_needed;
+            this->send_bytes_inflight += return_task.buffer_length;
         } else {
             // no IO needed now: return the default task
         }
@@ -996,24 +1002,25 @@ namespace ctsTraffic {
         switch (_task.ioAction) {
         case IOTaskAction::Send:
             this->stats.bytes_sent.add(_completed_bytes);
+            this->send_bytes_inflight -= _completed_bytes;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
             this->remaining_send_bytes += _task.buffer_length;
             // then we need to subtract back out the actual number of bytes sent
             this->remaining_send_bytes -= _completed_bytes;
-            ++this->send_needed;
             break;
 
         case IOTaskAction::Recv:
             this->stats.bytes_recv.add(_completed_bytes);
+            ++this->recv_needed;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
             this->remaining_recv_bytes += _task.buffer_length;
             // then we need to subtract back out the actual number of bytes received
             this->remaining_recv_bytes -= _completed_bytes;
-            ++this->recv_needed;
             break;
         }
+
         return ctsIOPatternProtocolError::NoError;
     }
 

@@ -110,7 +110,18 @@ namespace ctsTraffic {
             return this->last_error;
         }
 
-        ///
+		ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT
+		{
+            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            return this->pattern_state.get_ideal_send_backlog();
+		}
+		void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
+		{
+            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            this->pattern_state.set_ideal_send_backlog(_new_isb);
+		}
+
+		///
         /// none of these *_io functions can throw
         /// failures are critical and will RaiseException to be debugged
         /// - the task given by initiate_io should be returned through complete_io
@@ -436,7 +447,7 @@ namespace ctsTraffic {
     class ctsIOPatternPull : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPull();
-        ~ctsIOPatternPull() NOEXCEPT;
+        ~ctsIOPatternPull() NOEXCEPT = default;
 
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
@@ -444,7 +455,8 @@ namespace ctsTraffic {
 
     private:
         const IOTaskAction io_action;
-        ctsUnsignedLong io_needed;
+        ctsUnsignedLong recv_needed;
+        ctsUnsignedLong send_bytes_inflight;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -458,7 +470,7 @@ namespace ctsTraffic {
     class ctsIOPatternPush : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPush();
-        ~ctsIOPatternPush() NOEXCEPT;
+        ~ctsIOPatternPush() NOEXCEPT = default;
 
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
@@ -466,7 +478,8 @@ namespace ctsTraffic {
 
     private:
         const IOTaskAction io_action;
-        ctsUnsignedLong io_needed;
+        ctsUnsignedLong recv_needed;
+        ctsUnsignedLong send_bytes_inflight;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -481,7 +494,7 @@ namespace ctsTraffic {
     class ctsIOPatternPushPull : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternPushPull();
-        ~ctsIOPatternPushPull() NOEXCEPT;
+        ~ctsIOPatternPushPull() NOEXCEPT = default;
 
         ctsIOTask next_task() NOEXCEPT override;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
@@ -508,7 +521,7 @@ namespace ctsTraffic {
     class ctsIOPatternDuplex : public ctsIOPatternStatistics<ctsTcpStatistics> {
     public:
         ctsIOPatternDuplex();
-        ~ctsIOPatternDuplex() NOEXCEPT;
+        ~ctsIOPatternDuplex() NOEXCEPT = default;
 
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
@@ -518,8 +531,8 @@ namespace ctsTraffic {
         // need to know when to stop sending
         ctsUnsignedLongLong remaining_send_bytes;
         ctsUnsignedLongLong remaining_recv_bytes;
-        ctsUnsignedLong send_needed;
         ctsUnsignedLong recv_needed;
+        ctsUnsignedLong send_bytes_inflight;
     };
 
 

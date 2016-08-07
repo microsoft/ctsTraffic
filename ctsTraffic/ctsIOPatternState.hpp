@@ -65,15 +65,19 @@ namespace ctsTraffic {
             ErrorIOFailed
         };
 
-        InternalPatternState internal_state;
+        InternalPatternState internal_state = InternalPatternState::Initialized;
         // tracking current bytes 
-        ctsUnsignedLongLong confirmed_bytes;
+        ctsUnsignedLongLong confirmed_bytes = 0ULL;
         // need to know when to stop
-        ctsUnsignedLongLong max_transfer;
+        ctsUnsignedLongLong max_transfer = ctsConfig::GetTransferSize();
         // need to know in-flight bytes
-        ctsUnsignedLongLong inflight_bytes;
+        ctsUnsignedLongLong inflight_bytes = 0UL;
+		// ideal send backlog value
+		ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ? 
+            ctsConfig::GetMaxBufferSize() : 
+            ctsConfig::GetMaxBufferSize() * ctsConfig::Settings->PrePostSends;
         // track if waiting for the prior state to complete
-        bool pended_state;
+        bool pended_state = false;
 
     public:
         ctsIOPatternState() NOEXCEPT;
@@ -81,6 +85,8 @@ namespace ctsTraffic {
         ctsUnsignedLongLong get_remaining_transfer() const NOEXCEPT;
         ctsUnsignedLongLong get_max_transfer() const NOEXCEPT;
         void set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) NOEXCEPT;
+		ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT;
+		void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT;
 
         bool is_completed() const NOEXCEPT;
 
@@ -93,12 +99,7 @@ namespace ctsTraffic {
     };
 
 
-    inline ctsIOPatternState::ctsIOPatternState() NOEXCEPT :
-        internal_state(InternalPatternState::Initialized),
-        confirmed_bytes(0LL),
-        max_transfer(ctsConfig::GetTransferSize()),
-        inflight_bytes(0LL),
-        pended_state(false)
+    inline ctsIOPatternState::ctsIOPatternState() NOEXCEPT
     {
         if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol) {
             internal_state = InternalPatternState::MoreIo;
@@ -136,6 +137,14 @@ namespace ctsTraffic {
     {
         this->max_transfer = _new_max_transfer;
     }
+	inline ctsUnsignedLong ctsIOPatternState::get_ideal_send_backlog() const NOEXCEPT
+	{
+		return this->isb;
+	}
+	inline void ctsIOPatternState::set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
+	{
+		this->isb = _new_isb;
+	}
 
     inline bool ctsIOPatternState::is_completed() const NOEXCEPT
     {

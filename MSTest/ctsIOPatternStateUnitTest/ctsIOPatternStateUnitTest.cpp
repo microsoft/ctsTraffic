@@ -125,6 +125,11 @@ namespace ctsTraffic {
         {
             return s_TransferSize;
         }
+
+        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
+        {
+            return s_TransferSize;
+        }
     }
 }
 ///

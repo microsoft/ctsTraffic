@@ -28,16 +28,8 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    ctsSocket::ctsSocket(const weak_ptr<ctsSocketState>& _parent) : 
-        socket_cs(),
-        socket(INVALID_SOCKET),
-        io_count(0),
-        parent(_parent),
-        pattern(),
-        tp_iocp(),
-        tp_timer(),
-        local_sockaddr(),
-        target_sockaddr()
+	// default values are assigned in the class declaration
+    ctsSocket::ctsSocket(const weak_ptr<ctsSocketState>& _parent) : parent(_parent)
     {
         /// using a common spin count from base OS usage & crt usage
         if (!::InitializeCriticalSectionEx(&this->socket_cs, 4000, 0)) {
@@ -83,7 +75,7 @@ namespace ctsTraffic {
             _socket, this->socket);
 
         this->socket = _socket;
-    }
+	}
 
     void ctsSocket::close_socket() NOEXCEPT
     {
@@ -172,6 +164,77 @@ namespace ctsTraffic {
     void ctsSocket::set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) NOEXCEPT
     {
         this->pattern = _pattern;
+        if (ctsConfig::Settings->PrePostSends == 0) {
+            // user didn't specify a specific # of sends to pend
+            // start ISB notifications (best effort)
+            this->initiate_isb_notification();
+        }
+    }
+
+    void ctsSocket::process_isb_notification()
+    {
+        // lock the socket
+        auto socket_lock(ctsGuardSocket(shared_from_this()));
+        SOCKET local_socket = socket_lock.get();
+        if (local_socket != INVALID_SOCKET) {
+            ULONG isb;
+            if (0 == ::idealsendbacklogquery(local_socket, &isb)) {
+                ctsConfig::PrintDebug(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                this->pattern->set_ideal_send_backlog(isb);
+            } else {
+                int gle = ::WSAGetLastError();
+                ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
+            }
+        }
+    }
+
+    void ctsSocket::initiate_isb_notification()
+    {
+        try {
+            auto& shared_iocp = thread_pool();
+            LPOVERLAPPED ov = shared_iocp->new_request([this](OVERLAPPED* ov) {
+                DWORD gle = NO_ERROR;
+                auto socket_lock(ctsGuardSocket(this->shared_from_this()));
+                SOCKET local_socket = socket_lock.get();
+                if (local_socket != INVALID_SOCKET) {
+                    DWORD transferred, flags; // unneeded
+                    if (!::WSAGetOverlappedResult(local_socket, ov, &transferred, FALSE, &flags)) {
+                        gle = ::WSAGetLastError();
+                        if (gle != ERROR_OPERATION_ABORTED) {
+                            // aborted is expected whenever the socket is closed
+                            ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                        }
+                    }
+                } else {
+                    gle = WSAECANCELLED;
+                }
+                if (gle == NO_ERROR) {
+                    // if the request succeeded, handle the ISB change
+                    // and issue the next
+                    this->process_isb_notification();
+                    this->initiate_isb_notification();
+                }
+            });
+
+            auto socket_lock(ctsGuardSocket(this->shared_from_this()));
+            SOCKET local_socket = socket_lock.get();
+            if (local_socket != INVALID_SOCKET) {
+                int error = ::idealsendbacklognotify(local_socket, ov, nullptr);
+                if (SOCKET_ERROR == error) {
+                    int gle = ::WSAGetLastError();
+                    // expect this to be pending
+                    if (gle != WSA_IO_PENDING)
+                    {
+                        // if the ISB notification failed, tell the TP to no longer track that IO
+                        shared_iocp->cancel_request(ov);
+                        ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                    }
+                }
+            }
+        }
+        catch (const exception& e) {
+            ctsConfig::PrintException(e);
+        }
     }
 
     long ctsSocket::increment_io() NOEXCEPT

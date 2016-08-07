@@ -65,6 +65,16 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
+        void PrintDebug(_In_ LPCWSTR _text, ...) NOEXCEPT
+        {
+            va_list args;
+            va_start(args, _text);
+
+            auto formatted(ctl::ctString::format_string_va(_text, args));
+            Logger::WriteMessage(ctl::ctString::format_string(L"ctsConfig::PrintDebug: %s\n", formatted.c_str()).c_str());
+
+            va_end(args);
+        }
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
@@ -76,6 +86,17 @@ namespace ctsTraffic {
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
+        }
+        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) NOEXCEPT
+        {
+            Logger::WriteMessage(
+                ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+        }
+        void PrintException(const std::exception& e) NOEXCEPT
+        {
+            Logger::WriteMessage(
+                ctl::ctString::format_string(L"ctsConfig::PrintException(%s)",
+                    ctl::ctString::format_exception(e).c_str()).c_str());
         }
     }
 }
