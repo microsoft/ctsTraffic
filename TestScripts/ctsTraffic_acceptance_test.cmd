@@ -13,16 +13,6 @@ REM
 
 @echo off
 
-REM
-REM Known issues:
-REM CommandLine: ctsTraffic.exe  -listen:* -buffer:101 -transfer:1000000 -ServerExitLimit:100 -pattern:pull -io:rioiocp -verify:connection
-REM - random failures: >> RIOReceive failed (10053)  An established connection was aborted by the software in your host machine.
-REM
-REM
-REM CommandLine: ctsTraffic.exe  -target:localhost -buffer:100 -transfer:1000000 -connections:100 -iterations:1 -pattern:push -io:rioiocp -verify:connection
-REM - random failures: >> RIOReceive failed (10053)  An established connection was aborted by the software in your host machine.
-REM
-
 if '%1' == '' (
   echo Must specify server or client as the first argument
   goto :exit
@@ -40,6 +30,10 @@ if /i '%2' == 'debug' (
 )
 
 set Role=%1
+set NORMAL_TRANSFER=1000000
+set SMALLER_TRANSFER=999999
+set VERY_SMALL_TRANSFER=9999
+
 
 CALL :TESTCASES push iocp
 CALL :TESTCASES pull iocp
@@ -54,20 +48,20 @@ CALL :TESTCASES duplex rioiocp
 goto :eof
 
 :TESTCASES
-set ServerOptions= -listen:* -buffer:101 -transfer:1000000 -ServerExitLimit:%CONNECTIONS%
-set ClientOptions= -target:localhost -buffer:100 -transfer:1000000 -connections:%CONNECTIONS% -iterations:1
+set ServerOptions= -listen:* -buffer:101 -ServerExitLimit:%CONNECTIONS%
+set ClientOptions= -target:localhost -buffer:100 -connections:%CONNECTIONS% -iterations:1
 
 REM **********************************************************************************************
-REM Test : verify:connection
+REM Test : verify:connection and a single pended send
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -79,16 +73,16 @@ IF ERRORLEVEL 1 (
 
 
 REM **********************************************************************************************
-REM Test : verify:connection with multiple duplex IO requests
+REM Test : verify:data with ISB controlling sends
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3
+   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -100,16 +94,16 @@ IF ERRORLEVEL 1 (
 
 
 REM **********************************************************************************************
-REM Test : verify:data
+REM Test : verify:connection with multiple IO requests
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -120,108 +114,67 @@ IF ERRORLEVEL 1 (
 )
 
 
-
 REM **********************************************************************************************
-REM Test : sender not verifying, but receiver -verify:data, slight buffer count delta
-REM **********************************************************************************************
-Set ERRORLEVEL=
-if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection
-)
-if '%Role%' == 'client' (
-   REM delay the client
-   ping localhost -n 5 > nul
-   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data
-)
-
-if /i '%1' == 'pull' (
-  echo NOTE ** The client should have failed all calls with ErrorDataDidNotMatchBitPattern           **
-  echo      ** This is expected, as the server was not keeping track of the buffer offset            **
-  echo      ** and was sending with a different buffer size this the client eventually received data **
-  echo      ** that did not continue to circle around the expected circular buffer of bytes          **
-  
-  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
-    echo TEST FAILED: this test is expected to fail : %ERRORLEVEL%
-    PAUSE
-  ) else (
-    echo PASSED
-  )
-) else if /i '%1' == 'duplex' (
-  echo NOTE ** The client should have failed all calls with ErrorDataDidNotMatchBitPattern           **
-  echo      ** This is expected, as the server was not keeping track of the buffer offset            **
-  echo      ** and was sending with a different buffer size this the client eventually received data **
-  echo      ** that did not continue to circle around the expected circular buffer of bytes          **
-  
-  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
-    echo TEST FAILED: this test is expected to fail : %ERRORLEVEL%
-    PAUSE
-  ) else (
-    echo PASSED
-  )
-) else (
-  IF ERRORLEVEL 1 (
-    echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
-    PAUSE
-  ) else (
-    echo PASSED
-  )
-)
-
-REM **********************************************************************************************
-REM Test : receiver not verifying, but sender -verify:data, slight buffer count delta
+REM Test : sender sending more bytes than receiver is expecting, slight buffer count delta
 REM **********************************************************************************************
 Set ERRORLEVEL=
+Set EXPECTED_ERROR=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data
-)
-if '%Role%' == 'client' (
-   REM delay the client
-   ping localhost -n 5 > nul
-   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection
+
+  if /i '%1' == 'push' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+
+  ) else if /i '%1' == 'pull' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+
+  ) else if /i '%1' == 'pushpull' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+
+  ) else if /i '%1' == 'duplex' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+  )
 )
 
-if /i '%1' == 'push' (
-  echo NOTE ** The server should have failed all calls with ErrorDataDidNotMatchBitPattern           **
-  echo      ** This is expected, as the client was not keeping track of the buffer offset            **
-  echo      ** and was sending with a different buffer size this the server eventually received data **
-  echo      ** that did not continue to circle around the expected circular buffer of bytes          **
-  
-  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
-    echo TEST FAILED: this test is expected to fail : %ERRORLEVEL%
-    PAUSE
-  ) else (
-    echo PASSED
+if '%Role%' == 'client' (
+  REM delay the client
+  ping localhost -n 5 > nul
+
+  if /i '%1' == 'push' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+
+  ) else if /i '%1' == 'pull' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+
+  ) else if /i '%1' == 'pushpull' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+
+  ) else if /i '%1' == 'duplex' (
+    Set EXPECTED_ERROR=1
+    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
   )
-) else if /i '%1' == 'pushpull' (
-  echo NOTE ** The server should have failed all calls with ErrorDataDidNotMatchBitPattern           **
-  echo      ** This is expected, as the client was not keeping track of the buffer offset            **
-  echo      ** and was sending with a different buffer size this the server eventually received data **
-  echo      ** that did not continue to circle around the expected circular buffer of bytes          **
-  
-  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
-    echo TEST FAILED: this test is expected to fail : %ERRORLEVEL%
+)
+
+if '%EXPECTED_ERROR%' == '0' (
+  REM Expect this teset to succeed
+  IF '%ERRORLEVEL%' NEQ '0' (
+    echo TEST FAILED: this test is expected to PASS : %ERRORLEVEL%
     PAUSE
   ) else (
-    echo PASSED
-  )
-) else if /i '%1' == 'duplex' (
-  echo NOTE ** The server should have failed all calls with ErrorDataDidNotMatchBitPattern           **
-  echo      ** This is expected, as the client was not keeping track of the buffer offset            **
-  echo      ** and was sending with a different buffer size this the server eventually received data **
-  echo      ** that did not continue to circle around the expected circular buffer of bytes          **
-  
-  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
-    echo TEST FAILED: this test is expected to fail : %ERRORLEVEL%
-    PAUSE
-  ) else (
-    echo PASSED
+    echo PASSED -- all instances transferred successfully
   )
 ) else (
-  IF ERRORLEVEL 1 (
-    echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
+  IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
+    echo TEST FAILED: this test is expected to FAIL : %ERRORLEVEL%
     PAUSE
   ) else (
-    echo PASSED
+    echo PASSED -- all instances failed to transfer
   )
 )
 

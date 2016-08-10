@@ -110,18 +110,18 @@ namespace ctsTraffic {
             return this->last_error;
         }
 
-		ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT
-		{
+        ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT
+        {
             ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             return this->pattern_state.get_ideal_send_backlog();
-		}
-		void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
-		{
+        }
+        void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
+        {
             ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             this->pattern_state.set_ideal_send_backlog(_new_isb);
-		}
+        }
 
-		///
+        ///
         /// none of these *_io functions can throw
         /// failures are critical and will RaiseException to be debugged
         /// - the task given by initiate_io should be returned through complete_io
@@ -303,15 +303,18 @@ namespace ctsTraffic {
         {
             ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             if (ctsStatusIORunning == this->last_error) {
+                auto status_error = this->pattern_state.update_error(_error);
                 if (NO_ERROR == _error) {
-                    this->last_error = NO_ERROR;
+                    if (status_error != ctsIOPatternProtocolError::ErrorIOFailed) {
+                        this->last_error = NO_ERROR;
+                    }
                 } else {
-                    if (ctsIOPatternProtocolError::ErrorIOFailed == this->pattern_state.update_error(_error)) {
+                    if (ctsIOPatternProtocolError::ErrorIOFailed == status_error) {
                         this->last_error = _error;
                     }
                 }
             }
-            return this->get_last_error();
+            return this->last_error;
         }
         void update_last_protocol_error(ctsIOPatternProtocolError _protocol_error) NOEXCEPT
         {

@@ -469,10 +469,10 @@ namespace ctsTraffic {
                 // then actually validate the received completion
                 //
                 if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
+                    ctsConfig::Settings->ShouldVerifyBuffers &&
                     _original_task.ioAction == IOTaskAction::Recv &&
-                    (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status) &&
                     _original_task.track_io &&
-                    ctsConfig::Settings->ShouldVerifyBuffers) {
+                    (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status)) {
 
                     ctFatalCondition(
                         _original_task.expected_pattern_offset != this->recv_pattern_offset,
@@ -498,6 +498,7 @@ namespace ctsTraffic {
         //
         if ((_original_task.ioAction != IOTaskAction::None) &&
             (NO_ERROR == _status_code)) {
+
             if (IOTaskAction::Send == _original_task.ioAction) {
                 ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
             } else {

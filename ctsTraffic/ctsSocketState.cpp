@@ -297,15 +297,19 @@ namespace ctsTraffic {
                 context->socket->close_socket();
                 context->socket->print_pattern_results(context->last_error);
 
+                if (ctsConfig::Settings->ClosingFunction) {
+                    ctsConfig::Settings->ClosingFunction(weak_ptr<ctsSocket>(context->socket));
+                }
+
+                // verify all IO has completed (IO could have been pended when we closed the socket)
+                // called outside of any & all locks
+                context->socket.reset();
+
                 // update the state last, since ctsBroker looks for this state value
                 // - to know when to delete the ctsSocketState instance
                 ::EnterCriticalSection(&context->state_guard);
                 context->state = InternalState::Closed;
                 ::LeaveCriticalSection(&context->state_guard);
-
-                if (ctsConfig::Settings->ClosingFunction) {
-                    ctsConfig::Settings->ClosingFunction(weak_ptr<ctsSocket>(context->socket));
-                }
 
                 ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
                 break;

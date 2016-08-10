@@ -19,9 +19,6 @@
     <Filter Include="SocketFunctions">
       <UniqueIdentifier>{71dd0481-5c28-462d-83e3-1e31e9fe4f22}</UniqueIdentifier>
     </Filter>
-    <Filter Include="IOPattern">
-      <UniqueIdentifier>{3fea6222-7f01-4773-b6f4-d571615fba5a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="MediaStreaming">
       <UniqueIdentifier>{6c25a8c6-cc64-45a4-a5f8-23aba61ea248}</UniqueIdentifier>
     </Filter>
@@ -30,6 +27,9 @@
     </Filter>
     <Filter Include="SdkChanges">
       <UniqueIdentifier>{40fe5a12-4000-433d-afa4-7e5ac166ed06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FutureIOPattern">
+      <UniqueIdentifier>{3fea6222-7f01-4773-b6f4-d571615fba5a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -179,10 +179,10 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp">
-      <Filter>IOPattern</Filter>
+      <Filter>FutureIOPattern</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp">
-      <Filter>IOPattern</Filter>
+      <Filter>FutureIOPattern</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctVersionConversion.hpp">
       <Filter>ctl</Filter>
@@ -191,7 +191,7 @@
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternT.h">
-      <Filter>IOPattern</Filter>
+      <Filter>FutureIOPattern</Filter>
     </ClInclude>
     <ClInclude Include="ctsMediaStreamProtocol.hpp">
       <Filter>MediaStreaming</Filter>
@@ -245,7 +245,7 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternBufferPolicy.hpp">
-      <Filter>IOPattern</Filter>
+      <Filter>FutureIOPattern</Filter>
     </ClInclude>
     <ClInclude Include="..\SdkChanges\WbemDisp.h">
       <Filter>SdkChanges</Filter>

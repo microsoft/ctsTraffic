@@ -28,7 +28,7 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-	// default values are assigned in the class declaration
+    // default values are assigned in the class declaration
     ctsSocket::ctsSocket(const weak_ptr<ctsSocketState>& _parent) : parent(_parent)
     {
         /// using a common spin count from base OS usage & crt usage
@@ -75,7 +75,7 @@ namespace ctsTraffic {
             _socket, this->socket);
 
         this->socket = _socket;
-	}
+    }
 
     void ctsSocket::close_socket() NOEXCEPT
     {
@@ -183,7 +183,9 @@ namespace ctsTraffic {
                 this->pattern->set_ideal_send_backlog(isb);
             } else {
                 int gle = ::WSAGetLastError();
-                ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
+                if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR) {
+                    ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
+                }
             }
         }
     }
@@ -192,15 +194,21 @@ namespace ctsTraffic {
     {
         try {
             auto& shared_iocp = thread_pool();
-            LPOVERLAPPED ov = shared_iocp->new_request([this](OVERLAPPED* ov) {
+            LPOVERLAPPED ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(this->shared_from_this())](OVERLAPPED* ov) {
                 DWORD gle = NO_ERROR;
-                auto socket_lock(ctsGuardSocket(this->shared_from_this()));
+
+                auto shared_this_ptr = weak_this_ptr.lock();
+                if (!shared_this_ptr) {
+                    return;
+                }
+
+                auto socket_lock(ctsGuardSocket(shared_this_ptr));
                 SOCKET local_socket = socket_lock.get();
                 if (local_socket != INVALID_SOCKET) {
                     DWORD transferred, flags; // unneeded
                     if (!::WSAGetOverlappedResult(local_socket, ov, &transferred, FALSE, &flags)) {
                         gle = ::WSAGetLastError();
-                        if (gle != ERROR_OPERATION_ABORTED) {
+                        if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR) {
                             // aborted is expected whenever the socket is closed
                             ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
                         }
@@ -211,10 +219,10 @@ namespace ctsTraffic {
                 if (gle == NO_ERROR) {
                     // if the request succeeded, handle the ISB change
                     // and issue the next
-                    this->process_isb_notification();
-                    this->initiate_isb_notification();
+                    shared_this_ptr->process_isb_notification();
+                    shared_this_ptr->initiate_isb_notification();
                 }
-            });
+            }); // lambda for new_request
 
             auto socket_lock(ctsGuardSocket(this->shared_from_this()));
             SOCKET local_socket = socket_lock.get();
@@ -227,9 +235,14 @@ namespace ctsTraffic {
                     {
                         // if the ISB notification failed, tell the TP to no longer track that IO
                         shared_iocp->cancel_request(ov);
-                        ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                        if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR) {
+                            ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                        }
                     }
                 }
+            } else {
+                // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
+                shared_iocp->cancel_request(ov);
             }
         }
         catch (const exception& e) {
