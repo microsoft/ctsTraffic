@@ -223,7 +223,7 @@ namespace ctsTraffic {
             const wchar_t* param_end = _input_argument + wcslen(_input_argument);
             const wchar_t* param_delimiter = find(_input_argument, param_end, L':');
             if (!(param_end > param_delimiter + 1)) {
-                throw invalid_argument(ctString::convert_to_string(_input_argument).c_str());
+                throw invalid_argument(ctString::convert_to_string(_input_argument));
             }
             // temporarily null-terminate it at the delimiter to do a string compare
             *const_cast<wchar_t*>(param_delimiter) = L'\0';
@@ -280,7 +280,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(ctString::convert_to_string(_string).c_str());
+                throw invalid_argument(ctString::convert_to_string(_string));
             }
             return return_value;
         }
@@ -296,7 +296,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(ctString::convert_to_string(_string).c_str());
+                throw invalid_argument(ctString::convert_to_string(_string));
             }
             return return_value;
         }
@@ -2354,7 +2354,7 @@ namespace ctsTraffic {
                     L"[%.3f] %s\n",
                     ctsConfig::GetStatusTimeStamp(),
                     error_string.c_str());
-                throw invalid_argument(ctString::convert_to_string(error_string).c_str());
+                throw invalid_argument(ctString::convert_to_string(error_string));
             }
 
             auto timer = ::timeBeginPeriod(1);
