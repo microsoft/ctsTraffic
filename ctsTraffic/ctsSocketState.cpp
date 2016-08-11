@@ -149,9 +149,9 @@ namespace ctsTraffic {
         //
         if (initiating_io) {
             // always notify the broker
-			auto parent = broker.lock();
-			if (parent) {
-				parent->initiating_io();
+            auto parent = broker.lock();
+            if (parent) {
+                parent->initiating_io();
             }
         }
         //
@@ -280,12 +280,12 @@ namespace ctsTraffic {
                 context->state = InternalState::Closed;
                 ::LeaveCriticalSection(&context->state_guard);
 
-				auto parent = context->broker.lock();
-				if (parent) {
-					parent->closing(context->initiated_io);
-				}
-				
-				ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
+                auto parent = context->broker.lock();
+                if (parent) {
+                    parent->closing(context->initiated_io);
+                }
+                
+                ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
                 break;
             }
 

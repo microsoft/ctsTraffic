@@ -280,7 +280,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-				throw invalid_argument(ctString::convert_to_string(_string).c_str());
+                throw invalid_argument(ctString::convert_to_string(_string).c_str());
             }
             return return_value;
         }
@@ -296,7 +296,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-				throw invalid_argument(ctString::convert_to_string(_string).c_str());
+                throw invalid_argument(ctString::convert_to_string(_string).c_str());
             }
             return return_value;
         }
@@ -317,7 +317,7 @@ namespace ctsTraffic {
         {
             long return_value = as_integral<long>(_string);
             if (return_value > MAXSHORT || return_value < MINSHORT) {
-				throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::convert_to_string(_string));
             }
             return static_cast<short>(return_value);
         }
@@ -327,8 +327,8 @@ namespace ctsTraffic {
             unsigned long return_value = as_integral<unsigned long>(_string);
             // MAXWORD == MAXUSHORT
             if (return_value > MAXWORD) {
-				throw invalid_argument(ctString::convert_to_string(_string));
-			}
+                throw invalid_argument(ctString::convert_to_string(_string));
+            }
             return static_cast<unsigned short>(return_value);
         }
         /// LONGLONG and ULONGLONG
@@ -344,8 +344,8 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-				throw invalid_argument(ctString::convert_to_string(_string));
-			}
+                throw invalid_argument(ctString::convert_to_string(_string));
+            }
             return return_value;
         }
         template <>
@@ -360,8 +360,8 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-				throw invalid_argument(ctString::convert_to_string(_string));
-			}
+                throw invalid_argument(ctString::convert_to_string(_string));
+            }
             return return_value;
         }
 

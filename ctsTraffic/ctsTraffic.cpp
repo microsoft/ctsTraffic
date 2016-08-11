@@ -88,7 +88,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
         std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
         g_SocketBroker = broker.get();
-		broker->start();
+        broker->start();
 
         ctThreadpoolTimer status_timer;
         status_timer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::Settings->StatusUpdateFrequencyMilliseconds);

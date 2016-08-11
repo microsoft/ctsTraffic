@@ -38,7 +38,7 @@ namespace ctsTraffic {
         ctsSocketBroker();
         ~ctsSocketBroker() NOEXCEPT;
 
-		void start();
+        void start();
 
         /// methods that the child ctsSocketState objects will invoke when they change state
         void initiating_io() NOEXCEPT;

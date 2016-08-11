@@ -56,7 +56,7 @@ namespace ctsTraffic {
         //
         // c'tor requiring a parent ctsSocketBroker
         //
-		explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
+        explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
 
         ~ctsSocketState() NOEXCEPT;
 
