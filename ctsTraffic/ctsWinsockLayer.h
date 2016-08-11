@@ -49,19 +49,24 @@ namespace ctsTraffic {
         }
     };
 
-    ///
-    /// WSARecvFrom
-    ///
+    //
+    // WSARecvFrom
+    //
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
 
-    ///
-    /// WSASendTo
-    ///
+    //
+    // WSASendTo
+    //
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
+
+    //
+    // Set LINGER options to force a RST when the socket is closed
+    //
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket);
 }

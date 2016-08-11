@@ -37,11 +37,10 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    ctsSocketState::ctsSocketState(_In_ ctsSocketBroker* _broker) 
+    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) 
     : thread_pool_worker(nullptr),
       state_guard(),
-      broker_guard(),
-      broker(_broker),
+      broker(move(_broker)),
       socket(),
       last_error(0UL),
       state(InternalState::Creating),
@@ -50,17 +49,11 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionEx(&state_guard, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketState", false);
         }
-        if (!::InitializeCriticalSectionEx(&broker_guard, 4000, 0)) {
-            auto gle = ::GetLastError();
-            ::DeleteCriticalSection(&state_guard);
-            throw ctException(gle, L"InitializeCriticalSectionEx", L"ctsSocketState", false);
-        }
 
         thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == thread_pool_worker) {
             auto gle = ::GetLastError();
             ::DeleteCriticalSection(&state_guard);
-            ::DeleteCriticalSection(&broker_guard);
             throw ctException(gle, L"CreateThreadpoolWork", L"ctsSocketState", false);
         }
     }
@@ -83,7 +76,6 @@ namespace ctsTraffic {
         ::CloseThreadpoolWork(thread_pool_worker);
 
         ::DeleteCriticalSection(&state_guard);
-        ::DeleteCriticalSection(&broker_guard);
     }
 
     void ctsSocketState::start() NOEXCEPT
@@ -157,13 +149,10 @@ namespace ctsTraffic {
         //
         if (initiating_io) {
             // always notify the broker
-            ::EnterCriticalSection(&this->broker_guard);
-            {
-                if (this->broker != nullptr) {
-                    this->broker->initiating_io();
-                }
+			auto parent = broker.lock();
+			if (parent) {
+				parent->initiating_io();
             }
-            ::LeaveCriticalSection(&this->broker_guard);
         }
         //
         // schedule the next functor to run when not closing down the socket
@@ -171,21 +160,11 @@ namespace ctsTraffic {
         ::SubmitThreadpoolWork(this->thread_pool_worker);
     }
 
-
     ctsSocketState::InternalState ctsSocketState::current_state() const NOEXCEPT
     {
         ctAutoReleaseCriticalSection lock_state(&this->state_guard);
         return this->state;
     }
-    ///
-    /// guarded to allow safe detach from the parent broker
-    ///
-    void ctsSocketState::detach() NOEXCEPT
-    {
-        ctAutoReleaseCriticalSection lock_broker(&this->broker_guard);
-        this->broker = nullptr;
-    }
-
 
     VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
     {
@@ -268,12 +247,6 @@ namespace ctsTraffic {
             ///   on a threadpool thread - in which case it would deadlock on itself
             ///
             case InternalState::Closing: {
-                ::EnterCriticalSection(&context->broker_guard);
-                if (context->broker != nullptr) {
-                    context->broker->closing(context->initiated_io);
-                }
-                ::LeaveCriticalSection(&context->broker_guard);
-
                 if (context->initiated_io) {
                     // Update the status counter if we previously tracked this connection as active
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.decrement();
@@ -294,16 +267,12 @@ namespace ctsTraffic {
                     ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                 }
 
-                context->socket->close_socket();
+                context->socket->close_socket(context->last_error);
                 context->socket->print_pattern_results(context->last_error);
 
                 if (ctsConfig::Settings->ClosingFunction) {
                     ctsConfig::Settings->ClosingFunction(weak_ptr<ctsSocket>(context->socket));
                 }
-
-                // verify all IO has completed (IO could have been pended when we closed the socket)
-                // called outside of any & all locks
-                context->socket.reset();
 
                 // update the state last, since ctsBroker looks for this state value
                 // - to know when to delete the ctsSocketState instance
@@ -311,7 +280,12 @@ namespace ctsTraffic {
                 context->state = InternalState::Closed;
                 ::LeaveCriticalSection(&context->state_guard);
 
-                ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
+				auto parent = context->broker.lock();
+				if (parent) {
+					parent->closing(context->initiated_io);
+				}
+				
+				ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
                 break;
             }
 

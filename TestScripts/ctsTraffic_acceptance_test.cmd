@@ -134,7 +134,7 @@ if '%Role%' == 'server' (
     cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'duplex' (
-    Set EXPECTED_ERROR=1
+    Set EXPECTED_ERROR=2
     cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
   )
 )
@@ -169,12 +169,19 @@ if '%EXPECTED_ERROR%' == '0' (
   ) else (
     echo PASSED -- all instances transferred successfully
   )
-) else (
+) else if '%EXPECTED_ERROR%' == '1' (
   IF '%ERRORLEVEL%' NEQ '%CONNECTIONS%' (
     echo TEST FAILED: this test is expected to FAIL : %ERRORLEVEL%
     PAUSE
   ) else (
     echo PASSED -- all instances failed to transfer
+  )
+) else if '%EXPECTED_ERROR%' == '2' (
+  IF ERRORLEVEL 1 (
+    echo PASSED -- all instances failed to transfer
+  ) else (
+    echo TEST FAILED: this test is expected to FAIL : %ERRORLEVEL%
+    PAUSE
   )
 )
 

@@ -149,13 +149,8 @@ namespace ctsTraffic {
                     io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);
 
                 } else if (IOTaskAction::HardShutdown == next_io.ioAction) {
-                    ::linger linger_option;
-                    linger_option.l_onoff = 1;
-                    linger_option.l_linger = 0;
-                    if (0 != ::setsockopt(socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option)))) {
-                        io_error = ::WSAGetLastError();
-                    }
-                    shared_socket->close_socket();
+                    // pass through -1 to force an RST with the closesocket
+                    io_error = shared_socket->close_socket(-1);
                     socket = INVALID_SOCKET;
 
                     io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);

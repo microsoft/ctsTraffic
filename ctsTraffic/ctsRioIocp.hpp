@@ -566,7 +566,7 @@ namespace ctsTraffic {
             switch (protocol_status) {
                 case ctsIOStatus::ContinueIo:
                     // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp");
+                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp (ContinueIo)");
                     // more IO is requested from the protocol
                     // launch the next IO while holding the socket lock in complete_io
                     error = this->execute_io();
@@ -574,7 +574,7 @@ namespace ctsTraffic {
 
                 case ctsIOStatus::CompletedIo:
                     // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp");
+                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp (CompletedIo)");
                     // no more IO is requested from the protocol
                     error = NO_ERROR;
                     break;
@@ -641,13 +641,8 @@ namespace ctsTraffic {
                 }
 
                 if (IOTaskAction::HardShutdown == next_io.ioAction) {
-                    ::linger linger_option;
-                    linger_option.l_onoff = 1;
-                    linger_option.l_linger = 0;
-                    if (0 != ::setsockopt(rio_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option)))) {
-                        error = ::WSAGetLastError();
-                    }
-                    shared_socket->close_socket();
+                    // pass through -1 to force an RST with the closesocket
+                    error = shared_socket->close_socket(-1);
                     rio_socket = INVALID_SOCKET;
 
                     continue_io = (shared_pattern->complete_io(next_io, 0, error) == ctsIOStatus::ContinueIo);

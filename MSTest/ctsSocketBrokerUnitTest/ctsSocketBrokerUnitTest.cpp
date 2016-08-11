@@ -193,17 +193,15 @@ SocketStatePool* s_SocketPool;
 /// - don't need to actually do any work - just need to control indications back to the broker
 /// - but we do need to track all instances created so we can control each socketstate
 ///
-ctsSocketState::ctsSocketState(_In_ ctsSocketBroker* _broker) :
+ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) :
 thread_pool_worker(nullptr),
     state_guard(),
-    broker_guard(),
-    broker(_broker),
+    broker(std::move(_broker)),
     socket(),
     last_error(0UL),
     state(ctsSocketState::InternalState::Creating),
     initiated_io(false)
 {
-    this->broker = _broker;
 }
 
 ctsSocketState::~ctsSocketState() NOEXCEPT
@@ -222,25 +220,29 @@ void ctsSocketState::complete_state(DWORD _error_code) NOEXCEPT
         // walk states from creating -> InitiatingIO -> Closed
         switch (this->state) {
             
-            // Skipping Connecting, since that state doesn't affect ctsSocketBroker
+        // Skipping Connecting, since that state doesn't affect ctsSocketBroker
 
-            case ctsSocketState::InternalState::Creating:
-                this->broker->initiating_io();
-                this->state = ctsSocketState::InternalState::InitiatingIO;
-                break;
+		case ctsSocketState::InternalState::Creating: {
+			auto parent = this->broker.lock();
+			parent->initiating_io();
+			this->state = ctsSocketState::InternalState::InitiatingIO;
+			break;
+		}
+		case ctsSocketState::InternalState::InitiatingIO: {
+			auto parent = this->broker.lock();
+			parent->closing(true);
+			this->state = ctsSocketState::InternalState::Closed;
+			break;
+		}
 
-            case ctsSocketState::InternalState::InitiatingIO:
-                this->broker->closing(true);
-                this->state = ctsSocketState::InternalState::Closed;
-                break;
-
-            default:
-                Assert::Fail(
-                    ctl::ctString::format_string(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
-        }
+        default:
+            Assert::Fail(
+                ctl::ctString::format_string(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+    }
     } else {
         // move straight to Closed
-        this->broker->closing(ctsSocketState::InternalState::InitiatingIO == this->state);
+		auto parent = this->broker.lock();
+        parent->closing(ctsSocketState::InternalState::InitiatingIO == this->state);
         this->state = ctsSocketState::InternalState::Closed;
     }
 }
@@ -249,11 +251,6 @@ ctsSocketState::InternalState ctsSocketState::current_state() const NOEXCEPT
 {
     return this->state;
 }
-void ctsSocketState::detach() NOEXCEPT
-{
-    this->broker = nullptr;
-}
-
 
 
 namespace ctsUnitTest {
@@ -291,6 +288,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -304,6 +302,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulClientConnection)
@@ -321,6 +321,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -334,6 +335,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -352,6 +355,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -365,6 +369,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithExit)
@@ -382,6 +388,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -393,8 +400,10 @@ namespace ctsUnitTest {
             s_SocketPool->complete_state(NO_ERROR);
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            auto completed = test_broker->wait(2000);
+            auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -413,6 +422,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -427,6 +437,8 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsFalse(completed);
             // should create the next socket to accept on
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(1);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithoutExit)
@@ -444,6 +456,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -458,6 +471,8 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsFalse(completed);
             // should create the next socket to accept on
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(100);
         }
 
@@ -476,6 +491,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -485,6 +501,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedConnect)
@@ -502,6 +520,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -511,6 +530,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -529,6 +550,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -538,6 +560,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit)
@@ -555,6 +579,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -564,6 +589,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -582,6 +609,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -595,6 +623,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedIO)
@@ -612,6 +642,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -625,6 +656,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -643,6 +676,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -656,6 +690,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit_FailedIO)
@@ -673,6 +709,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             s_SocketPool->validate_expected_count(100);
 
@@ -686,6 +723,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -704,6 +743,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5);
@@ -732,6 +772,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -750,6 +792,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -771,6 +814,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -789,6 +834,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -811,6 +857,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -829,6 +877,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -857,6 +906,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -875,6 +926,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 1 creating\n");
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
@@ -891,6 +943,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -910,6 +964,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+			test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 95 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -1041,6 +1096,8 @@ namespace ctsUnitTest {
 
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
+            // let the TP complete
+            ::Sleep(333);
             s_SocketPool->validate_expected_count(0);
         }
     };

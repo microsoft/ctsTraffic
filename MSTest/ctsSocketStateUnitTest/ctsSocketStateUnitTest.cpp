@@ -23,6 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsSocketState.h"
 #include "ctsSocketBroker.h"
+#include "ctsWinsockLayer.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -37,7 +38,12 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-    namespace ctsConfig {
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET)
+	{
+		return wsIOResult();
+	}
+
+	namespace ctsConfig {
         ctsConfigSettings* Settings;
 
         void PrintDebug(_In_ LPCWSTR _text, ...) NOEXCEPT
@@ -178,7 +184,7 @@ namespace ctsUnitTest {
             // expect all to pass
             ResetStatics(0, 0, 0);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->start();
 
             do {
@@ -193,7 +199,7 @@ namespace ctsUnitTest {
             // create should fail, the others never invoked
             ResetStatics(1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->start();
 
             do {
@@ -208,7 +214,7 @@ namespace ctsUnitTest {
             // connect should fail, IO should never invoked
             ResetStatics(0, 1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->start();
 
             do {
@@ -223,7 +229,7 @@ namespace ctsUnitTest {
             // IO should fail
             ResetStatics(0, 0, 1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->start();
 
             do {

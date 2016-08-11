@@ -355,24 +355,24 @@ namespace ctsTraffic {
                     // servers will first send their final status before starting their shutdown sequence
                     switch (this->internal_state) {
                         case InternalPatternState::MoreIo:
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : ServerSendCompletion\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (MoreIo) : ServerSendCompletion\n");
                             this->internal_state = InternalPatternState::ServerSendCompletion;
                             this->pended_state = false;
                             break;
 
                         case InternalPatternState::ServerSendCompletion:
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : RequestFIN\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (ServerSendCompletion) : RequestFIN\n");
                             this->internal_state = InternalPatternState::RequestFIN;
                             this->pended_state = false;
                             break;
 
                         case InternalPatternState::RequestFIN:
                             if (_completed_transfer_bytes != 0) {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooManyBytes)\n");
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : ErrorIOFailed (TooManyBytes)\n");
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooManyBytes;
                             } else {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : CompletedTransfer\n");
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer [(already_transferred (%u) == this->max_transfer (%u))]\n", static_cast<unsigned long>(already_transferred), static_cast<unsigned long>(this->max_transfer));
                                 this->internal_state = InternalPatternState::CompletedTransfer;
                                 return ctsIOPatternProtocolError::SuccessfullyCompleted;
                             }
@@ -386,7 +386,7 @@ namespace ctsTraffic {
                     // clients will recv the server status, then process their shutdown sequence
                     switch (this->internal_state) {
                         case InternalPatternState::MoreIo:
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : ClientRecvCompletion\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (MoreIo) : ClientRecvCompletion\n");
                             this->internal_state = InternalPatternState::ClientRecvCompletion;
                             this->pended_state = false;
                             break;
@@ -395,42 +395,42 @@ namespace ctsTraffic {
                             // process the server's returned status
                             if (_completed_transfer_bytes != 4) {
                                 ctsConfig::PrintDebug(
-                                    L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (Server didn't return a completion - returned %u bytes)\n",
+                                    L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : ErrorIOFailed (Server didn't return a completion - returned %u bytes)\n",
                                     _completed_transfer_bytes);
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooFewBytes;
                             }
 
                             if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::Settings->TcpShutdown) {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : GracefulShutdown\n");
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : GracefulShutdown\n");
                                 this->internal_state = InternalPatternState::GracefulShutdown;
                                 this->pended_state = false;
                             } else {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : HardShutdown\n");
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : HardShutdown\n");
                                 this->internal_state = InternalPatternState::HardShutdown;
                                 this->pended_state = false;
                             }
                             break;
 
                         case InternalPatternState::GracefulShutdown:
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : RequestFIN\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (GracefulShutdown) : RequestFIN\n");
                             this->internal_state = InternalPatternState::RequestFIN;
                             this->pended_state = false;
                             break;
 
                         case InternalPatternState::RequestFIN:
                             if (_completed_transfer_bytes != 0) {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooManyBytes)\n");
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : ErrorIOFailed (TooManyBytes)\n");
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooManyBytes;
                             }
 
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : CompletedTransfer\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer [(already_transferred (%u) == this->max_transfer (%u))]\n", static_cast<unsigned long>(already_transferred), static_cast<unsigned long>(this->max_transfer));
                             this->internal_state = InternalPatternState::CompletedTransfer;
                             return ctsIOPatternProtocolError::SuccessfullyCompleted;
 
                         case InternalPatternState::HardShutdown:
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task : CompletedTransfer\n");
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (HardShutdown) : CompletedTransfer\n");
                             this->internal_state = InternalPatternState::CompletedTransfer;
                             return ctsIOPatternProtocolError::SuccessfullyCompleted;
 

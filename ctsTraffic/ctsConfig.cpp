@@ -223,7 +223,7 @@ namespace ctsTraffic {
             const wchar_t* param_end = _input_argument + wcslen(_input_argument);
             const wchar_t* param_delimiter = find(_input_argument, param_end, L':');
             if (!(param_end > param_delimiter + 1)) {
-                throw invalid_argument("Invalid argument");
+                throw invalid_argument(ctString::convert_to_string(_input_argument).c_str());
             }
             // temporarily null-terminate it at the delimiter to do a string compare
             *const_cast<wchar_t*>(param_delimiter) = L'\0';
@@ -280,10 +280,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
+				throw invalid_argument(ctString::convert_to_string(_string).c_str());
             }
             return return_value;
         }
@@ -299,10 +296,7 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
+				throw invalid_argument(ctString::convert_to_string(_string).c_str());
             }
             return return_value;
         }
@@ -323,10 +317,7 @@ namespace ctsTraffic {
         {
             long return_value = as_integral<long>(_string);
             if (return_value > MAXSHORT || return_value < MINSHORT) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
+				throw invalid_argument(ctString::convert_to_string(_string));
             }
             return static_cast<short>(return_value);
         }
@@ -336,11 +327,8 @@ namespace ctsTraffic {
             unsigned long return_value = as_integral<unsigned long>(_string);
             // MAXWORD == MAXUSHORT
             if (return_value > MAXWORD) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
-            }
+				throw invalid_argument(ctString::convert_to_string(_string));
+			}
             return static_cast<unsigned short>(return_value);
         }
         /// LONGLONG and ULONGLONG
@@ -356,11 +344,8 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
-            }
+				throw invalid_argument(ctString::convert_to_string(_string));
+			}
             return return_value;
         }
         template <>
@@ -375,11 +360,8 @@ namespace ctsTraffic {
             }
 
             if (first_unconverted_offset != _string.length()) {
-                throw invalid_argument(
-                    ctString::convert_to_string(
-                        ctString::format_string(
-                            L"Invalid argument: %s", _string.c_str())).c_str());
-            }
+				throw invalid_argument(ctString::convert_to_string(_string));
+			}
             return return_value;
         }
 
@@ -1629,8 +1611,8 @@ namespace ctsTraffic {
                 auto found_interface = find_if(
                     s_NetAdapterAddresses->begin(),
                     s_NetAdapterAddresses->end(),
-                    [&] (const IP_ADAPTER_ADDRESSES& _adapter_address) {
-                    return ctString::iordinal_equals(value, _adapter_address.FriendlyName);
+                    [&value] (const IP_ADAPTER_ADDRESSES& _adapter_address) {
+                        return ctString::iordinal_equals(value, _adapter_address.FriendlyName);
                 });
                 if (found_interface == s_NetAdapterAddresses->end()) {
                     throw ctException(

@@ -84,7 +84,7 @@ namespace ctl {
                 static_cast<double>(*(_begin + 2)));
         }
 
-        auto split_section = [&] (const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
+        auto split_section = [] (const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end) -> std::tuple < BidirectionalIterator, BidirectionalIterator > {
             size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
             // if begin and end are already right next to each other, immediately return the same values
@@ -109,7 +109,7 @@ namespace ctl {
             return std::make_tuple(lhs, rhs);
         };
 
-        auto find_median = [&] (const std::tuple<BidirectionalIterator, BidirectionalIterator>& _split) -> double {
+        auto find_median = [] (const std::tuple<BidirectionalIterator, BidirectionalIterator>& _split) -> double {
             const BidirectionalIterator& lhs = std::get<0>(_split);
             const BidirectionalIterator& rhs = std::get<1>(_split);
 
@@ -127,8 +127,8 @@ namespace ctl {
                 } else {
                     median_value = static_cast<double>(sum) / 2.0;
                 }
+                break;
             }
-                    break;
 
             case 2: {
                 // two apart: the one in the middle is the median

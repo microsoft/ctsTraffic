@@ -21,6 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketGuard.hpp"
 #include "ctsSocketState.h"
 #include "ctsIOPattern.h"
+#include "ctsWinsockLayer.h"
 
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -61,6 +62,11 @@ namespace ctsTraffic {
     {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
+
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET)
+	{
+		return wsIOResult();
+	}
 
     namespace ctsConfig {
         ctsConfigSettings* Settings;

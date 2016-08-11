@@ -46,7 +46,7 @@ namespace ctsTraffic {
         //
         // c'tor requiring a parent ctsSocket reference
         //
-        explicit ctsSocket(const std::weak_ptr<ctsSocketState>& _parent);
+        explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent);
 
         _No_competing_thread_
         ~ctsSocket() NOEXCEPT;
@@ -72,7 +72,7 @@ namespace ctsTraffic {
         //
         // It's made available for injectors who may want to close the SOCKET at random times
         // 
-        void close_socket() NOEXCEPT;
+        int close_socket(int _error_code = NO_ERROR) NOEXCEPT;
 
         //
         // Provides access to the IOCP ThreadPool associated with the SOCKET

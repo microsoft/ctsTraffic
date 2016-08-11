@@ -32,11 +32,13 @@ namespace ctsTraffic {
     /// - can't include ctsSocket.h in this header to avoid circular declarations
     class ctsSocket;
 
-    class ctsSocketBroker {
+    class ctsSocketBroker : public std::enable_shared_from_this<ctsSocketBroker> {
     public:
         /// only the c'tor can throw
         ctsSocketBroker();
         ~ctsSocketBroker() NOEXCEPT;
+
+		void start();
 
         /// methods that the child ctsSocketState objects will invoke when they change state
         void initiating_io() NOEXCEPT;

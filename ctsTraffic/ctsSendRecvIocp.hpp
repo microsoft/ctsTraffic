@@ -140,14 +140,8 @@ namespace ctsTraffic {
             return_status.io_started = false;
 
         } else if (IOTaskAction::HardShutdown == next_io.ioAction) {
-            ::linger linger_option;
-            linger_option.l_onoff = 1;
-            linger_option.l_linger = 0;
-            if (0 != ::setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option)))) {
-                return_status.io_errorcode = ::WSAGetLastError();
-            }
-            _shared_socket->close_socket();
-
+            // pass through -1 to force an RST with the closesocket
+            return_status.io_errorcode = _shared_socket->close_socket(-1);
             return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
             return_status.io_started = false;
 

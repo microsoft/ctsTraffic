@@ -86,12 +86,13 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         // set the start timer as close as possible to the start of the engine
         ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
-        ctsSocketBroker broker;
-        g_SocketBroker = &broker;
+        std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
+        g_SocketBroker = broker.get();
+		broker->start();
 
         ctThreadpoolTimer status_timer;
         status_timer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::Settings->StatusUpdateFrequencyMilliseconds);
-        if (!broker.wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE)) {
+        if (!broker->wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE)) {
             ctsConfig::PrintSummary(L"\n ** Timelimit of %lu reached **\n", static_cast<unsigned long>(ctsConfig::Settings->TimeLimit));
         }
     }

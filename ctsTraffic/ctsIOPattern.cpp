@@ -448,8 +448,12 @@ namespace ctsTraffic {
                 // if the IO task failed, the entire IO pattern is now failed
                 // - unless this is an extra recv that was canceled once we completed the transfer
                 //
-                if (!(IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed())) {
-                    if (this->update_last_error(_status_code) != ctsStatusIORunning) {
+                if (IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed()) {
+                    ctsConfig::PrintDebug(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", _status_code);
+                } else {
+                    auto current_status = this->update_last_error(_status_code);
+                    if (current_status != ctsStatusIORunning) {
+                        ctsConfig::PrintDebug(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", _status_code, current_status);
                         verify_io = false;
                     }
                 }

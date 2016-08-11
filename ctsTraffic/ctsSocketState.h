@@ -21,24 +21,24 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 
 namespace ctsTraffic {
-    ///
-    /// forward declare ctsSocketBroker
-    /// - can't include ctsSocketBroker.h in this header to avoid circular declarations
-    ///
+    //
+    // forward declare ctsSocketBroker
+    // - can't include ctsSocketBroker.h in this header to avoid circular declarations
+    //
     class ctsSocketBroker;
 
-    ///
-    /// forward declare ctsSocket
-    /// - can't include ctsSocket.h in this header to avoid circular declarations
-    ///
+    //
+    // forward declare ctsSocket
+    // - can't include ctsSocket.h in this header to avoid circular declarations
+    //
     class ctsSocket;
 
-    ///
-    /// ctsSocketState class
-    ///
-    /// Encapsulates a ctsSocket instance
-    /// - tracking socket state and corresponding statistics
-    ///
+    //
+    // ctsSocketState class
+    //
+    // Encapsulates a ctsSocket instance
+    // - tracking socket state and corresponding statistics
+    //
     class ctsSocketState : public std::enable_shared_from_this<ctsSocketState> {
     public:
         enum class InternalState
@@ -53,62 +53,52 @@ namespace ctsTraffic {
             Closed
         };
 
-        ///
-        /// c'tor requiring a parent ctsSocketBroker
-        ///
-        explicit
-        ctsSocketState(_In_ ctsSocketBroker* _broker);
+        //
+        // c'tor requiring a parent ctsSocketBroker
+        //
+		explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
 
         ~ctsSocketState() NOEXCEPT;
 
-        ///
-        /// explicit method to 'start' the state machine
-        /// - this is required to ensure the object is fully instatiated before
-        ///   it is passed to the threadpool thread
-        ///
+        //
+        // explicit method to 'start' the state machine
+        // - this is required to ensure the object is fully instatiated before
+        //   it is passed to the threadpool thread
+        //
         void start() NOEXCEPT;
 
-        ///
-        /// Completes the current socket state
-        ///
+        //
+        // Completes the current socket state
+        //
         void complete_state(DWORD) NOEXCEPT;
 
-        ///
-        /// Accessor to current state information
-        ///
+        //
+        // Accessor to current state information
+        //
         InternalState current_state() const NOEXCEPT;
 
-        ///
-        /// block default c'tor, copy c'tor and assignment
-        ///
-        ctsSocketState() = delete;
+        //
+        // copy c'tor and assignment
+        //
         ctsSocketState(const ctsSocketState& _copy) = delete;
         ctsSocketState& operator=(const ctsSocketState& _copy) = delete;
 
     private:
-        ///
-        /// ctsSocketBroker is given friend-access to call shutdown
-        /// - disassociating the parent from the child
-        ///
-        friend class ctsSocketBroker;
-        void detach() NOEXCEPT;
+        //
+        // private members of ctsSocketState
+        // - CS's are mutable to allow taking a CS in a const function
+        //
+        PTP_WORK                       thread_pool_worker;
+        mutable CRITICAL_SECTION       state_guard;
+        std::weak_ptr<ctsSocketBroker> broker;
+        std::shared_ptr<ctsSocket>     socket;
+        unsigned long                  last_error;
+        InternalState                  state;
+        bool                           initiated_io;
 
-        ///
-        /// private members of ctsSocketState
-        /// - CS's are mutable to allow taking a CS in a const function
-        ///
-        PTP_WORK                   thread_pool_worker;
-        mutable CRITICAL_SECTION   state_guard;
-        mutable CRITICAL_SECTION   broker_guard;
-        ctsSocketBroker*           broker;
-        std::shared_ptr<ctsSocket> socket;
-        unsigned long              last_error;
-        InternalState              state;
-        bool                       initiated_io;
-
-        ///
-        /// static threadpool callback function
-        ///
+        //
+        // static threadpool callback function
+        //
         static
         VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) NOEXCEPT;
     };

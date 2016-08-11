@@ -21,6 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
+#include "ctsWinsockLayer.h"
 
 
 namespace ctsTraffic {
@@ -29,7 +30,7 @@ namespace ctsTraffic {
     using namespace std;
 
     // default values are assigned in the class declaration
-    ctsSocket::ctsSocket(const weak_ptr<ctsSocketState>& _parent) : parent(_parent)
+    ctsSocket::ctsSocket(weak_ptr<ctsSocketState> _parent) : parent(move(_parent))
     {
         /// using a common spin count from base OS usage & crt usage
         if (!::InitializeCriticalSectionEx(&this->socket_cs, 4000, 0)) {
@@ -77,13 +78,21 @@ namespace ctsTraffic {
         this->socket = _socket;
     }
 
-    void ctsSocket::close_socket() NOEXCEPT
+    int ctsSocket::close_socket(int _error_code) NOEXCEPT
     {
+        int error = 0;
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
         if (this->socket != INVALID_SOCKET) {
+            if (_error_code != 0) {
+                // always try to RST if we are closing due to an error
+                // to best-effort notify the opposite endpoint
+                wsIOResult result = ctsSetLingertoRSTSocket(this->socket);
+                error = result.error_code;
+            }
             ::closesocket(this->socket);
             this->socket = INVALID_SOCKET;
         }
+        return error;
     }
 
     const shared_ptr<ctThreadIocp>& ctsSocket::thread_pool()

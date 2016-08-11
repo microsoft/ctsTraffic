@@ -239,9 +239,10 @@ namespace ctsTraffic {
                 auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
-                    return (shared_socket->target_address() == _connected_socket->get_address());
-                });
+                    [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
+                        return (shared_socket->target_address() == _connected_socket->get_address());
+                    }
+                );
 
                 if (found_socket == std::end(ctsMediaStreamServerImpl::connected_sockets)) {
                     ctsConfig::PrintDebug(

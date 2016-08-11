@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 #include <algorithm>
 #include <memory>
+#include <iterator>
 
 // os headers
 #include <Windows.h>
@@ -79,36 +80,7 @@ namespace ctsTraffic {
             throw ctException(::GetLastError(), L"CreateEvent", L"ctsSocketBroker", false);
         }
 
-        // intiate the threadpool timer
-        wakeup_timer->schedule_reoccuring(
-            [this] () {ctsSocketBroker::TimerCallback(this); }, 
-            0LL, 
-            TimerCallbackTimeout);
-
-        ctsConfig::PrintDebug(
-            L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
-            total_connections_remaining, pending_limit);
-
-        // must always guard access to the vector
-        ctAutoReleaseCriticalSection csLock(&cs);
-
-        // only loop to pending_limit
-        while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
-            // for outgoing connections, limit to ConnectionThrottleLimit 
-            // - to prevent killing the box with DPCs with too many concurrent connect attempts
-            // checking first since TimerCallback might have already established connections
-            if (!ctsConfig::Settings->AcceptFunction &&
-                this->pending_sockets >= ctsConfig::Settings->ConnectionThrottleLimit) {
-                break;
-            }
-
-            socket_pool.push_back(make_shared<ctsSocketState>(this));
-            (*this->socket_pool.rbegin())->start();
-            ++this->pending_sockets;
-            --this->total_connections_remaining;
-        }
-
-        // no failures, dismiss the scope guards
+		// no failures, dismiss the scope guards
         deleteCsOnExit.dismiss();
     }
 
@@ -116,11 +88,6 @@ namespace ctsTraffic {
     {
         // first, turn off the timer to stop creating/tearing down the socket pool
         wakeup_timer.reset();
-
-        // disassociate this parent from all children
-        for (auto& socket_state : socket_pool) {
-            socket_state->detach();
-        }
 
         // now delete all children, guaranteeing they stop processing
         // - must do this explicitly before deleting the CS
@@ -131,11 +98,42 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&cs);
     }
 
-    ///
-    /// SocketState is indicating the socket is now 'connected'
-    /// - and will be pumping IO
-    /// Update pending and active counts under guard
-    ///
+	void ctsSocketBroker::start()
+	{
+		ctsConfig::PrintDebug(
+			L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
+			total_connections_remaining, pending_limit);
+
+		// must always guard access to the vector
+		ctAutoReleaseCriticalSection csLock(&cs);
+
+		// only loop to pending_limit
+		while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
+			// for outgoing connections, limit to ConnectionThrottleLimit 
+			// - to prevent killing the box with DPCs with too many concurrent connect attempts
+			// checking first since TimerCallback might have already established connections
+			if (!ctsConfig::Settings->AcceptFunction &&
+				this->pending_sockets >= ctsConfig::Settings->ConnectionThrottleLimit) {
+				break;
+			}
+
+			socket_pool.push_back(make_shared<ctsSocketState>(shared_from_this()));
+			(*this->socket_pool.rbegin())->start();
+			++this->pending_sockets;
+			--this->total_connections_remaining;
+		}
+
+		// intiate the threadpool timer
+		wakeup_timer->schedule_reoccuring(
+			[this]() { ctsSocketBroker::TimerCallback(this); },
+			0LL,
+			TimerCallbackTimeout);
+	}
+    //
+    // SocketState is indicating the socket is now 'connected'
+    // - and will be pumping IO
+    // Update pending and active counts under guard
+    //
     void ctsSocketBroker::initiating_io() NOEXCEPT
     {
         ctAutoReleaseCriticalSection lock_broker(&this->cs);
@@ -148,10 +146,10 @@ namespace ctsTraffic {
         --this->pending_sockets;
         ++this->active_sockets;
     }
-    ///
-    /// SocketState is indicating the socket is now 'closed'
-    /// Update pending or active counts (depending on prior state) under guard
-    ///
+    //
+    // SocketState is indicating the socket is now 'closed'
+    // Update pending or active counts (depending on prior state) under guard
+    //
     void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
     {
         ctAutoReleaseCriticalSection lock_broker(&this->cs);
@@ -177,8 +175,8 @@ namespace ctsTraffic {
 
         bool fReturn = false;
         switch (::WaitForMultipleObjects(2, arWait, FALSE, _milliseconds)) {
-            /// we are done with our sockets, or user hit ctrl'c
-            /// - in either case we need to tell the caller to exit
+            // we are done with our sockets, or user hit ctrl'c
+            // - in either case we need to tell the caller to exit
             case WAIT_OBJECT_0:
             case WAIT_OBJECT_0 + 1:
                 fReturn = true;
@@ -196,60 +194,76 @@ namespace ctsTraffic {
         return fReturn;
     }
 
-    ///
-    /// Timer callback to scavenge any closed sockets
-    /// Then refresh sockets that should be created anew
-    ///
+    //
+    // Timer callback to scavenge any closed sockets
+    // Then refresh sockets that should be created anew
+    //
     void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* _broker) NOEXCEPT
     {
-        ctAutoReleaseCriticalSection lock_broker(&_broker->cs);
-        ///
-        /// Everything must occur under the broker lock
-        /// - touching the socket_pool
-        /// - touching the socket / connection counters
-        ///
-        _broker->socket_pool.erase(
-            remove_if(
-                begin(_broker->socket_pool),
-                end(_broker->socket_pool),
-                [&] (shared_ptr<ctsSocketState>& _socket_state) { return ctsSocketState::InternalState::Closed == _socket_state->current_state(); }),
-            _broker->socket_pool.end());
+        // removed_objects will delete the closed objects outside of the broker lock
+        vector<shared_ptr<ctsSocketState>> removed_objects;
+        {
+            if (!::TryEnterCriticalSection(&_broker->cs)) {
+                return;
+            }
 
-        // refresh our pool of sockets if more sockets should be added
-        try {
-            if (0 == _broker->total_connections_remaining &&
-                0 == _broker->pending_sockets &&
-                0 == _broker->active_sockets) {
-                /// it's time to exit if no more work is to be done
-                ::SetEvent(_broker->done_event.get());
+            // refresh our pool of sockets if more sockets should be added
+            try {
+                //
+                // Everything must occur under the broker lock
+                // - touching the socket_pool
+                // - touching the socket / connection counters
+                //
+				for (auto& socket_pool_entry : _broker->socket_pool) {
+					if (ctsSocketState::InternalState::Closed == socket_pool_entry->current_state()) {
+						removed_objects.push_back(socket_pool_entry);
+						socket_pool_entry.reset();
+					}
+				}
 
-            } else {
-                // don't spin up more if the user asked to shutdown
-                if (WAIT_OBJECT_0 != ::WaitForSingleObject(_broker->done_event.get(), 0)) {
-                    // catch up to the expected # of pended connections
-                    while (_broker->pending_sockets < _broker->pending_limit && _broker->total_connections_remaining > 0) {
-                        // not throttling the server accepting sockets based off total # of connections (pending + active)
-                        // - only throttling total connections for outgoing connections
-                        if (!ctsConfig::Settings->AcceptFunction) {
-                            if ((_broker->pending_sockets + _broker->active_sockets) >= ctsConfig::Settings->ConnectionLimit) {
-                                break;
+				_broker->socket_pool.erase(
+					remove(
+						begin(_broker->socket_pool),
+						end(_broker->socket_pool),
+						nullptr),
+					end(_broker->socket_pool));
+
+                if (0 == _broker->total_connections_remaining &&
+                    0 == _broker->pending_sockets &&
+                    0 == _broker->active_sockets) {
+                    // it's time to exit if no more work is to be done
+                    ::SetEvent(_broker->done_event.get());
+
+                } else {
+                    // don't spin up more if the user asked to shutdown
+                    if (WAIT_OBJECT_0 != ::WaitForSingleObject(_broker->done_event.get(), 0)) {
+                        // catch up to the expected # of pended connections
+                        while (_broker->pending_sockets < _broker->pending_limit && _broker->total_connections_remaining > 0) {
+                            // not throttling the server accepting sockets based off total # of connections (pending + active)
+                            // - only throttling total connections for outgoing connections
+                            if (!ctsConfig::Settings->AcceptFunction) {
+                                if ((_broker->pending_sockets + _broker->active_sockets) >= ctsConfig::Settings->ConnectionLimit) {
+                                    break;
+                                }
+                                // throttle pending connection attempts as specified
+                                if (_broker->pending_sockets >= ctsConfig::Settings->ConnectionThrottleLimit) {
+                                    break;
+                                }
                             }
-                            // throttle pending connection attempts as specified
-                            if (_broker->pending_sockets >= ctsConfig::Settings->ConnectionThrottleLimit) {
-                                break;
-                            }
+
+                            _broker->socket_pool.push_back(make_shared<ctsSocketState>(_broker->shared_from_this()));
+                            (*_broker->socket_pool.rbegin())->start();
+                            ++_broker->pending_sockets;
+                            --_broker->total_connections_remaining;
                         }
-
-                        _broker->socket_pool.push_back(make_shared<ctsSocketState>(_broker));
-                        (*_broker->socket_pool.rbegin())->start();
-                        ++_broker->pending_sockets;
-                        --_broker->total_connections_remaining;
                     }
                 }
             }
-        }
-        catch (const exception&) {
-            // if failed to create a socket will eventually reschedule
+            catch (const exception&) {
+                // if failed to create a socket will eventually reschedule
+            }
+
+            ::LeaveCriticalSection(&_broker->cs);
         }
     }
 

@@ -195,14 +195,14 @@ namespace ctsTraffic {
     };
 
     // ctsSocketState fakes
-    ctsSocketState::ctsSocketState(ctsSocketBroker*)
+    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker>)
     {
     }
     ctsSocketState::~ctsSocketState()
     {
     }
     // ctsSocket fakes
-    ctsSocket::ctsSocket(const std::weak_ptr<ctsSocketState>&)
+    ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>)
     {
         this->pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
     }
@@ -277,7 +277,7 @@ namespace ctsUnitTest {
             std::vector<ctl::ctSockaddr> test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             std::shared_ptr<ctsSocket> test_socket(std::make_shared<ctsSocket>(socket_state));
             test_socket->set_socket(INVALID_SOCKET);
 
@@ -325,7 +325,7 @@ namespace ctsUnitTest {
             std::vector<ctl::ctSockaddr> test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             std::shared_ptr<ctsSocket> test_socket(std::make_shared<ctsSocket>(socket_state));
             test_socket->set_socket(INVALID_SOCKET);
 
@@ -373,7 +373,7 @@ namespace ctsUnitTest {
             std::vector<ctl::ctSockaddr> test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             std::shared_ptr<ctsSocket> test_socket(std::make_shared<ctsSocket>(socket_state));
             test_socket->set_socket(INVALID_SOCKET);
 
@@ -423,7 +423,7 @@ namespace ctsUnitTest {
             std::vector<ctl::ctSockaddr> test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             std::shared_ptr<ctsSocket> test_socket(std::make_shared<ctsSocket>(socket_state));
             test_socket->set_socket(INVALID_SOCKET);
 
@@ -472,7 +472,7 @@ namespace ctsUnitTest {
             std::vector<ctl::ctSockaddr> test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(nullptr));
+            std::shared_ptr<ctsSocketState> socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             std::shared_ptr<ctsSocket> test_socket(std::make_shared<ctsSocket>(socket_state));
             test_socket->set_socket(INVALID_SOCKET);
 
