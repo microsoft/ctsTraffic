@@ -2357,11 +2357,14 @@ namespace ctsTraffic {
                 throw invalid_argument(ctString::convert_to_string(error_string));
             }
 
-            auto timer = ::timeBeginPeriod(1);
-            if (timer != TIMERR_NOERROR) {
-                throw ctl::ctException(timer, L"timeBeginPeriod", false);
+            if (ProtocolType::UDP == Settings->Protocol) {
+                auto timer = ::timeBeginPeriod(1);
+                if (timer != TIMERR_NOERROR) {
+                    throw ctl::ctException(timer, L"timeBeginPeriod", false);
+                }
+                ++s_TimePeriodRefCount;
             }
-            ++s_TimePeriodRefCount;
+
             return true;
         }
 
