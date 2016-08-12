@@ -31,6 +31,9 @@
     <Filter Include="FutureIOPattern">
       <UniqueIdentifier>{3fea6222-7f01-4773-b6f4-d571615fba5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="TestScripts">
+      <UniqueIdentifier>{7a26a09e-bbb3-4862-8220-a6a28a2e979d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp">
@@ -250,5 +253,15 @@
     <ClInclude Include="..\SdkChanges\WbemDisp.h">
       <Filter>SdkChanges</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd">
+      <Filter>TestScripts</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\TestScripts\streaming.txt">
+      <Filter>TestScripts</Filter>
+    </Text>
   </ItemGroup>
 </Project>

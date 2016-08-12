@@ -126,11 +126,11 @@ if '%Role%' == 'server' (
     cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'pull' (
-    Set EXPECTED_ERROR=1
+    Set EXPECTED_ERROR=2
     cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 
   ) else if /i '%1' == 'pushpull' (
-    Set EXPECTED_ERROR=1
+    Set EXPECTED_ERROR=2
     cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'duplex' (

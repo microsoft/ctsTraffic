@@ -303,6 +303,12 @@
     <ClInclude Include="ctsWSASocket.hpp" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\TestScripts\streaming.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
