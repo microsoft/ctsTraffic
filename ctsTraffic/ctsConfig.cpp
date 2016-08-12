@@ -204,7 +204,7 @@ namespace ctsTraffic {
             catch (const exception& e) {
                 // will assume is not configured if any exception is thrown
                 // - could be the class doesn't exist (Win7)
-                //   or the property doesn't exit (Win8 and 8.1)
+                //   or the property doesn't exist (Win8 and 8.1)
                 PrintExceptionOverride(e);
             }
         }

@@ -183,7 +183,8 @@ namespace ctsTraffic {
     void ctsSocket::process_isb_notification()
     {
         // lock the socket
-        auto socket_lock(ctsGuardSocket(shared_from_this()));
+        auto shared_this = shared_from_this();
+        auto socket_lock(ctsGuardSocket(shared_this));
         SOCKET local_socket = socket_lock.get();
         if (local_socket != INVALID_SOCKET) {
             ULONG isb;
@@ -233,7 +234,8 @@ namespace ctsTraffic {
                 }
             }); // lambda for new_request
 
-            auto socket_lock(ctsGuardSocket(this->shared_from_this()));
+            auto shared_this = this->shared_from_this();
+            auto socket_lock(ctsGuardSocket(shared_this));
             SOCKET local_socket = socket_lock.get();
             if (local_socket != INVALID_SOCKET) {
                 int error = ::idealsendbacklognotify(local_socket, ov, nullptr);
