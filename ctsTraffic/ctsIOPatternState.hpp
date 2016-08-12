@@ -118,14 +118,14 @@ namespace ctsTraffic {
             L"already_transferred: %llu\n"
             L"this->current_transfer: %llu\n"
             L"this->inflight_bytes: %llu\n",
-            static_cast<ULONGLONG>(already_transferred),
-            static_cast<ULONGLONG>(this->confirmed_bytes),
-            static_cast<ULONGLONG>(this->inflight_bytes));
+            static_cast<unsigned long long>(already_transferred),
+            static_cast<unsigned long long>(this->confirmed_bytes),
+            static_cast<unsigned long long>(this->inflight_bytes));
 
         ctl::ctFatalCondition(
             (already_transferred > this->max_transfer),
             L"ctsIOPatternState internal error: bytes already transferred (%llu) is >= the total we're expected to transfer (%llu)\n",
-            static_cast<ULONGLONG>(already_transferred), static_cast<ULONGLONG>(this->max_transfer));
+            static_cast<unsigned long long>(already_transferred), static_cast<unsigned long long>(this->max_transfer));
 
         return this->max_transfer - already_transferred;
     }
@@ -217,7 +217,7 @@ namespace ctsTraffic {
             default:
                 ctl::ctAlwaysFatalCondition(
                     L"ctsIOPatternState::get_next_task was called in an invalid state (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                    static_cast<unsigned>(this->internal_state), this);
+                    static_cast<unsigned long>(this->internal_state), this);
                 return ctsIOPatternProtocolTask::NoIo;
         }
     }
@@ -372,7 +372,7 @@ namespace ctsTraffic {
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooManyBytes;
                             } else {
-                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer [(already_transferred (%u) == this->max_transfer (%u))]\n", static_cast<unsigned long>(already_transferred), static_cast<unsigned long>(this->max_transfer));
+                                ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer\n");
                                 this->internal_state = InternalPatternState::CompletedTransfer;
                                 return ctsIOPatternProtocolError::SuccessfullyCompleted;
                             }
@@ -380,7 +380,7 @@ namespace ctsTraffic {
                         default:
                             ctl::ctAlwaysFatalCondition(
                                 L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                                static_cast<unsigned>(this->internal_state), this);
+                                static_cast<unsigned long>(this->internal_state), this);
                     }
                 } else {
                     // clients will recv the server status, then process their shutdown sequence
@@ -425,7 +425,7 @@ namespace ctsTraffic {
                                 return ctsIOPatternProtocolError::TooManyBytes;
                             }
 
-                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer [(already_transferred (%u) == this->max_transfer (%u))]\n", static_cast<unsigned long>(already_transferred), static_cast<unsigned long>(this->max_transfer));
+                            ctsConfig::PrintDebug(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer\n");
                             this->internal_state = InternalPatternState::CompletedTransfer;
                             return ctsIOPatternProtocolError::SuccessfullyCompleted;
 
@@ -437,7 +437,7 @@ namespace ctsTraffic {
                         default:
                             ctl::ctAlwaysFatalCondition(
                                 L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
-                                static_cast<unsigned>(this->internal_state), this, &_completed_task);
+                                static_cast<unsigned long>(this->internal_state), this, &_completed_task);
                     }
                 }
 

@@ -30,6 +30,7 @@ if /i '%2' == 'debug' (
 )
 
 set Role=%1
+set VERY_LARGE_TRANSFER=10000000000
 set NORMAL_TRANSFER=1000000
 set SMALLER_TRANSFER=999999
 set VERY_SMALL_TRANSFER=9999
@@ -104,6 +105,48 @@ if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
+)
+
+IF ERRORLEVEL 1 (
+  echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
+  PAUSE
+) else (
+  echo PASSED
+)
+
+
+REM **********************************************************************************************
+REM Test : verify one extremely long transfer verifying data
+REM **********************************************************************************************
+Set ERRORLEVEL=
+if '%Role%' == 'server' (
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
+)
+if '%Role%' == 'client' (
+   REM delay the client
+   ping localhost -n 5 > nul
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
+)
+
+IF ERRORLEVEL 1 (
+  echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
+  PAUSE
+) else (
+  echo PASSED
+)
+
+
+REM **********************************************************************************************
+REM Test : verify one extremely long transfer not verifying data
+REM **********************************************************************************************
+Set ERRORLEVEL=
+if '%Role%' == 'server' (
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
+)
+if '%Role%' == 'client' (
+   REM delay the client
+   ping localhost -n 5 > nul
+  cdb -gG -snul -sins -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
