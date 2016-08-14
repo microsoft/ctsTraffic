@@ -181,7 +181,7 @@ namespace ctsTraffic {
             case InternalState::Creating: {
                 unsigned long error = 0;
                 try {
-                    context->socket = make_shared<ctsSocket>(weak_ptr<ctsSocketState>(context->shared_from_this()));
+                    context->socket = make_shared<ctsSocket>(context->shared_from_this());
                 }
                 catch (const ctException& e) {
                     error = e.why() == 0 ? ERROR_OUTOFMEMORY : e.why();
@@ -198,7 +198,7 @@ namespace ctsTraffic {
                     context->state = InternalState::Created;
                     ::LeaveCriticalSection(&context->state_guard);
 
-                    ctsConfig::Settings->CreateFunction(weak_ptr<ctsSocket>(context->socket));
+                    ctsConfig::Settings->CreateFunction(context->socket);
                     ctsConfig::PrintDebug(L"\t\tctsSocketState Created\n");
                 }
                 break;
@@ -209,7 +209,7 @@ namespace ctsTraffic {
                 context->state = InternalState::Connected;
                 ::LeaveCriticalSection(&context->state_guard);
 
-                ctsConfig::Settings->ConnectFunction(weak_ptr<ctsSocket>(context->socket));
+                ctsConfig::Settings->ConnectFunction(context->socket);
                 ctsConfig::PrintDebug(L"\t\tctsSocketState Connected\n");
                 break;
             }
@@ -234,7 +234,7 @@ namespace ctsTraffic {
                     context->state = InternalState::InitiatedIO;
                     ::LeaveCriticalSection(&context->state_guard);
 
-                    ctsConfig::Settings->IoFunction(weak_ptr<ctsSocket>(context->socket));
+                    ctsConfig::Settings->IoFunction(context->socket);
                     ctsConfig::PrintDebug(L"\t\tctsSocketState InitiatedIO\n");
                 }
                 break;
@@ -271,7 +271,7 @@ namespace ctsTraffic {
                 context->socket->print_pattern_results(context->last_error);
 
                 if (ctsConfig::Settings->ClosingFunction) {
-                    ctsConfig::Settings->ClosingFunction(weak_ptr<ctsSocket>(context->socket));
+                    ctsConfig::Settings->ClosingFunction(context->socket);
                 }
 
                 // update the state last, since ctsBroker looks for this state value

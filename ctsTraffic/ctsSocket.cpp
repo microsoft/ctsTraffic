@@ -307,10 +307,8 @@ namespace ctsTraffic {
         }
         
         // register a weak pointer after creating a shared_ptr from the 'this' ptry
-        weak_ptr<ctsSocket> weak_reference(this->shared_from_this());
-
         this->tp_timer->schedule_singleton(
-            [_func = std::move(_func), weak_reference, _task] () { _func(weak_reference, _task); },
+            [_func = std::move(_func), weak_reference = this->shared_from_this(), _task] () { _func(weak_reference, _task); },
             _task.time_offset_milliseconds);
     }
 
