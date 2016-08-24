@@ -177,7 +177,7 @@ namespace ctsTraffic {
                 default:
                     ctl::ctAlwaysFatalCondition(
                         L"Unexpected task action returned from initiate_io - %u (dt %p ctsTraffic::ctsIOTask)",
-                        static_cast<unsigned int>(current_task.ioAction),
+                        static_cast<unsigned long>(current_task.ioAction),
                         &current_task);
             }
         }

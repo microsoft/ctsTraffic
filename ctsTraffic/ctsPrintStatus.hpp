@@ -372,10 +372,11 @@ namespace ctsTraffic {
             return
                 L"Legend:\n"
                 L"* TimeSlice - (seconds) cumulative runtime\n"
+                L"* Streams - count of current number of UDP streams\n"
                 L"* Bits/Sec - bits streamed within the TimeSlice period\n"
                 L"* Completed Frames - count of frames successfully processed within the TimeSlice\n"
+                L"* Dropped Frames - count of frames that were never seen within the TimeSlice\n"
                 L"* Repeated Frames - count of frames received multiple times within the TimeSlice\n"
-                L"* Attempted Retries - count of retries for missing frames within the TimeSlice\n"
                 L"* Stream Errors - count of invalid frames or buffers within the TimeSlice\n"
                 L"\n";
         }
@@ -384,13 +385,13 @@ namespace ctsTraffic {
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return
-                    L"TimeSlice,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors\n";
+                    L"TimeSlice,Streams,Bits/Sec,Completed,Dropped,Repeated,Errors\n";
 
             } else {
                 /// Formatted to fit on an 80-column command shell
                 return
-                    L" TimeSlice      Bits/Sec   Completed   Dropped   Repeated     Retries    Errors \n";
-                ///   00000000.0..000000000000...000000000...0000000....0000000.....0000000...0000000        
+                    L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \n";
+                ///   00000000.0...000000000000...00000000...000000000...0000000...00000000...0000000.        
                 ///   1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
                 ///           10        20        30        40        50        60        70        80
             }
@@ -399,6 +400,7 @@ namespace ctsTraffic {
         PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
+            ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
 
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 unsigned long characters_written = 0;
@@ -411,10 +413,10 @@ namespace ctsTraffic {
                     BitsPerSecondLength,
                     (time_elapsed > 0LL) ? static_cast<long long>(udp_data.bits_received.get() * 1000LL / time_elapsed) : 0LL);
 
+                characters_written += this->append_csvoutput(characters_written, CurrentStreamsLength, connection_data.active_connection_count.get());
                 characters_written += this->append_csvoutput(characters_written, CompetedFramesLength, udp_data.successful_frames.get());
                 characters_written += this->append_csvoutput(characters_written, DroppedFramesLength, udp_data.dropped_frames.get());
-                characters_written += this->append_csvoutput(characters_written, RepeatFramesLength, udp_data.duplicate_frames.get());
-                characters_written += this->append_csvoutput(characters_written, RetryAttemptLength, udp_data.retry_attempts.get());
+                characters_written += this->append_csvoutput(characters_written, DuplicatedFramesLength, udp_data.duplicate_frames.get());
                 characters_written += this->append_csvoutput(characters_written, ErrorFramesLength, udp_data.error_frames.get(), false); // no comma at the end
                 this->terminate_string(characters_written);
 
@@ -428,10 +430,10 @@ namespace ctsTraffic {
                     BitsPerSecondLength,
                     (time_elapsed > 0LL) ? static_cast<long long>(udp_data.bits_received.get() * 1000LL / time_elapsed) : 0LL);
 
+                this->right_justify_output(CurrentStreamsOffset, CurrentStreamsLength, connection_data.active_connection_count.get());
                 this->right_justify_output(CompetedFramesOffset, CompetedFramesLength, udp_data.successful_frames.get());
                 this->right_justify_output(DroppedFramesOffset, DroppedFramesLength, udp_data.dropped_frames.get());
-                this->right_justify_output(RepeatFramesOffset, RepeatFramesLength, udp_data.duplicate_frames.get());
-                this->right_justify_output(RetryAttemptOffset, RetryAttemptLength, udp_data.retry_attempts.get());
+                this->right_justify_output(DuplicatedFramesOffset, DuplicatedFramesLength, udp_data.duplicate_frames.get());
                 this->right_justify_output(ErrorFramesOffset, ErrorFramesLength, udp_data.error_frames.get());
                 this->terminate_string(ErrorFramesOffset);
             }
@@ -444,20 +446,20 @@ namespace ctsTraffic {
         static const unsigned long TimeSliceOffset = 10;
         static const unsigned long TimeSliceLength = 10;
 
-        static const unsigned long BitsPerSecondOffset = 24;
+        static const unsigned long BitsPerSecondOffset = 25;
         static const unsigned long BitsPerSecondLength = 12;
 
-        static const unsigned long CompetedFramesOffset = 36;
+        static const unsigned long CurrentStreamsOffset = 36;
+        static const unsigned long CurrentStreamsLength = 8;
+
+        static const unsigned long CompetedFramesOffset = 48;
         static const unsigned long CompetedFramesLength = 9;
 
-        static const unsigned long DroppedFramesOffset = 46;
+        static const unsigned long DroppedFramesOffset = 58;
         static const unsigned long DroppedFramesLength = 7;
 
-        static const unsigned long RepeatFramesOffset = 57;
-        static const unsigned long RepeatFramesLength = 7;
-
-        static const unsigned long RetryAttemptOffset = 69;
-        static const unsigned long RetryAttemptLength = 7;
+        static const unsigned long DuplicatedFramesOffset = 69;
+        static const unsigned long DuplicatedFramesLength = 7;
 
         static const unsigned long ErrorFramesOffset = 79;
         static const unsigned long ErrorFramesLength = 7;

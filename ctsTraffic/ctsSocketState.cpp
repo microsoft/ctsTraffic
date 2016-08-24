@@ -120,13 +120,22 @@ namespace ctsTraffic {
                     this->state = InternalState::Closing;
                     break;
 
+                case InternalState::Closing:
+                case InternalState::Closed:
+                    // these 2 states should generally not be "completed" by the functor that was invoked
+                    // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
+                    // deliberately not changing any internal values these since the socket is already being close
+                    ctsConfig::PrintDebug(
+                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n", 
+                        static_cast<unsigned long>(this->state));
+                    break;
+
                 default:
                     //    
                     // these are transitory states - complete() should never see these
                     // case Creating:
                     // case Connecting:
                     // case InitiatingIO:
-                    // case Closed:
                     //
                     ctAlwaysFatalCondition(
                         L"ctsSocketState::complete_state - invalid internal state [%d]",

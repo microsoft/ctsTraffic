@@ -2429,7 +2429,7 @@ namespace ctsTraffic {
                 }
                 if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
                     if (ProtocolType::UDP == Settings->Protocol) {
-                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result,ConnectionId\n");
+                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId\n");
 
                     } else { // TCP
                         s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\n");
@@ -2928,12 +2928,12 @@ namespace ctsTraffic {
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Retries [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
 
-            // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Retries,Errors,Result,ConnectionId"
-            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%llu,%s,%S\n";
+            // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
+            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%s,%S\n";
 
             float current_time = ctsConfig::GetStatusTimeStamp();
             long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
@@ -2966,7 +2966,6 @@ namespace ctsTraffic {
                         _stats.successful_frames.get(),
                         _stats.dropped_frames.get(),
                         _stats.duplicate_frames.get(),
-                        _stats.retry_attempts.get(),
                         _stats.error_frames.get(),
                         (ErrorType::ProtocolError == error_type) ?
                             ctsIOPattern::BuildProtocolErrorString(_error) :
@@ -2987,7 +2986,6 @@ namespace ctsTraffic {
                             _stats.successful_frames.get(),
                             _stats.dropped_frames.get(),
                             _stats.duplicate_frames.get(),
-                            _stats.retry_attempts.get(),
                             _stats.error_frames.get());
                     } else {
                         text_string = ctString::format_string(
@@ -3003,7 +3001,6 @@ namespace ctsTraffic {
                             _stats.successful_frames.get(),
                             _stats.dropped_frames.get(),
                             _stats.duplicate_frames.get(),
-                            _stats.retry_attempts.get(),
                             _stats.error_frames.get());
                     }
                 }

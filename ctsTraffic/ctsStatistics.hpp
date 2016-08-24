@@ -243,7 +243,6 @@ namespace ctsTraffic
         ctStatsTracking end_time;
         ctStatsTracking bits_received;
         ctStatsTracking successful_frames;
-        ctStatsTracking retry_attempts;
         ctStatsTracking dropped_frames;
         ctStatsTracking duplicate_frames;
         ctStatsTracking error_frames;
@@ -255,7 +254,6 @@ namespace ctsTraffic
             end_time(0LL),
             bits_received(0LL),
             successful_frames(0LL),
-            retry_attempts(0LL),
             dropped_frames(0LL),
             duplicate_frames(0LL),
             error_frames(0LL)
@@ -270,7 +268,6 @@ namespace ctsTraffic
             end_time(_in.end_time),
             bits_received(_in.bits_received),
             successful_frames(_in.successful_frames),
-            retry_attempts(_in.retry_attempts),
             dropped_frames(_in.dropped_frames),
             duplicate_frames(_in.duplicate_frames),
             error_frames(_in.error_frames)
@@ -301,7 +298,6 @@ namespace ctsTraffic
             if (_clear_settings) {
                 return_stats.bits_received.set(this->bits_received.snap_value_difference());
                 return_stats.successful_frames.set(this->successful_frames.snap_value_difference());
-                return_stats.retry_attempts.set(this->retry_attempts.snap_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.snap_value_difference());
                 return_stats.duplicate_frames.set(this->duplicate_frames.snap_value_difference());
                 return_stats.error_frames.set(this->duplicate_frames.snap_value_difference());
@@ -309,7 +305,6 @@ namespace ctsTraffic
             } else {
                 return_stats.bits_received.set(this->bits_received.read_value_difference());
                 return_stats.successful_frames.set(this->successful_frames.read_value_difference());
-                return_stats.retry_attempts.set(this->retry_attempts.read_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.read_value_difference());
                 return_stats.duplicate_frames.set(this->duplicate_frames.read_value_difference());
                 return_stats.error_frames.set(this->duplicate_frames.read_value_difference());

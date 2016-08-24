@@ -392,11 +392,6 @@ namespace ctsTraffic {
     _Requires_lock_held_(cs)
     void ctsIOPatternMediaStreamClient::render_frame() NOEXCEPT
     {
-        if (this->head_entry->retried) {
-            ctsConfig::Settings->UdpStatusDetails.retry_attempts.increment();
-            this->stats.retry_attempts.increment();
-        }
-
         if (this->head_entry->received == this->frame_size_bytes) {
             ctsConfig::Settings->UdpStatusDetails.successful_frames.increment();
             this->stats.successful_frames.increment();
@@ -426,7 +421,6 @@ namespace ctsTraffic {
         // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)
         this->head_entry->sequence_number = this->head_entry->sequence_number + this->frame_entries.size();
         this->head_entry->received = 0;
-        this->head_entry->retried = false;
 
         // move the head entry to the next sequence number
         ++this->head_entry;
@@ -491,6 +485,11 @@ namespace ctsTraffic {
                 ctsConfig::PrintErrorInfo(
                     L"[%.3f] ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server\n",
                     ctsConfig::GetStatusTimeStamp());
+
+                // indicate all frames were dropped
+                ctsConfig::Settings->UdpStatusDetails.dropped_frames.add(this_ptr->final_frame);
+                this_ptr->stats.dropped_frames.add(this_ptr->final_frame);
+
                 this_ptr->finished_stream = true;
                 ctsIOTask abort_task;
                 abort_task.ioAction = IOTaskAction::FatalAbort;

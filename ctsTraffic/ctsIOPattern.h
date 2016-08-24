@@ -601,7 +601,6 @@ namespace ctsTraffic {
             long long receiver_qpc = 0LL;
             long long receiver_qpf = 0LL;
             unsigned long received = 0UL;
-            bool retried = false;
         };
 
         // private member variables
