@@ -233,7 +233,7 @@ namespace ctl {
     inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) NOEXCEPT
     {
         ::CopyMemory(&saddr, &inAddr.saddr, SADDR_SIZE);
-        ::ZeroMemory(&inAddr, SADDR_SIZE);
+        ::ZeroMemory(&inAddr.saddr, SADDR_SIZE);
         return *this;
     }
 

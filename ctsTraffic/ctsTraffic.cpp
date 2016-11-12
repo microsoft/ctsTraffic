@@ -51,29 +51,41 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return gle;
     }
 
+    DWORD err = ERROR_SUCCESS;
     try {
         if (!ctsConfig::Startup(argc, argv)) {
             ctsConfig::Shutdown();
-            return ERROR_INVALID_DATA;
+            err = ERROR_INVALID_DATA;
         }
     }
     catch (const ctsSafeIntException& e) {
         ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %s\n", ctsPrintSafeIntException(e));
-        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
-        return ERROR_INVALID_DATA;
+        err = ERROR_INVALID_DATA;
     }
     catch (const invalid_argument& e) {
         ctsConfig::PrintErrorInfoOverride(L"Invalid argument specified: %S", e.what());
-        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
-        return ERROR_INVALID_DATA;
+        err = ERROR_INVALID_DATA;
     }
     catch (const exception& e) {
         ctsConfig::PrintExceptionOverride(e);
-        ctsConfig::PrintUsage();
         ctsConfig::Shutdown();
-        return ERROR_INVALID_DATA;
+        err = ERROR_INVALID_DATA;
+    }
+
+    if (err == ERROR_INVALID_DATA) {
+        wprintf(
+            L"\n\n"
+            L"For more information on command line options, specify -Help\n"
+            L"ctsTraffic.exe -Help:[tcp] [udp] [logging] [advanced]\n"
+            L"\t- <default> == prints this usage statement\n"
+            L"\t- tcp : prints usage for TCP-specific options\n"
+            L"\t- udp : prints usage for UDP-specific options\n"
+            L"\t- logging : prints usage for logging options\n"
+            L"\t- advanced : prints the usage for advanced and experimental options\n"
+            L"\n\n");
+        return err;
     }
 
     try {

@@ -955,16 +955,16 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
-                        Settings->TargetAddresses.end()
+                            [] (const ctSockaddr& addr) { return addr.family() == AF_INET; }),
+                        end(Settings->TargetAddresses)
                     );
                 } else if (0 == target_v4) {
                     Settings->BindAddresses.erase(
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET; }),
-                        Settings->BindAddresses.end()
+                            [] (const ctSockaddr& addr) { return addr.family() == AF_INET; }),
+                        end(Settings->BindAddresses)
                     );
                 }
 
@@ -973,23 +973,23 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
-                        Settings->TargetAddresses.end()
+                            [] (const ctSockaddr& addr) { return addr.family() == AF_INET6; }),
+                        end(Settings->TargetAddresses)
                     );
                 } else if (0 == target_v6) {
                     Settings->BindAddresses.erase(
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [] (ctSockaddr& addr) -> bool { return addr.family() == AF_INET6; }),
-                        Settings->BindAddresses.end()
+                            [] (const ctSockaddr& addr) { return addr.family() == AF_INET6; }),
+                        end(Settings->BindAddresses)
                     );
                 }
                 //
                 // now if either are of size zero, the user specified addresses which didn't align
                 //
                 if (Settings->BindAddresses.empty() || Settings->TargetAddresses.empty()) {
-                    throw exception("Invalid input: bind addresses and target addresses must match families");
+                    throw invalid_argument("-bind addresses and target addresses must match families");
                 }
             }
         }
@@ -1777,8 +1777,7 @@ namespace ctsTraffic {
                                  L"\n\n"
                                  L"For issues or questions, please contact 'ctsSupport'\n"
                                  L"\n\n"
-                                 L"For details on TCP, UDP, or Logging options, specify the applicable Help option:\n"
-                                 L"-Help:[tcp] [udp] [logging] [advanced]\n"
+                                 L"ctsTraffic -Help:[tcp] [udp] [logging] [advanced]\n"
                                  L"\t- <default> == prints this usage statement\n"
                                  L"\t- tcp : prints usage for TCP-specific options\n"
                                  L"\t- udp : prints usage for UDP-specific options\n"
