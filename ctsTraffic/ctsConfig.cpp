@@ -1535,15 +1535,15 @@ namespace ctsTraffic {
             });
             if (found_arg != end(_args)) {
                 Settings->PrePostSends = as_integral<unsigned long>(ParseArgument(*found_arg, L"-PrePostSends"));
-                if (0 == Settings->PrePostSends) {
-                    throw invalid_argument("-PrePostSends");
-                }
-
                 // always remove the arg from our vector
                 _args.erase(found_arg);
             } else {
-                // 0 PrePostSends == rely on ISB
-                Settings->PrePostSends = (ProtocolType::TCP == Settings->Protocol) ? 0 : 1;
+                Settings->PrePostSends = 1;
+                if (Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
+                {
+                    // 0 PrePostSends == rely on ISB
+                    Settings->PrePostSends = 0;
+                }
             }
         }
 
@@ -2102,7 +2102,12 @@ namespace ctsTraffic {
                                  L"   - for example, with the default -pattern:pull, the servers will post send calls \n"
                                  L"\t     one after another, immediately posting a send after the prior completed.\n"
                                  L"\t     With -pattern:pull -PrePostSends:2, servers will keep 2 send calls in-flight at all times.\n"
-                                 L"\t- <default> == 2 for TCP (two send request at a time)\n"
+                                 L"   - The value of '0' has special meaning: it indicates for ctsTraffic to keep as many sends\n"
+                                 L"\t     in flight as indicated by the Ideal Send Backlog (ISB) indicated by TCP. In this\n"
+                                 L"\t     configuration, ctsTraffic will maintain send calls until the number of bytes being sent\n"
+                                 L"\t     equals the number of byes indicates by ISB for that TCP connection.\n"
+                                 L"\t- <default> == 1 for non-RIO TCP (Winsock will adjust automatically according to ISB)\n"
+                                 L"\t- <default> == 0 (ISB) for RIO TCP (RIO doesn't user send buffers so callers must track ISB)\n"
                                  L"\t- <default> == 1 for UDP (one send request on each timer tick)\n"
                                  L"-RateLimitPeriod:#####\n"
                                  L"   - the # of milliseconds describing the granularity by which -RateLimit bytes/second is enforced\n"
@@ -2317,17 +2322,6 @@ namespace ctsTraffic {
                 }
             }
 
-            Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
-            set_shutdownOption(args);
-
-            set_prepostrecvs(args);
-            if ((ProtocolType::TCP == Settings->Protocol) && Settings->ShouldVerifyBuffers && (Settings->PrePostRecvs > 1)) {
-                throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
-            }
-            set_prepostsends(args);
-            set_recvbufvalue(args);
-            set_sendbufvalue(args);
-
             ///
             /// finally set the functions to use once all other settings are established
             /// set_ioFunction changes global options for socket operation for instance WSA_FLAG_REGISTERED_IO flag
@@ -2342,6 +2336,17 @@ namespace ctsTraffic {
                 Settings->CreateFunction = Settings->AcceptFunction;
                 Settings->ConnectFunction = nullptr;
             }
+
+            Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
+            set_shutdownOption(args);
+
+            set_prepostrecvs(args);
+            if ((ProtocolType::TCP == Settings->Protocol) && Settings->ShouldVerifyBuffers && (Settings->PrePostRecvs > 1)) {
+                throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
+            }
+            set_prepostsends(args);
+            set_recvbufvalue(args);
+            set_sendbufvalue(args);
 
             if (!args.empty()) {
                 std::wstring error_string;
