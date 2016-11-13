@@ -40,6 +40,8 @@ namespace ctl {
         NetworkOrder
     };
 
+    static const DWORD IP_STRING_MAX_LENGTH = 65;
+
     class ctSockaddr {
     public:
 
@@ -61,12 +63,7 @@ namespace ctl {
             return return_addrs;
         }
 
-        //
-        // constructors can throw if WSAStartup fails under low-resources
-        // - copy c'tor and copy assignment can't fail
-        //
         explicit ctSockaddr(short family = AF_UNSPEC) NOEXCEPT;
-
         explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) NOEXCEPT;
         explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) NOEXCEPT;
         explicit ctSockaddr(_In_ const SOCKADDR_IN*) NOEXCEPT;
@@ -121,12 +118,16 @@ namespace ctl {
         bool isAddressLoopback() const NOEXCEPT;
         bool isAddressAny() const NOEXCEPT;
 
-        std::wstring writeAddress(bool trim_scope = false) const;
-        bool writeAddress(_Out_ std::wstring& wsReturn, bool trim_scope = false) const;
-        bool writeAddress(_Out_ std::string& sReturn, bool trim_scope = false) const;
+        // the odd syntax below is necessary to pass a reference to an array
+        // necessary as the [] operators take precedence over the ref & operator
+        // writeAddress only prints the IP address, not the scope or port
+        std::wstring writeAddress() const;
+        bool writeAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
+        bool writeAddress(CHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
+        // writeCompleteAddress prints the IP address, scope, and port
         std::wstring writeCompleteAddress(bool trim_scope = false) const;
-        bool writeCompleteAddress(_Out_ std::wstring& wsReturn, bool trim_scope = false) const;
-        bool writeCompleteAddress(_Out_ std::string& sReturn, bool trim_scope = false) const;
+        bool writeCompleteAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
+        bool writeCompleteAddress(CHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
 
         //
         // Accessors
@@ -370,7 +371,7 @@ namespace ctl {
 
         ctSockaddr tempV6(AF_INET6);
         IN6_ADDR* a6 = tempV6.in6_addr();
-        IN_ADDR*  a4 = this->in_addr();
+        const IN_ADDR* a4 = this->in_addr();
 
         *a6 = v4MappedPrefix;
         a6->u.Byte[12] = a4->S_un.S_un_b.s_b1;
@@ -443,105 +444,51 @@ namespace ctl {
         }
     }
 
-    inline std::wstring ctSockaddr::writeAddress(bool trim_scope) const
+    inline std::wstring ctSockaddr::writeAddress() const
     {
-        std::wstring return_string;
-        this->writeAddress(return_string, trim_scope);
+        WCHAR return_string[IP_STRING_MAX_LENGTH];
+        this->writeAddress(return_string);
         return return_string;
     }
-    inline bool ctSockaddr::writeAddress(_Out_ std::wstring& wsReturn, bool trim_scope) const
+    inline bool ctSockaddr::writeAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
     {
-        WCHAR address[64];
-        size_t addressLength = 64;
+        ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(WCHAR));
 
-        if (nullptr != ::InetNtopW(
-            saddr.ss_family,
-            (AF_INET == saddr.ss_family) ? reinterpret_cast<PVOID>(this->in_addr()) : reinterpret_cast<PVOID>(this->in6_addr()),
-            address,
-            addressLength
-            )) {
-            if ((this->family() == AF_INET6) && trim_scope) {
-                WCHAR* end = address + addressLength;
-                WCHAR* scope_ptr = std::find(address, end, L'%');
-                if (scope_ptr != end) {
-                    WCHAR* move_ptr = std::find(address, end, L']');
-                    if (move_ptr != end) {
-                        while (move_ptr != end) {
-                            *scope_ptr = *move_ptr;
-                            ++scope_ptr;
-                            ++move_ptr;
-                        }
-                    } else {
-                        // no port was appended
-                        while (scope_ptr != end) {
-                            *scope_ptr = L'\0';
-                            ++scope_ptr;
-                        }
-                    }
-                }
-            }
-            wsReturn.assign(address, std::find(address, address + addressLength, 0x00));
+        const PVOID pAddr = (AF_INET == saddr.ss_family) ? reinterpret_cast<PVOID>(this->in_addr()) : reinterpret_cast<PVOID>(this->in6_addr());
+        if (nullptr != ::InetNtopW(saddr.ss_family, pAddr, address, IP_STRING_MAX_LENGTH)) {
             return true;
         }
-        wsReturn.clear();
         return false;
     }
 
-    inline bool ctSockaddr::writeAddress(_Out_ std::string& sReturn, bool trim_scope) const
+    inline bool ctSockaddr::writeAddress(CHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
     {
-        CHAR address[64];
-        DWORD addressLength = 64;
-
-        if (NULL != ::InetNtopA(
-            saddr.ss_family,
-            (AF_INET == saddr.ss_family) ? reinterpret_cast<PVOID>(this->in_addr()) : reinterpret_cast<PVOID>(this->in6_addr()),
-            address,
-            addressLength
-            )) {
-            if ((this->family() == AF_INET6) && trim_scope) {
-                CHAR* end = address + addressLength;
-                CHAR* scope_ptr = std::find(address, end, '%');
-                if (scope_ptr != end) {
-                    CHAR* move_ptr = std::find(address, end, ']');
-                    if (move_ptr != end) {
-                        while (move_ptr != end) {
-                            *scope_ptr = *move_ptr;
-                            ++scope_ptr;
-                            ++move_ptr;
-                        }
-                    } else {
-                        // no port was appended
-                        while (scope_ptr != end) {
-                            *scope_ptr = '\0';
-                            ++scope_ptr;
-                        }
-                    }
-                }
-            }
-            sReturn.assign(address, std::find(address, address + addressLength, 0x0));
+        ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(CHAR));
+        
+        const PVOID pAddr = (AF_INET == saddr.ss_family) ? reinterpret_cast<PVOID>(this->in_addr()) : reinterpret_cast<PVOID>(this->in6_addr());
+        if (NULL != ::InetNtopA(saddr.ss_family, pAddr, address, IP_STRING_MAX_LENGTH)) {
             return true;
         }
-        sReturn.clear();
         return false;
     }
 
     inline std::wstring ctSockaddr::writeCompleteAddress(bool trim_scope) const
     {
-        std::wstring return_string;
+        WCHAR return_string[IP_STRING_MAX_LENGTH];
         this->writeCompleteAddress(return_string, trim_scope);
         return return_string;
     }
-    inline bool ctSockaddr::writeCompleteAddress(_Out_ std::wstring& wsReturn, bool trim_scope) const
+    inline bool ctSockaddr::writeCompleteAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
     {
-        WCHAR address[64];
-        DWORD addressLength = 64;
+        ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(WCHAR));
 
+        DWORD addressLength = IP_STRING_MAX_LENGTH;
         if (0 == ::WSAAddressToStringW(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 WCHAR* end = address + addressLength;
                 WCHAR* scope_ptr = std::find(address, end, L'%');
                 if (scope_ptr != end) {
-                    WCHAR* move_ptr = std::find(address, end, L']');
+                    const WCHAR* move_ptr = std::find(address, end, L']');
                     if (move_ptr != end) {
                         while (move_ptr != end) {
                             *scope_ptr = *move_ptr;
@@ -557,24 +504,23 @@ namespace ctl {
                     }
                 }
             }
-            wsReturn.assign(address, std::find(address, address + addressLength, 0x00));
             return true;
         }
-        wsReturn.clear();
         return false;
     }
 
-    inline bool ctSockaddr::writeCompleteAddress(_Out_ std::string& sReturn, bool trim_scope) const
+    inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
     {
-        CHAR address[64];
-        DWORD addressLength = 64;
+        ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(CHAR));
+
+        DWORD addressLength = IP_STRING_MAX_LENGTH;
 #pragma warning( suppress : 4996) 
         if (0 == ::WSAAddressToStringA(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
             if ((this->family() == AF_INET6) && trim_scope) {
                 CHAR* end = address + addressLength;
                 CHAR* scope_ptr = std::find(address, end, '%');
                 if (scope_ptr != end) {
-                    CHAR* move_ptr = std::find(address, end, ']');
+                    const CHAR* move_ptr = std::find(address, end, ']');
                     if (move_ptr != end) {
                         while (move_ptr != end) {
                             *scope_ptr = *move_ptr;
@@ -590,10 +536,8 @@ namespace ctl {
                     }
                 }
             }
-            sReturn.assign(address, std::find(address, address + addressLength, 0x0));
             return true;
         }
-        sReturn.clear();
         return false;
     }
 

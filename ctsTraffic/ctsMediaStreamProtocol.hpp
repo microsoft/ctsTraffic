@@ -329,7 +329,7 @@ namespace ctsTraffic {
             return *reinterpret_cast<unsigned short*>(_task.buffer);
         }
 
-        static void SetConnectionIdFromTask(_Inout_ char* _connection_id, _In_ const ctsIOTask& _task) NOEXCEPT
+        static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, _In_ const ctsIOTask& _task) NOEXCEPT
         {
             auto copy_error = ::memcpy_s(
                 _connection_id,
@@ -388,7 +388,7 @@ namespace ctsTraffic {
             return return_value;
         }
 
-        static ctsIOTask MakeConnectionIdTask(_In_ const ctsIOTask& _raw_task, _In_ char* _connection_id) NOEXCEPT
+        static ctsIOTask MakeConnectionIdTask(_In_ const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 _raw_task.buffer_length != ctsStatistics::ConnectionIdLength + UdpDatagramProtocolHeaderFlagLength,

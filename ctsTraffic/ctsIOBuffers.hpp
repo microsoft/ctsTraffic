@@ -188,7 +188,7 @@ namespace ctsTraffic {
         // Will throw std::bad_alloc on low resource conditions
         //
         //////////////////////////////////////////////////////////////////////////
-        inline ::ctsTraffic::ctsIOTask NewConnectionIdBuffer(_In_ char* _connection_id)
+        inline ::ctsTraffic::ctsIOTask NewConnectionIdBuffer(_In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id)
         {
             // this init-once call is no-fail
             (void) ::InitOnceExecuteOnce(&statics::ConnectionIdInitOnce, statics::InitOnceIOPatternCallback, nullptr, nullptr);
@@ -258,7 +258,7 @@ namespace ctsTraffic {
             }
         }
 
-        inline bool SetConnectionId(_Inout_ char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+        inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
                 ctsConfig::PrintDebug(

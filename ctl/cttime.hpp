@@ -562,7 +562,7 @@ namespace ctl {
     // - HH: Two-digit hour of the day that uses the 24-hour clock (00 through 23).
     // - MM: Two-digit minute in the hour (00 through 59).
     // - SS: Two-digit number of seconds in the minute (00 through 59).
-    // - mmmmmm: Six-digit number of microseconds in the second (000000 through 999999). Your implementation is not required to support evaluation using this field, 
+    // - mmmmmm: Six-digit number of microseconds in the second (000000 through 999999). Your implementation is not required to support evaluation using this field,
     //           but this field must always be present to preserve the fixed-length nature of the string.
     //
     // Failure condition: will throw a ctException if the Win32 call fails
@@ -578,8 +578,9 @@ namespace ctl {
         // largest datetime segment is 9 in length
         //
         size_t offset = 0;
-        WCHAR conversion_string[9];
-        wmemset(conversion_string, L'\0', 9);
+        const size_t conversion_string_size = 9;
+        WCHAR conversion_string[conversion_string_size];
+        wmemset(conversion_string, L'\0',  conversion_string_size);
 
         //
         // fork whether this is a calendar datetime or interval datetime
@@ -589,22 +590,22 @@ namespace ctl {
             // this is an interval datetime
             //
             // read the years
-            ::wmemcpy(conversion_string, _datetime + offset, 8);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 8);
             conversion_string[8] = L'\0';
             unsigned days = static_cast<unsigned>(::_wtoi(conversion_string));
             offset += 8;
             // read the hours
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             unsigned hours = static_cast<unsigned>(::_wtoi(conversion_string));
             offset += 2;
             // read the minutes
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             unsigned minutes = static_cast<unsigned>(::_wtoi(conversion_string));
             offset += 2;
             // read the seconds
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             unsigned seconds = static_cast<unsigned>(::_wtoi(conversion_string));
             offset += 2;
@@ -614,7 +615,7 @@ namespace ctl {
             }
             ++offset;
             // read the milliseconds, then jump past the microseconds
-            ::wmemcpy(conversion_string, _datetime + offset, 3);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 3);
             conversion_string[3] = L'\0';
             ULONGLONG milliseconds = static_cast<ULONGLONG>(::_wtoi(conversion_string));
             milliseconds += static_cast<ULONGLONG>(seconds) * 1000ULL;
@@ -629,32 +630,32 @@ namespace ctl {
             //
             SYSTEMTIME st;
             // read the years
-            ::wmemcpy(conversion_string, _datetime + offset, 4);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 4);
             conversion_string[4] = L'\0';
             st.wYear = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 4;
             // read the months
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             st.wMonth = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 2;
             // read the days
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             st.wDay = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 2;
             // read the hours
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             st.wHour = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 2;
             // read the minutes
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             st.wMinute = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 2;
             // read the seconds
-            ::wmemcpy(conversion_string, _datetime + offset, 2);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 2);
             conversion_string[2] = L'\0';
             st.wSecond = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 2;
@@ -664,7 +665,7 @@ namespace ctl {
             }
             ++offset;
             // read the milliseconds, then jump past the microseconds
-            ::wmemcpy(conversion_string, _datetime + offset, 3);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 3);
             conversion_string[3] = L'\0';
             st.wMilliseconds = static_cast<WORD>(::_wtoi(conversion_string));
             offset += 6;
@@ -680,7 +681,7 @@ namespace ctl {
             ++offset;
             // read the number of minutes to UTC
             signed int utc_minute_variance;
-            ::wmemcpy(conversion_string, _datetime + offset, 3);
+            ::wmemcpy_s(conversion_string, conversion_string_size, _datetime + offset, 3);
             conversion_string[3] = L'\0';
             // update the variance according to the marker
             if (utc_marker == L'+') {
@@ -721,7 +722,7 @@ namespace ctl {
     // getDOSTime()
     //
     // Retrieve time as a DOS time in 2 WORD 's
-    //    
+    //
     ///////////////////////////////////////////////////////////////////////////////
     inline void ctTime::getDOSTime(_In_ WORD& _wDate, _In_ WORD& _wTime) const
     {
@@ -792,9 +793,9 @@ namespace ctl {
     {
         if (fileUTCTime.dwHighDateTime > LONG_MAX) {
             throw ctException(
-                ERROR_ARITHMETIC_OVERFLOW, 
-                L"Integer overflow assigning fileUTCTime.dwHighDateTime to LONG", 
-                L"ctTime::getLargeIntegerTime", 
+                ERROR_ARITHMETIC_OVERFLOW,
+                L"Integer overflow assigning fileUTCTime.dwHighDateTime to LONG",
+                L"ctTime::getLargeIntegerTime",
                 false);
         }
 
@@ -809,7 +810,7 @@ namespace ctl {
     // getSystemTime() / getLocalSystemTime()
     //
     // Retrieve time in a SYSTEMTIME struct
-    //    
+    //
     ///////////////////////////////////////////////////////////////////////////////
     inline SYSTEMTIME ctTime::getSystemTime() const
     {
@@ -835,7 +836,7 @@ namespace ctl {
     // getFileTime() / getLocalFileTime()
     //
     // Retrieve time in a FILETIME struct
-    //    
+    //
     ///////////////////////////////////////////////////////////////////////////////
     inline FILETIME ctTime::getFileTime() const NOEXCEPT
     {
@@ -878,9 +879,9 @@ namespace ctl {
         // We need to validate that first.
         if (st.wYear > 9999) {
             throw ctException(
-                st.wYear, 
-                L"ctTime instance invalid for conversion to CIM_DATETIME (year too large)", 
-                L"ctTime::getCIMDateTime", 
+                st.wYear,
+                L"ctTime instance invalid for conversion to CIM_DATETIME (year too large)",
+                L"ctTime::getCIMDateTime",
                 false);
         }
 
@@ -972,9 +973,9 @@ namespace ctl {
         // We need to validate that first.
         if (st.wYear > 9999) {
             throw ctException(
-                st.wYear, 
-                L"ctTime instance invalid for conversion to CIM_DATETIME (year too large)", 
-                L"ctTime::getFriendlyDateTime", 
+                st.wYear,
+                L"ctTime instance invalid for conversion to CIM_DATETIME (year too large)",
+                L"ctTime::getFriendlyDateTime",
                 false);
         }
 

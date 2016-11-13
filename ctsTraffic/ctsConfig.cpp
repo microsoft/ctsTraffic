@@ -1905,8 +1905,8 @@ namespace ctsTraffic {
                                  L"\t  note : specifying a range *will* create failures (used to test TCP failures paths)\n"
                                  L"-Shutdown:<graceful,rude>\n"
                                  L"   - controls how clients terminate the TCP connection - note this is a client-only option\n"
-                                 L"\t- <default> == gradeful\n"
-                                 L"\t- gradeful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
+                                 L"\t- <default> == graceful\n"
+                                 L"\t- graceful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
                                  L"\t- rude : client will immediately close the connection once it receives the 'done' response from the server\n"
                                  L"         : this will deliberately tell TCP to linger for zero seconds and close the socket\n"
                                  L"         : this may reesult in a RST instead of a FIN\n"
@@ -3530,8 +3530,8 @@ namespace ctsTraffic {
 
             if (Settings->ListenAddresses.size() > 0) {
                 setting_string.append(L"\tAccepting connections on addresses:\n");
+                WCHAR wsaddress[IP_STRING_MAX_LENGTH];
                 for (const auto& addr : Settings->ListenAddresses) {
-                    wstring wsaddress;
                     if (addr.writeCompleteAddress(wsaddress)) {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
@@ -3544,8 +3544,8 @@ namespace ctsTraffic {
 
             } else {
                 setting_string.append(L"\tConnecting out to addresses:\n");
+                WCHAR wsaddress[IP_STRING_MAX_LENGTH];
                 for (const auto& addr : Settings->TargetAddresses) {
-                    wstring wsaddress;
                     if (addr.writeCompleteAddress(wsaddress)) {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
@@ -3555,7 +3555,6 @@ namespace ctsTraffic {
 
                 setting_string.append(L"\tBinding to local addresses for outgoing connections:\n");
                 for (const auto& addr : Settings->BindAddresses) {
-                    wstring wsaddress;
                     if (addr.writeCompleteAddress(wsaddress)) {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
