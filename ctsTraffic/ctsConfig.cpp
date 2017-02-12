@@ -1401,6 +1401,9 @@ namespace ctsTraffic {
                 _args.erase(found_jitter_filename);
             }
 
+            // since CSV files each have their own header, we cannot allow the same CSV filename to be used
+            // for different loggers, as opposed to txt files, which can be shared across different loggers
+
             if (!connectionFilename.empty()) {
                 if (ctString::iends_with(connectionFilename, L".csv")) {
                     s_ConnectionLogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::Csv);
@@ -1426,8 +1429,14 @@ namespace ctsTraffic {
 
             if (!statusFilename.empty()) {
                 if (ctString::iordinal_equals(connectionFilename, statusFilename)) {
+                    if (s_ConnectionLogger->IsCsvFormat()) {
+                        throw invalid_argument("The same csv filename cannot be used for different loggers");
+                    }
                     s_StatusLogger = s_ConnectionLogger;
                 } else if (ctString::iordinal_equals(errorFilename, statusFilename)) {
+                    if (s_ErrorLogger->IsCsvFormat()) {
+                        throw invalid_argument("The same csv filename cannot be used for different loggers");
+                    }
                     s_StatusLogger = s_ErrorLogger;
                 } else {
                     if (ctString::iends_with(statusFilename, L".csv")) {
@@ -1439,27 +1448,15 @@ namespace ctsTraffic {
             }
 
             if (!jitterFilename.empty()) {
-                if (ctString::iordinal_equals(connectionFilename, jitterFilename)) {
-                    if (!s_ConnectionLogger->IsCsvFormat()) {
-                        throw invalid_argument("Jitter can only be logged using a csv format");
+                if (ctString::iends_with(jitterFilename, L".csv")) {
+                    if (ctString::iordinal_equals(connectionFilename, jitterFilename) ||
+                        ctString::iordinal_equals(errorFilename, jitterFilename) ||
+                        ctString::iordinal_equals(statusFilename, jitterFilename)) {
+                        throw invalid_argument("The same csv filename cannot be used for different loggers");
                     }
-                    s_JitterLogger = s_ConnectionLogger;
-                } else if (ctString::iordinal_equals(errorFilename, jitterFilename)) {
-                    if (!s_ErrorLogger->IsCsvFormat()) {
-                        throw invalid_argument("Jitter can only be logged using a csv format");
-                    }
-                    s_JitterLogger = s_ErrorLogger;
-                } else if (ctString::iordinal_equals(statusFilename, jitterFilename)) {
-                    if (!s_StatusLogger->IsCsvFormat()) {
-                        throw invalid_argument("Jitter can only be logged using a csv format");
-                    }
-                    s_JitterLogger = s_StatusLogger;
+                    s_JitterLogger = make_shared<ctsTextLogger>(jitterFilename.c_str(), StatusFormatting::Csv);
                 } else {
-                    if (ctString::iends_with(jitterFilename, L".csv")) {
-                        s_JitterLogger = make_shared<ctsTextLogger>(jitterFilename.c_str(), StatusFormatting::Csv);
-                    } else {
-                        throw invalid_argument("Jitter can only be logged using a csv format");
-                    }
+                    throw invalid_argument("Jitter can only be logged using a csv format");
                 }
             }
         }
@@ -2247,6 +2244,7 @@ namespace ctsTraffic {
             if (s_JitterLogger && ctsConfig::ProtocolType::UDP != Settings->Protocol) {
                 throw invalid_argument("Jitter can only be logged using UDP");
             }
+
             set_ioPattern(args);
             set_threadpool(args);
             // validate protocol & pattern combinations
@@ -2372,7 +2370,7 @@ namespace ctsTraffic {
             return true;
         }
 
-        void Shutdown()
+        void Shutdown() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2397,7 +2395,7 @@ namespace ctsTraffic {
 
         /// the Legend is to explain the fields for status updates
         /// - only print if status updates are going to be provided
-        void PrintLegend()
+        void PrintLegend() NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2431,14 +2429,19 @@ namespace ctsTraffic {
                     s_StatusLogger->LogLegend(s_PrintStatusInformation);
                     s_StatusLogger->LogHeader(s_PrintStatusInformation);
                 }
-                if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
-                    if (ProtocolType::UDP == Settings->Protocol) {
-                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId\n");
+            }
 
-                    } else { // TCP
-                        s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\n");
-                    }
+            if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
+                if (ProtocolType::UDP == Settings->Protocol) {
+                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId\n");
+
+                } else { // TCP
+                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\n");
                 }
+            }
+
+            if (s_JitterLogger && s_JitterLogger->IsCsvFormat()) {
+                s_JitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\n");
             }
         }
 
@@ -2713,11 +2716,15 @@ namespace ctsTraffic {
                     static const size_t formatted_text_length = (20 * 5) + 5;
                     wchar_t formatted_text[formatted_text_length];
                     formatted_text[0] = L'\0';
-                    ::_snwprintf_s(
+                    auto converted = ::_snwprintf_s(
                         formatted_text,
                         formatted_text_length,
                         _TRUNCATE,
                         L"%lld,%lld,%lld,%lld,%lld\n",
+                        _sequence_number, _sender_qpc, _sender_qpf, _recevier_qpc, _receiver_qpf);
+                    ctl::ctFatalCondition(
+                        -1 == converted,
+                        L"_snwprintf_s failed to convert Jitter information: %lld, %lld, %lld, %lld, %lld", 
                         _sequence_number, _sender_qpc, _sender_qpf, _recevier_qpc, _receiver_qpf);
                     s_JitterLogger->LogMessage(formatted_text);
                 }
@@ -3645,12 +3652,10 @@ namespace ctsTraffic {
             }
         }
 
-        DWORD CreateWSASocket(int af, int type, int protocol, DWORD dwFlags, _Out_ SOCKET *socket)
+        SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags)
         {
             NET_IF_COMPARTMENT_ID  oldCompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
-            DWORD dwErr = NO_ERROR;
             bool bCompartmentIdSet = FALSE;
-            *socket = INVALID_SOCKET;
 
             ///
             /// s_NetAdapterAddresses is created when the user has requested a compartment Id
@@ -3659,7 +3664,7 @@ namespace ctsTraffic {
             if (s_NetAdapterAddresses != nullptr) {
                 oldCompartmentId = GetCurrentThreadCompartmentId();
                 if (oldCompartmentId != s_CompartmentId) {
-                    dwErr = SetCurrentThreadCompartmentId(s_CompartmentId);
+                    DWORD dwErr = SetCurrentThreadCompartmentId(s_CompartmentId);
                     if (dwErr != NO_ERROR) {
                         PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", s_CompartmentId, dwErr);
                     } else {
@@ -3668,21 +3673,21 @@ namespace ctsTraffic {
                 }
             }
 
-            *socket = ::WSASocket(af, type, protocol, NULL, 0, dwFlags);
+            SOCKET socket = ::WSASocket(af, type, protocol, NULL, 0, dwFlags);
+            DWORD wsaError = ::WSAGetLastError();
 
             if (bCompartmentIdSet) {
-                dwErr = SetCurrentThreadCompartmentId(oldCompartmentId);
+                DWORD dwErr = SetCurrentThreadCompartmentId(oldCompartmentId);
                 if (dwErr != NO_ERROR) {
                     PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, dwErr);
                 }
             }
 
-            if (INVALID_SOCKET == *socket) {
-                dwErr = ::WSAGetLastError();
-            } else {
-                dwErr = NO_ERROR;
+            if (INVALID_SOCKET == socket) {
+                throw ctException(wsaError, "WSASocket", false);
             }
-            return dwErr;
+
+            return socket;
         }
 
     } // namespace ctsConfig

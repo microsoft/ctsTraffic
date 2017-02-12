@@ -151,7 +151,7 @@ namespace ctsTraffic {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv);
-        void Shutdown();
+        void Shutdown() NOEXCEPT;
 
         enum class PrintUsageOption
         {
@@ -162,9 +162,9 @@ namespace ctsTraffic {
             Advanced
         };
         void PrintUsage(PrintUsageOption option = PrintUsageOption::Default);
-
-        void PrintLegend();
         void PrintSettings();
+
+        void PrintLegend() NOEXCEPT;
         void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) NOEXCEPT;
         void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT;
         /// *Override will always print to console regardless of settings (important if can't even start)
@@ -174,8 +174,8 @@ namespace ctsTraffic {
         void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT;
 
         void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        void  __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        void  __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
         /// *Override will always print to console regardless of settings (important if can't even start)
         void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
 
@@ -357,7 +357,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         extern ctsConfigSettings* Settings;
 
-        DWORD CreateWSASocket(int af, int type, int protocol, DWORD dwFlags, _Out_ SOCKET *socket);
+        SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);
 
     } // namespace ctsConfig
 } // namespace ctsTraffic

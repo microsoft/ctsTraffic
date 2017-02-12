@@ -73,22 +73,26 @@ namespace ctsTraffic {
         SOCKET socket = INVALID_SOCKET;
         int gle = 0;
         const wchar_t* function = L"CreateWSASocket";
-        switch (ctsConfig::Settings->Protocol) {
-        case ctsConfig::ProtocolType::TCP:
-            gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
-            break;
+        try {
+            switch (ctsConfig::Settings->Protocol) {
+            case ctsConfig::ProtocolType::TCP:
+                socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
+                break;
 
-        case ctsConfig::ProtocolType::UDP:
-            gle = ctsConfig::CreateWSASocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags, &socket);
-            break;
+            case ctsConfig::ProtocolType::UDP:
+                socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags);
+                break;
 
-        default: {
-            ctsConfig::PrintErrorInfo(
-                L"[%.3f] Unknown socket protocol (%u)",
-                ctsConfig::GetStatusTimeStamp(),
-                static_cast<unsigned>(ctsConfig::Settings->Protocol));
-            gle = WSAEINVAL;
+            default:
+                ctsConfig::PrintErrorInfo(
+                    L"[%.3f] Unknown socket protocol (%u)",
+                    ctsConfig::GetStatusTimeStamp(),
+                    static_cast<unsigned>(ctsConfig::Settings->Protocol));
+                gle = WSAEINVAL;
+            }
         }
+        catch (const ctl::ctException& ex) {
+            gle = ex.why();
         }
 
         if (NO_ERROR == gle) {

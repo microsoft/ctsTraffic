@@ -380,14 +380,11 @@ namespace ctsTraffic {
         //
         // Create, Bind, Listen, create an IOCP thread pool
         //
-        DWORD error = ctsConfig::CreateWSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &socket);
-        if (INVALID_SOCKET == socket) {
-            throw ctl::ctException(error, L"CreateWSASocket", L"ctsAcceptEx", false);
-        }
+        socket = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
         // close the socket on failure
         ctlScopeGuard(closeListenSocketOnFailure, { ::closesocket(socket); socket = INVALID_SOCKET; });
 
-        error = ctsConfig::SetPreBindOptions(socket, addr);
+        auto error = ctsConfig::SetPreBindOptions(socket, addr);
         if (error != 0) {
             throw ctl::ctException(error, L"ctsConfig::SetPreBindOptions", L"ctsAcceptEx", false);
         }
@@ -457,16 +454,12 @@ namespace ctsTraffic {
             return;
         }
 
-        SOCKET new_socket = INVALID_SOCKET;
-        DWORD error = ctsConfig::CreateWSASocket(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &new_socket);
-        if (INVALID_SOCKET == new_socket) {
-            throw ctl::ctException(error, L"CreateWSASocket", L"ctsAcceptEx", false);
-        }
+        SOCKET new_socket = ctsConfig::CreateSocket(this->listening_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
         ctlScopeGuard(closeSocketOnError, { ::closesocket(new_socket); });
 
         // since not inheriting from the listening socket, must explicity set options on the accept socket
         // - passing the listening address since that will be the local address of this accepted socket
-        error = ctsConfig::SetPreBindOptions(new_socket, this->listening_addr);
+        auto error = ctsConfig::SetPreBindOptions(new_socket, this->listening_addr);
         if (error != 0) {
             throw ctl::ctException(error, L"SetPreBindOptions", L"ctsAcceptEx", false);
         }
@@ -488,7 +481,8 @@ namespace ctsTraffic {
             this->OutputBuffer,
             0, SingleOutputBufferSize, SingleOutputBufferSize,
             &bytes_received,
-            this->pov)) {
+            this->pov)) 
+        {
             error = ::WSAGetLastError();
             if (ERROR_IO_PENDING != error) {
                 // a real failure - must abort the IO
@@ -526,7 +520,8 @@ namespace ctsTraffic {
                 this->pov,
                 &transferred,
                 FALSE,
-                &flags)) {
+                &flags)) 
+            {
                 return_details.gle = ::WSAGetLastError();
 
                 ctsConfig::PrintErrorIfFailed(L"AcceptEx", return_details.gle);

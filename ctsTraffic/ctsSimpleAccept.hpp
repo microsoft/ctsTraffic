@@ -122,15 +122,10 @@ namespace ctsTraffic {
             // listen to each address
             for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
 #pragma warning(suppress: 28193) // PREFast isn't seeing that listening is indeed evaluated before being referenced
-                SOCKET listening = INVALID_SOCKET;
-                DWORD gle = ctsConfig::CreateWSASocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags, &listening);
-                ctlScopeGuard(closeSocketOnError, { if (listening != INVALID_SOCKET) ::closesocket(listening); });
+                SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
+                ctlScopeGuard(closeSocketOnError, { ::closesocket(listening); });
 
-                if (INVALID_SOCKET == listening) {
-                    throw ctl::ctException(gle, L"CreateWSASocket", L"ctsSimpleAccept", false);
-                }
-
-                gle = ctsConfig::SetPreBindOptions(listening, addr);
+                auto gle = ctsConfig::SetPreBindOptions(listening, addr);
                 if (gle != NO_ERROR) {
                     throw ctl::ctException(gle, L"SetPreBindOptions", L"ctsSimpleAccept", false);
                 }

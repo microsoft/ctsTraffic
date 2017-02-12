@@ -468,44 +468,6 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
-    /// Jitter is just a pass-through printing interface
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsJitterStatusInformation : public ctsStatusInformation {
-    public:
-        ctsJitterStatusInformation() NOEXCEPT : ctsStatusInformation()
-        {
-        }
-        ~ctsJitterStatusInformation() NOEXCEPT
-        {
-        }
-
-        ///
-        /// Pure-Virtual functions required to be defined
-        ///
-        LPCWSTR format_legend(ctsConfig::StatusFormatting) NOEXCEPT
-        {
-            return nullptr;
-        }
-
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
-        {
-            ctl::ctFatalCondition(
-                ctsConfig::StatusFormatting::Csv != _format,
-                L"ctsJitterStatusInformation only supports CSV output");
-            return L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\n";
-        }
-
-        PrintingStatus format_data(ctsConfig::StatusFormatting, long long, bool) NOEXCEPT override
-        {
-            return PrintingStatus::NoPrint;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
     /// Print function for TCP connections
     /// - allows an option for 'detailed' status
     ///

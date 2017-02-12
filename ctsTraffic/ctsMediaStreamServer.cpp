@@ -164,15 +164,9 @@ namespace ctsTraffic {
 
                 // 'listen' to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
-                    SOCKET socket = INVALID_SOCKET;
-                    DWORD error = ctsConfig::CreateWSASocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags, &socket);
-                    ctl::ctScopedSocket listening(socket);
+                    ctl::ctScopedSocket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
 
-                    if (INVALID_SOCKET == listening.get()) {
-                        throw ctl::ctException(error, L"CreateWSASocket", L"ctsMediaStreamServer", false);
-                    }
-
-                    error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+                    auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                     if (error != NO_ERROR) {
                         throw ctl::ctException(error, L"SetPreBindOptions", L"ctsMediaStreamServer", false);
                     }
@@ -181,6 +175,7 @@ namespace ctsTraffic {
                         throw ctl::ctException(::WSAGetLastError(), L"bind", L"ctsMediaStreamServer", false);
                     }
 
+                    // capture the socket value before moved into the vector
                     SOCKET listening_socket_to_print(listening.get());
                     ctsMediaStreamServerImpl::listening_sockets.emplace_back(
                         new ctsMediaStreamServerListeningSocket(std::move(listening), addr));
