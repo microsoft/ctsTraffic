@@ -98,6 +98,14 @@ namespace ctsTraffic {
         {
             return 0.0f;
         }
+        bool ShutdownCalled() NOEXCEPT
+        {
+            return false;
+        }
+        unsigned long ConsoleVerbosity() NOEXCEPT
+        {
+            return 0;
+        }
     }
 
     HANDLE s_RemovedSocketEvent = NULL;

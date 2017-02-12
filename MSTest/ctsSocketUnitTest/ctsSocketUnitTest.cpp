@@ -77,7 +77,7 @@ namespace ctsTraffic {
             va_start(args, _text);
 
             auto formatted(ctl::ctString::format_string_va(_text, args));
-            Logger::WriteMessage(ctl::ctString::format_string(L"ctsConfig::PrintDebug: %s\n", formatted.c_str()).c_str());
+            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %s\n", formatted.c_str()).c_str());
 
             va_end(args);
         }
@@ -103,6 +103,14 @@ namespace ctsTraffic {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintException(%s)",
                     ctl::ctString::format_exception(e).c_str()).c_str());
+        }
+        bool ShutdownCalled() NOEXCEPT
+        {
+            return false;
+        }
+        unsigned long ConsoleVerbosity() NOEXCEPT
+        {
+            return 0;
         }
     }
 }

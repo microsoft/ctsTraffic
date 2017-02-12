@@ -281,8 +281,7 @@ namespace ctsTraffic {
         {
             if (_completed_bytes < UdpDatagramProtocolHeaderFlagLength) {
                 ctsConfig::PrintErrorInfo(
-                    L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram: the datagram size (%u) is less than UdpDatagramProtocolHeaderFlagLength (%u)\n",
-                    ctsConfig::GetStatusTimeStamp(),
+                    L"ValidateBufferLengthFromTask rejecting the datagram: the datagram size (%u) is less than UdpDatagramProtocolHeaderFlagLength (%u)",
                     _completed_bytes,
                     UdpDatagramProtocolHeaderFlagLength);
                 return false;
@@ -292,8 +291,7 @@ namespace ctsTraffic {
                 case UdpDatagramProtocolHeaderFlagData:
                     if (_completed_bytes < UdpDatagramDataHeaderLength) {
                         ctsConfig::PrintErrorInfo(
-                            L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagData: the datagram size (%u) is less than UdpDatagramDataHeaderLength (%u)\n",
-                            ctsConfig::GetStatusTimeStamp(),
+                            L"ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagData: the datagram size (%u) is less than UdpDatagramDataHeaderLength (%u)",
                             _completed_bytes,
                             UdpDatagramDataHeaderLength);
                         return false;
@@ -303,8 +301,7 @@ namespace ctsTraffic {
                 case UdpDatagramProtocolHeaderFlagId:
                     if (_completed_bytes < UdpDatagramConnectionIdHeaderLength) {
                         ctsConfig::PrintErrorInfo(
-                            L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagId: the datagram size (%u) is less than UdpDatagramConnectionIdHeaderLength (%u)\n",
-                            ctsConfig::GetStatusTimeStamp(),
+                            L"ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagId: the datagram size (%u) is less than UdpDatagramConnectionIdHeaderLength (%u)",
                             _completed_bytes,
                             UdpDatagramConnectionIdHeaderLength);
                         return false;
@@ -313,8 +310,7 @@ namespace ctsTraffic {
 
                 default:
                     ctsConfig::PrintErrorInfo(
-                        L"[%.3f] ValidateBufferLengthFromTask rejecting the datagram of unknown frame type (%u) - expecting UdpDatagramProtocolHeaderFlagData (%u) or UdpDatagramProtocolHeaderFlagId (%u)\n",
-                        ctsConfig::GetStatusTimeStamp(),
+                        L"ValidateBufferLengthFromTask rejecting the datagram of unknown frame type (%u) - expecting UdpDatagramProtocolHeaderFlagData (%u) or UdpDatagramProtocolHeaderFlagId (%u)",
                         GetProtocolHeaderFromTask(_task),
                         UdpDatagramProtocolHeaderFlagData,
                         UdpDatagramProtocolHeaderFlagId);

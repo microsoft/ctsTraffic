@@ -71,21 +71,18 @@ namespace ctsTraffic {
         }
 
         const wchar_t* Function = (IOTaskAction::Send == _io_task.ioAction) ? L"WriteFile" : L"ReadFile";
+        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", Function, gle);
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
             case ctsIOStatus::ContinueIo:
-                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                ctsConfig::PrintDebugIfFailed(Function, gle, L"ctsReadWriteIocp");
                 // more IO is requested from the protocol
                 // - invoke the new IO call while holding a refcount to the prior IO
                 ctsReadWriteIocp(_weak_socket);
                 break;
 
             case ctsIOStatus::CompletedIo:
-                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                ctsConfig::PrintDebugIfFailed(Function, gle, L"ctsReadWriteIocp");
                 // protocol didn't fail this IO: no more IO is requested from the protocol
                 readwrite_status = NO_ERROR;
                 break;
@@ -210,20 +207,18 @@ namespace ctsTraffic {
                         io_count = shared_socket->decrement_io();
                         // call back to the socket that it failed to see if wants more IO
                         const wchar_t* Function = (IOTaskAction::Send == next_io.ioAction) ? L"WriteFile" : L"ReadFile";
+                        PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", Function, io_error);
+
                         ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
                         io_done = (protocol_status != ctsIOStatus::ContinueIo);
                         switch (protocol_status) {
                             case ctsIOStatus::ContinueIo:
-                                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                                ctsConfig::PrintDebugIfFailed(Function, io_error, L"ctsReadWriteIocp");
                                 // the protocol wants to ignore the error and send more data
                                 io_error = NO_ERROR;
                                 io_done = false;
                                 break;
 
                             case ctsIOStatus::CompletedIo:
-                                // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                                ctsConfig::PrintDebugIfFailed(Function, io_error, L"ctsReadWriteIocp");
                                 // the protocol wants to ignore the error but is done with IO
                                 io_error = NO_ERROR;
                                 io_done = true;

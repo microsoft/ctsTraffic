@@ -165,19 +165,30 @@ namespace ctsTraffic {
         void PrintSettings();
 
         void PrintLegend() NOEXCEPT;
-        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) NOEXCEPT;
-        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT;
-        /// *Override will always print to console regardless of settings (important if can't even start)
-        void PrintExceptionOverride(const std::exception& e) NOEXCEPT;
-        void PrintException(const std::exception& e) NOEXCEPT;
         void PrintStatusUpdate() NOEXCEPT;
         void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT;
-
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        void __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
         void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
-        /// *Override will always print to console regardless of settings (important if can't even start)
+
+        // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
+#define PrintDebugInfo(fmt, ...)                                        \
+        {                                                               \
+            if (!::ctsTraffic::ctsConfig::ShutdownCalled()) {           \
+                switch (::ctsTraffic::ctsConfig::ConsoleVerbosity()) {  \
+                    case 6:                                             \
+                        ::wprintf_s(fmt, ##__VA_ARGS__);                \
+                        break;                                          \
+                }                                                       \
+            }                                                           \
+        }
+
+        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT;
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        // Override will always print to console regardless of settings (important if can't even start)
         void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+
+        void PrintException(const std::exception& e) NOEXCEPT;
+        // Override will always print to console regardless of settings (important if can't even start)
+        void PrintExceptionOverride(const std::exception& e) NOEXCEPT;
 
         void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT;
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT;
@@ -310,7 +321,7 @@ namespace ctsTraffic {
             OptionType      Options = OptionType::NoOptionSet;
 
             DWORD SocketFlags = 0;
-            unsigned short Port = 0;
+            WORD  Port = 0;
 
             ctsUnsignedLongLong Iterations = 0;
             ctsUnsignedLong AcceptLimit = 0;
@@ -358,6 +369,7 @@ namespace ctsTraffic {
         extern ctsConfigSettings* Settings;
 
         SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);
-
+        bool ShutdownCalled() NOEXCEPT;
+        unsigned long ConsoleVerbosity() NOEXCEPT;
     } // namespace ctsConfig
 } // namespace ctsTraffic

@@ -123,8 +123,7 @@ namespace ctsTraffic {
                                 // - no need to continue to log it and fill up the error log
                             } else {
                                 ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSARecvFrom failed (SOCKET %Iu) with error (%d)\n",
-                                    ctsConfig::GetStatusTimeStamp(),
+                                    L"WSARecvFrom failed (SOCKET %Iu) with error (%d)",
                                     this->socket.get(),
                                     error);
                             }
@@ -146,8 +145,8 @@ namespace ctsTraffic {
                 ++failure_counter;
 
                 ctsConfig::PrintErrorInfo(
-                    L"[%.3f] MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted\n",
-                    ctsConfig::GetStatusTimeStamp(), error, failure_counter);
+                    L"MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted",
+                    error, failure_counter);
 
                 ctl::ctFatalCondition(
                     (0 == failure_counter % 10),
@@ -183,13 +182,11 @@ namespace ctsTraffic {
                         auto gle = ::WSAGetLastError();
                         if (WSAECONNRESET == gle) {
                             ctsConfig::PrintErrorInfo(
-                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable\n",
-                                ctsConfig::GetStatusTimeStamp(),
+                                L"ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable",
                                 this->remote_addr.writeCompleteAddress().c_str());
                         } else {
                             ctsConfig::PrintErrorInfo(
-                                L"[%.3f] ctsMediaStreamServer - WSARecvFrom failed [%d]\n",
-                                ctsConfig::GetStatusTimeStamp(),
+                                L"ctsMediaStreamServer - WSARecvFrom failed [%d]",
                                 ::WSAGetLastError());
                         }
                     }
@@ -204,7 +201,7 @@ namespace ctsTraffic {
                     ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
                     switch (message.action) {
                         case MediaStreamAction::START:
-                            ctsConfig::PrintDebug(
+                            PrintDebugInfo(
                                 L"\t\tctsMediaStreamServer - processing START from %s\n",
                                 this->remote_addr.writeCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START

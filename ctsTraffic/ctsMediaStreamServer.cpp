@@ -180,7 +180,7 @@ namespace ctsTraffic {
                     ctsMediaStreamServerImpl::listening_sockets.emplace_back(
                         new ctsMediaStreamServerListeningSocket(std::move(listening), addr));
 
-                    ctsConfig::PrintDebug(
+                    PrintDebugInfo(
                         L"\t\tctsMediaStreamServer - Receiving datagrams on %s (%Iu)\n",
                         addr.writeCompleteAddress().c_str(),
                         listening_socket_to_print);
@@ -240,7 +240,7 @@ namespace ctsTraffic {
                 );
 
                 if (found_socket == std::end(ctsMediaStreamServerImpl::connected_sockets)) {
-                    ctsConfig::PrintDebug(
+                    PrintDebugInfo(
                         L"\t\tctsMediaStreamServer - failed to find the socket with remote address %s in our connected socket list\n",
                         shared_socket->target_address().writeCompleteAddress().c_str());
                     throw ctl::ctException(ERROR_INVALID_DATA, L"ctsSocket was not found in the Connected Sockets", L"ctsMediaStreamServer", false);
@@ -355,7 +355,7 @@ namespace ctsTraffic {
                 });
 
                 if (found_socket != std::end(ctsMediaStreamServerImpl::connected_sockets)) {
-                    ctsConfig::PrintDebug(
+                    PrintDebugInfo(
                         L"\t\tctsMediaStreamServer - socket with remote address %s asked to be Started but was already established\n",
                         _target_addr.writeCompleteAddress().c_str());
                     // return early if this was a duplicate request: this can happen if there is latency or drops
@@ -440,8 +440,7 @@ namespace ctsTraffic {
                     auto error = ::WSAGetLastError();
                     try {
                         ctsConfig::PrintErrorInfo(
-                            L"[%.3f] WSASendTo(%Iu, %s) for the Connection-ID failed [%d]\n",
-                            ctsConfig::GetStatusTimeStamp(),
+                            L"WSASendTo(%Iu, %s) for the Connection-ID failed [%d]",
                             socket,
                             remote_addr.writeCompleteAddress().c_str(),
                             error);
@@ -455,7 +454,7 @@ namespace ctsTraffic {
             } else {
                 auto seq_number = this_ptr->increment_sequence();
 
-                ctsConfig::PrintDebug(
+                PrintDebugInfo(
                     L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
                     seq_number,
                     next_task.buffer_length);
@@ -489,16 +488,14 @@ namespace ctsTraffic {
                                     bytes_requested += wasbuf.len;
                                 }
                                 ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes\n",
-                                    ctsConfig::GetStatusTimeStamp(),
+                                    L"WSASendTo(%Iu, seq %lld, %s) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
                                     socket,
                                     seq_number,
                                     remote_addr.writeCompleteAddress().c_str(),
                                     bytes_requested);
                             } else {
                                 ctsConfig::PrintErrorInfo(
-                                    L"[%.3f] WSASendTo(%Iu, seq %lld, %s) failed [%d]\n",
-                                    ctsConfig::GetStatusTimeStamp(),
+                                    L"WSASendTo(%Iu, seq %lld, %s) failed [%d]",
                                     socket,
                                     seq_number,
                                     remote_addr.writeCompleteAddress().c_str(),

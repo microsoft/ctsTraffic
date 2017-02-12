@@ -147,7 +147,7 @@ namespace ctsTraffic {
                 // socket is now being tracked in listening_sockets, dismiss the scope guard
                 closeSocketOnError.dismiss();
 
-                ctsConfig::PrintDebug(
+                PrintDebugInfo(
                     L"\t\tListening to %s\n", addr.writeCompleteAddress().c_str());
             }
 

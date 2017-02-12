@@ -99,7 +99,7 @@ namespace ctsTraffic {
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
-                ctsConfig::PrintDebug(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes");
+                PrintDebugInfo(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n");
                 this->protocol_policy.update_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }
             ctsConfig::PrintConnectionResults(

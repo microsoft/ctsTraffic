@@ -395,20 +395,20 @@ namespace ctsTraffic {
             break;
 
         case IOTaskAction::FatalAbort:
-            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a FatalAbort\n");
+            PrintDebugInfo(L"\t\tctsIOPattern : completing a FatalAbort\n");
             this->update_last_error(ctsStatusErrorNotAllDataTransferred);
             break;
 
         case IOTaskAction::Abort:
-            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing an Abort\n");
+            PrintDebugInfo(L"\t\tctsIOPattern : completing an Abort\n");
             break;
 
         case IOTaskAction::GracefulShutdown:
             // Fall-through to be processed like send or recv IO
-            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
+            PrintDebugInfo(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
         case IOTaskAction::HardShutdown:
             // Fall-through to be processed like send or recv IO
-            ctsConfig::PrintDebug(L"\t\tctsIOPattern : completing a HardShutdown\n");
+            PrintDebugInfo(L"\t\tctsIOPattern : completing a HardShutdown\n");
         case IOTaskAction::Recv:
             //
             // Fall-through to Send - where the IO will be processed
@@ -449,11 +449,11 @@ namespace ctsTraffic {
                 // - unless this is an extra recv that was canceled once we completed the transfer
                 //
                 if (IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed()) {
-                    ctsConfig::PrintDebug(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", _status_code);
+                    PrintDebugInfo(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", _status_code);
                 } else {
                     auto current_status = this->update_last_error(_status_code);
                     if (current_status != ctsStatusIORunning) {
-                        ctsConfig::PrintDebug(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", _status_code, current_status);
+                        PrintDebugInfo(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", _status_code, current_status);
                         verify_io = false;
                     }
                 }
@@ -700,9 +700,8 @@ namespace ctsTraffic {
             _transferred_bytes);
         if (length_matched != _transferred_bytes) {
             ctsConfig::PrintErrorInfo(
-                L"[%.3f] ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
-                L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']\n",
-                ctsConfig::GetStatusTimeStamp(),
+                L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
+                L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
                 _transferred_bytes,
                 _original_task.buffer + _original_task.buffer_offset,
                 pattern_buffer,
@@ -1052,7 +1051,7 @@ namespace ctsTraffic {
         base_time_milliseconds(0LL),
         state(ServerState::NotStarted)
     {
-        ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / this->frame_rate_fps));
+        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / this->frame_rate_fps));
     }
     ctsIOPatternMediaStreamServer::~ctsIOPatternMediaStreamServer()
     {

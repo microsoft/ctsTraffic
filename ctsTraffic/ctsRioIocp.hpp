@@ -103,7 +103,7 @@ namespace ctsTraffic {
                 static_assert(MAXLONG / 1.5 > RIO_MAX_CQ_SIZE, "s_rio_cq_size can overflow");
                 new_cq_size = RIO_MAX_CQ_SIZE;
             }
-            ctsConfig::PrintDebug(
+            PrintDebugInfo(
                 L"\t\tctsRioIocp: Resizing the CQ from %u to %u (used slots = %u increasing used slots to %u)\n",
                 s_rio_cq_size,
                 new_cq_size,
@@ -114,7 +114,7 @@ namespace ctsTraffic {
                 throw ctl::ctException(::WSAGetLastError(), L"ctRIOResizeCompletionQueue", L"ctsRioIocp", false);
             }
         } else {
-            ctsConfig::PrintDebug(
+            PrintDebugInfo(
                 L"\t\tctsRioIocp: Not resizing the CQ from %u (used slots = %u increasing to %u)\n",
                 s_rio_cq_size, s_rio_cq_used, new_cq_used);
         }
@@ -138,7 +138,7 @@ namespace ctsTraffic {
             L"ctsRioIocp::s_release_room_in_cq(%u): underflow - current s_rio_cq_used value (%u)",
             _slots, s_rio_cq_used);
 
-        ctsConfig::PrintDebug(
+        PrintDebugInfo(
             L"\t\tctsRioIocp: Reducing the CQ used slots from %u to %u\n",
             s_rio_cq_used,
             s_rio_cq_used - _slots);
@@ -397,7 +397,7 @@ namespace ctsTraffic {
                     ctlScopeGuard(releaseCqSlotsOnFailure, { s_release_room_in_cq(RioRQGrowthFactor); });
 
                     // guarantee room in the RQ for this next IO
-                    ctsConfig::PrintDebug(
+                    PrintDebugInfo(
                         L"\t\tctRIOResizeRequestQueue: Resizing the RQ to %Iu\n", new_rqueue_used);
                     if (!ctl::ctRIOResizeRequestQueue(
                         this->rio_rq,
@@ -561,20 +561,19 @@ namespace ctsTraffic {
                 }
             }
             _Analysis_assume_(RIOFunction != nullptr);
+
+            if (_status != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", RIOFunction, _status);
+
             DWORD error = _status;
             ctsIOStatus protocol_status = shared_pattern->complete_io(_task, _transferred, _status);
             switch (protocol_status) {
                 case ctsIOStatus::ContinueIo:
-                    // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp (ContinueIo)");
                     // more IO is requested from the protocol
                     // launch the next IO while holding the socket lock in complete_io
                     error = this->execute_io();
                     break;
 
                 case ctsIOStatus::CompletedIo:
-                    // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                    ctsConfig::PrintDebugIfFailed(RIOFunction, _status, L"ctsRioIocp (CompletedIo)");
                     // no more IO is requested from the protocol
                     error = NO_ERROR;
                     break;

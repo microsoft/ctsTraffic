@@ -87,8 +87,8 @@ namespace ctsTraffic {
                 false);
         }
 
-        ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - queue size for this new connection is %d\n", static_cast<long>(queue_size));
-        ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - frame rate in milliseconds per frame : %f\n", frame_rate_ms_per_frame);
+        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient - queue size for this new connection is %d\n", static_cast<long>(queue_size));
+        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient - frame rate in milliseconds per frame : %f\n", frame_rate_ms_per_frame);
 
         frame_entries.resize(queue_size);
         head_entry = frame_entries.begin();
@@ -190,17 +190,13 @@ namespace ctsTraffic {
                     // TODO: verify on non-loopback
                     return ctsIOPatternProtocolError::NoError;
                 } else {
-                    ctsConfig::PrintErrorInfo(
-                        L"[%.3f] ctsIOPatternMediaStreamClient received a zero-byte datagram\n",
-                        ctsConfig::GetStatusTimeStamp());
+                    ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient received a zero-byte datagram");
                     return ctsIOPatternProtocolError::TooFewBytes;
                 }
             }
 
             if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(_task, _completed_bytes)) {
-                ctsConfig::PrintErrorInfo(
-                    L"[%.3f] MediaStreamClient received an invalid datagram trying to parse the protocol header\n",
-                    ctsConfig::GetStatusTimeStamp());
+                ctsConfig::PrintErrorInfo(L"MediaStreamClient received an invalid datagram trying to parse the protocol header");
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
 
@@ -230,7 +226,7 @@ namespace ctsTraffic {
                 ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
                 this->stats.error_frames.increment();
 
-                ctsConfig::PrintDebug(
+                PrintDebugInfo(
                     L"\t\tctsIOPatternMediaStreamClient recevieved **an unknown** seq number (%lld) (outside the final frame %lu)\n",
                     received_seq_number,
                     this->final_frame);
@@ -252,7 +248,7 @@ namespace ctsTraffic {
                         found_slot->receiver_qpf = ctTimer::snap_qpf();
                         found_slot->received += _completed_bytes;
 
-                        ctsConfig::PrintDebug(
+                        PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%lu bytes)\n",
                             static_cast<long long>(found_slot->sequence_number),
                             static_cast<unsigned long>(found_slot->received));
@@ -268,7 +264,7 @@ namespace ctsTraffic {
                         ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
                         this->stats.duplicate_frames.increment();
 
-                        ctsConfig::PrintDebug(
+                        PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient received **a duplicate frame** for seq number (%lld)\n",
                             received_seq_number);
                     }
@@ -279,12 +275,12 @@ namespace ctsTraffic {
                     this->stats.error_frames.increment();
 
                     if (received_seq_number < this->head_entry->sequence_number) {
-                        ctsConfig::PrintDebug(
+                        PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
                             received_seq_number,
                             static_cast<long long>(this->head_entry->sequence_number));
                     } else {
-                        ctsConfig::PrintDebug(
+                        PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
                             received_seq_number,
                             static_cast<long long>(this->head_entry->sequence_number),
@@ -396,7 +392,7 @@ namespace ctsTraffic {
             ctsConfig::Settings->UdpStatusDetails.successful_frames.increment();
             this->stats.successful_frames.increment();
 
-            ctsConfig::PrintDebug(
+            PrintDebugInfo(
                 L"\t\tctsIOPatternMediaStreamClient rendered frame %lld\n",
                 static_cast<long long>(this->head_entry->sequence_number));
 
@@ -412,8 +408,8 @@ namespace ctsTraffic {
             ctsConfig::Settings->UdpStatusDetails.dropped_frames.increment();
             this->stats.dropped_frames.increment();
 
-            ctsConfig::PrintDebug(
-                L"[%.3f] MediaStreamClient **dropped** frame %lld\n",
+            PrintDebugInfo(
+                L"\t\tctsIOPatternMediaStreamClient **dropped** frame %lld\n",
                 ctsConfig::GetStatusTimeStamp(),
                 static_cast<long long>(this->head_entry->sequence_number));
         }
@@ -446,7 +442,7 @@ namespace ctsTraffic {
 
         if (!this_ptr->received_buffered_frames()) {
             // send another start message
-            ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient re-requesting START\n");
+            PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient re-requesting START\n");
 
             ctsIOTask resend_task;
             resend_task.ioAction = IOTaskAction::Send;
@@ -482,9 +478,7 @@ namespace ctsTraffic {
             this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
             // if we haven't yet received *anything* from the server, abort this connection
             if (!this_ptr->received_buffered_frames()) {
-                ctsConfig::PrintErrorInfo(
-                    L"[%.3f] ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server\n",
-                    ctsConfig::GetStatusTimeStamp());
+                ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
 
                 // indicate all frames were dropped
                 ctsConfig::Settings->UdpStatusDetails.dropped_frames.add(this_ptr->final_frame);
@@ -512,7 +506,7 @@ namespace ctsTraffic {
                 ctsIOTask abort_task;
                 abort_task.ioAction = IOTaskAction::Abort;
                 this_ptr->send_callback(abort_task);
-                ctsConfig::PrintDebug(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
+                PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
             }
         }
     }

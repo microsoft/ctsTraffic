@@ -85,8 +85,7 @@ namespace ctsTraffic {
 
             default:
                 ctsConfig::PrintErrorInfo(
-                    L"[%.3f] Unknown socket protocol (%u)",
-                    ctsConfig::GetStatusTimeStamp(),
+                    L"Unknown socket protocol (%u)",
                     static_cast<unsigned>(ctsConfig::Settings->Protocol));
                 gle = WSAEINVAL;
             }
@@ -116,13 +115,13 @@ namespace ctsTraffic {
                     if (SOCKET_ERROR == ::bind(socket, local_addr.sockaddr(), local_addr.length())) {
                         gle = ::WSAGetLastError();
                         if (WSAEADDRINUSE == gle) {
-                            ctsConfig::PrintDebug(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs);
+                            PrintDebugInfo(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs);
                             ::Sleep(BindRetrySleepMs);
                         }
                     } else {
                         // succeeded - exit the loop
                         gle = NO_ERROR;
-                        ctsConfig::PrintDebug(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1);
+                        PrintDebugInfo(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1);
                         break;
                     }
                 }

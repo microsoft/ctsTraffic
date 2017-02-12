@@ -76,19 +76,16 @@ namespace ctsTraffic {
 
         // write to PrintError if the IO failed
         const wchar_t* function = (IOTaskAction::Send == _io_task.ioAction) ? L"WSASend" : L"WSARecv";
+        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsSendRecvIocp]\n", function, gle);
         // see if complete_io requests more IO
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
         case ctsIOStatus::ContinueIo:
-            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-            ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
             // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
             ctsSendRecvIocp(_weak_socket);
             break;
 
         case ctsIOStatus::CompletedIo:
-            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-            ctsConfig::PrintDebugIfFailed(function, gle, L"ctsSendRecvIocp");
             // no more IO is requested from the protocol : indicate success
             gle = NO_ERROR;
             break;

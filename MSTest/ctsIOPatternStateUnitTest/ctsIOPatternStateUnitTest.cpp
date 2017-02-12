@@ -130,6 +130,14 @@ namespace ctsTraffic {
         {
             return s_TransferSize;
         }
+        bool ShutdownCalled() NOEXCEPT
+        {
+            return false;
+        }
+        unsigned long ConsoleVerbosity() NOEXCEPT
+        {
+            return 0;
+        }
     }
 }
 ///

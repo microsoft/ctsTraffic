@@ -261,8 +261,8 @@ namespace ctsTraffic {
         inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
-                ctsConfig::PrintDebug(
-                    L"\t\tctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)",
+                PrintDebugInfo(
+                    L"\t\tctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)\n",
                     _current_transfer, ctsStatistics::ConnectionIdLength);
                 return false;
             }

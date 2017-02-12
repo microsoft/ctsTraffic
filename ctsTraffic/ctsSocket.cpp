@@ -189,7 +189,7 @@ namespace ctsTraffic {
         if (local_socket != INVALID_SOCKET) {
             ULONG isb;
             if (0 == ::idealsendbacklogquery(local_socket, &isb)) {
-                ctsConfig::PrintDebug(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                PrintDebugInfo(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
                 this->pattern->set_ideal_send_backlog(isb);
             } else {
                 int gle = ::WSAGetLastError();

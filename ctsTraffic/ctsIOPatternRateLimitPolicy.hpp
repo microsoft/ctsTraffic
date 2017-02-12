@@ -66,7 +66,7 @@ namespace ctsTraffic {
           quantum_start_time_ms(ctl::ctTimer::snap_qpc_as_msec())
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
-            ctsConfig::PrintDebug(
+            PrintDebugInfo(
                 L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
                 static_cast<unsigned long long>(this->BytesSendingPerQuantum),
                 static_cast<unsigned long long>(this->QuantumPeriodMs));
@@ -111,7 +111,7 @@ namespace ctsTraffic {
                 }
             }
 #ifdef CTSTRAFFIC_UNIT_TESTS
-            ctsConfig::PrintDebug(
+            PrintDebugInfo(
                 L"\t\tctsIOPatternRateLimitPolicy\n"
                 L"\tcurrent_time_ms: %lld\n"
                 L"\tquantum_start_time_ms: %llu\n"

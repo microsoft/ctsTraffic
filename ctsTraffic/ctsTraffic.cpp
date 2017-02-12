@@ -59,7 +59,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
     catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %s\n", ctsPrintSafeIntException(e));
+        ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %s", ctsPrintSafeIntException(e));
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
@@ -109,7 +109,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
     catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed when converting integers : %s\n", ctsPrintSafeIntException(e));
+        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed when converting integers : %s", ctsPrintSafeIntException(e));
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
@@ -119,12 +119,12 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return (e.why() == 0) ? ERROR_CANCELLED : e.why();
     }
     catch (const bad_alloc&) {
-        ctsConfig::PrintErrorInfo(L"[%.3f] ctsTraffic failed: Out of Memory", ctsConfig::GetStatusTimeStamp());
+        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: Out of Memory");
         ctsConfig::Shutdown();
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e) {
-        ctsConfig::PrintErrorInfo(L"[%.3f] ctsTraffic failed: %S", ctsConfig::GetStatusTimeStamp(), e.what());
+        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %S", e.what());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;
     }

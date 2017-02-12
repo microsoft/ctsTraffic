@@ -221,7 +221,7 @@ namespace ctsTraffic {
             for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                 // Make the structures for the listener and its accept sockets
                 std::shared_ptr<ctsListenSocketInfo> listen_socket_info = std::make_shared<ctsListenSocketInfo>(addr);
-                ctsConfig::PrintDebug(L"\t\tListening to %s\n", addr.writeCompleteAddress().c_str());
+                PrintDebugInfo(L"\t\tListening to %s\n", addr.writeCompleteAddress().c_str());
                 //
                 // Add PendedAcceptRequests pended acceptex objects per listener
                 //

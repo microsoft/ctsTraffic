@@ -125,7 +125,7 @@ namespace ctsTraffic {
                     // these 2 states should generally not be "completed" by the functor that was invoked
                     // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
                     // deliberately not changing any internal values these since the socket is already being close
-                    ctsConfig::PrintDebug(
+                    PrintDebugInfo(
                         L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n", 
                         static_cast<unsigned long>(this->state));
                     break;
@@ -208,7 +208,7 @@ namespace ctsTraffic {
                     ::LeaveCriticalSection(&context->state_guard);
 
                     ctsConfig::Settings->CreateFunction(context->socket);
-                    ctsConfig::PrintDebug(L"\t\tctsSocketState Created\n");
+                    PrintDebugInfo(L"\t\tctsSocketState Created\n");
                 }
                 break;
             }
@@ -219,7 +219,7 @@ namespace ctsTraffic {
                 ::LeaveCriticalSection(&context->state_guard);
 
                 ctsConfig::Settings->ConnectFunction(context->socket);
-                ctsConfig::PrintDebug(L"\t\tctsSocketState Connected\n");
+                PrintDebugInfo(L"\t\tctsSocketState Connected\n");
                 break;
             }
 
@@ -244,7 +244,7 @@ namespace ctsTraffic {
                     ::LeaveCriticalSection(&context->state_guard);
 
                     ctsConfig::Settings->IoFunction(context->socket);
-                    ctsConfig::PrintDebug(L"\t\tctsSocketState InitiatedIO\n");
+                    PrintDebugInfo(L"\t\tctsSocketState InitiatedIO\n");
                 }
                 break;
             }
@@ -294,7 +294,7 @@ namespace ctsTraffic {
                     parent->closing(context->initiated_io);
                 }
                 
-                ctsConfig::PrintDebug(L"\t\tctsSocketState Closed\n");
+                PrintDebugInfo(L"\t\tctsSocketState Closed\n");
                 break;
             }
 

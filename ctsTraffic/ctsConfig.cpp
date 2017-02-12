@@ -75,7 +75,7 @@ namespace ctsTraffic {
         static CRITICAL_SECTION s_StatusUpdateLock;
         static CRITICAL_SECTION s_ShutdownLock;
 
-        static const unsigned short s_DefaultPort = 4444;
+        static const WORD s_DefaultPort = 4444;
 
         static const unsigned long long s_DefaultTransfer = 0x40000000; // 1Gbyte
 
@@ -1009,7 +1009,7 @@ namespace ctsTraffic {
                 return (value != nullptr);
             });
             if (found_arg != end(_args)) {
-                Settings->Port = as_integral<unsigned short>(ParseArgument(*found_arg, L"-Port"));
+                Settings->Port = as_integral<WORD>(ParseArgument(*found_arg, L"-Port"));
                 if (0 == Settings->Port) {
                     throw invalid_argument("-Port");
                 }
@@ -2352,10 +2352,7 @@ namespace ctsTraffic {
                     error_string.append(ctString::format_string(L" %s", arg_string));
                 }
                 error_string.append(L"\n");
-                PrintErrorInfoOverride(
-                    L"[%.3f] %s\n",
-                    ctsConfig::GetStatusTimeStamp(),
-                    error_string.c_str());
+                PrintErrorInfoOverride(error_string.c_str());
                 throw invalid_argument(ctString::convert_to_string(error_string));
             }
 
@@ -2489,10 +2486,7 @@ namespace ctsTraffic {
                     ctFatalCondition(s_BreakOnError, L"Fatal exception: %s", exception_text.c_str());
                 }
 
-                PrintErrorInfo(
-                    L"[%.3f] %s\n",
-                    ctsConfig::GetStatusTimeStamp(),
-                    exception_text.c_str());
+                PrintErrorInfo(exception_text.c_str());
             }
             catch (const std::exception&) {
                 if (!s_ShutdownCalled) {
@@ -2527,9 +2521,14 @@ namespace ctsTraffic {
             ctFatalConditionVa(s_BreakOnError, _text, argptr);
 
             ::vwprintf_s(_text, argptr);
+
             if (s_ErrorLogger) {
                 try {
-                    s_ErrorLogger->LogError(ctString::format_string_va(_text, argptr).c_str());
+                    s_ErrorLogger->LogError(
+                        ctString::format_string(
+                            L"[%.3f] %s\n",
+                            ctsConfig::GetStatusTimeStamp(),
+                            ctString::format_string_va(_text, argptr).c_str()).c_str());
                 }
                 catch (const std::exception&) {
                 }
@@ -2567,7 +2566,11 @@ namespace ctsTraffic {
 
                 if (s_ErrorLogger) {
                     try {
-                        s_ErrorLogger->LogError(ctString::format_string_va(_text, argptr).c_str());
+                        s_ErrorLogger->LogError(
+                            ctString::format_string(
+                                L"[%.3f] %s\n",
+                                ctsConfig::GetStatusTimeStamp(),
+                                ctString::format_string_va(_text, argptr).c_str()).c_str());
                     }
                     catch (const std::exception&) {
                     }
@@ -2596,7 +2599,6 @@ namespace ctsTraffic {
                         write_to_console = true;
                     }
                 }
-
 
                 try {
                     std::wstring error_string;
@@ -2708,8 +2710,6 @@ namespace ctsTraffic {
 
         void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
         {
-            ctsConfigInitOnce();
-
             if (!s_ShutdownCalled) {
                 if (s_JitterLogger) {
                     // long long ~= up to 20 characters long, plus 5 for commas & CR
@@ -3038,48 +3038,6 @@ namespace ctsTraffic {
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsTcpStatistics());
             } else {
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsUdpStatistics());
-            }
-        }
-
-        void  __cdecl PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
-        {
-            ctsConfigInitOnce();
-
-            if (!s_ShutdownCalled) {
-                switch (s_ConsoleVerbosity) {
-                    // case 0: // nothing
-                    // case 1: // status updates
-                    // case 2: // error info
-                    // case 3: // connection info
-                    // case 4: // connection info + error info
-                    // case 5: // connection info + error info + status updates
-                    case 6: // above + debug info
-                    {
-                        va_list argptr;
-                        va_start(argptr, _text);
-                        ::vwprintf_s(_text, argptr);
-                        va_end(argptr);
-                    }
-                }
-            }
-        }
-        void PrintDebugIfFailed(_In_ LPCWSTR _what, unsigned long _why, _In_ LPCWSTR _where) NOEXCEPT
-        {
-            ctsConfigInitOnce();
-
-            if (!s_ShutdownCalled && (_why != 0)) {
-                switch (s_ConsoleVerbosity) {
-                    // case 0: // nothing
-                    // case 1: // status updates
-                    // case 2: // error info
-                    // case 3: // connection info
-                    // case 4: // connection info + error info
-                    // case 5: // connection info + error info + status updates
-                    case 6: // above + debug info
-                    {
-                        ::fwprintf_s(stdout, L"\tNonFatal Error: %s failed (%u) [%s]\n", _what, _why, _where);
-                    }
-                }
             }
         }
         void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
@@ -3690,6 +3648,15 @@ namespace ctsTraffic {
             return socket;
         }
 
+        bool ShutdownCalled() NOEXCEPT
+        {
+            return s_ShutdownCalled;
+        }
+
+        unsigned long ConsoleVerbosity() NOEXCEPT
+        {
+            return s_ConsoleVerbosity;
+        }
     } // namespace ctsConfig
 } // namespace ctsTraffic
 

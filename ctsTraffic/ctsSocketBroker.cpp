@@ -100,7 +100,7 @@ namespace ctsTraffic {
 
     void ctsSocketBroker::start()
     {
-        ctsConfig::PrintDebug(
+        PrintDebugInfo(
             L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
             total_connections_remaining, pending_limit);
 

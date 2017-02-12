@@ -187,7 +187,7 @@ namespace ctsTraffic {
             ctsConfig::PrintNewConnection(local_addr, targetAddress);
 
             try {
-                ctsConfig::PrintDebug(
+                PrintDebugInfo(
                     L"\t\tctsMediaStreamClient sent its START message to %s\n",
                     targetAddress.writeCompleteAddress().c_str());
             }
@@ -242,6 +242,7 @@ namespace ctsTraffic {
                 } else {
                     // IO successfully completed inline and the async completion won't be invoke
                     // - or the IO failed
+                    if (result.error_code != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsMediaStreamClient]\n", function_name, result.error_code);
 
                     // hold a reference on the iopattern
                     auto shared_pattern(_shared_socket->io_pattern());
@@ -252,16 +253,12 @@ namespace ctsTraffic {
 
                     switch (protocol_status) {
                         case ctsIOStatus::ContinueIo:
-                            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                            ctsConfig::PrintDebugIfFailed(function_name, result.error_code, L"ctsMediaStreamClient");
                             // the protocol wants to ignore the error and send more data
                             return_status.error_code = NO_ERROR;
                             return_status.continue_io = true;
                             break;
 
                         case ctsIOStatus::CompletedIo:
-                            // write to PrintDebug if the IO failed - only debug since the protocol ignored the error
-                            ctsConfig::PrintDebugIfFailed(function_name, result.error_code, L"ctsMediaStreamClient");
                             // the protocol wants to ignore the error but is done with IO
                             _shared_socket->close_socket();
                             return_status.error_code = NO_ERROR;
@@ -387,14 +384,12 @@ namespace ctsTraffic {
                 if (gle != 0) {
                     // the failure may have been a protocol error - in which case gle would just be NO_ERROR
                     ctsConfig::PrintErrorInfo(
-                        L"[%.3f] MediaStream Client: IO failed (%s) with error %d\n",
-                        ctsConfig::GetStatusTimeStamp(),
+                        L"MediaStream Client: IO failed (%s) with error %d",
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
                         gle);
                 } else {
                     ctsConfig::PrintErrorInfo(
-                        L"[%.3f] MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%u)\n",
-                        ctsConfig::GetStatusTimeStamp(),
+                        L"MediaStream Client: IO succeeded (%s) but the ctsIOProtocol failed the stream (%u)",
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
                         shared_pattern->get_last_error());
                 }

@@ -134,7 +134,7 @@ namespace ctsTraffic {
 
                     ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
                     if (NO_ERROR == error) {
-                        ctsConfig::PrintDebug(L"\t\tConnecting to %s\n", targetAddress.writeCompleteAddress().c_str());
+                        PrintDebugInfo(L"\t\tConnecting to %s\n", targetAddress.writeCompleteAddress().c_str());
                     }
                 }
                 catch (const ctl::ctException& e) {
