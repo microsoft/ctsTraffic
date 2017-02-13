@@ -2446,7 +2446,7 @@ namespace ctsTraffic {
             }
 
             if (s_JitterLogger && s_JitterLogger->IsCsvFormat()) {
-                s_JitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf,PriorReceiveDelta,EstReceivedDgramInFlight\r\n");
+                s_JitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\r\n");
             }
         }
 
@@ -2723,23 +2723,13 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) NOEXCEPT
+        void PrintJitterUpdate(const JitterFrame& current_frame, const JitterFrame& previous_frame, const JitterFrame& first_frame) NOEXCEPT
         {
             if (!s_ShutdownCalled) {
                 if (s_JitterLogger) {
-                    long ms_since_prior_receive = 0;
                     // calculate time since the prior receive
-                    if (previous_frame.receiver_qpc != 0) {
-                        ms_since_prior_receive = static_cast<long>(((current_frame.receiver_qpc * 1000LL) / current_frame.receiver_qpf) - ((previous_frame.receiver_qpc * 1000LL) / previous_frame.receiver_qpf));
-                    }
-
-                    // estimating time in flight for this frame by determining how much time since the first send was just 'waiting' to send this frame
-                    // and subtracing that from how much time since the first receive - since time between receives should at least be time between sends
-                    long ms_estimated_time_in_flight = 0;
-                    if (first_frame.receiver_qpc != 0) {
-                        long ms_since_first_receive = static_cast<long>(((current_frame.receiver_qpc * 1000LL) / current_frame.receiver_qpf) - ((first_frame.receiver_qpc * 1000LL) / first_frame.receiver_qpf));
-                        long ms_since_first_send = static_cast<long>(((current_frame.sender_qpc * 1000LL) / current_frame.sender_qpf) - ((first_frame.sender_qpc * 1000LL) / first_frame.sender_qpf));
-                        ms_estimated_time_in_flight = ms_since_first_receive - ms_since_first_send;
+                    if (previous_frame.receiver_qpc == 0) {
+                        // this is the first receive
                     }
                     // long long ~= up to 20 characters long, plus 5 for commas & CR
                     static const size_t formatted_text_length = (20 * 5) + 5;
@@ -2749,12 +2739,12 @@ namespace ctsTraffic {
                         formatted_text,
                         formatted_text_length,
                         _TRUNCATE,
-                        L"%lld,%lld,%lld,%lld,%lld,%ld,%ld\r\n",
-                        current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf, ms_since_prior_receive, ms_estimated_time_in_flight);
+                        L"%lld,%lld,%lld,%lld,%lld\r\n",
+                        current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf);
                     ctl::ctFatalCondition(
                         -1 == converted,
-                        L"_snwprintf_s failed to convert Jitter information: %lld, %lld, %lld, %lld, %lld, %ld, %ld", 
-                        current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf, ms_since_prior_receive, ms_estimated_time_in_flight);
+                        L"_snwprintf_s failed to convert Jitter information: %lld, %lld, %lld, %lld, %lld", 
+                        current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf);
                     s_JitterLogger->LogMessage(formatted_text);
                 }
             }

@@ -303,7 +303,7 @@ namespace ctsTraffic {
     /// If the sequence number was not found, will return end(frame_entries)
     ///
     _Requires_lock_held_(cs)
-    vector<ctsIOPatternMediaStreamClient::FrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) NOEXCEPT
+    vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) NOEXCEPT
     {
         ctsSignedLongLong head_sequence_number = this->head_entry->sequence_number;
         ctsSignedLongLong tail_sequence_number = head_sequence_number + this->frame_entries.size() - 1;
@@ -397,12 +397,14 @@ namespace ctsTraffic {
                 static_cast<long long>(this->head_entry->sequence_number));
 
             // Directly write this status update if jitter is enabled
-            ctsConfig::PrintJitterUpdate(
-                this->head_entry->sequence_number,
-                this->head_entry->sender_qpc,
-                this->head_entry->sender_qpf,
-                this->head_entry->receiver_qpc,
-                this->head_entry->receiver_qpf);
+            ctsConfig::PrintJitterUpdate(*this->head_entry, this->previous_frame, this->first_frame);
+
+            // if this is the first frame, capture it
+            if (this->first_frame.receiver_qpc == 0) {
+                this->first_frame = *this->head_entry;
+            }
+            // always keep the most recently received frame for jitter
+            this->previous_frame = *this->head_entry;
 
         } else {
             ctsConfig::Settings->UdpStatusDetails.dropped_frames.increment();
@@ -411,6 +413,10 @@ namespace ctsTraffic {
             PrintDebugInfo(
                 L"\t\tctsIOPatternMediaStreamClient **dropped** frame %lld\n",
                 static_cast<long long>(this->head_entry->sequence_number));
+
+            // write and empty row
+            ctsConfig::PrintJitterUpdate(ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry());
+
         }
 
         // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)

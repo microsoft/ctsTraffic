@@ -594,15 +594,6 @@ namespace ctsTraffic {
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
 
     private:
-        struct FrameEntry {
-            long long sequence_number = 0LL;
-            long long sender_qpc = 0LL;
-            long long sender_qpf = 0LL;
-            long long receiver_qpc = 0LL;
-            long long receiver_qpf = 0LL;
-            unsigned long received = 0UL;
-        };
-
         // private member variables
         PTP_TIMER renderer_timer;
         PTP_TIMER start_timer;
@@ -625,14 +616,18 @@ namespace ctsTraffic {
 
         // member variables that require the base lock
         _Requires_lock_held_(cs)
-        std::vector<FrameEntry> frame_entries;
+        std::vector<ctsConfig::JitterFrameEntry> frame_entries;
 
         _Requires_lock_held_(cs)
-        std::vector<FrameEntry>::iterator head_entry;
+        std::vector<ctsConfig::JitterFrameEntry>::iterator head_entry;
+
+        // tracking for jitter information
+        ctsConfig::JitterFrameEntry first_frame;
+        ctsConfig::JitterFrameEntry previous_frame;
 
         // member functions - all require the base lock
         _Requires_lock_held_(cs)
-        std::vector<FrameEntry>::iterator find_sequence_number(long long _seq_number) NOEXCEPT;
+        std::vector<ctsConfig::JitterFrameEntry>::iterator find_sequence_number(long long _seq_number) NOEXCEPT;
 
         _Requires_lock_held_(cs)
         bool received_buffered_frames() NOEXCEPT;

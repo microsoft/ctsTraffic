@@ -102,48 +102,48 @@ namespace ctsTraffic {
 
         /// OR
         inline
-        OptionType operator| (OptionType& _lhs, OptionType _rhs)
+        OptionType operator| (OptionType& lhs, OptionType rhs)
         {
-            return OptionType(static_cast<unsigned long>(_lhs) | static_cast<unsigned long>(_rhs));
+            return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
         inline
-        OptionType& operator|= (OptionType& _lhs, OptionType _rhs)
+        OptionType& operator|= (OptionType& lhs, OptionType rhs)
         {
-            _lhs = _lhs | _rhs;
-            return _lhs;
+            lhs = lhs | rhs;
+            return lhs;
         }
 
         /// AND
         inline
-        OptionType operator& (OptionType _lhs, OptionType _rhs)
+        OptionType operator& (OptionType lhs, OptionType rhs)
         {
-            return OptionType(static_cast<unsigned long>(_lhs) & static_cast<unsigned long>(_rhs));
+            return OptionType(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
         }
         inline
-        OptionType& operator&= (OptionType& _lhs, OptionType _rhs)
+        OptionType& operator&= (OptionType& lhs, OptionType rhs)
         {
-            _lhs = _lhs & _rhs;
-            return _lhs;
+            lhs = lhs & rhs;
+            return lhs;
         }
 
         /// XOR
         inline
-        OptionType operator^ (OptionType _lhs, OptionType _rhs)
+        OptionType operator^ (OptionType lhs, OptionType rhs)
         {
-            return OptionType(static_cast<unsigned long>(_lhs) ^ static_cast<unsigned long>(_rhs));
+            return OptionType(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
         }
         inline
-        OptionType& operator^= (OptionType& _lhs, OptionType _rhs)
+        OptionType& operator^= (OptionType& lhs, OptionType rhs)
         {
-            _lhs = _lhs ^ _rhs;
-            return _lhs;
+            lhs = lhs ^ rhs;
+            return lhs;
         }
 
         /// NOT
         inline
-        OptionType operator~ (OptionType _lhs)
+        OptionType operator~ (OptionType lhs)
         {
-            return OptionType(~static_cast<unsigned long>(_lhs));
+            return OptionType(~static_cast<unsigned long>(lhs));
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,9 +166,19 @@ namespace ctsTraffic {
         void PrintSettings();
 
         void PrintLegend() NOEXCEPT;
+
+        struct JitterFrameEntry {
+            long long sequence_number = 0LL;
+            long long sender_qpc = 0LL;
+            long long sender_qpf = 0LL;
+            long long receiver_qpc = 0LL;
+            long long receiver_qpf = 0LL;
+            unsigned long received = 0UL;
+        };
+        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) NOEXCEPT;
+
         void PrintStatusUpdate() NOEXCEPT;
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT;
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
 #define PrintDebugInfo(fmt, ...)                                        \
@@ -182,19 +192,19 @@ namespace ctsTraffic {
             }                                                           \
         }
 
-        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT;
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintErrorIfFailed(_In_ LPCWSTR what, unsigned long why) NOEXCEPT;
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
         // Override will always print to console regardless of settings (important if can't even start)
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
 
         void PrintException(const std::exception& e) NOEXCEPT;
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintExceptionOverride(const std::exception& e) NOEXCEPT;
 
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT;
+        void PrintNewConnection(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsTcpStatistics& stats) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsUdpStatistics& stats) NOEXCEPT;
+        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error) NOEXCEPT;
 
         // Get* functions
         ctsSignedLongLong   GetTcpBytesPerSecond() NOEXCEPT;
@@ -208,8 +218,8 @@ namespace ctsTraffic {
         bool IsListening() NOEXCEPT;
 
         // Set* functions
-        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address);
-        int SetPreConnectOptions(SOCKET _s);
+        int SetPreBindOptions(SOCKET s, const ctl::ctSockaddr& local_address);
+        int SetPreConnectOptions(SOCKET s);
 
         // for the MediaStream pattern
         struct MediaStreamSettings {
