@@ -32,3 +32,9 @@ UDP logging:
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500 -serverexitlimit:1 -connectionfilename:udpserver_conn.log -statusfilename:udpserver_status.log -errorfilename:udpserver_error.log
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -connectionfilename:udpclient_conn.csv -statusfilename:udpclient_status.csv -jitterfilename:udpclient_jitter.csv
 
+
+
+TCP logging:
+
+ctsTraffic.exe -listen:* -protocol:tcp -pattern:duplex -consoleverbosity:5 -statusupdate:500 -serverexitlimit:1 -connectionfilename:tcpserver_conn.log -statusfilename:tcpserver_status.log -errorfilename:tcpserver_error.log
+ctsTraffic.exe -target:localhost -protocol:tcp -pattern:duplex -connections:3 -statusupdate:500 -iterations:1 -consoleverbosity:5 -connectionfilename:tcpclient_conn.csv -statusfilename:tcpclient_status.csv

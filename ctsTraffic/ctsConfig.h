@@ -77,7 +77,8 @@ namespace ctsTraffic {
             NoFormattingSet,
             WttLog,
             ClearText,
-            Csv
+            Csv,
+            ConsoleOutput
         };
 
         enum OptionType

@@ -107,9 +107,7 @@ namespace ctsTraffic {
     class ctsTextLogger : public ctsLogger {
     public:
         ctsTextLogger(_In_ LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
-            ctsLogger(_format),
-            file_cs(),
-            file_handle(INVALID_HANDLE_VALUE)
+            ctsLogger(_format)
         {
             if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsTextLogger", false);
@@ -125,13 +123,14 @@ namespace ctsTraffic {
                 FILE_ATTRIBUTE_NORMAL,
                 NULL);
             if (INVALID_HANDLE_VALUE == file_handle) {
+                auto gle = ::GetLastError();
                 throw ctl::ctException(
-                    ::GetLastError(),
+                    gle,
                     ctl::ctString::format_string(L"CreateFile(%s)", _file_name).c_str(),
                     L"ctsTextLogger",
                     true);
             }
-            ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
+            ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); });
 
             // write the UTF16 Byte order mark
             static const WCHAR BOM_UTF16 = 0xFEFF;
@@ -143,7 +142,8 @@ namespace ctsTraffic {
                 &BytesWritten,
                 nullptr)) 
             {
-                throw ctl::ctException(::GetLastError(), L"WriteFile", L"ctsTextLogger", false);
+                auto gle = ::GetLastError();
+                throw ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false);
             }
 
             // everything succeeded, dismiss the scope guards
@@ -168,27 +168,24 @@ namespace ctsTraffic {
 
     private:
         CRITICAL_SECTION file_cs;
-        HANDLE file_handle;
+        HANDLE file_handle = INVALID_HANDLE_VALUE;
 
         void write_impl(_In_ LPCWSTR _message) NOEXCEPT
         {
-            try {
-                auto converted_string(ctl::ctString::replace_all_copy(_message, L"\n", L"\r\n"));
-                DWORD BytesWritten;
-                if (!::WriteFile(
-                    file_handle,
-                    converted_string.c_str(),
-                    static_cast<DWORD>(converted_string.length() * sizeof(WCHAR)),
-                    &BytesWritten,
-                    nullptr)) 
-                {
-                    ctl::ctException write_error(::GetLastError(), L"WriteFile", L"ctsTextLogger", false);
-                    ctsConfig::PrintException(write_error);
-                }
+            ::EnterCriticalSection(&file_cs);
+            DWORD BytesWritten;
+            if (!::WriteFile(
+                file_handle,
+                _message,
+                static_cast<DWORD>(::wcslen(_message) * sizeof(WCHAR)),
+                &BytesWritten,
+                nullptr)) 
+            {
+                auto gle = ::GetLastError();
+                ctsConfig::PrintException(
+                    ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false));
             }
-            catch (const std::exception& e) {
-                ctsConfig::PrintException(e);
-            }
+            ::LeaveCriticalSection(&file_cs);
         }
     };
 

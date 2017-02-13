@@ -267,7 +267,7 @@ namespace ctsTraffic {
             return {};
         }
 
-        /// LONG and ULONG
+        // LONG and ULONG
         template <>
         long as_integral<long>(const std::wstring& _string)
         {
@@ -300,7 +300,7 @@ namespace ctsTraffic {
             }
             return return_value;
         }
-        /// INT and UINT
+        // INT and UINT
         template <>
         int as_integral<int>(const std::wstring& _string)
         {
@@ -311,7 +311,7 @@ namespace ctsTraffic {
         {
             return as_integral<unsigned long>(_string);
         }
-        /// SHORT and USHORT
+        // SHORT and USHORT
         template <>
         short as_integral<short>(const std::wstring& _string)
         {
@@ -331,7 +331,7 @@ namespace ctsTraffic {
             }
             return static_cast<unsigned short>(return_value);
         }
-        /// LONGLONG and ULONGLONG
+        // LONGLONG and ULONGLONG
         template <>
         long long as_integral<long long>(const std::wstring& _string)
         {
@@ -1524,7 +1524,8 @@ namespace ctsTraffic {
         /// -PrePostSends:#####
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
-        static void set_prepostsends(vector<const wchar_t*>& _args)
+        static
+        void set_prepostsends(vector<const wchar_t*>& _args)
         {
             auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-PrePostSends");
@@ -1551,7 +1552,8 @@ namespace ctsTraffic {
         /// -RecvBufValue:#####
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
-        static void set_recvbufvalue(vector<const wchar_t*>& _args)
+        static
+        void set_recvbufvalue(vector<const wchar_t*>& _args)
         {
             auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-RecvBufValue");
@@ -1573,7 +1575,8 @@ namespace ctsTraffic {
         /// -SendBufValue:#####
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
-        static void set_sendbufvalue(vector<const wchar_t*>& _args)
+        static
+        void set_sendbufvalue(vector<const wchar_t*>& _args)
         {
             auto found_arg = find_if(begin(_args), end(_args), [] (const wchar_t* parameter) -> bool {
                 const wchar_t* value = ParseArgument(parameter, L"-SendBufValue");
@@ -1998,7 +2001,7 @@ namespace ctsTraffic {
                                  L"\t   - 3 : connection information only\n"
                                  L"\t   - 4 : connection information + error information\n"
                                  L"\t   - 5 : connection information + error information + status updates\n"
-                                 // L"\t   - 6 : above + debug output\n" /// Not exposing debug information to users
+                                 // L"\t   - 6 : above + debug output\n" // Not exposing debug information to users
                                  L"-ConnectionFilename:<filename with/without path>\n"
                                  L"\t - <default> == (not written to a log file)\n"
                                  L"\t   note : the same filename can be specified for the different logging options\n"
@@ -2155,9 +2158,9 @@ namespace ctsTraffic {
             const wchar_t** arg_end = argv + argc;
             vector<const wchar_t*> args(arg_begin, arg_end);
 
-            ///
-            /// first check of they asked for help text
-            ///
+            //
+            // first check of they asked for help text
+            //
             auto found_help = find_if(
                 begin(args),
                 end(args),
@@ -2185,43 +2188,43 @@ namespace ctsTraffic {
                 }
             }
 
-            ///
-            /// create the handle for ctrl-c
-            ///
+            //
+            // create the handle for ctrl-c
+            //
             Settings->CtrlCHandle = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
             if (Settings->CtrlCHandle == NULL) {
                 throw ctException(::GetLastError(), L"CreateEvent", L"ctsConfig::Startup", false);
             }
 
-            ///
-            /// Many of the below settings must be made in a specified order - comments below help to explain this reasoning
-            /// note: the IO function definitions must come after *all* other settings
-            ///       since instantiations of those IO functions might reference global Settings values
+            //
+            // Many of the below settings must be made in a specified order - comments below help to explain this reasoning
+            // note: the IO function definitions must come after *all* other settings
+            //       since instantiations of those IO functions might reference global Settings values
 
-            ///
-            /// First:
-            /// Establish logging settings including verbosity levels and error policies before any functional settings
-            /// Create the threadpool before instantiating any other object
-            ///
+            //
+            // First:
+            // Establish logging settings including verbosity levels and error policies before any functional settings
+            // Create the threadpool before instantiating any other object
+            //
             set_error(args);
             set_logging(args);
 
-            ///
-            /// Next: check for static machine configuration
-            /// - note these are checking system settings, not user arguments
-            ///
+            //
+            // Next: check for static machine configuration
+            // - note these are checking system settings, not user arguments
+            //
             check_system_settings();
 
-            ///
-            /// Next: establish the address and port # to be used
-            ///
+            //
+            // Next: establish the address and port # to be used
+            //
             set_address(args);
             set_port(args);
             set_localport(args);
 
-            ///
-            /// ensure a Port is assigned to all listening addresses and target addresses
-            ///
+            //
+            // ensure a Port is assigned to all listening addresses and target addresses
+            //
             for (auto& addr : Settings->ListenAddresses) {
                 if (addr.port() == 0x0000) {
                     addr.setPort(Settings->Port);
@@ -2233,17 +2236,10 @@ namespace ctsTraffic {
                 }
             }
 
-            ///
-            /// Next: gather the protocol and Pattern to be used
-            /// - set the threadpool value after identifying the pattern
+            //
+            // Next: gather the protocol and Pattern to be used
+            // - set the threadpool value after identifying the pattern
             set_protocol(args);
-
-            ///
-            /// verify logging matches the protocol
-            ///
-            if (s_JitterLogger && ctsConfig::ProtocolType::UDP != Settings->Protocol) {
-                throw invalid_argument("Jitter can only be logged using UDP");
-            }
 
             set_ioPattern(args);
             set_threadpool(args);
@@ -2261,19 +2257,19 @@ namespace ctsTraffic {
                 Settings->ConnectionLimit = s_DefaultTcpConnectionLimit;
             }
 
-            ///
-            /// Next, set the ctsStatusInformation to be used to print status updates for this protocol
-            /// - this must be called after both set_logging and set_protocol
-            ///
+            //
+            // Next, set the ctsStatusInformation to be used to print status updates for this protocol
+            // - this must be called after both set_logging and set_protocol
+            //
             if (ProtocolType::TCP == Settings->Protocol) {
                 s_PrintStatusInformation = std::make_shared<ctsTcpStatusInformation>();
             } else {
                 s_PrintStatusInformation = std::make_shared<ctsUdpStatusInformation>();
             }
 
-            ///
-            /// Next: capture other various settings which do not have explicit dependencies
-            ///
+            //
+            // Next: capture other various settings which do not have explicit dependencies
+            //
             set_options(args);
             set_compartment(args);
             set_connections(args);
@@ -2284,6 +2280,19 @@ namespace ctsTraffic {
             set_iterations(args);
             set_serverExitLimit(args);
             set_timelimit(args);
+
+            //
+            // verify jitter logging requirements
+            //
+            if (s_JitterLogger && Settings->Protocol != ctsConfig::ProtocolType::UDP) {
+                throw invalid_argument("Jitter can only be logged using UDP");
+            }
+            if (s_JitterLogger && ctsConfig::IsListening()) {
+                throw invalid_argument("Jitter can only be logged on the client");
+            }
+            if (s_JitterLogger && Settings->ConnectionLimit != 1) {
+                throw invalid_argument("Jitter can only be logged for a single UDP connection");
+            }
 
             if (s_MediaStreamSettings.FrameSizeBytes > 0) {
                 // the buffersize is now effectively the frame size
@@ -2307,9 +2316,9 @@ namespace ctsTraffic {
                 }
             }
 
-            ///
-            /// Set the default buffer values as these settings are optional
-            ///
+            //
+            // Set the default buffer values as these settings are optional
+            //
             Settings->ShouldVerifyBuffers = true;
             Settings->UseSharedBuffer = false;
             set_shouldVerifyBuffers(args);
@@ -2320,11 +2329,11 @@ namespace ctsTraffic {
                 }
             }
 
-            ///
-            /// finally set the functions to use once all other settings are established
-            /// set_ioFunction changes global options for socket operation for instance WSA_FLAG_REGISTERED_IO flag
-            /// - hence it is requirement to invoke it prior to any socket operation
-            ///
+            //
+            // finally set the functions to use once all other settings are established
+            // set_ioFunction changes global options for socket operation for instance WSA_FLAG_REGISTERED_IO flag
+            // - hence it is requirement to invoke it prior to any socket operation
+            //
             set_ioFunction(args);
             set_create(args);
             set_connect(args);
@@ -2390,8 +2399,8 @@ namespace ctsTraffic {
             }
         }
 
-        /// the Legend is to explain the fields for status updates
-        /// - only print if status updates are going to be provided
+        // the Legend is to explain the fields for status updates
+        // - only print if status updates are going to be provided
         void PrintLegend() NOEXCEPT
         {
             ctsConfigInitOnce();
@@ -2412,11 +2421,11 @@ namespace ctsTraffic {
 
             if (s_PrintStatusInformation) {
                 if (write_to_console) {
-                    LPCWSTR legend = s_PrintStatusInformation->print_legend(ctsConfig::StatusFormatting::ClearText);
+                    LPCWSTR legend = s_PrintStatusInformation->print_legend(ctsConfig::StatusFormatting::ConsoleOutput);
                     if (legend != nullptr) {
                         ::fwprintf(stdout, L"%s\n", legend);
                     }
-                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ClearText);
+                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ConsoleOutput);
                     if (header != nullptr) {
                         ::fwprintf(stdout, L"%s\n", header);
                     }
@@ -2430,19 +2439,18 @@ namespace ctsTraffic {
 
             if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat()) {
                 if (ProtocolType::UDP == Settings->Protocol) {
-                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId\n");
-
+                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId\r\n");
                 } else { // TCP
-                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\n");
+                    s_ConnectionLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId\r\n");
                 }
             }
 
             if (s_JitterLogger && s_JitterLogger->IsCsvFormat()) {
-                s_JitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\n");
+                s_JitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf\r\n");
             }
         }
 
-        /// Always print to console if override
+        // Always print to console if override
         void PrintExceptionOverride(const std::exception& e) NOEXCEPT
         {
             ctsConfigInitOnce();
@@ -2452,19 +2460,20 @@ namespace ctsTraffic {
             try {
                 auto formatted_string(
                     ctl::ctString::format_string(
-                    L"[%.3f] %s\n",
+                    L"[%.3f] %s",
                     ctsConfig::GetStatusTimeStamp(),
                     ctString::format_exception(e).c_str()));
 
                 ::fwprintf(stderr, L"%s\n", formatted_string.c_str());
                 if (s_ErrorLogger) {
-                    s_ErrorLogger->LogError(formatted_string.c_str());
+                    s_ErrorLogger->LogError(
+                        ctString::format_string(L"%s\r\n", formatted_string.c_str()).c_str());
                 }
             }
             catch (const std::exception&) {
                 ::fwprintf(stderr, L"Error : failed to allocate memory\n");
                 if (s_ErrorLogger) {
-                    s_ErrorLogger->LogError(L"Error : failed to allocate memory\n");
+                    s_ErrorLogger->LogError(L"Error : failed to allocate memory\r\n");
                 }
             }
         }
@@ -2510,7 +2519,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        /// Always print to console if override
+        // Always print to console if override
         void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
         {
             ctsConfigInitOnce();
@@ -2526,7 +2535,7 @@ namespace ctsTraffic {
                 try {
                     s_ErrorLogger->LogError(
                         ctString::format_string(
-                            L"[%.3f] %s\n",
+                            L"[%.3f] %s\r\n",
                             ctsConfig::GetStatusTimeStamp(),
                             ctString::format_string_va(_text, argptr).c_str()).c_str());
                 }
@@ -2560,20 +2569,25 @@ namespace ctsTraffic {
                     }
                 }
 
-                if (write_to_console) {
-                    ::vwprintf_s(_text, argptr);
-                }
+                try {
+                    std::wstring formatted_string;
+                    if (write_to_console) {
+                        formatted_string = ctString::format_string_va(_text, argptr);
+                        ::wprintf_s(L"%s\n", formatted_string.c_str());
+                    }
 
-                if (s_ErrorLogger) {
-                    try {
+                    if (s_ErrorLogger) {
+                        if (formatted_string.empty()) {
+                            formatted_string = ctString::format_string_va(_text, argptr);
+                        }
                         s_ErrorLogger->LogError(
                             ctString::format_string(
-                                L"[%.3f] %s\n",
+                                L"[%.3f] %s\r\n",
                                 ctsConfig::GetStatusTimeStamp(),
-                                ctString::format_string_va(_text, argptr).c_str()).c_str());
+                                formatted_string.c_str()).c_str());
                     }
-                    catch (const std::exception&) {
-                    }
+                }
+                catch (const std::exception&) {
                 }
 
                 va_end(argptr);
@@ -2604,13 +2618,13 @@ namespace ctsTraffic {
                     std::wstring error_string;
                     if (ctsIOPattern::IsProtocolError(_why)) {
                         error_string = ctl::ctString::format_string(
-                            L"[%.3f] Connection aborted due to the protocol error %s\n",
+                            L"[%.3f] Connection aborted due to the protocol error %s",
                             ctsConfig::GetStatusTimeStamp(),
                             ctsIOPattern::BuildProtocolErrorString(_why));
                     } else {
                         ctException error_details(_why, _what);
                         error_string = ctl::ctString::format_string(
-                            L"[%.3f] %s failed (%u) %s\n",
+                            L"[%.3f] %s failed (%u) %s",
                             ctsConfig::GetStatusTimeStamp(),
                             _what,
                             _why,
@@ -2618,11 +2632,12 @@ namespace ctsTraffic {
                     }
 
                     if (write_to_console) {
-                        ::fwprintf(stderr, L"%s", error_string.c_str());
+                        ::fwprintf(stderr, L"%s\n", error_string.c_str());
                     }
 
                     if (s_ErrorLogger) {
-                        s_ErrorLogger->LogError(error_string.c_str());
+                        s_ErrorLogger->LogError(
+                            ctString::format_string(L"%s\r\n", error_string.c_str()).c_str());
                     }
                 }
                 catch (const std::exception&) {
@@ -2660,7 +2675,7 @@ namespace ctsTraffic {
                             // write out the header to the console every 40 updates 
                             if (write_to_console) {
                                 if (s_PrintTimesliceCount != 0 && 0 == s_PrintTimesliceCount % 40) {
-                                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ClearText);
+                                    LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ConsoleOutput);
                                     if (header != nullptr) {
                                         ::fwprintf(stdout, L"%s", header);
                                     }
@@ -2682,7 +2697,7 @@ namespace ctsTraffic {
                                 --status_count;
                                 bool clear_status = (0 == status_count);
                                 LPCWSTR print_string = s_PrintStatusInformation->print_status(
-                                    ctsConfig::StatusFormatting::ClearText,
+                                    ctsConfig::StatusFormatting::ConsoleOutput,
                                     l_current_timeslice,
                                     clear_status);
                                 if (print_string != nullptr) {
@@ -2720,7 +2735,7 @@ namespace ctsTraffic {
                         formatted_text,
                         formatted_text_length,
                         _TRUNCATE,
-                        L"%lld,%lld,%lld,%lld,%lld\n",
+                        L"%lld,%lld,%lld,%lld,%lld\r\n",
                         _sequence_number, _sender_qpc, _sender_qpf, _recevier_qpc, _receiver_qpf);
                     ctl::ctFatalCondition(
                         -1 == converted,
@@ -2765,8 +2780,8 @@ namespace ctsTraffic {
                     s_ConnectionLogger->LogMessage(
                         ctString::format_string(
                             (ProtocolType::TCP == Settings->Protocol) ?
-                                L"[%.3f] TCP connection established [%s - %s]\n" :
-                                L"[%.3f] UDP connection established [%s - %s]\n",
+                                L"[%.3f] TCP connection established [%s - %s]\r\n" :
+                                L"[%.3f] UDP connection established [%s - %s]\r\n",
                             GetStatusTimeStamp(),
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str()).c_str());
@@ -2810,12 +2825,12 @@ namespace ctsTraffic {
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%s - %s] [%S]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
-            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
-            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]\n";
+            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%s - %s] [%S]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
 
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
-            static LPCWSTR TCPResultCsvFormat = L"%.3f,%s,%s,%lld,%lld,%lld,%lld,%lld,%s,%S\n";
+            static LPCWSTR TCPResultCsvFormat = L"%.3f,%s,%s,%lld,%lld,%lld,%lld,%lld,%s,%S\r\n";
 
             long long total_time = (_stats.end_time.get() - _stats.start_time.get());
             ctl::ctFatalCondition(
@@ -2875,9 +2890,7 @@ namespace ctsTraffic {
                         text_string = ctString::format_string(
                             (ErrorType::ProtocolError == error_type) ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
                             current_time,
-                            (ErrorType::ProtocolError == error_type) ?
-                                 ctsIOPattern::BuildProtocolErrorString(_error) :
-                                error_string.c_str(),
+                            (ErrorType::ProtocolError == error_type) ? ctsIOPattern::BuildProtocolErrorString(_error) : error_string.c_str(),
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str(),
                             _stats.connection_identifier,
@@ -2891,14 +2904,15 @@ namespace ctsTraffic {
 
                 if (write_to_console) {
                     // text strings always go to the console
-                    ::wprintf(L"%s", text_string.c_str());
+                    ::wprintf(L"%s\n", text_string.c_str());
                 }
 
                 if (s_ConnectionLogger) {
                     if (s_ConnectionLogger->IsCsvFormat()) {
                         s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
-                        s_ConnectionLogger->LogMessage(text_string.c_str());
+                        s_ConnectionLogger->LogMessage(
+                            ctString::format_string(L"%s\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -2939,12 +2953,12 @@ namespace ctsTraffic {
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
-            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]\n";
+            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
 
             // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
-            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%s,%S\n";
+            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%s,%S\r\n";
 
             float current_time = ctsConfig::GetStatusTimeStamp();
             long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
@@ -3018,14 +3032,15 @@ namespace ctsTraffic {
 
                 if (write_to_console) {
                     // text strings always go to the console
-                    ::wprintf(L"%s", text_string.c_str());
+                    ::wprintf(L"%s\n", text_string.c_str());
                 }
 
                 if (s_ConnectionLogger) {
                     if (s_ConnectionLogger->IsCsvFormat()) {
                         s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
-                        s_ConnectionLogger->LogMessage(text_string.c_str());
+                        s_ConnectionLogger->LogMessage(
+                            ctString::format_string(L"%s\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -3062,18 +3077,25 @@ namespace ctsTraffic {
             va_list argptr;
             va_start(argptr, _text);
 
-            if (write_to_console) {
-                ::vwprintf_s(_text, argptr);
-            }
-
-            if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
-                try {
-                    s_ConnectionLogger->LogMessage(ctString::format_string_va(_text, argptr).c_str());
+            try {
+                wstring formatted_string;
+                if (write_to_console) {
+                    formatted_string = ctString::format_string_va(_text, argptr);
+                    ::wprintf(L"%s", formatted_string.c_str());
                 }
-                catch (const std::exception&) {
+
+                if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
+                    if (formatted_string.empty()) {
+                        formatted_string = ctString::format_string_va(_text, argptr);
+                    }
+                    s_ConnectionLogger->LogMessage(
+                        ctString::replace_all_copy(
+                            formatted_string, L"\n", L"\r\n").c_str());
                 }
             }
-
+            catch (const std::exception&) {
+                // best-effort
+            }
             va_end(argptr);
         }
 
@@ -3179,15 +3201,15 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            ///
-            /// if the user specified bind addresses, enable SO_PORT_SCALABILITY
-            /// - this will allow each unique IP address the full range of ephemeral ports
-            /// this option is not available when just binding to INET_ANY (making an ephemeral bind)
-            /// this option is also not used if the user is binding to an explicit port #
-            /// - since the port scalability rules no longer apply
-            ///
-            /// these only are applicable for outgoing connections
-            ///
+            //
+            // if the user specified bind addresses, enable SO_PORT_SCALABILITY
+            // - this will allow each unique IP address the full range of ephemeral ports
+            // this option is not available when just binding to INET_ANY (making an ephemeral bind)
+            // this option is also not used if the user is binding to an explicit port #
+            // - since the port scalability rules no longer apply
+            //
+            // these only are applicable for outgoing connections
+            //
             if (ProtocolType::TCP == Settings->Protocol && !IsListening()) {
                 if (Settings->Options & OptionType::REUSE_UNICAST_PORT) {
                     // the admin configured the system to use this socket option
@@ -3605,8 +3627,11 @@ namespace ctsTraffic {
                 }
             }
 
+            // must manually convert all carriage returns to file-friendly carriage return/line feed
             if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
-                s_ConnectionLogger->LogMessage(setting_string.c_str());
+                s_ConnectionLogger->LogMessage(
+                    ctString::replace_all_copy(
+                        setting_string, L"\n", L"\r\n").c_str());
             }
         }
 
@@ -3615,10 +3640,10 @@ namespace ctsTraffic {
             NET_IF_COMPARTMENT_ID  oldCompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
             bool bCompartmentIdSet = FALSE;
 
-            ///
-            /// s_NetAdapterAddresses is created when the user has requested a compartment Id
-            /// - since we would have had to lookup the interface
-            ///
+            //
+            // s_NetAdapterAddresses is created when the user has requested a compartment Id
+            // - since we would have had to lookup the interface
+            //
             if (s_NetAdapterAddresses != nullptr) {
                 oldCompartmentId = GetCurrentThreadCompartmentId();
                 if (oldCompartmentId != s_CompartmentId) {

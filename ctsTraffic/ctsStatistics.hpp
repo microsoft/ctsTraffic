@@ -12,13 +12,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 #pragma once
-
+// cpp headers
+#include <wchar.h>
+#include <string.h>
+#include <memory.h>
 // os headers
-#include "rpc.h"
+#include <Windows.h>
+#include <rpc.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
+#include <ctException.hpp>
 
 namespace ctsTraffic
 {
@@ -332,7 +337,10 @@ namespace ctsTraffic
             bytes_sent(0LL),
             bytes_recv(0LL)
         {
-            connection_identifier[0] = '\0';
+            static const char * NULL_GUID_STRING = "00000000-0000-0000-0000-000000000000";
+            ::strcpy_s(
+                connection_identifier,
+                NULL_GUID_STRING);
         }
         //
         // implementing the copy c'tor with memory barriers in place

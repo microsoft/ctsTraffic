@@ -26,9 +26,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    ///
-    /// Abstract base class for status - printing classes
-    ///
+    //
+    // Abstract base class for status - printing classes
+    //
     class ctsStatusInformation {
     protected:
         enum class PrintingStatus
@@ -67,25 +67,25 @@ namespace ctsTraffic {
         {
         }
 
-        LPCWSTR print_legend(ctsConfig::StatusFormatting _format) NOEXCEPT
+        LPCWSTR print_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return nullptr;
             } else {
-                return this->format_legend();
+                return this->format_legend(_format);
             }
         }
 
-        LPCWSTR print_header(ctsConfig::StatusFormatting _format) NOEXCEPT
+        LPCWSTR print_header(const ctsConfig::StatusFormatting& _format) NOEXCEPT
         {
             return this->format_header(_format);
         }
 
-        ///
-        /// Expects to be called in a loop
-        /// - returns nullptr if nothing left to print
-        ///
-        LPCWSTR print_status(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT
+        //
+        // Expects to be called in a loop
+        // - returns nullptr if nothing left to print
+        //
+        LPCWSTR print_status(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT
         {
             this->reset_buffer();
             if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint) {
@@ -94,14 +94,15 @@ namespace ctsTraffic {
                 return nullptr;
             }
         }
+        // 
 
     protected:
-        ///
-        /// derived class is required to implement these three pure virtual function
-        ///
-        virtual PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT = 0;
-        virtual LPCWSTR format_legend() NOEXCEPT = 0;
-        virtual LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT = 0;
+        //
+        // derived class is required to implement these three pure virtual function
+        //
+        virtual PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT = 0;
+        virtual LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT = 0;
+        virtual LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) NOEXCEPT = 0;
 
         void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, _In_ LPCWSTR _value) NOEXCEPT
         {
@@ -237,10 +238,16 @@ namespace ctsTraffic {
                 converted);
         }
 
-        void terminate_string(unsigned long _offset)
+        void terminate_string(unsigned long _offset) NOEXCEPT
         {
             OutputBuffer[_offset] = L'\n';
             OutputBuffer[_offset + 1] = L'\0';
+        }
+        void terminate_file_string(unsigned long _offset) NOEXCEPT
+        {
+            OutputBuffer[_offset] = L'\r';
+            OutputBuffer[_offset + 1] = L'\n';
+            OutputBuffer[_offset + 2] = L'\0';
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -338,7 +345,7 @@ namespace ctsTraffic {
                 _value);
             ctl::ctFatalCondition(
                 -1 == converted,
-                L"_snwprintf_s failed to convert this (%p) ctsUdpStatusInformation", this);
+                L"_snwprintf_s failed to convert this (%p) ctsUdpStatusInformation\n", this);
             return converted;
         }
     };
@@ -364,40 +371,56 @@ namespace ctsTraffic {
         {
         }
 
-        ///
-        /// Pure-Virtual functions required to be defined
-        ///
-        LPCWSTR format_legend() NOEXCEPT override
+        //
+        // Pure-Virtual functions required to be defined
+        //
+        LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT override
         {
-            return
-                L"Legend:\n"
-                L"* TimeSlice - (seconds) cumulative runtime\n"
-                L"* Streams - count of current number of UDP streams\n"
-                L"* Bits/Sec - bits streamed within the TimeSlice period\n"
-                L"* Completed Frames - count of frames successfully processed within the TimeSlice\n"
-                L"* Dropped Frames - count of frames that were never seen within the TimeSlice\n"
-                L"* Repeated Frames - count of frames received multiple times within the TimeSlice\n"
-                L"* Stream Errors - count of invalid frames or buffers within the TimeSlice\n"
-                L"\n";
-        }
-
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
-        {
-            if (ctsConfig::StatusFormatting::Csv == _format) {
+            if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
                 return
-                    L"TimeSlice,Streams,Bits/Sec,Completed,Dropped,Repeated,Errors\n";
-
+                    L"Legend:\n"
+                    L"* TimeSlice - (seconds) cumulative runtime\n"
+                    L"* Streams - count of current number of UDP streams\n"
+                    L"* Bits/Sec - bits streamed within the TimeSlice period\n"
+                    L"* Completed Frames - count of frames successfully processed within the TimeSlice\n"
+                    L"* Dropped Frames - count of frames that were never seen within the TimeSlice\n"
+                    L"* Repeated Frames - count of frames received multiple times within the TimeSlice\n"
+                    L"* Stream Errors - count of invalid frames or buffers within the TimeSlice\n"
+                    L"\n";
             } else {
-                /// Formatted to fit on an 80-column command shell
                 return
-                    L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \n";
-                ///   00000000.0...000000000000...00000000...000000000...0000000...00000000...0000000.        
-                ///   1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
-                ///           10        20        30        40        50        60        70        80
+                    L"Legend:\r\n"
+                    L"* TimeSlice - (seconds) cumulative runtime\r\n"
+                    L"* Streams - count of current number of UDP streams\r\n"
+                    L"* Bits/Sec - bits streamed within the TimeSlice period\r\n"
+                    L"* Completed Frames - count of frames successfully processed within the TimeSlice\r\n"
+                    L"* Dropped Frames - count of frames that were never seen within the TimeSlice\r\n"
+                    L"* Repeated Frames - count of frames received multiple times within the TimeSlice\r\n"
+                    L"* Stream Errors - count of invalid frames or buffers within the TimeSlice\r\n"
+                    L"\r\n";
             }
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT override
+        LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) NOEXCEPT override
+        {
+            if (ctsConfig::StatusFormatting::Csv == _format) {
+                return
+                    L"TimeSlice,Streams,Bits/Sec,Completed,Dropped,Repeated,Errors\r\n";
+
+            } else if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
+                // Formatted to fit on an 80-column command shell
+                return
+                    L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \n";
+                   // 00000000.0...000000000000...00000000...000000000...0000000...00000000...0000000.        
+                   // 1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
+                   //         10        20        30        40        50        60        70        80
+            } else {
+                return
+                    L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \r\n";
+            }
+        }
+
+        PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
             ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
@@ -418,7 +441,7 @@ namespace ctsTraffic {
                 characters_written += this->append_csvoutput(characters_written, DroppedFramesLength, udp_data.dropped_frames.get());
                 characters_written += this->append_csvoutput(characters_written, DuplicatedFramesLength, udp_data.duplicate_frames.get());
                 characters_written += this->append_csvoutput(characters_written, ErrorFramesLength, udp_data.error_frames.get(), false); // no comma at the end
-                this->terminate_string(characters_written);
+                this->terminate_file_string(characters_written);
 
             } else {
                 // converting milliseconds to seconds before printing
@@ -435,7 +458,11 @@ namespace ctsTraffic {
                 this->right_justify_output(DroppedFramesOffset, DroppedFramesLength, udp_data.dropped_frames.get());
                 this->right_justify_output(DuplicatedFramesOffset, DuplicatedFramesLength, udp_data.duplicate_frames.get());
                 this->right_justify_output(ErrorFramesOffset, ErrorFramesLength, udp_data.error_frames.get());
-                this->terminate_string(ErrorFramesOffset);
+                if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+                    this->terminate_string(ErrorFramesOffset);
+                } else {
+                    this->terminate_file_string(ErrorFramesOffset);
+                }
             }
             return PrintingStatus::PrintComplete;
         }
@@ -482,7 +509,7 @@ namespace ctsTraffic {
         {
         }
 
-        PrintingStatus format_data(ctsConfig::StatusFormatting _format, long long _current_time, bool _clear_status) NOEXCEPT override
+        PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
             ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
@@ -509,7 +536,7 @@ namespace ctsTraffic {
                 characters_written += this->append_csvoutput(characters_written, CompletedTransactionsLength, connection_data.successful_completion_count.get());
                 characters_written += this->append_csvoutput(characters_written, ConnectionErrorsLength, connection_data.connection_error_count.get());
                 characters_written += this->append_csvoutput(characters_written, ProtocolErrorsLength, connection_data.protocol_error_count.get(), false); // no comma at the end
-                this->terminate_string(characters_written);
+                this->terminate_file_string(characters_written);
 
             } else {
                 // converting milliseconds to seconds before printing
@@ -530,37 +557,56 @@ namespace ctsTraffic {
                 this->right_justify_output(CompletedTransactionsOffset, CompletedTransactionsLength, connection_data.successful_completion_count.get());
                 this->right_justify_output(ConnectionErrorsOffset, ConnectionErrorsLength, connection_data.connection_error_count.get());
                 this->right_justify_output(ProtocolErrorsOffset, ProtocolErrorsLength, connection_data.protocol_error_count.get());
-                this->terminate_string(ProtocolErrorsOffset);
+                if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+                    this->terminate_string(ProtocolErrorsOffset);
+                } else {
+                    this->terminate_file_string(ProtocolErrorsOffset);
+                }
             }
 
             return PrintingStatus::PrintComplete;
         }
 
-        LPCWSTR format_legend() NOEXCEPT override
+        LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT override
         {
-            return
-                L"Legend:\n"
-                L"* TimeSlice - (seconds) cumulative runtime\n"
-                L"* Send & Recv Rates - bytes/sec that were transferred within the TimeSlice period\n"
-                L"* In-Flight - count of established connections transmitting IO pattern data\n"
-                L"* Completed - cumulative count of successfully completed IO patterns\n"
-                L"* Network Errors - cumulative count of failed IO patterns due to Winsock errors\n"
-                L"* Data Errors - cumulative count of failed IO patterns due to data errors\n"
-                L"\n";
+            if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
+                return
+                    L"Legend:\n"
+                    L"* TimeSlice - (seconds) cumulative runtime\n"
+                    L"* Send & Recv Rates - bytes/sec that were transferred within the TimeSlice period\n"
+                    L"* In-Flight - count of established connections transmitting IO pattern data\n"
+                    L"* Completed - cumulative count of successfully completed IO patterns\n"
+                    L"* Network Errors - cumulative count of failed IO patterns due to Winsock errors\n"
+                    L"* Data Errors - cumulative count of failed IO patterns due to data errors\n"
+                    L"\n";
+            } else {
+                return
+                    L"Legend:\r\n"
+                    L"* TimeSlice - (seconds) cumulative runtime\r\n"
+                    L"* Send & Recv Rates - bytes/sec that were transferred within the TimeSlice period\r\n"
+                    L"* In-Flight - count of established connections transmitting IO pattern data\r\n"
+                    L"* Completed - cumulative count of successfully completed IO patterns\r\n"
+                    L"* Network Errors - cumulative count of failed IO patterns due to Winsock errors\r\n"
+                    L"* Data Errors - cumulative count of failed IO patterns due to data errors\r\n"
+                    L"\r\n";
+            }
         }
 
-        LPCWSTR format_header(ctsConfig::StatusFormatting _format) NOEXCEPT override
+        LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) NOEXCEPT override
         {
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 return
-                    L"TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError\n";
+                    L"TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError\r\n";
 
-            } else {
+            } else if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
                 return
                     L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \n";
-                ///   00000000.0..00000000000..00000000000....0000000....0000000...0000000....0000000.        
-                ///   1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
-                ///           10        20        30        40        50        60        70        80
+                //    00000000.0..00000000000..00000000000....0000000....0000000...0000000....0000000.        
+                //    1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
+                //            10        20        30        40        50        60        70        80
+            } else {
+                return
+                    L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \r\n";
             }
         }
 
