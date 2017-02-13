@@ -410,7 +410,6 @@ namespace ctsTraffic {
 
             PrintDebugInfo(
                 L"\t\tctsIOPatternMediaStreamClient **dropped** frame %lld\n",
-                ctsConfig::GetStatusTimeStamp(),
                 static_cast<long long>(this->head_entry->sequence_number));
         }
 
