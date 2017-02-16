@@ -148,7 +148,7 @@ namespace ctsTraffic {
             // initiate the timers the first time the object is used
             this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
             this->set_next_start_timer();
-            this->set_next_timer();
+            this->set_next_timer(true);
         }
 
         // defaulting to an empty task (do nothing)
@@ -347,28 +347,31 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_timer() NOEXCEPT
+    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) NOEXCEPT
     {
+        bool timer_scheduled = false;
         // only schedule the next timer instance if the d'tor hasn't indicated it's wanting to exit
         if (this->renderer_timer != nullptr) {
             // calculate when that time should be relative to base_time_milliseconds 
             // (base_time_milliseconds is the start milliseconds from ctTimer::snap_qpc_msec())
-            unsigned long long timer_offset = this->base_time_milliseconds;
+            long long timer_offset = this->base_time_milliseconds;
             // offset to the time when we need to check the next frame
             // - we'll also render a frame at the same time if the initial buffer is full
-            timer_offset += static_cast<unsigned long long>(static_cast<double>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
+            timer_offset += static_cast<long long>(static_cast<double>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
             // subtract out the current time to get the delta # of milliseconds
             timer_offset -= ctTimer::snap_qpc_as_msec();
-            // can't let it go negative
-            if (timer_offset < 1) {
-                timer_offset = 0;
+            // only set the timer if we have time to wait
+            if (initial_timer || timer_offset > 2) {
+                // convert to filetime from milliseconds
+                // - make a 'relative' for SetThreadpoolTimer
+                FILETIME file_time(ctTimer::convert_msec_relative_filetime(timer_offset));
+                // TP Timer APIs work off of the UTC time
+                ::SetThreadpoolTimer(this->renderer_timer, &file_time, 0, 0);
+                timer_scheduled = true;
             }
-            // convert to filetime from milliseconds
-            // - make a 'relative' for SetThreadpoolTimer
-            FILETIME file_time(ctTimer::convert_msec_relative_filetime(timer_offset));
-            // TP Timer APIs work off of the UTC time
-            ::SetThreadpoolTimer(this->renderer_timer, &file_time, 0, 0);
         }
+
+        return timer_scheduled;
     }
 
     _Requires_lock_held_(cs)
@@ -468,52 +471,57 @@ namespace ctsTraffic {
     VOID CALLBACK ctsIOPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER)
     {
         ctsIOPatternMediaStreamClient* this_ptr = reinterpret_cast<ctsIOPatternMediaStreamClient*>(_context);
-        // take the base lock before touching any internal members
-        this_ptr->base_lock();
-        // guarantee the lock is released on exit
+
+        // process frames until the timer is scheduled in the future to process more frames
+        bool timer_scheduled = false;
+        while (!timer_scheduled) {
+            // take the base lock before touching any internal members
+            this_ptr->base_lock();
+            // guarantee the lock is released on exit
 #pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
-        ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock();});
+            ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
 
-        if (this_ptr->finished_stream) {
-            return;
-        }
-
-        ++this_ptr->timer_wheel_offset_frames;
-
-        bool fatal_aborted = false;
-        if (this_ptr->timer_wheel_offset_frames >= this_ptr->initial_buffer_frames &&
-            this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
-            // if we haven't yet received *anything* from the server, abort this connection
-            if (!this_ptr->received_buffered_frames()) {
-                ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
-
-                // indicate all frames were dropped
-                ctsConfig::Settings->UdpStatusDetails.dropped_frames.add(this_ptr->final_frame);
-                this_ptr->stats.dropped_frames.add(this_ptr->final_frame);
-
-                this_ptr->finished_stream = true;
-                ctsIOTask abort_task;
-                abort_task.ioAction = IOTaskAction::FatalAbort;
-                this_ptr->send_callback(abort_task);
-                fatal_aborted = true;
-
-            } else {
-                // if the initial buffer has already been filled, "render" the frame
-                this_ptr->render_frame();
+            if (this_ptr->finished_stream) {
+                return;
             }
-        }
 
-        if (!fatal_aborted) {
-            // wait for the precise number of milliseconds for the next frame
-            if (this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
-                this_ptr->set_next_timer();
+            ++this_ptr->timer_wheel_offset_frames;
 
-            } else {
-                this_ptr->finished_stream = true;
-                ctsIOTask abort_task;
-                abort_task.ioAction = IOTaskAction::Abort;
-                this_ptr->send_callback(abort_task);
-                PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
+            bool fatal_aborted = false;
+            if (this_ptr->timer_wheel_offset_frames >= this_ptr->initial_buffer_frames &&
+                this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
+                // if we haven't yet received *anything* from the server, abort this connection
+                if (!this_ptr->received_buffered_frames()) {
+                    ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
+
+                    // indicate all frames were dropped
+                    ctsConfig::Settings->UdpStatusDetails.dropped_frames.add(this_ptr->final_frame);
+                    this_ptr->stats.dropped_frames.add(this_ptr->final_frame);
+
+                    this_ptr->finished_stream = true;
+                    ctsIOTask abort_task;
+                    abort_task.ioAction = IOTaskAction::FatalAbort;
+                    this_ptr->send_callback(abort_task);
+                    fatal_aborted = true;
+
+                } else {
+                    // if the initial buffer has already been filled, "render" the frame
+                    this_ptr->render_frame();
+                }
+            }
+
+            if (!fatal_aborted) {
+                // wait for the precise number of milliseconds for the next frame
+                if (this_ptr->head_entry->sequence_number <= this_ptr->final_frame) {
+                    timer_scheduled = this_ptr->set_next_timer(false);
+
+                } else {
+                    this_ptr->finished_stream = true;
+                    ctsIOTask abort_task;
+                    abort_task.ioAction = IOTaskAction::Abort;
+                    this_ptr->send_callback(abort_task);
+                    PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient - issuing an ABORT to cleanly close the connection\n");
+                }
             }
         }
     }

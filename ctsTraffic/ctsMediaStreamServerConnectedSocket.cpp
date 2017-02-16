@@ -157,9 +157,9 @@ namespace ctsTraffic {
             switch (current_task.ioAction) {
                 case IOTaskAction::Send:
                     this_ptr->next_task = current_task;
-                    // if the time is less than one ms., we need to catch up on sends
+                    // if the time is less than two ms., we need to catch up on sends
                     // - post the sendto immediately instead of scheduling for later
-                    if (this_ptr->next_task.time_offset_milliseconds < 1) {
+                    if (this_ptr->next_task.time_offset_milliseconds < 2) {
                         send_results = this_ptr->io_functor(this_ptr);
                         status = shared_pattern->complete_io(
                             this_ptr->next_task,

@@ -633,7 +633,7 @@ namespace ctsTraffic {
         bool received_buffered_frames() NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        void set_next_timer() NOEXCEPT;
+        bool set_next_timer(bool initial_timer) NOEXCEPT;
 
         _Requires_lock_held_(cs)
         void set_next_start_timer() NOEXCEPT;
