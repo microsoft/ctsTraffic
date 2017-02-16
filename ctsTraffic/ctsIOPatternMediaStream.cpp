@@ -414,9 +414,11 @@ namespace ctsTraffic {
                 L"\t\tctsIOPatternMediaStreamClient **dropped** frame %lld\n",
                 static_cast<long long>(this->head_entry->sequence_number));
 
-            // write and empty row
-            ctsConfig::PrintJitterUpdate(ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry());
-
+            // track the dropped frame
+            // indicate zero's for the other values so we won't calculate jitter for a dropped datagram
+            ctsConfig::JitterFrameEntry droppedFrame;
+            droppedFrame.sequence_number = this->head_entry->sequence_number;
+            ctsConfig::PrintJitterUpdate(droppedFrame, ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry());
         }
 
         // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)
