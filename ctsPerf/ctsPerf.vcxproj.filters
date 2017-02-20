@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\ctl\ctComInitialize.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctException.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctHandle.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctLocks.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctMath.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctRandom.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctscopedt.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctScopeGuard.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctSockaddr.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctString.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsWriteDetails.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctThreadIocp.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\cttime.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctTimer.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctVersionConversion.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiClassObject.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiEnumerate.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiException.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiInitialize.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiInstance.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiMakeVariant.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiPerformance.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiProperties.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiService.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ctl">
+      <UniqueIdentifier>{e3a38330-3b98-49e6-8e7c-e7b411bbfb04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{01324c49-8cbd-48e2-8805-4f6e4b60c895}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source FIles">
+      <UniqueIdentifier>{db6f9dd3-ce4d-461e-b40b-208d49e77cd5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ctsPerf.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ctsPerf.cpp">
+      <Filter>Source FIles</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

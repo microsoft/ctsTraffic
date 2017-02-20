@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 12.0.30723.0
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsTraffic", "ctsTraffic\ctsTraffic.vcxproj", "{0857150B-4FC8-4B6D-A48C-903C629D9BB9}"
 EndProject
@@ -34,6 +34,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsMediaStreamServerConnectedSocketUnitTest", "MSTest\ctsMediaStreamServerConnectedSocketUnitTest\ctsMediaStreamServerConnectedSocketUnitTest.vcxproj", "{47AB4470-4617-47FA-9529-3A1D1DA7FAA0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{F6BA338C-59FD-4354-9F13-1B5511486DC9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsPerf", "ctsPerf\ctsPerf.vcxproj", "{F7316F57-89E3-4BC7-A642-8B000EA06C44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -121,6 +123,14 @@ Global
 		{47AB4470-4617-47FA-9529-3A1D1DA7FAA0}.Debug|x64.ActiveCfg = Debug|x64
 		{47AB4470-4617-47FA-9529-3A1D1DA7FAA0}.Release|Win32.ActiveCfg = Release|Win32
 		{47AB4470-4617-47FA-9529-3A1D1DA7FAA0}.Release|x64.ActiveCfg = Release|x64
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Debug|Win32.Build.0 = Debug|Win32
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Debug|x64.ActiveCfg = Debug|x64
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Debug|x64.Build.0 = Debug|x64
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Release|Win32.ActiveCfg = Release|Win32
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Release|Win32.Build.0 = Release|Win32
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Release|x64.ActiveCfg = Release|x64
+		{F7316F57-89E3-4BC7-A642-8B000EA06C44}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -24,7 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <Windows.h>
 
-#include <ctThreadTimer.hpp>
+#include <ctThreadPoolTimer.hpp>
 #include <ctException.hpp>
 #include <ctWmiInitialize.hpp>
 #include <ctScopeGuard.hpp>
@@ -1063,14 +1063,7 @@ namespace ctl {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctWmiPerformance {
     public:
-        ctWmiPerformance()
-        : com_init(),
-          wmi_service(L"root\\cimv2"),
-          refresher(),
-          timer(),
-          starttime(),
-          timeslots(),
-          callbacks()
+        ctWmiPerformance() : wmi_service(L"root\\cimv2")
         {
             refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
             HRESULT hr = refresher->QueryInterface(
@@ -1081,14 +1074,10 @@ namespace ctl {
             }
         }
 
-        virtual ~ctWmiPerformance() throw()
-        {
-            // must stop all callbacks before tearing everything down
-            timer.stop();
-        }
+        virtual ~ctWmiPerformance() = default;
 
         template <typename T>
-        void add_counter(std::shared_ptr<ctWmiPerformanceCounter<T>> _wmi_perf)
+        void add_counter(const std::shared_ptr<ctWmiPerformanceCounter<T>>& _wmi_perf)
         {
             this->callbacks.push_back(_wmi_perf->register_callback());
             ctlScopeGuard(revert_callback, { this->callbacks.pop_back(); });
@@ -1104,36 +1093,15 @@ namespace ctl {
 
         void start_all_counters(unsigned _interval)
         {
-            std::function<void(void*)> callback = [this] (void*) {
-                try {
-                    // must guarantee COM is initialized on this thread
-                    ctComInitialize com;
-                    this->refresher->Refresh(0);
-                    this->starttime.setCurrentSystemTime();
-                    ULONGLONG now = this->starttime.getMilliSeconds();
-
-                    this->timeslots.push_back(now);
-                    for (auto& _callback : this->callbacks) {
-                        _callback(true, now);
-                    }
-                }
-                catch (const std::exception& e) {
-                    ctAlwaysFatalCondition(L"%s", ctString::format_exception(e).c_str());
-                }
-            };
-
-            // non-reentrant: so if overlapping times occur, will ignore the latter perf data
-            this->timer.stop();
-            this->timer.start_nonreentrant(
-                callback,
-                static_cast<void*>(nullptr),
+            this->timer.reset(new ctl::ctThreadpoolTimer);
+            this->timer->schedule_singleton(
+                [this, _interval] () { TimerCallback(this, _interval); },
                 _interval);
         }
-
         // no-throw / no-fail
         void stop_all_counters() throw()
         {
-            this->timer.stop();
+            this->timer.reset();
         }
 
         // no-throw / no-fail
@@ -1170,13 +1138,36 @@ namespace ctl {
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> config_refresher;
         // timer to fire to indicate when to Refresh the data
-        ctThreadTimer timer;
+        std::unique_ptr<ctl::ctThreadpoolTimer> timer;
         // track when the time started
         ctTime starttime;
         // track the timeslots for each interval
         std::vector<ULONGLONG> timeslots;
         // for each interval, callback each of the registered aggregators
         std::vector<ctWmiPerformanceCallback> callbacks;
+
+        static void TimerCallback(ctl::ctWmiPerformance* this_ptr, unsigned long _interval)
+        {
+            try {
+                // must guarantee COM is initialized on this thread
+                ctComInitialize com;
+                this_ptr->refresher->Refresh(0);
+                this_ptr->starttime.setCurrentSystemTime();
+                ULONGLONG now = this_ptr->starttime.getMilliSeconds();
+
+                this_ptr->timeslots.push_back(now);
+                for (const auto& _callback : this_ptr->callbacks) {
+                    _callback(true, now);
+                }
+
+                this_ptr->timer->schedule_singleton(
+                    [this_ptr, _interval] () { TimerCallback(this_ptr, _interval); }, 
+                    _interval);
+            }
+            catch (const std::exception&) {
+                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read");
+            }
+        }
     };
 
 

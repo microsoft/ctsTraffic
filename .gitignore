@@ -17,3 +17,5 @@
 /ctsTraffic/.vs/ctsTraffic/v14/.suo
 *.ipch
 /.vs/ctsTraffic/v15/.suo
+/ctsPerf/x64/Release
+/ctsPerf/Performance.csv
