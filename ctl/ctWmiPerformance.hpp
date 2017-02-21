@@ -42,7 +42,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// - Every performance counter object contains a 'Name' key field, uniquely identifying a 'set' of data points for that counter
 /// - Counters are 'snapped' every one second, with the timeslot tracked with the data
 /// 
-/// ctWmiPerformanceCounter is exposed to the user through factory functions defined per-counter class (ctShared<class>PerfCounter) e.g. ctSharedNetworkInterfacePerfCounter
+/// ctWmiPerformanceCounter is exposed to the user through factory functions defined per-counter class (ctShared<class>PerfCounter)
 /// - the factory functions takes in the counter name that the user wants to capture data for
 /// - the factory function has a template type matching the data type of the counter data for that counter name
 /// 
@@ -1185,11 +1185,35 @@ namespace ctl {
         return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name);
     }
 
+    enum class ctWmiPerfClass {
+        Process,
+        Processor,
+        Memory,
+        NetworkAdapter,
+        NetworkInterface,
+        TcpipDiagnostics,
+        TcpipIpv4,
+    };
+
+    template <typename T>
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiPerfClass& _class, _In_ LPCWSTR _counter_name)
+    {
+        switch (_class) {
+        case Process: return ctSharedProcessPerfCounter(_counter_name);
+        case Processor: return ctSharedProcessorPerfCounter(_counter_name);
+        case Memory: return ctSharedMemoryPerfCounter(_counter_name);
+        case NetworkAdapter: return ctSharedNetworkAdapterPerfCounter(_counter_name);
+        case NetworkInterface: return ctSharedNetworkInterfacePerfCounter(_counter_name);
+        case TcpipDiagnostics: return ctSharedTcpIpDiagnosticsPerfCounter(_counter_name);
+        case TcpipIpv4: return ctSharedNetworkTcpipIpv4PerfCounter(_counter_name);
+        }
+        
+        throw std::invalid_argument("Unknown WMI Performance Counter Class");
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Factory for a Win32_PerfFormattedData_PerfProc_Process ctWmiPerformanceCounter instance
-    /// - specialized only for ULONGLONG, ULONG, and string
-    /// - each matching their respective counter
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
@@ -1199,8 +1223,6 @@ namespace ctl {
     ///
     /// Factory for a Win32_PerfFormattedData_Counters_ProcessorInformation ctWmiPerformanceCounter instance
     ///   *Not* using the older Win32_PerfFormattedData_PerfOS_Processor which is now considered less accurate
-    /// - specialized only for ULONGLONG, ULONG, and string
-    /// - each matching their respective counter
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
@@ -1209,8 +1231,6 @@ namespace ctl {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Factory for a Win32_PerfFormattedData_PerfOS_Memory ctWmiPerformanceCounter instance
-    /// - specialized only for ULONGLONG, ULONG, and string
-    /// - each matching their respective counter
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
@@ -1218,14 +1238,36 @@ namespace ctl {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
+    /// Factory for a Win32_PerfFormattedData_Tcpip_NetworkAdapter ctWmiPerformanceCounter instance
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template <typename T>
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkAdapterPerfCounter(_In_ LPCWSTR _counter_name);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
     /// Factory for a Win32_PerfFormattedData_Tcpip_NetworkInterface ctWmiPerformanceCounter instance
-    /// - specialized only for ULONGLONG, ULONG, and string
-    /// - each matching their respective counter
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
     std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkInterfacePerfCounter(_In_ LPCWSTR _counter_name);
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Factory for a Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics ctWmiPerformanceCounter instance
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template <typename T>
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedTcpIpDiagnosticsPerfCounter(_In_ LPCWSTR _counter_name);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Factory for a Win32_PerfFormattedData_Tcpip_IPv4 ctWmiPerformanceCounter instance
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template <typename T>
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkTcpipIpv4PerfCounter(_In_ LPCWSTR _counter_name);
+    
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -1258,7 +1300,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"SystemDriverTotalBytes") ||
             ctString::iordinal_equals(_counter_name, L"Timestamp_Object") ||
             ctString::iordinal_equals(_counter_name, L"Timestamp_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Sys100NS")) {
+            ctString::iordinal_equals(_counter_name, L"Timestamp_Sys100NS"))
+        {
             // a static perf counter
             return ctMakeStaticPerfCounter<ULONGLONG>(ctWmiPerformanceClass_Memory, _counter_name);
         }
@@ -1290,7 +1333,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"PoolNonpagedAllocs") ||
             ctString::iordinal_equals(_counter_name, L"PoolPagedAllocs") ||
             ctString::iordinal_equals(_counter_name, L"TransitionFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"WriteCopiesPerSec")) {
+            ctString::iordinal_equals(_counter_name, L"WriteCopiesPerSec"))
+        {
             // a static perf counter
             return ctMakeStaticPerfCounter<ULONG>(ctWmiPerformanceClass_Memory, _counter_name);
         }
@@ -1311,7 +1355,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name"))
+        {
             // a static perf counter
             return ctMakeStaticPerfCounter<ctComBstr>(ctWmiPerformanceClass_Memory, _counter_name);
         }
@@ -1331,7 +1376,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name"))
+        {
             // a static perf counter
             return ctMakeStaticPerfCounter<std::wstring>(ctWmiPerformanceClass_Memory, _counter_name);
         }
@@ -1375,7 +1421,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"PercentProcessorPerformance") ||
             ctString::iordinal_equals(_counter_name, L"PercentProcessorTime") ||
             ctString::iordinal_equals(_counter_name, L"PercentProcessorUtility") ||
-            ctString::iordinal_equals(_counter_name, L"PercentUserTime")) {
+            ctString::iordinal_equals(_counter_name, L"PercentUserTime"))
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
         }
@@ -1403,7 +1450,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"PercentPerformanceLimit") ||
             ctString::iordinal_equals(_counter_name, L"PerformanceLimitFlags") ||
             ctString::iordinal_equals(_counter_name, L"ProcessorFrequency") ||
-            ctString::iordinal_equals(_counter_name, L"ProcessorStateFlags")) {
+            ctString::iordinal_equals(_counter_name, L"ProcessorStateFlags"))
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
         }
@@ -1424,7 +1472,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name"))
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
         }
@@ -1445,7 +1494,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name"))
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
         }
@@ -1495,7 +1545,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"VirtualBytes") ||
             ctString::iordinal_equals(_counter_name, L"VirtualBytesPeak") ||
             ctString::iordinal_equals(_counter_name, L"WorkingSet") ||
-            ctString::iordinal_equals(_counter_name, L"WorkingSetPeak")) {
+            ctString::iordinal_equals(_counter_name, L"WorkingSetPeak")) 
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_Process, _counter_name);
         }
@@ -1521,7 +1572,8 @@ namespace ctl {
             ctString::iordinal_equals(_counter_name, L"PoolNonpagedBytes") ||
             ctString::iordinal_equals(_counter_name, L"PoolPagedBytes") ||
             ctString::iordinal_equals(_counter_name, L"PriorityBase") ||
-            ctString::iordinal_equals(_counter_name, L"ThreadCount")) {
+            ctString::iordinal_equals(_counter_name, L"ThreadCount")) 
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_Process, _counter_name);
         }
@@ -1542,7 +1594,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name")) 
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_Process, _counter_name);
         }
@@ -1563,7 +1616,8 @@ namespace ctl {
 
         if (ctString::iordinal_equals(_counter_name, L"Caption") ||
             ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
+            ctString::iordinal_equals(_counter_name, L"Name")) 
+        {
             // an instance perf counter
             return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_Process, _counter_name);
         }
@@ -1579,7 +1633,98 @@ namespace ctl {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
-    /// ctSharedMemoryPerfCounter specializations
+    /// ctSharedNetworkAdapterPerfCounter specializations
+    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_NetworkAdapter
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedNetworkAdapterPerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
+
+        if (ctString::iordinal_equals(_counter_name, L"BytesReceivedPersec") ||
+            ctString::iordinal_equals(_counter_name, L"BytesSentPersec") ||
+            ctString::iordinal_equals(_counter_name, L"BytesTotalPersec") ||
+            ctString::iordinal_equals(_counter_name, L"CurrentBandwidth") ||
+            ctString::iordinal_equals(_counter_name, L"OffloadedConnections") ||
+            ctString::iordinal_equals(_counter_name, L"OutputQueueLength") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsOutboundDiscarded") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsOutboundErrors") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedDiscarded") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedErrors") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedNonUnicastPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnicastPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnknown") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsReceivedPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsSentNonUnicastPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsSentUnicastPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsSentPersec") ||
+            ctString::iordinal_equals(_counter_name, L"PacketsPersec") ||
+            ctString::iordinal_equals(_counter_name, L"TCPActiveRSCConnections") ||
+            ctString::iordinal_equals(_counter_name, L"TCPRSCAveragePacketSize") ||
+            ctString::iordinal_equals(_counter_name, L"TCPRSCCoalescedPacketsPersec") ||
+            ctString::iordinal_equals(_counter_name, L"TCPRSCExceptionsPersec")) 
+        {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a ULONGLONG counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkAdapterPerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedNetworkAdapterPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) 
+        {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
+        }
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkAdapterPerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedNetworkAdapterPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) 
+        {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkAdapterPerfCounter",
+            true);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// ctSharedNetworkInterfacePerfCounter specializations
     /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_NetworkInterface
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1681,6 +1826,180 @@ namespace ctl {
                 L"ctSharedNetworkInterfacePerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkInterface] does not have a string counter type",
                 _counter_name).c_str(),
             L"ctSharedNetworkInterfacePerfCounter",
+            true);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// ctSharedTcpIpDiagnosticsPerfCounter specializations
+    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedTcpIpDiagnosticsPerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Deniedconnectorsendrequestsinlowpowermode") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLstreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersectreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsPersecnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLstreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersectreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsPersecnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsfallenoffloopbackfastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsPersecfallenoffloopbackfastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsPersecnotprocessedviafastpath")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a ULONG counter type",
+                _counter_name).c_str(),
+            L"ctSharedTcpIpDiagnosticsPerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedTcpIpDiagnosticsPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedTcpIpDiagnosticsPerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedTcpIpDiagnosticsPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedTcpIpDiagnosticsPerfCounter",
+            true);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// ctSharedNetworkInterfacePerfCounter specializations
+    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_IPv4
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedNetworkTcpipIpv4PerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Deniedconnectorsendrequestsinlowpowermode") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLstreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersectreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsPersecnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLstreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithlowresourceflag") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithoutprevalidation") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersectreatedasnonprevalidated") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsPersecnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsfallenoffloopbackfastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsPersecfallenoffloopbackfastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsnotprocessedviafastpath") ||
+            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsPersecnotprocessedviafastpath")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a ULONG counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkTcpipIpv4PerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedNetworkTcpipIpv4PerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkTcpipIpv4PerfCounter",
+            true);
+    }
+
+    template <>
+    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedNetworkTcpipIpv4PerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
+    {
+        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+
+        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
+            ctString::iordinal_equals(_counter_name, L"Description") ||
+            ctString::iordinal_equals(_counter_name, L"Name")) {
+            // an instance perf counter
+            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
+        }
+
+        throw ctException(
+            ERROR_INVALID_NAME,
+            ctString::format_string(
+                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
+                _counter_name).c_str(),
+            L"ctSharedNetworkTcpipIpv4PerfCounter",
             true);
     }
 
