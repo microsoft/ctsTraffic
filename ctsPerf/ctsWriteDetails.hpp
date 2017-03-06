@@ -73,6 +73,10 @@ namespace ctsPerf {
         template <typename T>
         void write_details(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, std::vector<T>& _data)
         {
+            if (_data.empty()) {
+                return;
+            }
+
             start_row(_class_name, _counter_name);
 
             if (!_data.empty()) {
@@ -98,15 +102,19 @@ namespace ctsPerf {
         }
 
         template <typename T>
-        void write_sum(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, std::vector<T>& _data)
+        void write_difference(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, std::vector<T>& _data)
         {
+            if (_data.empty()) {
+                return;
+            }
+
             start_row(_class_name, _counter_name);
 
-            std::wstring sum = write(::accumulate(_data.begin(), _data.end(), 0ULL));
+            std::wstring difference = write(*_data.rbegin() - *_data.begin());
 
-            DWORD length = static_cast<DWORD>(sum.length() * sizeof(wchar_t));
+            DWORD length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, sum.c_str(), length, &written, NULL)) {
+            if (!::WriteFile(file_handle, difference.c_str(), length, &written, NULL)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 

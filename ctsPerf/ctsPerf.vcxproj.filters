@@ -46,9 +46,6 @@
     <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\cttime.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctTimer.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
