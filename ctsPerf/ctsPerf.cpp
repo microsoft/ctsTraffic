@@ -251,7 +251,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             performance_vector.emplace_back(InstantiatePerProcessByPIDCounters(processId));
         }
 
-        wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ....\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
+        wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
         for (auto& perf_object : performance_vector) {
             perf_object.start_all_counters(1000);
         }
@@ -429,35 +429,35 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     performance_counter.add_counter(network_adapter_total_bytes);
     wprintf(L".");
 
-    network_adapter_offloaded_connections = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"OffloadedConnections");
+    network_adapter_offloaded_connections = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"OffloadedConnections", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_offloaded_connections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_offloaded_connections);
     wprintf(L".");
 
-    network_adapter_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsOutboundDiscarded");
+    network_adapter_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsOutboundDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_packets_outbound_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_outbound_discarded);
     wprintf(L".");
 
-    network_adapter_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsOutboundErrors");
+    network_adapter_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsOutboundErrors", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_packets_outbound_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_outbound_errors);
     wprintf(L".");
 
-    network_adapter_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsReceivedDiscarded");
+    network_adapter_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsReceivedDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_packets_received_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_received_discarded);
     wprintf(L".");
 
-    network_adapter_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsReceivedErrors");
+    network_adapter_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"PacketsReceivedErrors", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_packets_received_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
@@ -471,7 +471,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     performance_counter.add_counter(network_adapter_packets_per_second);
     wprintf(L".");
 
-    network_adapter_active_rsc_connections = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"TCPActiveRSCConnections");
+    network_adapter_active_rsc_connections = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkAdapter, L"TCPActiveRSCConnections", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_adapter_active_rsc_connections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
@@ -606,35 +606,35 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     performance_counter.add_counter(network_interface_total_bytes);
     wprintf(L".");
 
-    network_interface_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsOutboundDiscarded");
+    network_interface_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsOutboundDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_interface_packets_outbound_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_outbound_discarded);
     wprintf(L".");
 
-    network_interface_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsOutboundErrors");
+    network_interface_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsOutboundErrors", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_interface_packets_outbound_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_outbound_errors);
     wprintf(L".");
 
-    network_interface_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedDiscarded");
+    network_interface_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_interface_packets_received_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_received_discarded);
     wprintf(L".");
 
-    network_interface_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedErrors");
+    network_interface_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedErrors", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_interface_packets_received_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_received_errors);
     wprintf(L".");
 
-    network_interface_packets_received_unknown = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedUnknown");
+    network_interface_packets_received_unknown = ctCreatePerfCounter<ULONGLONG>(ctWmiClassName::NetworkInterface, L"PacketsReceivedUnknown", ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
         network_interface_packets_received_unknown->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
@@ -678,8 +678,6 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
                 L"BytesTotalPerSec for interface %s",
                 name.c_str()).c_str(),
             ullData);
-
-        // just print the delta for these counters
 
         auto network_range = network_interface_packets_outbound_discarded->reference_range(name.c_str());
         ullData.assign(network_range.first, network_range.second);
@@ -754,67 +752,67 @@ ctWmiPerformance InstantiateIPCounters()
 {
     ctWmiPerformance performance_counter;
 
-    tcpip_ipv4_outbound_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsOutboundDiscarded");
+    tcpip_ipv4_outbound_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsOutboundDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_discarded);
     wprintf(L".");
 
-    tcpip_ipv4_outbound_no_route = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsOutboundNoRoute");
+    tcpip_ipv4_outbound_no_route = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsOutboundNoRoute", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_no_route);
     wprintf(L".");
 
-    tcpip_ipv4_received_address_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedAddressErrors");
+    tcpip_ipv4_received_address_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedAddressErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_address_errors);
     wprintf(L".");
 
-    tcpip_ipv4_received_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedDiscarded");
+    tcpip_ipv4_received_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_discarded);
     wprintf(L".");
 
-    tcpip_ipv4_received_header_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedHeaderErrors");
+    tcpip_ipv4_received_header_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedHeaderErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_header_errors);
     wprintf(L".");
 
-    tcpip_ipv4_received_unknown_protocol = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedUnknownProtocol");
+    tcpip_ipv4_received_unknown_protocol = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"DatagramsReceivedUnknownProtocol", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_unknown_protocol);
     wprintf(L".");
 
-    tcpip_ipv4_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"FragmentReassemblyFailures");
+    tcpip_ipv4_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"FragmentReassemblyFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragment_reassembly_failures);
     wprintf(L".");
 
-    tcpip_ipv4_fragmentation_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"FragmentationFailures");
+    tcpip_ipv4_fragmentation_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv4, L"FragmentationFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragmentation_failures);
     wprintf(L".");
 
-    tcpip_ipv6_outbound_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsOutboundDiscarded");
+    tcpip_ipv6_outbound_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsOutboundDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_discarded);
     wprintf(L".");
 
-    tcpip_ipv6_outbound_no_route = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsOutboundNoRoute");
+    tcpip_ipv6_outbound_no_route = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsOutboundNoRoute", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_no_route);
     wprintf(L".");
 
-    tcpip_ipv6_received_address_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedAddressErrors");
+    tcpip_ipv6_received_address_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedAddressErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_address_errors);
     wprintf(L".");
 
-    tcpip_ipv6_received_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedDiscarded");
+    tcpip_ipv6_received_discarded = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedDiscarded", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_discarded);
     wprintf(L".");
 
-    tcpip_ipv6_received_header_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedHeaderErrors");
+    tcpip_ipv6_received_header_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedHeaderErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_header_errors);
     wprintf(L".");
 
-    tcpip_ipv6_received_unknown_protocol = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedUnknownProtocol");
+    tcpip_ipv6_received_unknown_protocol = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"DatagramsReceivedUnknownProtocol", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_unknown_protocol);
     wprintf(L".");
 
-    tcpip_ipv6_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"FragmentReassemblyFailures");
+    tcpip_ipv6_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"FragmentReassemblyFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragment_reassembly_failures);
     wprintf(L".");
 
-    tcpip_ipv6_fragmentation_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"FragmentationFailures");
+    tcpip_ipv6_fragmentation_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_Ipv6, L"FragmentationFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragmentation_failures);
     wprintf(L".");
 
@@ -974,31 +972,31 @@ ctWmiPerformance InstantiateTCPCounters()
 {
     ctWmiPerformance performance_counter;
 
-    tcpip_tcpv4_connections_established = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionsEstablished");
+    tcpip_tcpv4_connections_established = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionsEstablished", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connections_established);
     wprintf(L".");
 
-    tcpip_tcpv6_connections_established = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionsEstablished");
+    tcpip_tcpv6_connections_established = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionsEstablished", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connections_established);
     wprintf(L".");
 
-    tcpip_tcpv4_connection_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionFailures");
+    tcpip_tcpv4_connection_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connection_failures);
     wprintf(L".");
 
-    tcpip_tcpv6_connection_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionFailures");
+    tcpip_tcpv6_connection_failures = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionFailures", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connection_failures);
     wprintf(L".");
     
-    tcpip_tcpv4_connections_reset = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionsReset");
+    tcpip_tcpv4_connections_reset = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv4, L"ConnectionsReset", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connections_reset);
     wprintf(L".");
 
-    tcpip_tcpv6_connections_reset = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionsReset");
+    tcpip_tcpv6_connections_reset = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_TCPv6, L"ConnectionsReset", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connections_reset);
     wprintf(L".");
 
-    winsock_bsp_rejected_connections = ctCreatePerfCounter<ULONG>(ctWmiClassName::WinsockBSP, L"RejectedConnections");
+    winsock_bsp_rejected_connections = ctCreatePerfCounter<ULONG>(ctWmiClassName::WinsockBSP, L"RejectedConnections", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_rejected_connections);
     wprintf(L".");
 
@@ -1068,14 +1066,14 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
     network_range = winsock_bsp_rejected_connections->reference_range();
     ulData.assign(network_range.first, network_range.second);
     writer.write_difference(
-        L"WinsockBSP",
+        L"Winsock",
         L"RejectedConnections",
         ulData);
 
     network_range = winsock_bsp_rejected_connections_per_sec->reference_range();
     ulData.assign(network_range.first, network_range.second);
     writer.write_details(
-        L"WinsockBSP",
+        L"Winsock",
         L"RejectedConnectionsPersec",
         ulData);
 }
@@ -1101,7 +1099,7 @@ ctWmiPerformance InstantiateUDPCounters()
     performance_counter.add_counter(tcpip_udpv4_noport_per_sec);
     wprintf(L".");
 
-    tcpip_udpv4_received_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_UDPv4, L"DatagramsReceivedErrors");
+    tcpip_udpv4_received_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_UDPv4, L"DatagramsReceivedErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv4_received_errors);
     wprintf(L".");
 
@@ -1113,7 +1111,7 @@ ctWmiPerformance InstantiateUDPCounters()
     performance_counter.add_counter(tcpip_udpv6_noport_per_sec);
     wprintf(L".");
 
-    tcpip_udpv6_received_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_UDPv6, L"DatagramsReceivedErrors");
+    tcpip_udpv6_received_errors = ctCreatePerfCounter<ULONG>(ctWmiClassName::Tcpip_UDPv6, L"DatagramsReceivedErrors", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv6_received_errors);
     wprintf(L".");
 
@@ -1121,7 +1119,7 @@ ctWmiPerformance InstantiateUDPCounters()
     performance_counter.add_counter(tcpip_udpv6_datagrams_per_sec);
     wprintf(L".");
 
-    winsock_bsp_dropped_datagrams = ctCreatePerfCounter<ULONG>(ctWmiClassName::WinsockBSP, L"DroppedDatagrams");
+    winsock_bsp_dropped_datagrams = ctCreatePerfCounter<ULONG>(ctWmiClassName::WinsockBSP, L"DroppedDatagrams", ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_dropped_datagrams);
     wprintf(L".");
 
@@ -1173,8 +1171,6 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
         L"TCPIP - UDPv6",
         L"DatagramsPersec",
         ulData);
-
-    // just write delta totals for these counters
 
     udp_range = tcpip_udpv4_received_errors->reference_range();
     ulData.assign(udp_range.first, udp_range.second);

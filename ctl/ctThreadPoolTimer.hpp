@@ -108,13 +108,13 @@ namespace ctl {
         {
             // wait for all callbacks
             ::EnterCriticalSection(&timer_lock);
-            for (const auto& timer : tp_timers) {
-                ::SetThreadpoolTimer(timer, nullptr, 0, 0);
-            }
+            // block any more items being scheduled
+            exiting = true;
             ::LeaveCriticalSection(&timer_lock);
 
+            stop_all_timers();
+
             for (const auto& timer : tp_timers) {
-                ::WaitForThreadpoolTimerCallbacks(timer, TRUE);
                 ::CloseThreadpoolTimer(timer);
             }
 
@@ -143,6 +143,19 @@ namespace ctl {
                     _period));
         }
 
+        void stop_all_timers()
+        {
+            ::EnterCriticalSection(&timer_lock);
+            for (const auto& timer : tp_timers) {
+                ::SetThreadpoolTimer(timer, nullptr, 0, 0);
+            }
+            ::LeaveCriticalSection(&timer_lock);
+
+            for (const auto& timer : tp_timers) {
+                ::WaitForThreadpoolTimerCallbacks(timer, TRUE);
+            }
+        }
+
     private:
         //
         // Private members
@@ -151,6 +164,7 @@ namespace ctl {
         const PTP_CALLBACK_ENVIRON tp_environment;
         std::vector<PTP_TIMER> tp_timers;
         std::vector<::ctl::details::ctThreadpoolTimerCallbackInfo> callback_objects;
+        bool exiting = false;
 
         PTP_TIMER create_tp()
         {
@@ -166,6 +180,10 @@ namespace ctl {
         void insert_callback_info(::ctl::details::ctThreadpoolTimerCallbackInfo&& _new_request)
         {
             ctl::ctAutoReleaseCriticalSection lock_timer(&this->timer_lock);
+
+            if (exiting) {
+                return;
+            }
 
             // compare each callback_object to check if it contains a null function ptr
             auto unused_callback = std::find_if(
@@ -255,6 +273,5 @@ namespace ctl {
             functor();
         }
     };
-
 } // namespace
 

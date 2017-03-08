@@ -84,6 +84,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace ctl {
+    enum class ctWmiPerformanceCollectionType
+    {
+        Detailed,
+        MeanOnly,
+        FirstLast
+    };
+
     namespace {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -197,7 +204,7 @@ namespace ctl {
 
             ctWmiPerformanceDataAccessor(_In_ ctComPtr<IWbemConfigureRefresher> _config, _In_ LPCWSTR _classname);
 
-            ~ctWmiPerformanceDataAccessor() throw()
+            ~ctWmiPerformanceDataAccessor() NOEXCEPT
             {
                 clear();
             }
@@ -207,11 +214,11 @@ namespace ctl {
             ///
             void refresh();
 
-            access_iterator begin() const throw()
+            access_iterator begin() const NOEXCEPT
             {
                 return accessor_objects.begin();
             }
-            access_iterator end() const throw()
+            access_iterator end() const NOEXCEPT
             {
                 return accessor_objects.end();
             }
@@ -239,7 +246,7 @@ namespace ctl {
             std::vector<TAccess*> accessor_objects;
             access_iterator current_iterator;
 
-            void clear() throw();
+            void clear() NOEXCEPT;
         };
 
         inline
@@ -348,7 +355,7 @@ namespace ctl {
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() throw()
+        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() NOEXCEPT
         {
             for (IWbemObjectAccess* _object : accessor_objects) {
                 _object->Release();
@@ -358,7 +365,7 @@ namespace ctl {
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() throw()
+        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() NOEXCEPT
         {
             current_iterator = accessor_objects.end();
         }
@@ -379,17 +386,81 @@ namespace ctl {
         template <typename T>
         class ctWmiPeformanceCounterData {
         private:
-            CRITICAL_SECTION guard_data;
-            std::wstring instance_name;
-            std::wstring counter_name;
+            mutable CRITICAL_SECTION guard_data;
+            const ctWmiPerformanceCollectionType collection_type;
+            const std::wstring instance_name;
+            const std::wstring counter_name;
             std::vector<T> counter_data;
+            ULONGLONG counter_sum = 0;
+
+            void add_data(const T& instance_data)
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                switch (collection_type) {
+                    case ctWmiPerformanceCollectionType::Detailed:
+                        counter_data.push_back(instance_data);
+                        break;
+
+                    case ctWmiPerformanceCollectionType::MeanOnly:
+                        // the first data point write:
+                        // [0] == the placeholder for the sum
+                        // [1] == the counter of the data points
+                        if (counter_data.empty()) {
+                            counter_data.push_back(0);
+                            counter_data.push_back(0);
+                        }
+
+                        counter_data[1] = counter_data[1] + 1;
+                        counter_sum += instance_data;
+                        break;
+
+                    case ctWmiPerformanceCollectionType::FirstLast:
+                        // the first data point write both min and max
+                        // [0] == min (first)
+                        // [1] == max (last)
+                        if (counter_data.empty()) {
+                            counter_data.push_back(instance_data);
+                            counter_data.push_back(instance_data);
+                        } else {
+                            counter_data[1] = instance_data;
+                        }
+                        break;
+
+                    default:
+                        ctAlwaysFatalCondition(
+                            L"Unknown ctWmiPerformanceCollectionType (%u)",
+                            collection_type);
+                }
+            }
+
+            typename std::vector<T>::const_iterator access_begin()
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                // when accessing data, calculate the mean
+                if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
+                    counter_data[0] = static_cast<T>(counter_sum / counter_data[1]);
+                }
+                return counter_data.cbegin();
+            }
+
+            typename std::vector<T>::const_iterator access_end() const
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                // mean must return a size of 1 - the mean value
+                if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
+                    return counter_data.cbegin() + 1;
+                }
+                return counter_data.cend();
+            }
 
         public:
-            ctWmiPeformanceCounterData(_In_ IWbemObjectAccess* _instance, _In_ LPCWSTR _counter)
-            : guard_data(),
+            ctWmiPeformanceCounterData(
+                const ctWmiPerformanceCollectionType _collection_type,
+                _In_ IWbemObjectAccess* _instance,
+                _In_ LPCWSTR _counter)
+            : collection_type(_collection_type),
               instance_name(ctReadIWbemObjectAccess(_instance, L"Name")->bstrVal),
-              counter_name(_counter),
-              counter_data()
+              counter_name(_counter)
             {
                 if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0)) {
                     auto gle = ::GetLastError();
@@ -399,11 +470,12 @@ namespace ctl {
                             gle).c_str());
                 }
             }
-            ctWmiPeformanceCounterData(_In_ IWbemClassObject* _instance, _In_ LPCWSTR _counter)
-            : guard_data(),
-              instance_name(),
-              counter_name(_counter),
-              counter_data()
+            ctWmiPeformanceCounterData(
+                const ctWmiPerformanceCollectionType _collection_type,
+                _In_ IWbemClassObject* _instance,
+                _In_ LPCWSTR _counter)
+            : collection_type(_collection_type),
+              counter_name(_counter)
             {
                 if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0)) {
                     auto gle = ::GetLastError();
@@ -430,14 +502,14 @@ namespace ctl {
                         true);
                 }
             }
-            ~ctWmiPeformanceCounterData() throw()
+            ~ctWmiPeformanceCounterData() NOEXCEPT
             {
                 ::DeleteCriticalSection(&guard_data);
             }
 
             /// _instance_name == nullptr means match everything
             /// - allows for the caller to not have to pass Name filters multiple times
-            bool match(_In_opt_ LPCWSTR _instance_name) throw()
+            bool match(_In_opt_ LPCWSTR _instance_name) NOEXCEPT
             {
                 if (nullptr == _instance_name) {
                     return true;
@@ -469,8 +541,7 @@ namespace ctl {
             {
                 T instance_data;
                 ctReadIWbemObjectAccess(_instance, counter_name.c_str()).retrieve(&instance_data);
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
-                counter_data.push_back(instance_data);
+                add_data(instance_data);
             }
             void add(_In_ IWbemClassObject* _instance)
             {
@@ -486,32 +557,32 @@ namespace ctl {
                         true);
                 }
 
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 T instance_data;
-                counter_data.push_back(value.retrieve(&instance_data));
+                add_data(value.retrieve(&instance_data));
             }
 
-            typename std::vector<T>::iterator begin()
+            typename std::vector<T>::const_iterator begin()
             {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
-                return counter_data.begin();
+                return access_begin();
             }
-            typename std::vector<T>::iterator end()
+            typename std::vector<T>::const_iterator end()
             {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
-                return counter_data.end();
+                return access_end();
             }
 
             size_t count()
             {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
-                return counter_data.size();
+                return access_end() - access_begin();
             }
 
             void clear()
             {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 counter_data.clear();
+                counter_sum = 0;
             }
 
             // non-copyable
@@ -548,8 +619,7 @@ namespace ctl {
                     false);
             }
 
-            ctAutoReleaseCriticalSection auto_guard(&guard_data);
-            counter_data.push_back(::_wcstoui64(value->bstrVal, NULL, 10));
+            add_data(::_wcstoui64(value->bstrVal, NULL, 10));
         }
 
         template <>
@@ -574,8 +644,7 @@ namespace ctl {
                     false);
             }
 
-            ctAutoReleaseCriticalSection auto_guard(&guard_data);
-            counter_data.push_back(::_wcstoi64(value->bstrVal, NULL, 10));
+            add_data(::_wcstoi64(value->bstrVal, NULL, 10));
         }
 
 
@@ -622,11 +691,11 @@ namespace ctl {
         ///
         class iterator : public std::iterator<std::forward_iterator_tag, T> {
         private:
-            typename std::vector<T>::iterator current;
+            typename std::vector<T>::const_iterator current;
             bool is_empty;
 
         public:
-            iterator(typename std::vector<T>::iterator _instance)
+            explicit iterator(typename std::vector<T>::const_iterator && _instance)
             : current(std::move(_instance)),
               is_empty(false)
             {
@@ -642,24 +711,24 @@ namespace ctl {
             /// move c'tor and move assignment
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            iterator(_In_ iterator&& _i) throw()
+            iterator(_In_ iterator&& _i) NOEXCEPT
             : current(std::move(_i.current)),
               is_empty(std::move(_i.is_empty))
             {
             }
-            iterator& operator =(_In_ iterator&& _i) throw()
+            iterator& operator =(_In_ iterator&& _i) NOEXCEPT
             {
                 current = std::move(_i.current);
                 is_empty = std::move(_i.is_empty);
                 return *this;
             }
 
-            iterator(_In_ const iterator& _i) throw()
+            iterator(_In_ const iterator& _i) NOEXCEPT
             : current(_i.current),
               is_empty(_i.is_empty)
             {
             }
-            iterator& operator =(_In_ const iterator& i) throw()
+            iterator& operator =(_In_ const iterator& i) NOEXCEPT
             {
                 iterator local_copy(i);
                 *this = std::move(local_copy);
@@ -684,7 +753,7 @@ namespace ctl {
             }
             */
 
-            bool operator==(_In_ const iterator& _iter) const throw()
+            bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
                 if (is_empty || _iter.is_empty) {
                     return (is_empty == _iter.is_empty);
@@ -692,7 +761,7 @@ namespace ctl {
                     return (current == _iter.current);
                 }
             }
-            bool operator!=(_In_ const iterator& _iter) const throw()
+            bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
             {
                 return !(*this == _iter);
             }
@@ -730,13 +799,9 @@ namespace ctl {
         };
 
     public:
-        ctWmiPerformanceCounter(_In_ LPCWSTR _counter_name)
-        : counter_guard(),
-          filter_guard(),
-          counter_name(_counter_name),
-          refresher(),
-          configure_refresher(),
-          counter_data()
+        ctWmiPerformanceCounter(_In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        : collection_type(_collection_type),
+          counter_name(_counter_name)
         {
             refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
             HRESULT hr = refresher->QueryInterface(IID_IWbemConfigureRefresher, reinterpret_cast<void**>(configure_refresher.get_addr_of()));
@@ -760,7 +825,7 @@ namespace ctl {
             }
         }
 
-        virtual ~ctWmiPerformanceCounter() throw()
+        virtual ~ctWmiPerformanceCounter() NOEXCEPT
         {
             ::DeleteCriticalSection(&counter_guard);
             ::DeleteCriticalSection(&filter_guard);
@@ -862,8 +927,8 @@ namespace ctl {
         // private stucture to track the 'filter' which instances to track
         //
         struct ctWmiPerformanceInstanceFilter {
-            std::wstring counter_name;
-            ctComVariant property_value;
+            const std::wstring counter_name;
+            const ctComVariant property_value;
 
             ctWmiPerformanceInstanceFilter(_In_ LPCWSTR _counter_name, _In_ const ctComVariant& _property_value)
             : counter_name(_counter_name),
@@ -919,7 +984,8 @@ namespace ctl {
         mutable CRITICAL_SECTION counter_guard;
         mutable CRITICAL_SECTION filter_guard;
 
-        std::wstring counter_name;
+        const ctWmiPerformanceCollectionType collection_type;
+        const std::wstring counter_name;
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> configure_refresher;
         std::vector<ctWmiPerformanceInstanceFilter> instance_filter;
@@ -994,7 +1060,7 @@ namespace ctl {
                 if (tracked_instance == std::end(counter_data)) {
                     counter_data.push_back(
                         std::unique_ptr<ctWmiPeformanceCounterData<T>>
-                            (new ctWmiPeformanceCounterData<T>(_instance, counter_name.c_str())));
+                            (new ctWmiPeformanceCounterData<T>(collection_type, _instance, counter_name.c_str())));
                     (*counter_data.rbegin())->add(_instance);
                 } else {
                     (*tracked_instance)->add(_instance);
@@ -1025,8 +1091,8 @@ namespace ctl {
     template <typename TEnum, typename TAccess, typename TData>
     class ctWmiPerformanceCounterImpl : public ctWmiPerformanceCounter<TData> {
     public:
-        ctWmiPerformanceCounterImpl(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
-        : ctWmiPerformanceCounter<TData>(_counter_name),
+        ctWmiPerformanceCounterImpl(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        : ctWmiPerformanceCounter<TData>(_counter_name, _collection_type),
           accessor(access_refresher(), _class_name)
         {
         }
@@ -1090,8 +1156,7 @@ namespace ctl {
 
         virtual ~ctWmiPerformance() NOEXCEPT
         {
-            // guarantee the timer stops before tearing down anything
-            timer.reset();
+            stop_all_counters();
         }
 
         template <typename T>
@@ -1117,13 +1182,15 @@ namespace ctl {
                 _interval);
         }
         // no-throw / no-fail
-        void stop_all_counters() throw()
+        void stop_all_counters() NOEXCEPT
         {
-            timer.reset();
+            if (timer) {
+                timer->stop_all_timers();
+            }
         }
 
         // no-throw / no-fail
-        void clear_counter_data() throw()
+        void clear_counter_data() NOEXCEPT
         {
             for (auto& _callback : callbacks) {
                 _callback(CallbackAction::Clear);
@@ -1154,9 +1221,9 @@ namespace ctl {
             wmi_service(std::move(rhs.wmi_service)),
             refresher(std::move(rhs.refresher)),
             config_refresher(std::move(rhs.config_refresher)),
-            timer(std::move(rhs.timer)),
-            callbacks(std::move(rhs.callbacks))
-        {
+            callbacks(std::move(rhs.callbacks)),
+            timer(std::move(rhs.timer))
+            {
         }
 
     private:
@@ -1164,10 +1231,11 @@ namespace ctl {
         ctWmiService wmi_service;
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> config_refresher;
-        // timer to fire to indicate when to Refresh the data
-        std::unique_ptr<ctl::ctThreadpoolTimer> timer;
         // for each interval, callback each of the registered aggregators
         std::vector<ctWmiPerformanceCallback> callbacks;
+        // timer to fire to indicate when to Refresh the data
+        // declare last to guarantee will be destroyed first
+        std::unique_ptr<ctl::ctThreadpoolTimer> timer;
 
         static void TimerCallback(ctl::ctWmiPerformance* this_ptr, unsigned long _interval)
         {
@@ -1704,21 +1772,21 @@ namespace ctl {
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         // 'static' WMI PerfCounters enumerate via IWbemClassObject and accessed/refreshed via IWbemClassObject
-        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(_class_name, _counter_name);
+        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(_class_name, _counter_name, _collection_type);
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         // 'instance' WMI perf objects are enumerated through the IWbemHiPerfEnum interface and accessed/refreshed through the IWbemObjectAccess interface
-        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name);
+        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name, _collection_type);
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiClassName& _class, _In_ LPCWSTR _counter_name)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiClassName& _class, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         const ctWmiPerformanceCounterProperties* foundProperty = nullptr;
         for (const auto& counterProperty : ctWmiPerformanceDetails::PerformanceCounterPropertiesArray) {
@@ -1743,9 +1811,9 @@ namespace ctl {
         }
 
         if (foundProperty->classType == ctWmiClassType::Static) {
-            return ctMakeStaticPerfCounter<T>(foundProperty->providerName, _counter_name);
+            return ctMakeStaticPerfCounter<T>(foundProperty->providerName, _counter_name, _collection_type);
         } else {
-            return ctMakeInstancePerfCounter<T>(foundProperty->providerName, _counter_name);
+            return ctMakeInstancePerfCounter<T>(foundProperty->providerName, _counter_name, _collection_type);
         }
     }
 } // ctl namespace

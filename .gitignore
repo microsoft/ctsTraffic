@@ -19,3 +19,4 @@
 *.aps
 /ctsTraffic/.vs
 /.vs
+/MSTest/Debug

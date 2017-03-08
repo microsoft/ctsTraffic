@@ -80,7 +80,7 @@ namespace ctsPerf {
             start_row(_class_name, _counter_name);
 
             if (!_data.empty()) {
-                // sort the data for IQR calculations (minmax depends on this as well)
+                // sort the data for IQR calculations
                 sort(_data.begin(), _data.end());
 
                 auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
