@@ -103,5 +103,8 @@
     <ClCompile Include="ctsPerf.cpp">
       <Filter>Source FIles</Filter>
     </ClCompile>
+    <ClCompile Include="ctsWriteDetails.cpp">
+      <Filter>Source FIles</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

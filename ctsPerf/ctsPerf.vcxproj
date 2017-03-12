@@ -208,6 +208,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ctsPerf.cpp" />
+    <ClCompile Include="ctsWriteDetails.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ctl\ctComInitialize.hpp" />

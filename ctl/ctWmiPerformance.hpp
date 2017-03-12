@@ -55,10 +55,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// 
 /// Methods exposed publicly off of ctWmiPerformanceCounter:
 /// - add_filter(): allows the caller to only capture instances which match the parameter/value combination for that object
-/// - calculate_size(): returns to the caller the number of data-points matching that instance name (instance name is always the string matching the 'Name' property)
-/// - clear_data(): clears all data points captured but still maintains all filters previously added
-/// - get_counterName(): returns the name of the property of the WMI class that is being recorded
-/// - get_filter(): takes a counter name parameter and returns the variant value by which that name is being filtered
 /// - reference_range() : takes an Instance Name by which to return values
 /// -- returns begin/end iterators to reference the data
 /// 
@@ -76,7 +72,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// - this is instantiated in ctWmiPerformanceCounterImpl as it knows the Access and Enum template types
 /// 
 /// ctWmiPerformanceCounterData encapsulates the data points for one instance of one counter.
-/// - exposes match() taking both types of Access objects to return if it matches the instance it contains
 /// - exposes match() taking a string to check if it matches the instance it contains
 /// - exposes add() taking both types of Access objects + a ULONGLONG time parameter to retrieve the data and add it to the internal map
 /// 
@@ -402,27 +397,42 @@ namespace ctl {
                         break;
 
                     case ctWmiPerformanceCollectionType::MeanOnly:
-                        // the first data point write:
-                        // [0] == the placeholder for the sum
-                        // [1] == the counter of the data points
+                        // vector is formatted as:
+                        // [0] == count
+                        // [1] == min
+                        // [2] == max
+                        // [3] == mean
                         if (counter_data.empty()) {
+                            counter_data.push_back(1);
+                            counter_data.push_back(instance_data);
+                            counter_data.push_back(instance_data);
                             counter_data.push_back(0);
-                            counter_data.push_back(0);
+                        } else {
+                            ++counter_data[0];
+
+                            if (instance_data < counter_data[1]) {
+                                counter_data[1] = instance_data;
+                            }
+                            if (instance_data > counter_data[2]) {
+                                counter_data[2] = instance_data;
+                            }
                         }
 
-                        counter_data[1] = counter_data[1] + 1;
                         counter_sum += instance_data;
                         break;
 
                     case ctWmiPerformanceCollectionType::FirstLast:
                         // the first data point write both min and max
-                        // [0] == min (first)
-                        // [1] == max (last)
+                        // [0] == count
+                        // [1] == first
+                        // [2] == last
                         if (counter_data.empty()) {
+                            counter_data.push_back(1);
                             counter_data.push_back(instance_data);
                             counter_data.push_back(instance_data);
                         } else {
-                            counter_data[1] = instance_data;
+                            ++counter_data[0];
+                            counter_data[2] = instance_data;
                         }
                         break;
 
@@ -438,7 +448,7 @@ namespace ctl {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 // when accessing data, calculate the mean
                 if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
-                    counter_data[0] = static_cast<T>(counter_sum / counter_data[1]);
+                    counter_data[3] = static_cast<T>(counter_sum / counter_data[0]);
                 }
                 return counter_data.cbegin();
             }
@@ -446,10 +456,6 @@ namespace ctl {
             typename std::vector<T>::const_iterator access_end() const
             {
                 ctAutoReleaseCriticalSection auto_guard(&guard_data);
-                // mean must return a size of 1 - the mean value
-                if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
-                    return counter_data.cbegin() + 1;
-                }
                 return counter_data.cend();
             }
 
@@ -520,21 +526,6 @@ namespace ctl {
                 } else {
                     return ctString::iordinal_equals(instance_name, _instance_name);
                 }
-            }
-            bool match(_In_ IWbemObjectAccess* _instance)
-            {
-                return ctString::iordinal_equals(
-                    instance_name,
-                    ctReadIWbemObjectAccess(_instance, L"Name")->bstrVal);
-            }
-            bool match(_In_ IWbemClassObject* _instance)
-            {
-                ctComVariant value;
-                HRESULT hr = _instance->Get(L"Name", 0, value.get(), nullptr, nullptr);
-                if (FAILED(hr)) {
-                    throw ctException(hr, L"IWbemClassObject::Get(Name)", L"ctWmiPerformanceCounterData::match", false);
-                }
-                return match(value->bstrVal);
             }
 
             void add(_In_ IWbemObjectAccess* _instance)
@@ -647,6 +638,19 @@ namespace ctl {
             add_data(::_wcstoi64(value->bstrVal, NULL, 10));
         }
 
+        ctComVariant ctQueryInstanceName(_In_ IWbemObjectAccess* _instance)
+        {
+            return ctReadIWbemObjectAccess(_instance, L"Name");
+        }
+        ctComVariant ctQueryInstanceName(_In_ IWbemClassObject* _instance)
+        {
+            ctComVariant value;
+            HRESULT hr = _instance->Get(L"Name", 0, value.get(), nullptr, nullptr);
+            if (FAILED(hr)) {
+                throw ctException(hr, L"IWbemClassObject::Get(Name)", L"ctWmiPerformanceCounterData::match", false);
+            }
+            return value;
+        }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -654,6 +658,8 @@ namespace ctl {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         enum class CallbackAction {
+            Start,
+            Stop,
             Update,
             Clear
         };
@@ -808,54 +814,14 @@ namespace ctl {
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemRefresher::QueryInterface", L"ctWmiPerformanceCounter", false);
             }
-
-            if (!::InitializeCriticalSectionEx(&counter_guard, 4000, 0)) {
-                auto gle = ::GetLastError();
-                ctAlwaysFatalCondition(
-                    ctString::format_string(
-                        L"InitializeCriticalSectionEx failed with error %ul",
-                        gle).c_str());
-            }
-            if (!::InitializeCriticalSectionEx(&filter_guard, 4000, 0)) {
-                auto gle = ::GetLastError();
-                ctAlwaysFatalCondition(
-                    ctString::format_string(
-                        L"InitializeCriticalSectionEx failed with error %ul",
-                        gle).c_str());
-            }
         }
 
-        virtual ~ctWmiPerformanceCounter() NOEXCEPT
-        {
-            ::DeleteCriticalSection(&counter_guard);
-            ::DeleteCriticalSection(&filter_guard);
-        }
+        virtual ~ctWmiPerformanceCounter() = default;
 
-        const std::wstring& get_counterName() const
-        {
-            return counter_name;
-        }
-
-        const ctComVariant& get_filter(_In_ LPCWSTR _counter_name) const
-        {
-            ctAutoReleaseCriticalSection guard(&filter_guard);
-            auto found_filter = std::find_if(
-                std::begin(instance_filter),
-                std::end(instance_filter),
-                [_counter_name] (const ctWmiPerformanceInstanceFilter& _filter) -> bool {
-                return ctString::iordinal_equals(_counter_name, _filter.counter_name);
-            });
-            if (std::end(instance_filter) == found_filter) {
-                throw ctException(
-                    ERROR_NOT_FOUND,
-                    ctString::format_string(
-                        L"Filter with the counter_name %s was not found",
-                        _counter_name).c_str(),
-                    L"ctWmiPerformanceCounter::get_filter",
-                    true);
-            }
-            return found_filter->property_value;
-        }
+        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
+        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
+        ctWmiPerformanceCounter(ctWmiPerformanceCounter&&) = delete;
+        ctWmiPerformanceCounter& operator=(ctWmiPerformanceCounter&&) = delete;
 
         ///
         /// *not* thread-safe: caller must guarantee sequential access to add_filter()
@@ -863,7 +829,9 @@ namespace ctl {
         template <typename T>
         void add_filter(_In_ LPCWSTR _counter_name, _In_ T _property_value)
         {
-            ctAutoReleaseCriticalSection guard(&filter_guard);
+            ctl::ctFatalCondition(
+                !data_stopped,
+                L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
             instance_filter.emplace_back(_counter_name, ctWmiMakeVariant(_property_value));
         }
 
@@ -873,7 +841,10 @@ namespace ctl {
         ///
         std::pair<iterator, iterator> reference_range(_In_ LPCWSTR _instance_name = nullptr)
         {
-            ctAutoReleaseCriticalSection guard(&counter_guard);
+            ctl::ctFatalCondition(
+                !data_stopped,
+                L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+
             auto found_instance = std::find_if(
                 std::begin(counter_data),
                 std::end(counter_data),
@@ -888,38 +859,6 @@ namespace ctl {
 
             const std::unique_ptr<ctWmiPeformanceCounterData<T>>& instance_reference = *found_instance;
             return std::pair<iterator, iterator>(instance_reference->begin(), instance_reference->end());
-        }
-
-        ///
-        /// returns only the number of counters matching that instance name
-        /// - which could be smaller than the total instances captured across that time-period
-        ///
-        size_t calculate_size(_In_ LPCWSTR _instance_name = nullptr)
-        {
-            ctAutoReleaseCriticalSection guard(&counter_guard);
-            auto found = std::find_if(
-                std::rbegin(counter_data),
-                std::rend(counter_data),
-                [_instance_name] (const std::unique_ptr<ctWmiPeformanceCounterData<T>>& _instance) {
-                return _instance->match(_instance_name);
-            });
-            if (std::rend(counter_data) == found) {
-                return 0;
-            } else {
-                const std::unique_ptr<ctWmiPeformanceCounterData<T>>& found_data = *found;
-                return found_data->count();
-            }
-        }
-
-        ///
-        /// clears all counter data, but leaves all filters in-place
-        ///
-        void clear_data()
-        {
-            ctAutoReleaseCriticalSection guard(&counter_guard);
-            for (auto& _counter_data : counter_data) {
-                _counter_data->clear();
-            }
         }
 
     private:
@@ -971,25 +910,13 @@ namespace ctl {
             }
         };
 
-        // non-copyable
-        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
-        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
-
-        // non-movable
-        ctWmiPerformanceCounter(ctWmiPerformanceCounter&&) = delete;
-        ctWmiPerformanceCounter& operator=(ctWmiPerformanceCounter&&) = delete;
-
-    private:
-        // CS's must be mutable to allow internal locks to be taken in const methods
-        mutable CRITICAL_SECTION counter_guard;
-        mutable CRITICAL_SECTION filter_guard;
-
         const ctWmiPerformanceCollectionType collection_type;
         const std::wstring counter_name;
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> configure_refresher;
         std::vector<ctWmiPerformanceInstanceFilter> instance_filter;
         std::vector<std::unique_ptr<ctWmiPeformanceCounterData<T>>> counter_data;
+        bool data_stopped = true;
 
     protected:
 
@@ -1000,15 +927,30 @@ namespace ctl {
         ctWmiPerformanceCallback register_callback()
         {
             return [this] (const CallbackAction _update_data) {
-                ctAutoReleaseCriticalSection guard(&counter_guard);
-                if (_update_data == CallbackAction::Update) {
+                switch (_update_data)
+                {
+                case CallbackAction::Start:
+                    data_stopped = false;
+                    break;
+
+                case CallbackAction::Stop:
+                    data_stopped = true;
+                    break;
+
+                case CallbackAction::Update:
                     // only the derived class has appropriate the accessor class to update the data
                     update_counter_data();
-                } else {
-                    // else clear the data
+                    break;
+
+                case CallbackAction::Clear:
+                    ctl::ctFatalCondition(
+                        !data_stopped,
+                        L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+
                     for (auto& _counter_data : counter_data) {
                         _counter_data->clear();
                     }
+                    break;
                 }
             };
         }
@@ -1024,33 +966,29 @@ namespace ctl {
         //
         // this function is how one looks to see if the data machines requires knowing how to access the data from that specific WMI class
         // - it's also how to access the data is captured with the TAccess template type
-        // - ctWmiPerformanceCounterData overrides match() for each possible TAccess* types
         //
         template <typename TAccess>
         void add_instance(_In_ TAccess* _instance)
         {
-            bool fAddData = false;
-            // scope for the instance gaurd
-            {
-                ctAutoReleaseCriticalSection guard(&filter_guard);
-                fAddData = instance_filter.empty();
-                if (!fAddData) {
-                    fAddData = (std::end(instance_filter) != std::find(
-                        std::begin(instance_filter),
-                        std::end(instance_filter),
-                        _instance));
-                }
+            bool fAddData = instance_filter.empty();
+            if (!fAddData) {
+                fAddData = (std::end(instance_filter) != std::find(
+                    std::begin(instance_filter),
+                    std::end(instance_filter),
+                    _instance));
             }
+
             // add the counter data for this instance if:
             // - have no filters [not filtering instances at all]
             // - matches at least one filter
             if (fAddData) {
-                ctAutoReleaseCriticalSection guard(&counter_guard);
+                ctComVariant instance_name = ctQueryInstanceName(_instance);
+
                 auto tracked_instance = std::find_if(
                     std::begin(counter_data),
                     std::end(counter_data),
                     [&] (std::unique_ptr<ctWmiPeformanceCounterData<T>>& _counter_data) {
-                    return _counter_data->match(_instance);
+                    return _counter_data->match(instance_name->bstrVal);
                 });
 
                 // if this instance of this counter is new [new unique instance for this counter]
@@ -1176,6 +1114,9 @@ namespace ctl {
 
         void start_all_counters(unsigned _interval)
         {
+            for (auto& _callback : callbacks) {
+                _callback(CallbackAction::Start);
+            }
             timer.reset(new ctl::ctThreadpoolTimer);
             timer->schedule_singleton(
                 [this, _interval] () { TimerCallback(this, _interval); },
@@ -1186,6 +1127,9 @@ namespace ctl {
         {
             if (timer) {
                 timer->stop_all_timers();
+            }
+            for (auto& _callback : callbacks) {
+                _callback(CallbackAction::Stop);
             }
         }
 
@@ -1223,7 +1167,7 @@ namespace ctl {
             config_refresher(std::move(rhs.config_refresher)),
             callbacks(std::move(rhs.callbacks)),
             timer(std::move(rhs.timer))
-            {
+        {
         }
 
     private:
