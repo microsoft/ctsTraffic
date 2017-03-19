@@ -77,7 +77,7 @@ namespace ctl
         /// - thus defaulting to COINIT_MULTITHREADED as they can be used with either
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////
-        explicit ctComInitialize(DWORD _threading_model = COINIT_MULTITHREADED) : uninit_required(false)
+        explicit ctComInitialize(DWORD _threading_model = COINIT_MULTITHREADED)
         {
             HRESULT hr = ::CoInitializeEx(nullptr, _threading_model);
             switch (hr) {
@@ -99,18 +99,13 @@ namespace ctl
             }
         }
 
-    private:
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// This object is non-copyable
-        /// - there are options to make it "work", but this would open up other issues
-        /// - the caller should verify CoInit on all their threads with unique instances
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
-        ctComInitialize(const ctComInitialize&);
-        ctComInitialize& operator =(const ctComInitialize&);
+        ctComInitialize(const ctComInitialize&) = delete;
+        ctComInitialize& operator =(const ctComInitialize&) = delete;
+        ctComInitialize(ctComInitialize&&) = delete;
+        ctComInitialize& operator =(ctComInitialize&&) = delete;
 
-        bool uninit_required;
+    private:
+        bool uninit_required = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,10 +164,7 @@ namespace ctl
         ///  (they should always match their addref's with their releases)
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr() NOEXCEPT : t(nullptr)
-        {
-        }
-
+        ctComPtr() = default;
         explicit ctComPtr(_In_opt_ T* _t) NOEXCEPT : t(_t)
         {
             if (t != nullptr) {
@@ -182,7 +174,7 @@ namespace ctl
 
         ~ctComPtr() NOEXCEPT
         {
-            this->release();
+            release();
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -212,7 +204,7 @@ namespace ctl
         /// All are no-throw/no-fail operations
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        ctComPtr(_In_ ctComPtr&& _obj) NOEXCEPT : t(nullptr)
+        ctComPtr(_In_ ctComPtr&& _obj) NOEXCEPT
         {
             // initialized to nullptr ... swap with the [in] object
             this->swap(_obj);
@@ -235,11 +227,11 @@ namespace ctl
         ////////////////////////////////////////////////////////////////////////////////
         bool operator ==(_In_ const ctComPtr& _obj) const NOEXCEPT
         {
-            return this->t == _obj.t;
+            return t == _obj.t;
         }
         bool operator !=(_In_ const ctComPtr& _obj) const NOEXCEPT
         {
-            return this->t != _obj.t;
+            return t != _obj.t;
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -257,10 +249,10 @@ namespace ctl
         ////////////////////////////////////////////////////////////////////////////////
         void set(_In_ const T* _ptr) NOEXCEPT
         {
-            this->release();
-            this->t = _ptr;
-            if (t != nullptr) {
-                this->t->AddRef();
+            release();
+            t = _ptr;
+            if (t) {
+                t->AddRef();
             }
         }
 
@@ -307,7 +299,7 @@ namespace ctl
         }
         T** get_addr_of() NOEXCEPT
         {
-            this->release();
+            release();
             return (&t);
         }
         IUnknown* get_IUnknown() NOEXCEPT
@@ -351,7 +343,7 @@ namespace ctl
         }
 
     private:
-        T* t;
+        T* t = nullptr;
     };
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -805,12 +797,12 @@ namespace ctl
         ////////////////////////////////////////////////////////////////////////////////
         void set_empty() NOEXCEPT
         {
-            this->reset();
+            reset();
             variant.vt = VT_EMPTY;
         }
         void set_null() NOEXCEPT
         {
-            this->reset();
+            reset();
             variant.vt = VT_NULL;
         }
         bool is_empty() const NOEXCEPT
@@ -1186,7 +1178,7 @@ namespace ctl
         T retrieve()
         {
             T t;
-            return this->retrieve(&t);
+            return retrieve(&t);
         }
         ////////////////////////////////////////////////////////////////////////////////
         ///

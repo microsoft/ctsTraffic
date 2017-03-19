@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <string>
 #include <tuple>
-#include <map>
 #include <algorithm>
 
 #include <Windows.h>
@@ -28,7 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctWmiInitialize.hpp>
 #include <ctScopeGuard.hpp>
-#include <cttime.hpp>
 #include <ctString.hpp>
 #include <ctLocks.hpp>
 
@@ -57,10 +55,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// 
 /// Methods exposed publicly off of ctWmiPerformanceCounter:
 /// - add_filter(): allows the caller to only capture instances which match the parameter/value combination for that object
-/// - calculate_size(): returns to the caller the number of data-points matching that instance name (instance name is always the string matching the 'Name' property)
-/// - clear_data(): clears all data points captured but still maintains all filters previously added
-/// - get_counterName(): returns the name of the property of the WMI class that is being recorded
-/// - get_filter(): takes a counter name parameter and returns the variant value by which that name is being filtered
 /// - reference_range() : takes an Instance Name by which to return values
 /// -- returns begin/end iterators to reference the data
 /// 
@@ -78,7 +72,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// - this is instantiated in ctWmiPerformanceCounterImpl as it knows the Access and Enum template types
 /// 
 /// ctWmiPerformanceCounterData encapsulates the data points for one instance of one counter.
-/// - exposes match() taking both types of Access objects to return if it matches the instance it contains
 /// - exposes match() taking a string to check if it matches the instance it contains
 /// - exposes add() taking both types of Access objects + a ULONGLONG time parameter to retrieve the data and add it to the internal map
 /// 
@@ -86,6 +79,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace ctl {
+    enum class ctWmiPerformanceCollectionType
+    {
+        Detailed,
+        MeanOnly,
+        FirstLast
+    };
+
     namespace {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -199,9 +199,9 @@ namespace ctl {
 
             ctWmiPerformanceDataAccessor(_In_ ctComPtr<IWbemConfigureRefresher> _config, _In_ LPCWSTR _classname);
 
-            ~ctWmiPerformanceDataAccessor() throw()
+            ~ctWmiPerformanceDataAccessor() NOEXCEPT
             {
-                this->clear();
+                clear();
             }
 
             ///
@@ -209,18 +209,30 @@ namespace ctl {
             ///
             void refresh();
 
-            access_iterator begin() const throw()
+            access_iterator begin() const NOEXCEPT
             {
-                return this->accessor_objects.begin();
+                return accessor_objects.begin();
             }
-            access_iterator end() const throw()
+            access_iterator end() const NOEXCEPT
             {
-                return this->accessor_objects.end();
+                return accessor_objects.end();
             }
 
             // non-copyable
             ctWmiPerformanceDataAccessor(const ctWmiPerformanceDataAccessor&) = delete;
             ctWmiPerformanceDataAccessor& operator=(const ctWmiPerformanceDataAccessor&) = delete;
+
+            // movable
+            ctWmiPerformanceDataAccessor(ctWmiPerformanceDataAccessor&& rhs) :
+                enumeration_object(std::move(rhs.enumeration_object)),
+                accessor_objects(std::move(rhs.accessor_objects)),
+                current_iterator(std::move(rhs.current_iterator))
+            {
+                // since accessor_objects is storing raw pointers, manually clear out the rhs object
+                // so they won't be double-deleted
+                rhs.accessor_objects.clear();
+                rhs.current_iterator = rhs.accessor_objects.end();
+            }
 
         private:
             // members
@@ -229,7 +241,7 @@ namespace ctl {
             std::vector<TAccess*> accessor_objects;
             access_iterator current_iterator;
 
-            void clear() throw();
+            void clear() NOEXCEPT;
         };
 
         inline
@@ -299,29 +311,29 @@ namespace ctl {
         template <>
         inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::refresh()
         {
-            this->clear();
+            clear();
 
             ULONG objects_returned = 0;
-            HRESULT hr = this->enumeration_object->GetObjects(
+            HRESULT hr = enumeration_object->GetObjects(
                 0,
-                static_cast<ULONG>(this->accessor_objects.size()),
-                (0 == this->accessor_objects.size()) ? nullptr : &this->accessor_objects[0],
+                static_cast<ULONG>(accessor_objects.size()),
+                (0 == accessor_objects.size()) ? nullptr : &accessor_objects[0],
                 &objects_returned);
 
             if (WBEM_E_BUFFER_TOO_SMALL == hr) {
-                this->accessor_objects.resize(objects_returned);
-                hr = this->enumeration_object->GetObjects(
+                accessor_objects.resize(objects_returned);
+                hr = enumeration_object->GetObjects(
                     0,
-                    static_cast<ULONG>(this->accessor_objects.size()),
-                    &this->accessor_objects[0],
+                    static_cast<ULONG>(accessor_objects.size()),
+                    &accessor_objects[0],
                     &objects_returned);
             }
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemObjectAccess::GetObjects", L"ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::refresh", false);
             }
 
-            this->accessor_objects.resize(objects_returned);
-            this->current_iterator = this->accessor_objects.begin();
+            accessor_objects.resize(objects_returned);
+            current_iterator = accessor_objects.begin();
         }
 
         template <>
@@ -330,27 +342,27 @@ namespace ctl {
             // the underlying IWbemClassObject is already refreshed
             // accessor_objects will only ever have a singe instance
             ctFatalCondition(
-                this->accessor_objects.size() != 1,
+                accessor_objects.size() != 1,
                 L"ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>: for IWbemClassObject performance classes there can only ever have the single instance being tracked - instead has %Iu",
-                this->accessor_objects.size());
+                accessor_objects.size());
 
-            this->current_iterator = this->accessor_objects.begin();
+            current_iterator = accessor_objects.begin();
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() throw()
+        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() NOEXCEPT
         {
-            for (IWbemObjectAccess* _object : this->accessor_objects) {
+            for (IWbemObjectAccess* _object : accessor_objects) {
                 _object->Release();
             }
-            this->accessor_objects.clear();
-            this->current_iterator = this->accessor_objects.end();
+            accessor_objects.clear();
+            current_iterator = accessor_objects.end();
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() throw()
+        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() NOEXCEPT
         {
-            this->current_iterator = this->accessor_objects.end();
+            current_iterator = accessor_objects.end();
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -369,17 +381,92 @@ namespace ctl {
         template <typename T>
         class ctWmiPeformanceCounterData {
         private:
-            CRITICAL_SECTION guard_data;
-            std::wstring instance_name;
-            std::wstring counter_name;
-            std::map<ULONGLONG, T> counter_data;
+            mutable CRITICAL_SECTION guard_data;
+            const ctWmiPerformanceCollectionType collection_type;
+            const std::wstring instance_name;
+            const std::wstring counter_name;
+            std::vector<T> counter_data;
+            ULONGLONG counter_sum = 0;
+
+            void add_data(const T& instance_data)
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                switch (collection_type) {
+                    case ctWmiPerformanceCollectionType::Detailed:
+                        counter_data.push_back(instance_data);
+                        break;
+
+                    case ctWmiPerformanceCollectionType::MeanOnly:
+                        // vector is formatted as:
+                        // [0] == count
+                        // [1] == min
+                        // [2] == max
+                        // [3] == mean
+                        if (counter_data.empty()) {
+                            counter_data.push_back(1);
+                            counter_data.push_back(instance_data);
+                            counter_data.push_back(instance_data);
+                            counter_data.push_back(0);
+                        } else {
+                            ++counter_data[0];
+
+                            if (instance_data < counter_data[1]) {
+                                counter_data[1] = instance_data;
+                            }
+                            if (instance_data > counter_data[2]) {
+                                counter_data[2] = instance_data;
+                            }
+                        }
+
+                        counter_sum += instance_data;
+                        break;
+
+                    case ctWmiPerformanceCollectionType::FirstLast:
+                        // the first data point write both min and max
+                        // [0] == count
+                        // [1] == first
+                        // [2] == last
+                        if (counter_data.empty()) {
+                            counter_data.push_back(1);
+                            counter_data.push_back(instance_data);
+                            counter_data.push_back(instance_data);
+                        } else {
+                            ++counter_data[0];
+                            counter_data[2] = instance_data;
+                        }
+                        break;
+
+                    default:
+                        ctAlwaysFatalCondition(
+                            L"Unknown ctWmiPerformanceCollectionType (%u)",
+                            collection_type);
+                }
+            }
+
+            typename std::vector<T>::const_iterator access_begin()
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                // when accessing data, calculate the mean
+                if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
+                    counter_data[3] = static_cast<T>(counter_sum / counter_data[0]);
+                }
+                return counter_data.cbegin();
+            }
+
+            typename std::vector<T>::const_iterator access_end() const
+            {
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                return counter_data.cend();
+            }
 
         public:
-            ctWmiPeformanceCounterData(_In_ IWbemObjectAccess* _instance, _In_ LPCWSTR _counter)
-            : guard_data(),
+            ctWmiPeformanceCounterData(
+                const ctWmiPerformanceCollectionType _collection_type,
+                _In_ IWbemObjectAccess* _instance,
+                _In_ LPCWSTR _counter)
+            : collection_type(_collection_type),
               instance_name(ctReadIWbemObjectAccess(_instance, L"Name")->bstrVal),
-              counter_name(_counter),
-              counter_data()
+              counter_name(_counter)
             {
                 if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0)) {
                     auto gle = ::GetLastError();
@@ -389,11 +476,12 @@ namespace ctl {
                             gle).c_str());
                 }
             }
-            ctWmiPeformanceCounterData(_In_ IWbemClassObject* _instance, _In_ LPCWSTR _counter)
-            : guard_data(),
-              instance_name(),
-              counter_name(_counter),
-              counter_data()
+            ctWmiPeformanceCounterData(
+                const ctWmiPerformanceCollectionType _collection_type,
+                _In_ IWbemClassObject* _instance,
+                _In_ LPCWSTR _counter)
+            : collection_type(_collection_type),
+              counter_name(_counter)
             {
                 if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0)) {
                     auto gle = ::GetLastError();
@@ -420,111 +508,97 @@ namespace ctl {
                         true);
                 }
             }
-            ~ctWmiPeformanceCounterData() throw()
+            ~ctWmiPeformanceCounterData() NOEXCEPT
             {
                 ::DeleteCriticalSection(&guard_data);
             }
 
             /// _instance_name == nullptr means match everything
             /// - allows for the caller to not have to pass Name filters multiple times
-            bool match(_In_opt_ LPCWSTR _instance_name) throw()
+            bool match(_In_opt_ LPCWSTR _instance_name) NOEXCEPT
             {
                 if (nullptr == _instance_name) {
                     return true;
 
-                } else if (this->instance_name.empty()) {
+                } else if (instance_name.empty()) {
                     return (nullptr == _instance_name);
 
                 } else {
-                    return ctString::iordinal_equals(
-                        this->instance_name,
-                        _instance_name);
+                    return ctString::iordinal_equals(instance_name, _instance_name);
                 }
-            }
-            bool match(_In_ IWbemObjectAccess* _instance)
-            {
-                return ctString::iordinal_equals(
-                    this->instance_name,
-                    ctReadIWbemObjectAccess(_instance, L"Name")->bstrVal);
-            }
-            bool match(_In_ IWbemClassObject* _instance)
-            {
-                ctComVariant value;
-                HRESULT hr = _instance->Get(L"Name", 0, value.get(), nullptr, nullptr);
-                if (FAILED(hr)) {
-                    throw ctException(hr, L"IWbemClassObject::Get(Name)", L"ctWmiPerformanceCounterData::match", false);
-                }
-                return this->match(value->bstrVal);
             }
 
-            void add(_In_ IWbemObjectAccess* _instance, _In_ ULONGLONG _time)
+            void add(_In_ IWbemObjectAccess* _instance)
             {
                 T instance_data;
                 ctReadIWbemObjectAccess(_instance, counter_name.c_str()).retrieve(&instance_data);
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-                this->counter_data[_time] = instance_data;
+                add_data(instance_data);
             }
-            void add(_In_ IWbemClassObject* _instance, _In_ ULONGLONG _time)
+            void add(_In_ IWbemClassObject* _instance)
             {
                 ctComVariant value;
-                HRESULT hr = _instance->Get(this->counter_name.c_str(), 0, value.get(), nullptr, nullptr);
+                HRESULT hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
                 if (FAILED(hr)) {
                     throw ctException(
                         hr,
                         ctString::format_string(
                             L"IWbemClassObject::Get(%s)",
-                            this->counter_name.c_str()).c_str(),
+                            counter_name.c_str()).c_str(),
                         L"ctWmiPeformanceCounterData<T>::add",
                         true);
                 }
 
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
                 T instance_data;
-                this->counter_data[_time] = value.retrieve(&instance_data);
+                add_data(value.retrieve(&instance_data));
             }
 
-            typename std::map<ULONGLONG, T>::iterator begin()
+            typename std::vector<T>::const_iterator begin()
             {
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-                return this->counter_data.begin();
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                return access_begin();
             }
-            typename std::map<ULONGLONG, T>::iterator end()
+            typename std::vector<T>::const_iterator end()
             {
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-                return this->counter_data.end();
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                return access_end();
             }
 
             size_t count()
             {
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-                return this->counter_data.size();
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                return access_end() - access_begin();
             }
 
             void clear()
             {
-                ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-                this->counter_data.clear();
+                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                counter_data.clear();
+                counter_sum = 0;
             }
 
             // non-copyable
             ctWmiPeformanceCounterData(const ctWmiPeformanceCounterData&) = delete;
             ctWmiPeformanceCounterData& operator= (const ctWmiPeformanceCounterData&) = delete;
+
+            // not movable
+            ctWmiPeformanceCounterData(ctWmiPeformanceCounterData&&) = delete;
+            ctWmiPeformanceCounterData& operator=(ctWmiPeformanceCounterData&&) = delete;
         };
 
         ///
         /// WMI passes around 64-bit integers as BSTR's, so must specialize reading those values to do the proper conversion
         ///
         template <>
-        inline void ctWmiPeformanceCounterData<ULONGLONG>::add(_In_ IWbemClassObject* _instance, _In_ ULONGLONG _time)
+        inline void ctWmiPeformanceCounterData<ULONGLONG>::add(_In_ IWbemClassObject* _instance)
         {
             ctComVariant value;
-            HRESULT hr = _instance->Get(this->counter_name.c_str(), 0, value.get(), nullptr, nullptr);
+            HRESULT hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
             if (FAILED(hr)) {
                 throw ctException(
                     hr,
                     ctString::format_string(
                         L"IWbemClassObject::Get(%s)",
-                        this->counter_name.c_str()).c_str(),
+                        counter_name.c_str()).c_str(),
                     L"ctWmiPeformanceCounterData<ULONGLONG>::add",
                     true);
             }
@@ -536,21 +610,20 @@ namespace ctl {
                     false);
             }
 
-            ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-            this->counter_data[_time] = ::_wcstoui64(value->bstrVal, NULL, 10);
+            add_data(::_wcstoui64(value->bstrVal, NULL, 10));
         }
 
         template <>
-        inline void ctWmiPeformanceCounterData<LONGLONG>::add(_In_ IWbemClassObject* _instance, _In_ ULONGLONG _time)
+        inline void ctWmiPeformanceCounterData<LONGLONG>::add(_In_ IWbemClassObject* _instance)
         {
             ctComVariant value;
-            HRESULT hr = _instance->Get(this->counter_name.c_str(), 0, value.get(), nullptr, nullptr);
+            HRESULT hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
             if (FAILED(hr)) {
                 throw ctException(
                     hr,
                     ctString::format_string(
                         L"IWbemClassObject::Get(%s)",
-                        this->counter_name.c_str()).c_str(),
+                        counter_name.c_str()).c_str(),
                     L"ctWmiPeformanceCounterData<LONGLONG>::add",
                     true);
             }
@@ -562,18 +635,35 @@ namespace ctl {
                     false);
             }
 
-            ctAutoReleaseCriticalSection auto_guard(&this->guard_data);
-            this->counter_data[_time] = ::_wcstoi64(value->bstrVal, NULL, 10);
+            add_data(::_wcstoi64(value->bstrVal, NULL, 10));
         }
 
+        ctComVariant ctQueryInstanceName(_In_ IWbemObjectAccess* _instance)
+        {
+            return ctReadIWbemObjectAccess(_instance, L"Name");
+        }
+        ctComVariant ctQueryInstanceName(_In_ IWbemClassObject* _instance)
+        {
+            ctComVariant value;
+            HRESULT hr = _instance->Get(L"Name", 0, value.get(), nullptr, nullptr);
+            if (FAILED(hr)) {
+                throw ctException(hr, L"IWbemClassObject::Get(Name)", L"ctWmiPerformanceCounterData::match", false);
+            }
+            return value;
+        }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// type for the callback implemented in all ctWmiPerformanceCounter classes
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        typedef std::function<void(const bool _update_data, const ULONGLONG _time)> ctWmiPerformanceCallback;
-
+        enum class CallbackAction {
+            Start,
+            Stop,
+            Update,
+            Clear
+        };
+        typedef std::function<void(const CallbackAction _action)> ctWmiPerformanceCallback;
     } // unnamed namespace
 
 
@@ -607,22 +697,19 @@ namespace ctl {
         ///
         class iterator : public std::iterator<std::forward_iterator_tag, T> {
         private:
-            typename std::map<ULONGLONG, T>::iterator current;
+            typename std::vector<T>::const_iterator current;
             bool is_empty;
 
         public:
-            iterator(typename std::map<ULONGLONG, T>::iterator _instance)
-            : current(_instance),
+            explicit iterator(typename std::vector<T>::const_iterator && _instance)
+            : current(std::move(_instance)),
               is_empty(false)
             {
             }
             iterator() : current(), is_empty(true)
             {
             }
-
-            ~iterator() throw()
-            {
-            }
+            ~iterator() = default;
 
             ////////////////////////////////////////////////////////////////////////////////
             ///
@@ -630,55 +717,57 @@ namespace ctl {
             /// move c'tor and move assignment
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            iterator(_In_ iterator&& _i) throw()
+            iterator(_In_ iterator&& _i) NOEXCEPT
             : current(std::move(_i.current)),
               is_empty(std::move(_i.is_empty))
             {
             }
-            iterator& operator =(_In_ iterator&& _i) throw()
+            iterator& operator =(_In_ iterator&& _i) NOEXCEPT
             {
-                this->current = std::move(_i.current);
-                this->is_empty = std::move(_i.is_empty);
+                current = std::move(_i.current);
+                is_empty = std::move(_i.is_empty);
                 return *this;
             }
 
-            iterator(_In_ const iterator& _i) throw()
+            iterator(_In_ const iterator& _i) NOEXCEPT
             : current(_i.current),
               is_empty(_i.is_empty)
             {
             }
-            iterator& operator =(_In_ const iterator& i) throw()
+            iterator& operator =(_In_ const iterator& i) NOEXCEPT
             {
                 iterator local_copy(i);
                 *this = std::move(local_copy);
                 return *this;
             }
 
-            T& operator* ()
+            const T& operator* () const
             {
-                if (this->is_empty) {
+                if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : dereferencing an iterator referencing an empty container");
                 }
-                return this->current->second;
+                return *current;
             }
 
+            /*
             T* operator-> ()
             {
-                if (this->is_empty) {
+                if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : dereferencing an iterator referencing an empty container");
                 }
-                &(this->current->second);
+                &(current);
             }
+            */
 
-            bool operator==(_In_ const iterator& _iter) const throw()
+            bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
-                if (this->is_empty || _iter.is_empty) {
-                    return (this->is_empty == _iter.is_empty);
+                if (is_empty || _iter.is_empty) {
+                    return (is_empty == _iter.is_empty);
                 } else {
-                    return (this->current == _iter.current);
+                    return (current == _iter.current);
                 }
             }
-            bool operator!=(_In_ const iterator& _iter) const throw()
+            bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
             {
                 return !(*this == _iter);
             }
@@ -686,97 +775,53 @@ namespace ctl {
             // preincrement
             iterator& operator++()
             {
-                if (this->is_empty) {
+                if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : preincrementing an iterator referencing an empty container");
                 }
-                ++this->current;
+                ++current;
                 return *this;
             }
             // postincrement
             iterator operator++(_In_ int)
             {
-                if (this->is_empty) {
+                if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
                 }
                 iterator temp(*this);
-                ++this->current;
+                ++current;
                 return temp;
             }
             // increment by integer
             iterator& operator+=(_In_ size_t _inc)
             {
-                if (this->is_empty) {
+                if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
                 }
                 for (size_t loop = 0; loop < _inc; ++loop) {
-                    ++this->current;
+                    ++current;
                 }
                 return *this;
             }
         };
 
     public:
-        ctWmiPerformanceCounter(_In_ LPCWSTR _counter_name)
-        : counter_guard(),
-          filter_guard(),
-          counter_name(_counter_name),
-          refresher(),
-          configure_refresher(),
-          counter_data()
+        ctWmiPerformanceCounter(_In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        : collection_type(_collection_type),
+          counter_name(_counter_name)
         {
             refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
             HRESULT hr = refresher->QueryInterface(IID_IWbemConfigureRefresher, reinterpret_cast<void**>(configure_refresher.get_addr_of()));
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemRefresher::QueryInterface", L"ctWmiPerformanceCounter", false);
             }
-
-            if (!::InitializeCriticalSectionEx(&counter_guard, 4000, 0)) {
-                auto gle = ::GetLastError();
-                ctAlwaysFatalCondition(
-                    ctString::format_string(
-                        L"InitializeCriticalSectionEx failed with error %ul",
-                        gle).c_str());
-            }
-            if (!::InitializeCriticalSectionEx(&filter_guard, 4000, 0)) {
-                auto gle = ::GetLastError();
-                ctAlwaysFatalCondition(
-                    ctString::format_string(
-                        L"InitializeCriticalSectionEx failed with error %ul",
-                        gle).c_str());
-            }
         }
 
-        virtual ~ctWmiPerformanceCounter() throw()
-        {
-            ::DeleteCriticalSection(&counter_guard);
-            ::DeleteCriticalSection(&filter_guard);
-        }
+        virtual ~ctWmiPerformanceCounter() = default;
 
-        const std::wstring& get_counterName() const
-        {
-            return this->counter_name;
-        }
-
-        const ctComVariant& get_filter(_In_ LPCWSTR _counter_name) const
-        {
-            ctAutoReleaseCriticalSection guard(&this->filter_guard);
-            auto found_filter = std::find_if(
-                std::begin(this->instance_filter),
-                std::end(this->instance_filter),
-                [_counter_name] (const ctWmiPerformanceInstanceFilter& _filter) -> bool {
-                return ctString::iordinal_equals(_counter_name, _filter.counter_name);
-            });
-            if (std::end(this->instance_filter) == found_filter) {
-                throw ctException(
-                    ERROR_NOT_FOUND,
-                    ctString::format_string(
-                        L"Filter with the counter_name %s was not found",
-                        _counter_name).c_str(),
-                    L"ctWmiPerformanceCounter::get_filter",
-                    true);
-            }
-            return found_filter->property_value;
-        }
+        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
+        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
+        ctWmiPerformanceCounter(ctWmiPerformanceCounter&&) = delete;
+        ctWmiPerformanceCounter& operator=(ctWmiPerformanceCounter&&) = delete;
 
         ///
         /// *not* thread-safe: caller must guarantee sequential access to add_filter()
@@ -784,8 +829,10 @@ namespace ctl {
         template <typename T>
         void add_filter(_In_ LPCWSTR _counter_name, _In_ T _property_value)
         {
-            ctAutoReleaseCriticalSection guard(&this->filter_guard);
-            this->instance_filter.emplace_back(_counter_name, ctWmiMakeVariant(_property_value));
+            ctl::ctFatalCondition(
+                !data_stopped,
+                L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+            instance_filter.emplace_back(_counter_name, ctWmiMakeVariant(_property_value));
         }
 
         ///
@@ -794,14 +841,17 @@ namespace ctl {
         ///
         std::pair<iterator, iterator> reference_range(_In_ LPCWSTR _instance_name = nullptr)
         {
-            ctAutoReleaseCriticalSection guard(&this->counter_guard);
+            ctl::ctFatalCondition(
+                !data_stopped,
+                L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+
             auto found_instance = std::find_if(
-                this->counter_data.begin(),
-                this->counter_data.end(),
+                std::begin(counter_data),
+                std::end(counter_data),
                 [&] (const std::unique_ptr<ctWmiPeformanceCounterData<T>>& _instance) {
                 return _instance->match(_instance_name);
             });
-            if (this->counter_data.end() == found_instance) {
+            if (std::end(counter_data) == found_instance) {
                 // nothing matching that instance name
                 // return the end iterator (default c'tor == end)
                 return std::pair<iterator, iterator>(iterator(), iterator());
@@ -811,58 +861,24 @@ namespace ctl {
             return std::pair<iterator, iterator>(instance_reference->begin(), instance_reference->end());
         }
 
-        ///
-        /// returns only the number of counters matching that instance name
-        /// - which could be smaller than the total instances captured across that time-period
-        ///
-        size_t calculate_size(_In_ LPCWSTR _instance_name = nullptr)
-        {
-            ctAutoReleaseCriticalSection guard(&this->counter_guard);
-            auto found = std::find_if(
-                this->counter_data.rbegin(),
-                this->counter_data.rend(),
-                [_instance_name] (const std::unique_ptr<ctWmiPeformanceCounterData<T>>& _instance) {
-                return _instance->match(_instance_name);
-            });
-            if (this->counter_data.rend() == found) {
-                return 0;
-            } else {
-                const std::unique_ptr<ctWmiPeformanceCounterData<T>>& found_data = *found;
-                return found_data->count();
-            }
-        }
-
-        ///
-        /// clears all counter data, but leaves all filters in-place
-        ///
-        void clear_data()
-        {
-            ctAutoReleaseCriticalSection guard(&this->counter_guard);
-            for (auto& _counter_data : this->counter_data) {
-                _counter_data->clear();
-            }
-        }
-
     private:
         //
         // private stucture to track the 'filter' which instances to track
         //
         struct ctWmiPerformanceInstanceFilter {
-            std::wstring counter_name;
-            ctComVariant property_value;
+            const std::wstring counter_name;
+            const ctComVariant property_value;
 
             ctWmiPerformanceInstanceFilter(_In_ LPCWSTR _counter_name, _In_ const ctComVariant& _property_value)
             : counter_name(_counter_name),
               property_value(_property_value)
             {
             }
-            ~ctWmiPerformanceInstanceFilter() throw()
-            {
-            }
+            ~ctWmiPerformanceInstanceFilter() = default;
 
             bool operator==(_In_ IWbemObjectAccess* _instance)
             {
-                return (this->property_value == ctReadIWbemObjectAccess(_instance, counter_name.c_str()));
+                return (property_value == ctReadIWbemObjectAccess(_instance, counter_name.c_str()));
             }
             bool operator!=(_In_ IWbemObjectAccess* _instance)
             {
@@ -886,7 +902,7 @@ namespace ctl {
                     L"VARIANT types do not match to make a comparison : Counter name '%s', retrieved type '%u', expected type '%u'",
                     counter_name.c_str(), value->vt, property_value->vt);
 
-                return (this->property_value == value);
+                return (property_value == value);
             }
             bool operator!=(_In_ IWbemClassObject* _instance)
             {
@@ -894,39 +910,47 @@ namespace ctl {
             }
         };
 
-        // non-copyable
-        ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
-        ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
-
-    private:
-        // CS's must be mutable to allow internal locks to be taken in const methods
-        mutable CRITICAL_SECTION counter_guard;
-        mutable CRITICAL_SECTION filter_guard;
-
-        std::wstring counter_name;
+        const ctWmiPerformanceCollectionType collection_type;
+        const std::wstring counter_name;
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> configure_refresher;
         std::vector<ctWmiPerformanceInstanceFilter> instance_filter;
         std::vector<std::unique_ptr<ctWmiPeformanceCounterData<T>>> counter_data;
+        bool data_stopped = true;
 
     protected:
 
-        virtual void update_counter_data(ULONGLONG _time) = 0;
+        virtual void update_counter_data() = 0;
 
         // ctWmiPerformance needs private access to invoke register_callback in the derived type
         friend class ctWmiPerformance;
         ctWmiPerformanceCallback register_callback()
         {
-            return [this] (const bool _update_data, const ULONGLONG _time) {
-                ctAutoReleaseCriticalSection guard(&this->counter_guard);
-                if (_update_data) {
+            return [this] (const CallbackAction _update_data) {
+                switch (_update_data)
+                {
+                case CallbackAction::Start:
+                    data_stopped = false;
+                    break;
+
+                case CallbackAction::Stop:
+                    data_stopped = true;
+                    break;
+
+                case CallbackAction::Update:
                     // only the derived class has appropriate the accessor class to update the data
-                    this->update_counter_data(_time);
-                } else {
-                    // else clear the data
-                    for (auto& _counter_data : this->counter_data) {
+                    update_counter_data();
+                    break;
+
+                case CallbackAction::Clear:
+                    ctl::ctFatalCondition(
+                        !data_stopped,
+                        L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+
+                    for (auto& _counter_data : counter_data) {
                         _counter_data->clear();
                     }
+                    break;
                 }
             };
         }
@@ -936,52 +960,48 @@ namespace ctl {
         //
         ctComPtr<IWbemConfigureRefresher> access_refresher()
         {
-            return this->configure_refresher;
+            return configure_refresher;
         }
 
         //
         // this function is how one looks to see if the data machines requires knowing how to access the data from that specific WMI class
         // - it's also how to access the data is captured with the TAccess template type
-        // - ctWmiPerformanceCounterData overrides match() for each possible TAccess* types
         //
         template <typename TAccess>
-        void add_instance(_In_ TAccess* _instance, ULONGLONG _time)
+        void add_instance(_In_ TAccess* _instance)
         {
-            bool fAddData = false;
-            // scope for the instance gaurd
-            {
-                ctAutoReleaseCriticalSection guard(&this->filter_guard);
-                fAddData = this->instance_filter.empty();
-                if (!fAddData) {
-                    fAddData = (std::end(this->instance_filter) != std::find(
-                        std::begin(this->instance_filter),
-                        std::end(this->instance_filter),
-                        _instance));
-                }
+            bool fAddData = instance_filter.empty();
+            if (!fAddData) {
+                fAddData = (std::end(instance_filter) != std::find(
+                    std::begin(instance_filter),
+                    std::end(instance_filter),
+                    _instance));
             }
+
             // add the counter data for this instance if:
             // - have no filters [not filtering instances at all]
             // - matches at least one filter
             if (fAddData) {
-                ctAutoReleaseCriticalSection guard(&this->counter_guard);
+                ctComVariant instance_name = ctQueryInstanceName(_instance);
+
                 auto tracked_instance = std::find_if(
-                    std::begin(this->counter_data),
-                    std::end(this->counter_data),
+                    std::begin(counter_data),
+                    std::end(counter_data),
                     [&] (std::unique_ptr<ctWmiPeformanceCounterData<T>>& _counter_data) {
-                    return _counter_data->match(_instance);
+                    return _counter_data->match(instance_name->bstrVal);
                 });
 
                 // if this instance of this counter is new [new unique instance for this counter]
                 // - we must add a new ctWmiPeformanceCounterData to the parent's counter_data vector
                 // else
                 // - we just add this counter value to the already-tracked instance
-                if (tracked_instance == std::end(this->counter_data)) {
-                    this->counter_data.push_back(
+                if (tracked_instance == std::end(counter_data)) {
+                    counter_data.push_back(
                         std::unique_ptr<ctWmiPeformanceCounterData<T>>
-                            (new ctWmiPeformanceCounterData<T>(_instance, this->counter_name.c_str())));
-                    (*this->counter_data.rbegin())->add(_instance, _time);
+                            (new ctWmiPeformanceCounterData<T>(collection_type, _instance, counter_name.c_str())));
+                    (*counter_data.rbegin())->add(_instance);
                 } else {
-                    (*tracked_instance)->add(_instance, _time);
+                    (*tracked_instance)->add(_instance);
                 }
             }
         }
@@ -1009,15 +1029,13 @@ namespace ctl {
     template <typename TEnum, typename TAccess, typename TData>
     class ctWmiPerformanceCounterImpl : public ctWmiPerformanceCounter<TData> {
     public:
-        ctWmiPerformanceCounterImpl(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
-        : ctWmiPerformanceCounter<TData>(_counter_name),
-          accessor(this->access_refresher(), _class_name)
+        ctWmiPerformanceCounterImpl(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        : ctWmiPerformanceCounter<TData>(_counter_name, _collection_type),
+          accessor(access_refresher(), _class_name)
         {
         }
 
-        ~ctWmiPerformanceCounterImpl() throw()
-        {
-        }
+        ~ctWmiPerformanceCounterImpl() = default;
 
         // non-copyable
         ctWmiPerformanceCounterImpl(const ctWmiPerformanceCounterImpl&) = delete;
@@ -1033,18 +1051,18 @@ namespace ctl {
         /// invoked from the parent class to add data matching any/all filters
         ///
         /// private function required to be implemented from the abstract base class
-        /// - concrete classe must pass back a function callback for addeding data points for the specified counter
+        /// - concrete classe must pass back a function callback for adding data points for the specified counter
         ///
-        void update_counter_data(ULONGLONG _time)
+        void update_counter_data()
         {
             // refresh this hi-perf object to get the current values
             // requires the invoker serializes all calls
-            this->accessor.refresh();
+            accessor.refresh();
 
             // the accessor object exposes begin() / end() to allow access to instances
             // - of the specified hi-performance counter
-            for (auto& _instance : this->accessor) {
-                this->add_instance(_instance, _time);
+            for (auto& _instance : accessor) {
+                add_instance(_instance);
             }
         }
     };
@@ -1068,21 +1086,24 @@ namespace ctl {
             refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
             HRESULT hr = refresher->QueryInterface(
                 IID_IWbemConfigureRefresher,
-                reinterpret_cast<void**>(this->config_refresher.get_addr_of()));
+                reinterpret_cast<void**>(config_refresher.get_addr_of()));
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemRefresher::QueryInterface(IID_IWbemConfigureRefresher)", L"ctWmiPerformance", false);
             }
         }
 
-        virtual ~ctWmiPerformance() = default;
+        virtual ~ctWmiPerformance() NOEXCEPT
+        {
+            stop_all_counters();
+        }
 
         template <typename T>
         void add_counter(const std::shared_ptr<ctWmiPerformanceCounter<T>>& _wmi_perf)
         {
-            this->callbacks.push_back(_wmi_perf->register_callback());
-            ctlScopeGuard(revert_callback, { this->callbacks.pop_back(); });
+            callbacks.push_back(_wmi_perf->register_callback());
+            ctlScopeGuard(revert_callback, { callbacks.pop_back(); });
 
-            HRESULT hr = this->config_refresher->AddRefresher(_wmi_perf->refresher.get(), 0, nullptr);
+            HRESULT hr = config_refresher->AddRefresher(_wmi_perf->refresher.get(), 0, nullptr);
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemConfigureRefresher::AddRefresher", L"ctWmiPerformance<T>::add", false);
             }
@@ -1093,36 +1114,42 @@ namespace ctl {
 
         void start_all_counters(unsigned _interval)
         {
-            this->timer.reset(new ctl::ctThreadpoolTimer);
-            this->timer->schedule_singleton(
+            for (auto& _callback : callbacks) {
+                _callback(CallbackAction::Start);
+            }
+            timer.reset(new ctl::ctThreadpoolTimer);
+            timer->schedule_singleton(
                 [this, _interval] () { TimerCallback(this, _interval); },
                 _interval);
         }
         // no-throw / no-fail
-        void stop_all_counters() throw()
+        void stop_all_counters() NOEXCEPT
         {
-            this->timer.reset();
+            if (timer) {
+                timer->stop_all_timers();
+            }
+            for (auto& _callback : callbacks) {
+                _callback(CallbackAction::Stop);
+            }
         }
 
         // no-throw / no-fail
-        void clear_counter_data() throw()
+        void clear_counter_data() NOEXCEPT
         {
-            this->timeslots.clear();
-            for (auto& _callback : this->callbacks) {
-                _callback(false, 0ULL);
+            for (auto& _callback : callbacks) {
+                _callback(CallbackAction::Clear);
             }
         }
 
         void reset_counters()
         {
-            this->timeslots.clear();
-            this->callbacks.clear();
+            callbacks.clear();
 
             // release this Refresher and ConfigRefresher, so future counters will be added cleanly
-            this->refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
+            refresher = ctComPtr<IWbemRefresher>::createInstance(CLSID_WbemRefresher, IID_IWbemRefresher);
             HRESULT hr = refresher->QueryInterface(
                 IID_IWbemConfigureRefresher,
-                reinterpret_cast<void**>(this->config_refresher.get_addr_of()));
+                reinterpret_cast<void**>(config_refresher.get_addr_of()));
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemRefresher::QueryInterface(IID_IWbemConfigureRefresher)", L"ctWmiPerformance", false);
             }
@@ -1132,19 +1159,27 @@ namespace ctl {
         ctWmiPerformance(const ctWmiPerformance&) = delete;
         ctWmiPerformance& operator=(const ctWmiPerformance&) = delete;
 
+        // movable
+        ctWmiPerformance(ctWmiPerformance&& rhs) :
+            com_init(),
+            wmi_service(std::move(rhs.wmi_service)),
+            refresher(std::move(rhs.refresher)),
+            config_refresher(std::move(rhs.config_refresher)),
+            callbacks(std::move(rhs.callbacks)),
+            timer(std::move(rhs.timer))
+        {
+        }
+
     private:
         ctComInitialize com_init;
         ctWmiService wmi_service;
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> config_refresher;
-        // timer to fire to indicate when to Refresh the data
-        std::unique_ptr<ctl::ctThreadpoolTimer> timer;
-        // track when the time started
-        ctTime starttime;
-        // track the timeslots for each interval
-        std::vector<ULONGLONG> timeslots;
         // for each interval, callback each of the registered aggregators
         std::vector<ctWmiPerformanceCallback> callbacks;
+        // timer to fire to indicate when to Refresh the data
+        // declare last to guarantee will be destroyed first
+        std::unique_ptr<ctl::ctThreadpoolTimer> timer;
 
         static void TimerCallback(ctl::ctWmiPerformance* this_ptr, unsigned long _interval)
         {
@@ -1152,856 +1187,577 @@ namespace ctl {
                 // must guarantee COM is initialized on this thread
                 ctComInitialize com;
                 this_ptr->refresher->Refresh(0);
-                this_ptr->starttime.setCurrentSystemTime();
-                ULONGLONG now = this_ptr->starttime.getMilliSeconds();
 
-                this_ptr->timeslots.push_back(now);
                 for (const auto& _callback : this_ptr->callbacks) {
-                    _callback(true, now);
+                    _callback(CallbackAction::Update);
                 }
 
                 this_ptr->timer->schedule_singleton(
                     [this_ptr, _interval] () { TimerCallback(this_ptr, _interval); }, 
                     _interval);
             }
-            catch (const std::exception&) {
-                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read");
+            catch (const ctl::ctException& e) {
+                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read [%ws : %u]", e.what_w(), e.why());
+            }
+            catch (const std::exception& e) {
+                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read [%hs]", e.what());
             }
         }
     };
 
 
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
-    {
-        // 'static' WMI PerfCounters enumerate via IWbemClassObject and accessed/refreshed via IWbemClassObject
-        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(_class_name, _counter_name);
-    }
-
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
-    {
-        // 'instance' WMI perf objects are enumerated through the IWbemHiPerfEnum interface and accessed/refreshed through the IWbemObjectAccess interface
-        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name);
-    }
-
-    enum class ctWmiPerfClass {
+    enum class ctWmiClassType {
+        Static, // ctMakeStaticPerfCounter
+        Instance // created with ctMakeInstancePerfCounter
+    };
+    
+    enum class ctWmiClassName {
         Process,
         Processor,
         Memory,
         NetworkAdapter,
         NetworkInterface,
-        TcpipDiagnostics,
-        TcpipIpv4,
+        Tcpip_Diagnostics,
+        Tcpip_Ipv4,
+        Tcpip_Ipv6,
+        Tcpip_TCPv4,
+        Tcpip_TCPv6,
+        Tcpip_UDPv4,
+        Tcpip_UDPv6,
+        WinsockBSP
     };
 
+    struct ctWmiPerformanceCounterProperties {
+        const ctWmiClassType classType;
+        const ctWmiClassName className;
+        const wchar_t* providerName;
+
+        const unsigned long ulongFieldNameCount;
+        const wchar_t** ulongFieldNames;
+
+        const unsigned long ulonglongFieldNameCount;
+        const wchar_t** ulonglongFieldNames;
+
+        const unsigned long stringFieldNameCount;
+        const wchar_t** stringFieldNames;
+
+        template <typename T> bool PropertyNameExists(_In_ LPCWSTR name) const NOEXCEPT;
+    };
+
+    template <> 
+    bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(_In_ LPCWSTR name) const NOEXCEPT
+    {
+        for (unsigned counter = 0; counter < this->ulongFieldNameCount; ++counter) {
+            if (ctl::ctString::iordinal_equals(name, this->ulongFieldNames[counter])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    template <>
+    bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(_In_ LPCWSTR name) const NOEXCEPT
+    {
+        for (unsigned counter = 0; counter < this->ulonglongFieldNameCount; ++counter) {
+            if (ctl::ctString::iordinal_equals(name, this->ulonglongFieldNames[counter])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    template <>
+    bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(_In_ LPCWSTR name) const NOEXCEPT
+    {
+        for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
+            if (ctl::ctString::iordinal_equals(name, this->stringFieldNames[counter])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    template <>
+    bool ctWmiPerformanceCounterProperties::PropertyNameExists<ctl::ctComBstr>(_In_ LPCWSTR name) const NOEXCEPT
+    {
+        for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
+            if (ctl::ctString::iordinal_equals(name, this->stringFieldNames[counter])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    namespace ctWmiPerformanceDetails {
+        const wchar_t* CommonStringPropertyNames[] = {
+            L"Caption",
+            L"Description",
+            L"Name" };
+
+        const wchar_t* Memory_Counter = L"Win32_PerfFormattedData_PerfOS_Memory";
+        const wchar_t* Memory_UlongCounterNames[] = {
+            L"CacheFaultsPerSec",
+            L"DemandZeroFaultsPerSec",
+            L"FreeSystemPageTableEntries",
+            L"PageFaultsPerSec",
+            L"PageReadsPerSec",
+            L"PagesInputPerSec",
+            L"PagesOutputPerSec",
+            L"PagesPerSec",
+            L"PageWritesPerSec",
+            L"PercentCommittedBytesInUse",
+            L"PoolNonpagedAllocs",
+            L"PoolPagedAllocs",
+            L"TransitionFaultsPerSec",
+            L"WriteCopiesPerSec"
+        };
+        const wchar_t* Memory_UlonglongCounterNames[] = {
+            L"AvailableBytes",
+            L"AvailableKBytes",
+            L"AvailableMBytes",
+            L"CacheBytes",
+            L"CacheBytesPeak",
+            L"CommitLimit",
+            L"CommittedBytes",
+            L"Frequency_Object",
+            L"Frequency_PerfTime",
+            L"Frequency_Sys100NS",
+            L"PoolNonpagedBytes",
+            L"PoolPagedBytes",
+            L"PoolPagedResidentBytes",
+            L"SystemCacheResidentBytes",
+            L"SystemCodeResidentBytes",
+            L"SystemCodeTotalBytes",
+            L"SystemDriverResidentBytes",
+            L"SystemDriverTotalBytes",
+            L"Timestamp_Object",
+            L"Timestamp_PerfTime",
+            L"Timestamp_Sys100NS"
+        };
+
+        const wchar_t* ProcessorInformation_Counter = L"Win32_PerfFormattedData_Counters_ProcessorInformation";
+        const wchar_t* ProcessorInformation_UlongCounterNames[] = {
+            L"ClockInterruptsPersec",
+            L"DPCRate",
+            L"DPCsQueuedPersec",
+            L"InterruptsPersec",
+            L"ParkingStatus",
+            L"PercentofMaximumFrequency",
+            L"PercentPerformanceLimit",
+            L"PerformanceLimitFlags",
+            L"ProcessorFrequency",
+            L"ProcessorStateFlags"
+        };
+        const wchar_t* ProcessorInformation_UlonglongCounterNames[] = {
+            L"AverageIdleTime",
+            L"C1TransitionsPerSec",
+            L"C2TransitionsPerSec",
+            L"C3TransitionsPerSec",
+            L"IdleBreakEventsPersec",
+            L"PercentC1Time",
+            L"PercentC2Time",
+            L"PercentC3Time",
+            L"PercentDPCTime",
+            L"PercentIdleTime",
+            L"PercentInterruptTime",
+            L"PercentPriorityTime",
+            L"PercentPrivilegedTime",
+            L"PercentPrivilegedUtility",
+            L"PercentProcessorPerformance",
+            L"PercentProcessorTime",
+            L"PercentProcessorUtility",
+            L"PercentUserTime",
+            L"Timestamp_Object",
+            L"Timestamp_PerfTime",
+            L"Timestamp_Sys100NS"
+        };
+
+        const wchar_t* PerfProc_Process_Counter = L"Win32_PerfFormattedData_PerfProc_Process";
+        const wchar_t* PerfProc_Process_UlongCounterNames[] = {
+            L"CreatingProcessID",
+            L"HandleCount",
+            L"IDProcess",
+            L"PageFaultsPerSec",
+            L"PoolNonpagedBytes",
+            L"PoolPagedBytes",
+            L"PriorityBase",
+            L"ThreadCount"
+        };
+        const wchar_t* PerfProc_Process_UlonglongCounterNames[] = {
+            L"ElapsedTime",
+            L"Frequency_Object",
+            L"Frequency_PerfTime",
+            L"Frequency_Sys100NS",
+            L"IODataBytesPerSec",
+            L"IODataOperationsPerSec",
+            L"IOOtherBytesPerSec",
+            L"IOOtherOperationsPerSec",
+            L"IOReadBytesPerSec",
+            L"IOReadOperationsPerSec",
+            L"IOWriteBytesPerSec",
+            L"IOWriteOperationsPerSec",
+            L"PageFileBytes",
+            L"PageFileBytesPeak",
+            L"PercentPrivilegedTime",
+            L"PercentProcessorTime",
+            L"PercentUserTime",
+            L"PrivateBytes",
+            L"Timestamp_Object",
+            L"Timestamp_PerfTime",
+            L"Timestamp_Sys100NS",
+            L"VirtualBytes",
+            L"VirtualBytesPeak",
+            L"WorkingSet",
+            L"WorkingSetPeak"
+        };
+
+        const wchar_t* Tcpip_NetworkAdapter_Counter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
+        const wchar_t* Tcpip_NetworkAdapter_ULongLongCounterNames[] = {
+            L"BytesReceivedPersec",
+            L"BytesSentPersec",
+            L"BytesTotalPersec",
+            L"CurrentBandwidth",
+            L"OffloadedConnections",
+            L"OutputQueueLength",
+            L"PacketsOutboundDiscarded",
+            L"PacketsOutboundErrors",
+            L"PacketsReceivedDiscarded",
+            L"PacketsReceivedErrors",
+            L"PacketsReceivedNonUnicastPersec",
+            L"PacketsReceivedUnicastPersec",
+            L"PacketsReceivedUnknown",
+            L"PacketsReceivedPersec",
+            L"PacketsSentNonUnicastPersec",
+            L"PacketsSentUnicastPersec",
+            L"PacketsSentPersec",
+            L"PacketsPersec",
+            L"TCPActiveRSCConnections",
+            L"TCPRSCAveragePacketSize",
+            L"TCPRSCCoalescedPacketsPersec",
+            L"TCPRSCExceptionsPersec",
+            L"Timestamp_Object",
+            L"Timestamp_PerfTime",
+            L"Timestamp_Sys100NS"
+        };
+
+        const wchar_t* Tcpip_NetworkInterface_Counter = L"Win32_PerfFormattedData_Tcpip_NetworkInterface";
+        const wchar_t* Tcpip_NetworkInterface_ULongLongCounterNames[] = {
+            L"BytesReceivedPerSec",
+            L"BytesSentPerSec",
+            L"BytesTotalPerSec",
+            L"CurrentBandwidth",
+            L"Frequency_Object",
+            L"Frequency_PerfTime",
+            L"Frequency_Sys100NS",
+            L"OffloadedConnections",
+            L"OutputQueueLength",
+            L"PacketsOutboundDiscarded",
+            L"PacketsOutboundErrors",
+            L"PacketsPerSec",
+            L"PacketsReceivedDiscarded",
+            L"PacketsReceivedErrors",
+            L"PacketsReceivedNonUnicastPerSec",
+            L"PacketsReceivedPerSec",
+            L"PacketsReceivedUnicastPerSec",
+            L"PacketsReceivedUnknown",
+            L"PacketsSentNonUnicastPerSec",
+            L"PacketsSentPerSec",
+            L"PacketsSentUnicastPerSec"
+            L"TCPActiveRSCConnections",
+            L"TCPRSCAveragePacketSize",
+            L"TCPRSCCoalescedPacketsPersec",
+            L"TCPRSCExceptionsPersec"
+            L"Timestamp_Object",
+            L"Timestamp_PerfTime",
+            L"Timestamp_Sys100NS"
+        };
+
+        const wchar_t* Tcpip_IPv4_Counter = L"Win32_PerfFormattedData_Tcpip_IPv4";
+        const wchar_t* Tcpip_IPv6_Counter = L"Win32_PerfFormattedData_Tcpip_IPv6";
+        const wchar_t* Tcpip_IP_ULongCounterNames[] = {
+            L"DatagramsForwardedPersec",
+            L"DatagramsOutboundDiscarded",
+            L"DatagramsOutboundNoRoute",
+            L"DatagramsReceivedAddressErrors",
+            L"DatagramsReceivedDeliveredPersec",
+            L"DatagramsReceivedDiscarded",
+            L"DatagramsReceivedHeaderErrors",
+            L"DatagramsReceivedUnknownProtocol",
+            L"DatagramsReceivedPersec",
+            L"DatagramsSentPersec",
+            L"DatagramsPersec",
+            L"FragmentReassemblyFailures",
+            L"FragmentationFailures",
+            L"FragmentedDatagramsPersec",
+            L"FragmentsCreatedPersec",
+            L"FragmentsReassembledPersec",
+            L"FragmentsReceivedPersec"
+        };
+
+        const wchar_t* Tcpip_TCPv4_Counter = L"Win32_PerfFormattedData_Tcpip_TCPv4";
+        const wchar_t* Tcpip_TCPv6_Counter = L"Win32_PerfFormattedData_Tcpip_TCPv6";
+        const wchar_t* Tcpip_TCP_ULongCounterNames[] = {
+            L"ConnectionFailures",
+            L"ConnectionsActive",
+            L"ConnectionsEstablished",
+            L"ConnectionsPassive",
+            L"ConnectionsReset",
+            L"SegmentsReceivedPersec",
+            L"SegmentsRetransmittedPersec",
+            L"SegmentsSentPersec",
+            L"SegmentsPersec"
+        };
+
+        const wchar_t* Tcpip_UDPv4_Counter = L"Win32_PerfFormattedData_Tcpip_UDPv4";
+        const wchar_t* Tcpip_UDPv6_Counter = L"Win32_PerfFormattedData_Tcpip_UDPv6";
+        const wchar_t* Tcpip_UDP_ULongCounterNames[] = {
+            L"DatagramsNoPortPersec",
+            L"DatagramsReceivedErrors",
+            L"DatagramsReceivedPersec",
+            L"DatagramsSentPersec",
+            L"DatagramsPersec"
+        };
+
+        const wchar_t* TCPIPPerformanceDiagnostics_Counter = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
+        const wchar_t* TCPIPPerformanceDiagnostics_ULongCounterNames[] = {
+            L"Deniedconnectorsendrequestsinlowpowermode",
+            L"IPv4NBLsindicatedwithlowresourceflag",
+            L"IPv4NBLsindicatedwithoutprevalidation",
+            L"IPv4NBLstreatedasnonprevalidated",
+            L"IPv4NBLsPersecindicatedwithlowresourceflag",
+            L"IPv4NBLsPersecindicatedwithoutprevalidation",
+            L"IPv4NBLsPersectreatedasnonprevalidated",
+            L"IPv4outboundNBLsnotprocessedviafastpath",
+            L"IPv4outboundNBLsPersecnotprocessedviafastpath",
+            L"IPv6NBLsindicatedwithlowresourceflag",
+            L"IPv6NBLsindicatedwithoutprevalidation",
+            L"IPv6NBLstreatedasnonprevalidated",
+            L"IPv6NBLsPersecindicatedwithlowresourceflag",
+            L"IPv6NBLsPersecindicatedwithoutprevalidation",
+            L"IPv6NBLsPersectreatedasnonprevalidated",
+            L"IPv6outboundNBLsnotprocessedviafastpath",
+            L"IPv6outboundNBLsPersecnotprocessedviafastpath",
+            L"TCPconnectrequestsfallenoffloopbackfastpath",
+            L"TCPconnectrequestsPersecfallenoffloopbackfastpath",
+            L"TCPinboundsegmentsnotprocessedviafastpath",
+            L"TCPinboundsegmentsPersecnotprocessedviafastpath"
+        };
+
+        const wchar_t* MicrosoftWinsockBSP_Counter = L"Win32_PerfFormattedData_AFDCounters_MicrosoftWinsockBSP";
+        const wchar_t* MicrosoftWinsockBSP_ULongCounterNames[] = {
+            L"DroppedDatagrams",
+            L"DroppedDatagramsPersec",
+            L"RejectedConnections",
+            L"RejectedConnectionsPersec"
+        };
+
+        // this patterns (const array of wchar_t* pointers) 
+        // allows for compile-time construction of the array of properties
+        const ctWmiPerformanceCounterProperties PerformanceCounterPropertiesArray[] = {
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Memory,
+            Memory_Counter,
+            ARRAYSIZE(Memory_UlongCounterNames),
+            Memory_UlongCounterNames,
+            ARRAYSIZE(Memory_UlonglongCounterNames),
+            Memory_UlonglongCounterNames,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Instance,
+            ctWmiClassName::Processor,
+            ProcessorInformation_Counter,
+            ARRAYSIZE(ProcessorInformation_UlongCounterNames),
+            ProcessorInformation_UlongCounterNames,
+            ARRAYSIZE(ProcessorInformation_UlonglongCounterNames),
+            ProcessorInformation_UlonglongCounterNames,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Instance,
+            ctWmiClassName::Process,
+            PerfProc_Process_Counter,
+            ARRAYSIZE(PerfProc_Process_UlongCounterNames),
+            PerfProc_Process_UlongCounterNames,
+            ARRAYSIZE(PerfProc_Process_UlonglongCounterNames),
+            PerfProc_Process_UlonglongCounterNames,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Instance,
+            ctWmiClassName::NetworkAdapter,
+            Tcpip_NetworkAdapter_Counter,
+            0,
+            nullptr,
+            ARRAYSIZE(Tcpip_NetworkAdapter_ULongLongCounterNames),
+            Tcpip_NetworkAdapter_ULongLongCounterNames,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Instance,
+            ctWmiClassName::NetworkInterface,
+            Tcpip_NetworkInterface_Counter,
+            0,
+            nullptr,
+            ARRAYSIZE(Tcpip_NetworkInterface_ULongLongCounterNames),
+            Tcpip_NetworkInterface_ULongLongCounterNames,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_Ipv4,
+            Tcpip_IPv4_Counter,
+            ARRAYSIZE(Tcpip_IP_ULongCounterNames),
+            Tcpip_IP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_Ipv6,
+            Tcpip_IPv6_Counter,
+            ARRAYSIZE(Tcpip_IP_ULongCounterNames),
+            Tcpip_IP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_TCPv4,
+            Tcpip_TCPv4_Counter,
+            ARRAYSIZE(Tcpip_TCP_ULongCounterNames),
+            Tcpip_TCP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_TCPv6,
+            Tcpip_TCPv6_Counter,
+            ARRAYSIZE(Tcpip_TCP_ULongCounterNames),
+            Tcpip_TCP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_UDPv4,
+            Tcpip_UDPv4_Counter,
+            ARRAYSIZE(Tcpip_UDP_ULongCounterNames),
+            Tcpip_UDP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_UDPv6,
+            Tcpip_UDPv6_Counter,
+            ARRAYSIZE(Tcpip_UDP_ULongCounterNames),
+            Tcpip_UDP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::Tcpip_Diagnostics,
+            TCPIPPerformanceDiagnostics_Counter,
+            ARRAYSIZE(TCPIPPerformanceDiagnostics_ULongCounterNames),
+            TCPIPPerformanceDiagnostics_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        },
+
+        {
+            ctWmiClassType::Static,
+            ctWmiClassName::WinsockBSP,
+            MicrosoftWinsockBSP_Counter,
+            ARRAYSIZE(MicrosoftWinsockBSP_ULongCounterNames),
+            MicrosoftWinsockBSP_ULongCounterNames,
+            0,
+            nullptr,
+            ARRAYSIZE(CommonStringPropertyNames),
+            CommonStringPropertyNames
+        }
+
+        };
+    }
+
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiPerfClass& _class, _In_ LPCWSTR _counter_name)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
-        switch (_class) {
-        case Process: return ctSharedProcessPerfCounter(_counter_name);
-        case Processor: return ctSharedProcessorPerfCounter(_counter_name);
-        case Memory: return ctSharedMemoryPerfCounter(_counter_name);
-        case NetworkAdapter: return ctSharedNetworkAdapterPerfCounter(_counter_name);
-        case NetworkInterface: return ctSharedNetworkInterfacePerfCounter(_counter_name);
-        case TcpipDiagnostics: return ctSharedTcpIpDiagnosticsPerfCounter(_counter_name);
-        case TcpipIpv4: return ctSharedNetworkTcpipIpv4PerfCounter(_counter_name);
-        }
-        
-        throw std::invalid_argument("Unknown WMI Performance Counter Class");
+        // 'static' WMI PerfCounters enumerate via IWbemClassObject and accessed/refreshed via IWbemClassObject
+        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(_class_name, _counter_name, _collection_type);
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_PerfProc_Process ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedProcessPerfCounter(_In_ LPCWSTR _counter_name);
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
+    {
+        // 'instance' WMI perf objects are enumerated through the IWbemHiPerfEnum interface and accessed/refreshed through the IWbemObjectAccess interface
+        return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name, _collection_type);
+    }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_Counters_ProcessorInformation ctWmiPerformanceCounter instance
-    ///   *Not* using the older Win32_PerfFormattedData_PerfOS_Processor which is now considered less accurate
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedProcessorPerfCounter(_In_ LPCWSTR _counter_name);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_PerfOS_Memory ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedMemoryPerfCounter(_In_ LPCWSTR _counter_name);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_Tcpip_NetworkAdapter ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkAdapterPerfCounter(_In_ LPCWSTR _counter_name);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_Tcpip_NetworkInterface ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkInterfacePerfCounter(_In_ LPCWSTR _counter_name);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedTcpIpDiagnosticsPerfCounter(_In_ LPCWSTR _counter_name);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Factory for a Win32_PerfFormattedData_Tcpip_IPv4 ctWmiPerformanceCounter instance
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctSharedNetworkTcpipIpv4PerfCounter(_In_ LPCWSTR _counter_name);
-    
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedMemoryPerfCounter specializations
-    /// - colleecting from the static hi-perf WMI class Win32_PerfFormattedData_PerfOS_Memory
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedMemoryPerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiClassName& _class, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
-        static LPCWSTR ctWmiPerformanceClass_Memory = L"Win32_PerfFormattedData_PerfOS_Memory";
-
-        if (ctString::iordinal_equals(_counter_name, L"AvailableBytes") ||
-            ctString::iordinal_equals(_counter_name, L"AvailableKBytes") ||
-            ctString::iordinal_equals(_counter_name, L"AvailableMBytes") ||
-            ctString::iordinal_equals(_counter_name, L"CacheBytes") ||
-            ctString::iordinal_equals(_counter_name, L"CacheBytesPeak") ||
-            ctString::iordinal_equals(_counter_name, L"CommitLimit") ||
-            ctString::iordinal_equals(_counter_name, L"CommittedBytes") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Sys100NS") ||
-            ctString::iordinal_equals(_counter_name, L"PoolNonpagedBytes") ||
-            ctString::iordinal_equals(_counter_name, L"PoolPagedBytes") ||
-            ctString::iordinal_equals(_counter_name, L"PoolPagedResidentBytes") ||
-            ctString::iordinal_equals(_counter_name, L"SystemCacheResidentBytes") ||
-            ctString::iordinal_equals(_counter_name, L"SystemCodeResidentBytes") ||
-            ctString::iordinal_equals(_counter_name, L"SystemCodeTotalBytes") ||
-            ctString::iordinal_equals(_counter_name, L"SystemDriverResidentBytes") ||
-            ctString::iordinal_equals(_counter_name, L"SystemDriverTotalBytes") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Sys100NS"))
-        {
-            // a static perf counter
-            return ctMakeStaticPerfCounter<ULONGLONG>(ctWmiPerformanceClass_Memory, _counter_name);
+        const ctWmiPerformanceCounterProperties* foundProperty = nullptr;
+        for (const auto& counterProperty : ctWmiPerformanceDetails::PerformanceCounterPropertiesArray) {
+            if (_class == counterProperty.className) {
+                foundProperty = &counterProperty;
+                break;
+            }
         }
 
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedMemoryPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfOS_Memory] does not have a ULONGLONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedMemoryPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedMemoryPerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Memory = L"Win32_PerfFormattedData_PerfOS_Memory";
-
-        if (ctString::iordinal_equals(_counter_name, L"CacheFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"DemandZeroFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"FreeSystemPageTableEntries") ||
-            ctString::iordinal_equals(_counter_name, L"PageFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PageReadsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PagesInputPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PagesOutputPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PagesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PageWritesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PercentCommittedBytesInUse") ||
-            ctString::iordinal_equals(_counter_name, L"PoolNonpagedAllocs") ||
-            ctString::iordinal_equals(_counter_name, L"PoolPagedAllocs") ||
-            ctString::iordinal_equals(_counter_name, L"TransitionFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"WriteCopiesPerSec"))
-        {
-            // a static perf counter
-            return ctMakeStaticPerfCounter<ULONG>(ctWmiPerformanceClass_Memory, _counter_name);
+        if (!foundProperty) {
+            throw std::invalid_argument("Unknown WMI Performance Counter Class");
         }
 
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedMemoryPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfOS_Memory] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedMemoryPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedMemoryPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Memory = L"Win32_PerfFormattedData_PerfOS_Memory";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name"))
-        {
-            // a static perf counter
-            return ctMakeStaticPerfCounter<ctComBstr>(ctWmiPerformanceClass_Memory, _counter_name);
-        }
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedMemoryPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfOS_Memory] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedMemoryPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedMemoryPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Memory = L"Win32_PerfFormattedData_PerfOS_Memory";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name"))
-        {
-            // a static perf counter
-            return ctMakeStaticPerfCounter<std::wstring>(ctWmiPerformanceClass_Memory, _counter_name);
+        if (!foundProperty->PropertyNameExists<T>(_counter_name)) {
+            throw ctException(
+                ERROR_INVALID_DATA,
+                ctString::format_string(
+                    L"CounterName (%ws) does not exist in the requested class (%u)",
+                    _counter_name, _class).c_str(),
+                L"ctCreatePerfCounter",
+                true);
         }
 
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedMemoryPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfOS_Memory] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedMemoryPerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedProcessorPerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Counters_ProcessorInformation
-    ///   *Not* using the older Win32_PerfFormattedData_PerfOS_Processor which is now considered less accurate
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedProcessorPerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_ProcessorInformation = L"Win32_PerfFormattedData_Counters_ProcessorInformation";
-
-        if (ctString::iordinal_equals(_counter_name, L"AverageIdleTime") ||
-            ctString::iordinal_equals(_counter_name, L"C1TransitionsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"C2TransitionsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"C3TransitionsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IdleBreakEventsPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PercentC1Time") ||
-            ctString::iordinal_equals(_counter_name, L"PercentC2Time") ||
-            ctString::iordinal_equals(_counter_name, L"PercentC3Time") ||
-            ctString::iordinal_equals(_counter_name, L"PercentDPCTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentIdleTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentInterruptTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentPriorityTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentPrivilegedTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentPrivilegedUtility") ||
-            ctString::iordinal_equals(_counter_name, L"PercentProcessorPerformance") ||
-            ctString::iordinal_equals(_counter_name, L"PercentProcessorTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentProcessorUtility") ||
-            ctString::iordinal_equals(_counter_name, L"PercentUserTime"))
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
+        if (foundProperty->classType == ctWmiClassType::Static) {
+            return ctMakeStaticPerfCounter<T>(foundProperty->providerName, _counter_name, _collection_type);
+        } else {
+            return ctMakeInstancePerfCounter<T>(foundProperty->providerName, _counter_name, _collection_type);
         }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessorPerfCounter counter name %s [from class Win32_PerfFormattedData_Counters_ProcessorInformation] does not have a ULONGLONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
     }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedProcessorPerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_ProcessorInformation = L"Win32_PerfFormattedData_Counters_ProcessorInformation";
-
-        if (ctString::iordinal_equals(_counter_name, L"ClockInterruptsPersec") ||
-            ctString::iordinal_equals(_counter_name, L"DPCRate") ||
-            ctString::iordinal_equals(_counter_name, L"DPCsQueuedPersec") ||
-            ctString::iordinal_equals(_counter_name, L"InterruptsPersec") ||
-            ctString::iordinal_equals(_counter_name, L"ParkingStatus") ||
-            ctString::iordinal_equals(_counter_name, L"PercentofMaximumFrequency") ||
-            ctString::iordinal_equals(_counter_name, L"PercentPerformanceLimit") ||
-            ctString::iordinal_equals(_counter_name, L"PerformanceLimitFlags") ||
-            ctString::iordinal_equals(_counter_name, L"ProcessorFrequency") ||
-            ctString::iordinal_equals(_counter_name, L"ProcessorStateFlags"))
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessorPerfCounter counter name %s [from class Win32_PerfFormattedData_Counters_ProcessorInformation] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedProcessorPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_ProcessorInformation = L"Win32_PerfFormattedData_Counters_ProcessorInformation";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name"))
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessorPerfCounter counter name %s [from class Win32_PerfFormattedData_Counters_ProcessorInformation] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedProcessorPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_ProcessorInformation = L"Win32_PerfFormattedData_Counters_ProcessorInformation";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name"))
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_ProcessorInformation, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessorPerfCounter counter name %s [from class Win32_PerfFormattedData_Counters_ProcessorInformation] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedProcessPerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_PerfProc_Process
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedProcessPerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Process = L"Win32_PerfFormattedData_PerfProc_Process";
-
-        if (ctString::iordinal_equals(_counter_name, L"ElapsedTime") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Sys100NS") ||
-            ctString::iordinal_equals(_counter_name, L"IODataBytesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IODataOperationsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOOtherBytesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOOtherOperationsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOReadBytesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOReadOperationsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOWriteBytesPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"IOWriteOperationsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PageFileBytes") ||
-            ctString::iordinal_equals(_counter_name, L"PageFileBytesPeak") ||
-            ctString::iordinal_equals(_counter_name, L"PercentPrivilegedTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentProcessorTime") ||
-            ctString::iordinal_equals(_counter_name, L"PercentUserTime") ||
-            ctString::iordinal_equals(_counter_name, L"PrivateBytes") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Sys100NS") ||
-            ctString::iordinal_equals(_counter_name, L"VirtualBytes") ||
-            ctString::iordinal_equals(_counter_name, L"VirtualBytesPeak") ||
-            ctString::iordinal_equals(_counter_name, L"WorkingSet") ||
-            ctString::iordinal_equals(_counter_name, L"WorkingSetPeak")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_Process, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfProc_Process] does not have a ULONGLONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedProcessPerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Process = L"Win32_PerfFormattedData_PerfProc_Process";
-
-        if (ctString::iordinal_equals(_counter_name, L"CreatingProcessID") ||
-            ctString::iordinal_equals(_counter_name, L"HandleCount") ||
-            ctString::iordinal_equals(_counter_name, L"IDProcess") ||
-            ctString::iordinal_equals(_counter_name, L"PageFaultsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PoolNonpagedBytes") ||
-            ctString::iordinal_equals(_counter_name, L"PoolPagedBytes") ||
-            ctString::iordinal_equals(_counter_name, L"PriorityBase") ||
-            ctString::iordinal_equals(_counter_name, L"ThreadCount")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_Process, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfProc_Process] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedProcessPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Process = L"Win32_PerfFormattedData_PerfProc_Process";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_Process, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfProc_Process] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedProcessPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_Process = L"Win32_PerfFormattedData_PerfProc_Process";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_Process, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedProcessPerfCounter counter name %s [from class Win32_PerfFormattedData_PerfProc_Process] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedProcessorPerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedNetworkAdapterPerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_NetworkAdapter
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedNetworkAdapterPerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
-
-        if (ctString::iordinal_equals(_counter_name, L"BytesReceivedPersec") ||
-            ctString::iordinal_equals(_counter_name, L"BytesSentPersec") ||
-            ctString::iordinal_equals(_counter_name, L"BytesTotalPersec") ||
-            ctString::iordinal_equals(_counter_name, L"CurrentBandwidth") ||
-            ctString::iordinal_equals(_counter_name, L"OffloadedConnections") ||
-            ctString::iordinal_equals(_counter_name, L"OutputQueueLength") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsOutboundDiscarded") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsOutboundErrors") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedDiscarded") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedErrors") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedNonUnicastPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnicastPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnknown") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentNonUnicastPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentUnicastPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentPersec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsPersec") ||
-            ctString::iordinal_equals(_counter_name, L"TCPActiveRSCConnections") ||
-            ctString::iordinal_equals(_counter_name, L"TCPRSCAveragePacketSize") ||
-            ctString::iordinal_equals(_counter_name, L"TCPRSCCoalescedPacketsPersec") ||
-            ctString::iordinal_equals(_counter_name, L"TCPRSCExceptionsPersec")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a ULONGLONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkAdapterPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedNetworkAdapterPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
-        }
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkAdapterPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedNetworkAdapterPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkAdapter = L"Win32_PerfFormattedData_Tcpip_NetworkAdapter";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) 
-        {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_NetworkAdapter, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkAdapterPerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkAdapter] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkAdapterPerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedNetworkInterfacePerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_NetworkInterface
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> ctSharedNetworkInterfacePerfCounter<ULONGLONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkInterface = L"Win32_PerfFormattedData_Tcpip_NetworkInterface";
-
-        if (ctString::iordinal_equals(_counter_name, L"BytesTotalPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Frequency_Sys100NS") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Object") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_PerfTime") ||
-            ctString::iordinal_equals(_counter_name, L"Timestamp_Sys100NS")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONGLONG>(ctWmiPerformanceClass_NetworkInterface, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkInterfacePerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkInterface] does not have a ULONGLONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkInterfacePerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedNetworkInterfacePerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkInterface = L"Win32_PerfFormattedData_Tcpip_NetworkInterface";
-
-        if (ctString::iordinal_equals(_counter_name, L"BytesReceivedPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"BytesSentPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"CurrentBandwidth") ||
-            ctString::iordinal_equals(_counter_name, L"OutputQueueLength") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsOutboundDiscarded") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsOutboundErrors") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedDiscarded") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedErrors") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedNonUnicastPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnicastPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsReceivedUnknown") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentNonUnicastPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentPerSec") ||
-            ctString::iordinal_equals(_counter_name, L"PacketsSentUnicastPerSec")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_NetworkInterface, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkInterfacePerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkInterface] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkInterfacePerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedNetworkInterfacePerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkInterface = L"Win32_PerfFormattedData_Tcpip_NetworkInterface";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_NetworkInterface, _counter_name);
-        }
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkInterfacePerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkInterface] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkInterfacePerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedNetworkInterfacePerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_NetworkInterface = L"Win32_PerfFormattedData_Tcpip_NetworkInterface";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_NetworkInterface, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkInterfacePerfCounter counter name %s [from class Win32_PerfFormattedData_Tcpip_NetworkInterface] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkInterfacePerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedTcpIpDiagnosticsPerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedTcpIpDiagnosticsPerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Deniedconnectorsendrequestsinlowpowermode") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLstreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersectreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsPersecnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLstreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersectreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsPersecnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsfallenoffloopbackfastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsPersecfallenoffloopbackfastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsPersecnotprocessedviafastpath")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedTcpIpDiagnosticsPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedTcpIpDiagnosticsPerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedTcpIpDiagnosticsPerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedTcpIpDiagnosticsPerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedTcpIpDiagnosticsPerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedTcpIpDiagnosticsPerfCounter",
-            true);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctSharedNetworkInterfacePerfCounter specializations
-    /// - colleecting from the instance hi-perf WMI class Win32_PerfFormattedData_Tcpip_IPv4
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ULONG>> ctSharedNetworkTcpipIpv4PerfCounter<ULONG>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Deniedconnectorsendrequestsinlowpowermode") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLstreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersecindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4NBLsPersectreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv4outboundNBLsPersecnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLstreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithlowresourceflag") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersecindicatedwithoutprevalidation") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6NBLsPersectreatedasnonprevalidated") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"IPv6outboundNBLsPersecnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsfallenoffloopbackfastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPconnectrequestsPersecfallenoffloopbackfastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsnotprocessedviafastpath") ||
-            ctString::iordinal_equals(_counter_name, L"TCPinboundsegmentsPersecnotprocessedviafastpath")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ULONG>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a ULONG counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkTcpipIpv4PerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<ctComBstr>> ctSharedNetworkTcpipIpv4PerfCounter<ctComBstr>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<ctComBstr>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkTcpipIpv4PerfCounter",
-            true);
-    }
-
-    template <>
-    inline std::shared_ptr<ctWmiPerformanceCounter<std::wstring>> ctSharedNetworkTcpipIpv4PerfCounter<std::wstring>(_In_ LPCWSTR _counter_name)
-    {
-        static LPCWSTR ctWmiPerformanceClass_TcpIpDiagnostics = L"Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics";
-
-        if (ctString::iordinal_equals(_counter_name, L"Caption") ||
-            ctString::iordinal_equals(_counter_name, L"Description") ||
-            ctString::iordinal_equals(_counter_name, L"Name")) {
-            // an instance perf counter
-            return ctMakeInstancePerfCounter<std::wstring>(ctWmiPerformanceClass_TcpIpDiagnostics, _counter_name);
-        }
-
-        throw ctException(
-            ERROR_INVALID_NAME,
-            ctString::format_string(
-                L"ctSharedNetworkTcpipIpv4PerfCounter counter name %s [from class Win32_PerfFormattedData_TCPIPCounters_TCPIPPerformanceDiagnostics] does not have a string counter type",
-                _counter_name).c_str(),
-            L"ctSharedNetworkTcpipIpv4PerfCounter",
-            true);
-    }
-
 } // ctl namespace
-
