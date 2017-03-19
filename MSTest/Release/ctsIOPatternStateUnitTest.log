@@ -1,0 +1,7 @@
+﻿  ctsIOPatternStateUnitTest.cpp
+  ctsIOPatternStateUnitTest.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
+     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternStateUnitTest.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternStateUnitTest.exp
+  Generating code
+  Finished generating code
+  ctsIOPatternStateUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternStateUnitTest.dll
+  ctsIOPatternStateUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternStateUnitTest.pdb (Full PDB)

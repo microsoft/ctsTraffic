@@ -448,6 +448,7 @@ namespace ctl {
     {
         WCHAR return_string[IP_STRING_MAX_LENGTH];
         this->writeAddress(return_string);
+        return_string[IP_STRING_MAX_LENGTH - 1] = L'\0';
         return return_string;
     }
     inline bool ctSockaddr::writeAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
@@ -476,6 +477,7 @@ namespace ctl {
     {
         WCHAR return_string[IP_STRING_MAX_LENGTH];
         this->writeCompleteAddress(return_string, trim_scope);
+        return_string[IP_STRING_MAX_LENGTH - 1] = L'\0';
         return return_string;
     }
     inline bool ctSockaddr::writeCompleteAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT

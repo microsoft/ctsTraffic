@@ -1,0 +1,9 @@
+﻿  ctsSocket.cpp
+  ctsSocketState.cpp
+  ctsSocketStateUnitTest.cpp
+  ctsSocket.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
+     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketStateUnitTest.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketStateUnitTest.exp
+  Generating code
+  Finished generating code
+  ctsSocketStateUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketStateUnitTest.dll
+  ctsSocketStateUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketStateUnitTest.pdb (Full PDB)

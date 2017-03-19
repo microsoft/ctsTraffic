@@ -456,6 +456,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"StatusCode", &intTemp)) {
             if (0 == _itow_s(intTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tStatusCode: ");
                 wsprint.append(intString);
             }
@@ -495,6 +496,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"ErrorType", &intTemp)) {
             if (0 == _itow_s(intTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tErrorType: ");
                 wsprint.append(intString);
             }
@@ -530,6 +532,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"PerceivedSeverity", &shortTemp)) {
             if (0 == _itow_s(shortTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tPerceivedSeverity: ");
                 wsprint.append(intString);
             }
@@ -537,6 +540,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"ProbableCause", &shortTemp)) {
             if (0 == _itow_s(shortTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tProbableCause: ");
                 wsprint.append(intString);
             }
@@ -562,6 +566,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"ErrorSourceFormat", &shortTemp)) {
             if (0 == _itow_s(shortTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tErrorSourceFormat: ");
                 wsprint.append(intString);
             }
@@ -574,6 +579,7 @@ namespace ctl
 
         if (this->get_parameter_value(L"CIMStatusCode", &intTemp)) {
             if (0 == _itow_s(intTemp, intString, 10)) {
+                intString[31] = L'\0';
                 wsprint.append(L"\n\tCIMStatusCode: ");
                 wsprint.append(intString);
             }
