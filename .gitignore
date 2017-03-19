@@ -21,3 +21,4 @@
 /.vs
 /MSTest/Debug
 /ctsPerf/*.csv
+/MSTest/Release
