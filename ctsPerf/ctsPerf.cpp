@@ -1160,14 +1160,14 @@ ctWmiPerformance InstantiateTCPCounters()
     tcpip_tcpv4_connections_established = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv4,
         L"ConnectionsEstablished",
-        ctWmiPerformanceCollectionType::FirstLast);
+        g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv4_connections_established);
     wprintf(L".");
 
     tcpip_tcpv6_connections_established = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv6,
         L"ConnectionsEstablished",
-        ctWmiPerformanceCollectionType::FirstLast);
+        g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv6_connections_established);
     wprintf(L".");
 
@@ -1232,17 +1232,32 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 
     auto network_range = tcpip_tcpv4_connections_established->reference_range();
     ulData.assign(network_range.first, network_range.second);
-    writer.write_difference(
-        L"TCPIP - TCPv4",
-        L"ConnectionsEstablished",
-        ulData);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            L"TCPIP - TCPv4",
+            L"ConnectionsEstablished",
+            ulData);
+    } else {
+        writer.write_details(
+            L"TCPIP - TCPv4",
+            L"ConnectionsEstablished",
+            ulData);
+    }
 
     network_range = tcpip_tcpv6_connections_established->reference_range();
     ulData.assign(network_range.first, network_range.second);
-    writer.write_difference(
-        L"TCPIP - TCPv6",
-        L"ConnectionsEstablished",
-        ulData);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            L"TCPIP - TCPv6",
+            L"ConnectionsEstablished",
+            ulData);
+    }
+    else {
+        writer.write_details(
+            L"TCPIP - TCPv6",
+            L"ConnectionsEstablished",
+            ulData);
+    }
 
     network_range = tcpip_tcpv4_connection_failures->reference_range();
     ulData.assign(network_range.first, network_range.second);
