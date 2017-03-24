@@ -34,6 +34,9 @@
     <Filter Include="TestScripts">
       <UniqueIdentifier>{7a26a09e-bbb3-4862-8220-a6a28a2e979d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="TCPFunctions">
+      <UniqueIdentifier>{6c98383c-dafa-4647-b058-92fa7c1e4636}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ctsConfig.cpp">
@@ -71,6 +74,15 @@
     </ClCompile>
     <ClCompile Include="ctsMediaStreamServer.cpp">
       <Filter>MediaStreaming</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsWSASocket.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSimpleAccept.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSimpleConnect.cpp">
+      <Filter>TCPFunctions</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -144,30 +156,6 @@
     </ClInclude>
     <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsAcceptEx.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsConnectEx.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsReadWriteIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsRioIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsSendRecvIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsSimpleAccept.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsSimpleConnect.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsWSASocket.hpp">
-      <Filter>SocketFunctions</Filter>
     </ClInclude>
     <ClInclude Include="ctsSafeInt.hpp">
       <Filter>Header Files</Filter>
@@ -252,6 +240,24 @@
     </ClInclude>
     <ClInclude Include="..\SdkChanges\WbemDisp.h">
       <Filter>SdkChanges</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsTCPFunctions.h">
+      <Filter>TCPFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsConnectEx.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsAcceptEx.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsReadWriteIocp.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsRioIocp.hpp">
+      <Filter>SocketFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsSendRecvIocp.hpp">
+      <Filter>SocketFunctions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

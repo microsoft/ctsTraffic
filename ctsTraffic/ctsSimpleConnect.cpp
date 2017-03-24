@@ -30,15 +30,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 
 namespace ctsTraffic {
-    ///
-    /// ctsSimpleConnect makes *blocking* calls to connect
-    /// - callers should be careful to ensure that this is really what they want
-    /// - since it will not scale out well
-    ///
-    /// Its intended use is either for UDP sockets, or for very few concurrent connections
-    ///
-
-    inline void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    //
+    // ctsSimpleConnect makes *blocking* calls to connect
+    // - callers should be careful to ensure that this is really what they want
+    // - since it will not scale out well
+    //
+    // Its intended use is either for UDP sockets, or for very few concurrent connections
+    //
+    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());

@@ -40,10 +40,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // project functors
 #include "ctsConnectEx.hpp"
-#include "ctsSimpleConnect.hpp"
-#include "ctsWSASocket.hpp"
+#include "ctsTCPFunctions.h"
 #include "ctsAcceptEx.hpp"
-#include "ctsSimpleAccept.hpp"
 #include "ctsSendRecvIocp.hpp"
 #include "ctsReadWriteIocp.hpp"
 #include "ctsrioiocp.hpp"
@@ -457,7 +455,7 @@ namespace ctsTraffic {
 
                 const wchar_t* value = ParseArgument(*found_arg, L"-acc");
                 if (ctString::iordinal_equals(L"accept", value)) {
-                    Settings->AcceptFunction = ctsSimpleAccept();
+                    Settings->AcceptFunction = ctsSimpleAccept;
                     s_AcceptFunctionName = L"accept";
                 } else if (ctString::iordinal_equals(L"AcceptEx", value)) {
                     Settings->AcceptFunction = ctsAcceptEx();

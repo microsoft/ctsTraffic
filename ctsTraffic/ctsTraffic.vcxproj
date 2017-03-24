@@ -243,6 +243,8 @@
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsMediaStreamClient.cpp" />
     <ClCompile Include="ctsMediaStreamServer.cpp" />
+    <ClCompile Include="ctsSimpleAccept.cpp" />
+    <ClCompile Include="ctsSimpleConnect.cpp" />
     <ClCompile Include="ctsSocket.cpp" />
     <ClCompile Include="ctsSocketBroker.cpp" />
     <ClCompile Include="ctsSocketState.cpp" />
@@ -250,6 +252,7 @@
     <ClCompile Include="ctsMediaStreamServerListeningSocket.cpp" />
     <ClCompile Include="ctsMediaStreamServerConnectedSocket.cpp" />
     <ClCompile Include="ctsWinsockLayer.cpp" />
+    <ClCompile Include="ctsWSASocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -294,6 +297,7 @@
     <ClInclude Include="ctsSafeInt.hpp" />
     <ClInclude Include="ctsSocket.h" />
     <ClInclude Include="ctsSocketBroker.h" />
+    <ClInclude Include="ctsTCPFunctions.h" />
     <ClInclude Include="ctsSocketGuard.hpp" />
     <ClInclude Include="ctsSocketState.h" />
     <ClInclude Include="ctsStatistics.hpp" />
@@ -309,9 +313,6 @@
     <ClInclude Include="ctsReadWriteIocp.hpp" />
     <ClInclude Include="ctsRioIocp.hpp" />
     <ClInclude Include="ctsSendRecvIocp.hpp" />
-    <ClInclude Include="ctsSimpleAccept.hpp" />
-    <ClInclude Include="ctsSimpleConnect.hpp" />
-    <ClInclude Include="ctsWSASocket.hpp" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
