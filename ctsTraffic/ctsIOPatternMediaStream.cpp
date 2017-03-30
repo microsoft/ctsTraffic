@@ -443,7 +443,6 @@ namespace ctsTraffic {
         // take the base lock before touching any internal members
         this_ptr->base_lock();
         // guarantee the lock is released on exit
-#pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
         ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock();});
 
         if (this_ptr->finished_stream) {
@@ -478,7 +477,6 @@ namespace ctsTraffic {
             // take the base lock before touching any internal members
             this_ptr->base_lock();
             // guarantee the lock is released on exit
-#pragma warning(suppress: 26110)   //  PREFast is getting confused with the scope guard
             ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
 
             if (this_ptr->finished_stream) {
