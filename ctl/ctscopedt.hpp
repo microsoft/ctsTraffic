@@ -64,6 +64,10 @@ namespace ctl {
         {
         }
         // allowing move construction (not copy construction)
+
+        ctScopedT(ctScopedT const&) = delete;
+        ctScopedT& operator=(ctScopedT const&) = delete;
+
         ctScopedT(ctScopedT&& other) NOEXCEPT : 
             closeFunctor(std::move(other.closeFunctor)),
             tValue(std::move(other.tValue))
@@ -106,9 +110,6 @@ namespace ctl {
             swap(this->closeFunctor, tShared.closeFunctor);
             swap(this->tValue, tShared.tValue);
         }
-
-        ctScopedT(ctScopedT const&) = delete;
-        ctScopedT& operator=(ctScopedT const&) = delete;
 
     private:
         Fn closeFunctor;

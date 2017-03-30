@@ -41,7 +41,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project functors
 #include "ctsConnectEx.hpp"
 #include "ctsTCPFunctions.h"
-#include "ctsAcceptEx.hpp"
 #include "ctsSendRecvIocp.hpp"
 #include "ctsReadWriteIocp.hpp"
 #include "ctsrioiocp.hpp"
@@ -119,11 +118,11 @@ namespace ctsTraffic {
 
         // default to 5 seconds
         static const unsigned long s_DefaultStatusUpdateFrequency = 5000;
-        static std::shared_ptr<ctsStatusInformation> s_PrintStatusInformation;
-        static std::shared_ptr<ctsLogger> s_ConnectionLogger;
-        static std::shared_ptr<ctsLogger> s_StatusLogger;
-        static std::shared_ptr<ctsLogger> s_ErrorLogger;
-        static std::shared_ptr<ctsLogger> s_JitterLogger;
+        static shared_ptr<ctsStatusInformation> s_PrintStatusInformation;
+        static shared_ptr<ctsLogger> s_ConnectionLogger;
+        static shared_ptr<ctsLogger> s_StatusLogger;
+        static shared_ptr<ctsLogger> s_ErrorLogger;
+        static shared_ptr<ctsLogger> s_JitterLogger;
 
         static bool s_BreakOnError = false;
         static bool s_ShutdownCalled = false;
@@ -259,7 +258,7 @@ namespace ctsTraffic {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         template <typename T>
-        T as_integral(const std::wstring& _string)
+        T as_integral(const wstring& _string)
         {
             static_assert(false, "Only supports the below specializations");
             return {};
@@ -267,14 +266,14 @@ namespace ctsTraffic {
 
         // LONG and ULONG
         template <>
-        long as_integral<long>(const std::wstring& _string)
+        long as_integral<long>(const wstring& _string)
         {
             long return_value;
             size_t first_unconverted_offset = 0;
             if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos) {
-                return_value = std::stol(_string, &first_unconverted_offset, 16);
+                return_value = stol(_string, &first_unconverted_offset, 16);
             } else {
-                return_value = std::stol(_string, &first_unconverted_offset, 10);
+                return_value = stol(_string, &first_unconverted_offset, 10);
             }
 
             if (first_unconverted_offset != _string.length()) {
@@ -283,14 +282,14 @@ namespace ctsTraffic {
             return return_value;
         }
         template <>
-        unsigned long as_integral<unsigned long>(const std::wstring& _string)
+        unsigned long as_integral<unsigned long>(const wstring& _string)
         {
             unsigned long return_value;
             size_t first_unconverted_offset = 0;
             if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos) {
-                return_value = std::stoul(_string, &first_unconverted_offset, 16);
+                return_value = stoul(_string, &first_unconverted_offset, 16);
             } else {
-                return_value = std::stoul(_string, &first_unconverted_offset, 10);
+                return_value = stoul(_string, &first_unconverted_offset, 10);
             }
 
             if (first_unconverted_offset != _string.length()) {
@@ -300,18 +299,18 @@ namespace ctsTraffic {
         }
         // INT and UINT
         template <>
-        int as_integral<int>(const std::wstring& _string)
+        int as_integral<int>(const wstring& _string)
         {
             return as_integral<long>(_string);
         }
         template <>
-        unsigned int as_integral<unsigned int>(const std::wstring& _string)
+        unsigned int as_integral<unsigned int>(const wstring& _string)
         {
             return as_integral<unsigned long>(_string);
         }
         // SHORT and USHORT
         template <>
-        short as_integral<short>(const std::wstring& _string)
+        short as_integral<short>(const wstring& _string)
         {
             long return_value = as_integral<long>(_string);
             if (return_value > MAXSHORT || return_value < MINSHORT) {
@@ -320,7 +319,7 @@ namespace ctsTraffic {
             return static_cast<short>(return_value);
         }
         template <>
-        unsigned short as_integral<unsigned short>(const std::wstring& _string)
+        unsigned short as_integral<unsigned short>(const wstring& _string)
         {
             unsigned long return_value = as_integral<unsigned long>(_string);
             // MAXWORD == MAXUSHORT
@@ -331,14 +330,14 @@ namespace ctsTraffic {
         }
         // LONGLONG and ULONGLONG
         template <>
-        long long as_integral<long long>(const std::wstring& _string)
+        long long as_integral<long long>(const wstring& _string)
         {
             long long return_value;
             size_t first_unconverted_offset = 0;
             if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos) {
-                return_value = std::stoll(_string, &first_unconverted_offset, 16);
+                return_value = stoll(_string, &first_unconverted_offset, 16);
             } else {
-                return_value = std::stoll(_string, &first_unconverted_offset, 10);
+                return_value = stoll(_string, &first_unconverted_offset, 10);
             }
 
             if (first_unconverted_offset != _string.length()) {
@@ -347,14 +346,14 @@ namespace ctsTraffic {
             return return_value;
         }
         template <>
-        unsigned long long as_integral<unsigned long long>(const std::wstring& _string)
+        unsigned long long as_integral<unsigned long long>(const wstring& _string)
         {
             unsigned long long return_value;
             size_t first_unconverted_offset = 0;
             if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos) {
-                return_value = std::stoull(_string, &first_unconverted_offset, 16);
+                return_value = stoull(_string, &first_unconverted_offset, 16);
             } else {
-                return_value = std::stoull(_string, &first_unconverted_offset, 10);
+                return_value = stoull(_string, &first_unconverted_offset, 10);
             }
 
             if (first_unconverted_offset != _string.length()) {
@@ -458,7 +457,7 @@ namespace ctsTraffic {
                     Settings->AcceptFunction = ctsSimpleAccept;
                     s_AcceptFunctionName = L"accept";
                 } else if (ctString::iordinal_equals(L"AcceptEx", value)) {
-                    Settings->AcceptFunction = ctsAcceptEx();
+                    Settings->AcceptFunction = ctsAcceptEx;
                     s_AcceptFunctionName = L"AcceptEx";
                 } else {
                     throw invalid_argument("-acc");
@@ -469,7 +468,7 @@ namespace ctsTraffic {
             } else if (Settings->ListenAddresses.size() > 0) {
                 if (IoPatternType::MediaStream != Settings->IoPattern) {
                     // only default an Accept function if listening
-                    Settings->AcceptFunction = ctsAcceptEx();
+                    Settings->AcceptFunction = ctsAcceptEx;
                     s_AcceptFunctionName = L"AcceptEx";
                 } else {
                     Settings->AcceptFunction = ctsMediaStreamServerListener;
@@ -2260,9 +2259,9 @@ namespace ctsTraffic {
             // - this must be called after both set_logging and set_protocol
             //
             if (ProtocolType::TCP == Settings->Protocol) {
-                s_PrintStatusInformation = std::make_shared<ctsTcpStatusInformation>();
+                s_PrintStatusInformation = make_shared<ctsTcpStatusInformation>();
             } else {
-                s_PrintStatusInformation = std::make_shared<ctsUdpStatusInformation>();
+                s_PrintStatusInformation = make_shared<ctsUdpStatusInformation>();
             }
 
             //
@@ -2354,7 +2353,7 @@ namespace ctsTraffic {
             set_sendbufvalue(args);
 
             if (!args.empty()) {
-                std::wstring error_string;
+                wstring error_string;
                 for (const auto& arg_string : args) {
                     error_string.append(ctString::format_string(L" %s", arg_string));
                 }
@@ -2449,7 +2448,7 @@ namespace ctsTraffic {
         }
 
         // Always print to console if override
-        void PrintExceptionOverride(const std::exception& e) NOEXCEPT
+        void PrintExceptionOverride(const exception& e) NOEXCEPT
         {
             ctsConfigInitOnce();
 
@@ -2468,7 +2467,7 @@ namespace ctsTraffic {
                         ctString::format_string(L"%s\r\n", formatted_string.c_str()).c_str());
                 }
             }
-            catch (const std::exception&) {
+            catch (const exception&) {
                 ::fwprintf(stderr, L"Error : failed to allocate memory\n");
                 if (s_ErrorLogger) {
                     s_ErrorLogger->LogError(L"Error : failed to allocate memory\r\n");
@@ -2487,7 +2486,7 @@ namespace ctsTraffic {
             ctsConfigInitOnce();
 
             try {
-                std::wstring exception_text(ctString::format_exception(e));
+                wstring exception_text(ctString::format_exception(e));
 
                 if (!s_ShutdownCalled) {
                     ctFatalCondition(s_BreakOnError, L"Fatal exception: %s", exception_text.c_str());
@@ -2495,7 +2494,7 @@ namespace ctsTraffic {
 
                 PrintErrorInfo(exception_text.c_str());
             }
-            catch (const std::exception&) {
+            catch (const exception&) {
                 if (!s_ShutdownCalled) {
                     ctFatalCondition(s_BreakOnError, L"Fatal exception: %S", e.what());
                 }
@@ -2537,7 +2536,7 @@ namespace ctsTraffic {
                             ctsConfig::GetStatusTimeStamp(),
                             ctString::format_string_va(_text, argptr).c_str()).c_str());
                 }
-                catch (const std::exception&) {
+                catch (const exception&) {
                 }
             }
 
@@ -2568,7 +2567,7 @@ namespace ctsTraffic {
                 }
 
                 try {
-                    std::wstring formatted_string;
+                    wstring formatted_string;
                     if (write_to_console) {
                         formatted_string = ctString::format_string_va(_text, argptr);
                         ::wprintf_s(L"%s\n", formatted_string.c_str());
@@ -2585,7 +2584,7 @@ namespace ctsTraffic {
                                 formatted_string.c_str()).c_str());
                     }
                 }
-                catch (const std::exception&) {
+                catch (const exception&) {
                 }
 
                 va_end(argptr);
@@ -2613,7 +2612,7 @@ namespace ctsTraffic {
                 }
 
                 try {
-                    std::wstring error_string;
+                    wstring error_string;
                     if (ctsIOPattern::IsProtocolError(_why)) {
                         error_string = ctl::ctString::format_string(
                             L"[%.3f] Connection aborted due to the protocol error %s",
@@ -2638,7 +2637,7 @@ namespace ctsTraffic {
                             ctString::format_string(L"%s\r\n", error_string.c_str()).c_str());
                     }
                 }
-                catch (const std::exception&) {
+                catch (const exception&) {
                 }
             }
         }
@@ -2801,7 +2800,7 @@ namespace ctsTraffic {
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str()).c_str());
                 }
-                catch (const std::exception&) {
+                catch (const exception&) {
                 }
             }
         }
@@ -2854,9 +2853,9 @@ namespace ctsTraffic {
             float current_time = ctsConfig::GetStatusTimeStamp();
 
             try {
-                std::wstring csv_string;
-                std::wstring text_string;
-                std::wstring error_string;
+                wstring csv_string;
+                wstring text_string;
+                wstring error_string;
                 if (ErrorType::ProtocolError != error_type) {
                     if (0 == _error) {
                         error_string = L"Succeeded";
@@ -2931,7 +2930,7 @@ namespace ctsTraffic {
                     }
                 }
             }
-            catch (const std::exception&) {
+            catch (const exception&) {
             }
         }
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
@@ -2980,9 +2979,9 @@ namespace ctsTraffic {
             long long bits_per_second = (elapsed_time > 0LL) ? static_cast<long long>(_stats.bits_received.get() * 1000LL / elapsed_time) : 0LL;
 
             try {
-                std::wstring csv_string;
-                std::wstring text_string;
-                std::wstring error_string;
+                wstring csv_string;
+                wstring text_string;
+                wstring error_string;
                 if (ErrorType::ProtocolError != error_type) {
                     if (0 == _error) {
                         error_string = L"Succeeded";
@@ -3059,7 +3058,7 @@ namespace ctsTraffic {
                     }
                 }
             }
-            catch (const std::exception&) {
+            catch (const exception&) {
             }
         }
         void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
@@ -3108,7 +3107,7 @@ namespace ctsTraffic {
                             formatted_string, L"\n", L"\r\n").c_str());
                 }
             }
-            catch (const std::exception&) {
+            catch (const exception&) {
                 // best-effort
             }
             va_end(argptr);

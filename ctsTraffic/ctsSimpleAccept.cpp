@@ -242,9 +242,7 @@ namespace ctsTraffic {
         static INIT_ONCE s_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK s_ctsSimpleAcceptImplInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*)
         {
-            try {
-                s_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
-            }
+            try { s_pimpl = std::make_shared<ctsSimpleAcceptImpl>(); }
             catch (const ctl::ctException& e) {
                 ctsConfig::PrintException(e);
                 *reinterpret_cast<DWORD*>(perror) = e.why();
@@ -258,7 +256,6 @@ namespace ctsTraffic {
 
             return TRUE;
         }
-
     }
 
     void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT

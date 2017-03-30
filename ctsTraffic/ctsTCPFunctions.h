@@ -29,5 +29,6 @@ namespace ctsTraffic {
 
     void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
     void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
 }

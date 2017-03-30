@@ -115,6 +115,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -152,7 +153,11 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+      <ImageHasSafeExceptionHandlers>
+      </ImageHasSafeExceptionHandlers>
+      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <StackCommitSize>
+      </StackCommitSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -192,6 +197,7 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
+      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -232,12 +238,16 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
+      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <StackCommitSize>
+      </StackCommitSize>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ctsAcceptEx.cpp" />
     <ClCompile Include="ctsConfig.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
@@ -303,7 +313,6 @@
     <ClInclude Include="ctsStatistics.hpp" />
     <ClInclude Include="ctsWinsockLayer.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="ctsAcceptEx.hpp" />
     <ClInclude Include="ctsConnectEx.hpp" />
     <ClInclude Include="ctsMediaStreamClient.h" />
     <ClInclude Include="ctsMediaStreamServerListeningSocket.h" />
