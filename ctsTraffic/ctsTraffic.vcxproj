@@ -153,11 +153,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <ImageHasSafeExceptionHandlers>
-      </ImageHasSafeExceptionHandlers>
       <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -239,8 +235,6 @@
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
       <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -249,10 +243,14 @@
   <ItemGroup>
     <ClCompile Include="ctsAcceptEx.cpp" />
     <ClCompile Include="ctsConfig.cpp" />
+    <ClCompile Include="ctsConnectEx.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsMediaStreamClient.cpp" />
     <ClCompile Include="ctsMediaStreamServer.cpp" />
+    <ClCompile Include="ctsReadWriteIocp.cpp" />
+    <ClCompile Include="ctsRioIocp.cpp" />
+    <ClCompile Include="ctsSendRecvIocp.cpp" />
     <ClCompile Include="ctsSimpleAccept.cpp" />
     <ClCompile Include="ctsSimpleConnect.cpp" />
     <ClCompile Include="ctsSocket.cpp" />
@@ -313,15 +311,11 @@
     <ClInclude Include="ctsStatistics.hpp" />
     <ClInclude Include="ctsWinsockLayer.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="ctsConnectEx.hpp" />
     <ClInclude Include="ctsMediaStreamClient.h" />
     <ClInclude Include="ctsMediaStreamServerListeningSocket.h" />
     <ClInclude Include="ctsMediaStreamProtocol.hpp" />
     <ClInclude Include="ctsMediaStreamServer.h" />
     <ClInclude Include="ctsMediaStreamServerConnectedSocket.h" />
-    <ClInclude Include="ctsReadWriteIocp.hpp" />
-    <ClInclude Include="ctsRioIocp.hpp" />
-    <ClInclude Include="ctsSendRecvIocp.hpp" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>

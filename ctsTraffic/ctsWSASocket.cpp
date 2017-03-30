@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <memory>
 // os headers

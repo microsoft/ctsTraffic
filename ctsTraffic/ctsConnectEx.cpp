@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <memory>
 #include <vector>
@@ -31,12 +29,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    static inline
-    void ctsConnectExIoCompletionCallback(
+    static void ctsConnectExIoCompletionCallback(
         OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctl::ctSockaddr& _targetAddress
-        ) NOEXCEPT
+        const ctl::ctSockaddr& _targetAddress) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -88,7 +84,7 @@ namespace ctsTraffic {
         }
     }
 
-    inline void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -111,8 +107,8 @@ namespace ctsTraffic {
                     // get a new IO request from the socket's TP
                     const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
                     OVERLAPPED* pov = connect_iocp->new_request(
-                        [_weak_socket, targetAddress] (OVERLAPPED* _ov) 
-                        { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
+                        [_weak_socket, targetAddress](OVERLAPPED* _ov)
+                    { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                     if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {
                         error = ::WSAGetLastError();

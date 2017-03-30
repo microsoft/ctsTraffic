@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <memory>
 // os headers
@@ -31,7 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 
     /// forward delcaration
-    inline void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
     struct ctsSendRecvStatus
     {
@@ -46,7 +44,10 @@ namespace ctsTraffic {
     ///
     /// IO Threadpool completion callback 
     ///
-    static inline void ctsIoCompletionCallback(_In_ OVERLAPPED* _overlapped, const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _io_task) NOEXCEPT
+    static void ctsIoCompletionCallback(
+        _In_ OVERLAPPED* _overlapped,
+        const std::weak_ptr<ctsSocket>& _weak_socket,
+        const ctsIOTask& _io_task) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -115,7 +116,7 @@ namespace ctsTraffic {
     /// ** ctsSocket::increment_io must have been called before this function was invoked
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static inline ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) NOEXCEPT
+    static ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) NOEXCEPT
     {
         ctsSendRecvStatus return_status;
 
@@ -245,7 +246,7 @@ namespace ctsTraffic {
     /// Processes the given task and then calls ctsSendRecvIocp function to deal with any additional tasks
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static inline void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) NOEXCEPT
+    static void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -281,7 +282,7 @@ namespace ctsTraffic {
     ///
     /// The function registered with ctsConfig
     ///
-    inline void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());

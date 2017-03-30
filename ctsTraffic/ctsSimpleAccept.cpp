@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <vector>
 #include <memory>
@@ -56,9 +54,9 @@ namespace ctsTraffic {
             std::vector<LONG> listening_sockets_refcount;
 
             _Guarded_by_(accepting_cs)
-                std::vector<SOCKET> listening_sockets;
+            std::vector<SOCKET> listening_sockets;
             _Guarded_by_(accepting_cs)
-                std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
+            std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
 
         public:
             ctsSimpleAcceptImpl()
@@ -83,7 +81,6 @@ namespace ctsTraffic {
 
                 // listen to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
-#pragma warning(suppress: 28193) // PREFast isn't seeing that listening is indeed evaluated before being referenced
                     SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
                     ctlScopeGuard(closeSocketOnError, { ::closesocket(listening); });
 
@@ -214,8 +211,7 @@ namespace ctsTraffic {
                 int local_addr_len = local_addr.length();
                 if (0 == ::getsockname(new_socket, local_addr.sockaddr(), &local_addr_len)) {
                     accept_socket->set_local_address(local_addr);
-                }
-                else if (0 == ::getsockname(listener, local_addr.sockaddr(), &local_addr_len)) {
+                } else if (0 == ::getsockname(listener, local_addr.sockaddr(), &local_addr_len)) {
                     accept_socket->set_local_address(local_addr);
                 }
 

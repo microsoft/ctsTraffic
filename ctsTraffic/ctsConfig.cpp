@@ -28,6 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctString.hpp>
 #include <ctNetAdapterAddresses.hpp>
+#include <ctSocketExtensions.hpp>
 #include <ctTimer.hpp>
 #include <ctRandom.hpp>
 #include <ctWmiInitialize.hpp>
@@ -39,11 +40,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsPrintStatus.hpp"
 
 // project functors
-#include "ctsConnectEx.hpp"
 #include "ctsTCPFunctions.h"
-#include "ctsSendRecvIocp.hpp"
-#include "ctsReadWriteIocp.hpp"
-#include "ctsrioiocp.hpp"
 #include "ctsMediaStreamClient.h"
 #include "ctsMediaStreamServer.h"
 

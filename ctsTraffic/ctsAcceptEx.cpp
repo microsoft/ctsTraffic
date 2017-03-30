@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <memory>
 #include <vector>
@@ -26,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctLocks.hpp>
 #include <ctHandle.hpp>
 // project headers
@@ -230,8 +227,7 @@ namespace ctsTraffic {
         ///
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline ctsListenSocketInfo::ctsListenSocketInfo(const ctl::ctSockaddr& _addr)
-            : addr(_addr)
+        ctsListenSocketInfo::ctsListenSocketInfo(const ctl::ctSockaddr& _addr) : addr(_addr)
         {
             ctl::ctScopedSocket tempsocket (
                 ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags));
@@ -262,7 +258,7 @@ namespace ctsTraffic {
         ///
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline ctsAcceptSocketInfo::ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket)
+        ctsAcceptSocketInfo::ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket)
         : listening_socket_info(_listen_socket)
         {
             if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
@@ -270,12 +266,12 @@ namespace ctsTraffic {
             }
         }
 
-        inline ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
+        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
         {
             ::DeleteCriticalSection(&cs);
         }
 
-        inline void ctsAcceptSocketInfo::InitatiateAcceptEx()
+        void ctsAcceptSocketInfo::InitatiateAcceptEx()
         {
             ctl::ctAutoReleaseCriticalSection lock(&cs);
 
@@ -337,7 +333,7 @@ namespace ctsTraffic {
             this->socket = std::move(new_socket);
         }
 
-        inline ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
+        ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
         {
             ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             SOCKET listening_socket = listening_socket_info->socket.get();
@@ -453,17 +449,14 @@ namespace ctsTraffic {
                         shared_socket->complete_state(0);
 
                         ctsConfig::PrintNewConnection(local_addr, accepted_socket.remote_addr);
-                    }
-                    else {
+                    } else {
                         shared_socket->complete_state(accepted_socket.gle);
                     }
-                }
-                else {
+                } else {
                     // socket was closed from beneath us
                     ctsConfig::PrintErrorIfFailed(L"AcceptEx", WSAECONNABORTED);
                 }
-            }
-            else {
+            } else {
                 //
                 // else, we have no requests for another connection,
                 // - queue this one for when a request comes in

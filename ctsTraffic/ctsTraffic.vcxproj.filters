@@ -16,9 +16,6 @@
     <Filter Include="ctl">
       <UniqueIdentifier>{cc254f44-0bca-4207-90df-1e7bfb2d2dbb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="SocketFunctions">
-      <UniqueIdentifier>{71dd0481-5c28-462d-83e3-1e31e9fe4f22}</UniqueIdentifier>
-    </Filter>
     <Filter Include="MediaStreaming">
       <UniqueIdentifier>{6c25a8c6-cc64-45a4-a5f8-23aba61ea248}</UniqueIdentifier>
     </Filter>
@@ -85,6 +82,18 @@
       <Filter>TCPFunctions</Filter>
     </ClCompile>
     <ClCompile Include="ctsAcceptEx.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsConnectEx.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsReadWriteIocp.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsSendRecvIocp.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
+    <ClCompile Include="ctsRioIocp.cpp">
       <Filter>TCPFunctions</Filter>
     </ClCompile>
   </ItemGroup>
@@ -246,18 +255,6 @@
     </ClInclude>
     <ClInclude Include="ctsTCPFunctions.h">
       <Filter>TCPFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsConnectEx.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsReadWriteIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsRioIocp.hpp">
-      <Filter>SocketFunctions</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsSendRecvIocp.hpp">
-      <Filter>SocketFunctions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
