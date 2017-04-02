@@ -506,9 +506,9 @@ namespace ctsTraffic {
         const unsigned long push_segment_size;
         const unsigned long pull_segment_size;
 
-        const bool listening;
-
         ctsUnsignedLong intra_segment_transfer;
+
+        const bool listening;
         bool io_needed;
         bool sending;
     };
@@ -598,17 +598,14 @@ namespace ctsTraffic {
         PTP_TIMER renderer_timer;
         PTP_TIMER start_timer;
 
+        long long base_time_milliseconds;
+        const double frame_rate_ms_per_frame;
         const unsigned long frame_size_bytes;
         const unsigned long final_frame;
 
         unsigned long initial_buffer_frames;
         unsigned long timer_wheel_offset_frames;
         unsigned long recv_needed;
-
-        long long base_time_milliseconds;
-
-        const double frame_rate_ms_per_frame;
-        bool finished_stream;
 
         // these must be protected by the base class cs
         // - the base lock is always taken before our virtual functions are called
@@ -624,6 +621,8 @@ namespace ctsTraffic {
         // tracking for jitter information
         ctsConfig::JitterFrameEntry first_frame;
         ctsConfig::JitterFrameEntry previous_frame;
+
+        bool finished_stream;
 
         // member functions - all require the base lock
         _Requires_lock_held_(cs)

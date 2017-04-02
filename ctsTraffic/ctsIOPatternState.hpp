@@ -65,7 +65,6 @@ namespace ctsTraffic {
             ErrorIOFailed
         };
 
-        InternalPatternState internal_state = InternalPatternState::Initialized;
         // tracking current bytes 
         ctsUnsignedLongLong confirmed_bytes = 0ULL;
         // need to know when to stop
@@ -76,6 +75,8 @@ namespace ctsTraffic {
         ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ? 
             ctsConfig::GetMaxBufferSize() : 
             ctsConfig::GetMaxBufferSize() * ctsConfig::Settings->PrePostSends;
+
+        InternalPatternState internal_state = InternalPatternState::Initialized;
         // track if waiting for the prior state to complete
         bool pended_state = false;
 

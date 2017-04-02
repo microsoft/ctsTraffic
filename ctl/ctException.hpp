@@ -105,11 +105,11 @@ namespace ctl {
         void szMessageTowszMessage() NOEXCEPT;
 
         // private member variables
-        unsigned long ulCode = 0;
         const char* szMessage = nullptr;
         const wchar_t* wszMessage = nullptr;
         const wchar_t* wszLocation = nullptr;
         mutable wchar_t* wszTranslation = nullptr;
+        unsigned long ulCode = 0;
         bool bMessageCopy_s = false;
         bool bMessageCopy_w = false;
         bool bLocationCopy_w = false;

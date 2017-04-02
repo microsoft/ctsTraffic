@@ -41,17 +41,16 @@ namespace ctsTraffic {
     };
 
     struct ctsIOTask {
+        long long time_offset_milliseconds = 0LL;
+        RIO_BUFFERID rio_bufferid = RIO_INVALID_BUFFERID;
+
         _Field_size_full_(buffer_length)
         char* buffer = nullptr;
         unsigned long buffer_length = 0UL;
         unsigned long buffer_offset = 0UL;
         unsigned long expected_pattern_offset = 0UL;
-        long long time_offset_milliseconds = 0LL;
-        RIO_BUFFERID rio_bufferid = RIO_INVALID_BUFFERID;
         IOTaskAction ioAction = IOTaskAction::None;
 
-        // (internal) flag if this IO request is tracked and verified
-        bool track_io = false;
         // (internal) flag identifying the type of buffer
         enum class BufferType
         {
@@ -61,6 +60,8 @@ namespace ctsTraffic {
             Static,
             Tracked
         } buffer_type = BufferType::Null;
+        // (internal) flag if this IO request is tracked and verified
+        bool track_io = false;
 
         static LPCWSTR PrintIOAction(const IOTaskAction& _action) NOEXCEPT
         {

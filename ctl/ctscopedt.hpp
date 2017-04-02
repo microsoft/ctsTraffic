@@ -53,14 +53,14 @@ namespace ctl {
         // - optionally take a deleter Functor instance
         // - default constructor initializes with tNullValue
         ///////////////////////////////////////////////////////////////
-        ctScopedT() NOEXCEPT : closeFunctor(), tValue(tNullValue)
+        ctScopedT() NOEXCEPT : tValue(tNullValue)
         {
         }
         // non-explicit by design
-        explicit ctScopedT(T const& t) NOEXCEPT : closeFunctor(), tValue(t)
+        explicit ctScopedT(T const& t) NOEXCEPT : tValue(t)
         {
         }
-        ctScopedT(T const& t, Fn const& f) NOEXCEPT : closeFunctor(f), tValue(t)
+        ctScopedT(T const& t, Fn const& f) NOEXCEPT : tValue(t), closeFunctor(f)
         {
         }
         // allowing move construction (not copy construction)
@@ -69,8 +69,8 @@ namespace ctl {
         ctScopedT& operator=(ctScopedT const&) = delete;
 
         ctScopedT(ctScopedT&& other) NOEXCEPT : 
-            closeFunctor(std::move(other.closeFunctor)),
-            tValue(std::move(other.tValue))
+            tValue(std::move(other.tValue)),
+            closeFunctor(std::move(other.closeFunctor))
         {
             // Stop the tValue from being destroyed as soon as other leaves scope
             other.tValue = tNullValue;
@@ -112,8 +112,8 @@ namespace ctl {
         }
 
     private:
-        Fn closeFunctor;
         T tValue;
+        Fn closeFunctor;
     }; // class ctScopedT
 
     ///////////////////////////////////////////////////////////////////
