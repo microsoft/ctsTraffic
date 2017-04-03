@@ -82,6 +82,12 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="ctsEstats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsWriteDetails.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ctl">
@@ -92,6 +98,9 @@
     </Filter>
     <Filter Include="Source FIles">
       <UniqueIdentifier>{db6f9dd3-ce4d-461e-b40b-208d49e77cd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{f826a88a-d773-481c-a845-cfccf36450f8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
