@@ -24,7 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     enum class ctsIOPatternProtocolTask
     {
@@ -48,7 +49,8 @@ namespace ctsTraffic {
         SuccessfullyCompleted
     };
 
-    class ctsIOPatternState {
+    class ctsIOPatternState
+    {
     private:
         enum class InternalPatternState
         {
@@ -72,8 +74,8 @@ namespace ctsTraffic {
         // need to know in-flight bytes
         ctsUnsignedLongLong inflight_bytes = 0UL;
         // ideal send backlog value
-        ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ? 
-            ctsConfig::GetMaxBufferSize() : 
+        ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ?
+            ctsConfig::GetMaxBufferSize() :
             ctsConfig::GetMaxBufferSize() * ctsConfig::Settings->PrePostSends;
 
         InternalPatternState internal_state = InternalPatternState::Initialized;
@@ -248,8 +250,8 @@ namespace ctsTraffic {
         } else {
             // ctsConfig::ProtocolType::TCP
             if (_error_code != 0 && !this->is_completed()) {
-                if (ctsConfig::IsListening() && 
-                    InternalPatternState::RequestFIN == this->internal_state && 
+                if (ctsConfig::IsListening() &&
+                    InternalPatternState::RequestFIN == this->internal_state &&
                     (WSAETIMEDOUT == _error_code || WSAECONNRESET == _error_code || WSAECONNABORTED == _error_code)) {
                     // this is actually OK - the client may have just RST instead of a graceful FIN after receiving our status
                     return ctsIOPatternProtocolError::NoError;

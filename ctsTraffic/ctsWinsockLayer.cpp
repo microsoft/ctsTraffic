@@ -37,11 +37,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // - primarily facilitating unit testing of interface logic that calls through Winsock
 //   but also simplifying the logic behind the code to make reasoning over the code more straight forward
 //
-namespace ctsTraffic {
-
-    ///
-    /// WSARecvFrom
-    ///
+namespace ctsTraffic
+{
+    //
+    // WSARecvFrom
+    //
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
@@ -95,9 +95,9 @@ namespace ctsTraffic {
         return return_result;
     }
 
-    ///
-    /// WSASendTo
-    ///
+    //
+    // WSASendTo
+    //
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,

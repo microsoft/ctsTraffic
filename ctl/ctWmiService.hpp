@@ -26,33 +26,31 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctVersionConversion.hpp"
 
 
-namespace ctl {
-
+namespace ctl
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// class ctWmiService
-    ///
-    /// Callers must instantiate a ctWmiService instance in order to use any ctWmi* class.  This class
-    ///   tracks the WMI initialization of the IWbemLocator and IWbemService interfaces - which
-    ///   maintain a connection to the specified WMI Service through which WMI calls are made.
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // class ctWmiService
+    //
+    // Callers must instantiate a ctWmiService instance in order to use any ctWmi* class.  This class
+    //   tracks the WMI initialization of the IWbemLocator and IWbemService interfaces - which
+    //   maintain a connection to the specified WMI Service through which WMI calls are made.
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctWmiService
     {
     public:
         /////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Note: current only connecting to the local machine.
-        ///
-        /// Note: CoInitializeSecurity is not called by the ctWmi* classes. This security
-        ///   policy should be defined by the code consuming these libraries, as these
-        ///   libraries cannot assume the security context to apply to the process.
-        ///
-        /// Argument:
-        /// LPCWSTR _path: this is the WMI namespace path to connect with
-        ///
+        //
+        // Note: current only connecting to the local machine.
+        //
+        // Note: CoInitializeSecurity is not called by the ctWmi* classes. This security
+        //   policy should be defined by the code consuming these libraries, as these
+        //   libraries cannot assume the security context to apply to the process.
+        //
+        // Argument:
+        // LPCWSTR _path: this is the WMI namespace path to connect with
+        //
         /////////////////////////////////////////////////////////////////////////////////////
         explicit ctWmiService(_In_ LPCWSTR _path) : coinit(), wbemLocator(), wbemServices()
         {
@@ -80,8 +78,7 @@ namespace ctl {
                 RPC_C_AUTHN_LEVEL_CALL,      // RPC_C_AUTHN_LEVEL_xxx 
                 RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
                 nullptr,                     // client identity
-                EOAC_NONE                    // proxy capabilities 
-                );
+                EOAC_NONE);                  // proxy capabilities 
             if (FAILED(hr)) {
                 throw ctException(hr, L"CoSetProxyBlanket", L"ctWmiService::connect", false);
             }
@@ -103,16 +100,16 @@ namespace ctl {
             return *this;
         }
 
-        ///
-        /// TODO: add move c'tor and move assignment operator
-        ///
+        //
+        // TODO: add move c'tor and move assignment operator
+        //
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// operator ->
-        /// - exposes the underlying IWbemServices* 
-        ///
-        /// A no-fail/no-throw operation
+        //
+        // operator ->
+        // - exposes the underlying IWbemServices* 
+        //
+        // A no-fail/no-throw operation
         ////////////////////////////////////////////////////////////////////////////////
         IWbemServices* operator->() NOEXCEPT
         {
@@ -166,14 +163,14 @@ namespace ctl {
             }
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// void delete_path(LPCWSTR)
-        /// - Deletes the WMI object based off the object path specified in the input
-        /// - Throws ctWmiException on failures
-        ///
-        /// The object path takes the form of:
-        ///    MyClass.MyProperty1='33',MyProperty2='value'
-        ///
+        //
+        // void delete_path(LPCWSTR)
+        // - Deletes the WMI object based off the object path specified in the input
+        // - Throws ctWmiException on failures
+        //
+        // The object path takes the form of:
+        //    MyClass.MyProperty1='33',MyProperty2='value'
+        //
         ////////////////////////////////////////////////////////////////////////////////
         void delete_path(_In_ LPCWSTR _objPath)
         {

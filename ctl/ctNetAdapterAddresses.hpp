@@ -26,19 +26,22 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctException.hpp"
 #include "ctSockaddr.hpp"
 
-namespace ctl {
+namespace ctl
+{
 
-    class ctNetAdapterAddresses {
+    class ctNetAdapterAddresses
+    {
     public:
-        class iterator {
+        class iterator
+        {
         public:
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// c'tor
-            /// - NULL ptr is an 'end' iterator
-            ///
-            /// - default d'tor, copy c'tor, and copy assignment
-            ///
+            //
+            // c'tor
+            // - NULL ptr is an 'end' iterator
+            //
+            // - default d'tor, copy c'tor, and copy assignment
+            //
             ////////////////////////////////////////////////////////////////////////////////
             iterator() = default;
 
@@ -50,9 +53,9 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// member swap method
-            ///
+            //
+            // member swap method
+            //
             ////////////////////////////////////////////////////////////////////////////////
             void swap(_Inout_ iterator& _in) NOEXCEPT
             {
@@ -62,10 +65,10 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// accessors:
-            /// - dereference operators to access the internal row
-            ///
+            //
+            // accessors:
+            // - dereference operators to access the internal row
+            //
             ////////////////////////////////////////////////////////////////////////////////
             IP_ADAPTER_ADDRESSES& operator*()
             {
@@ -83,12 +86,12 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// comparison and arithmatic operators
-            /// 
-            /// comparison operators are no-throw/no-fail
-            /// arithmatic operators can fail 
-            ///
+            //
+            // comparison and arithmatic operators
+            // 
+            // comparison operators are no-throw/no-fail
+            // arithmatic operators can fail 
+            //
             ////////////////////////////////////////////////////////////////////////////////
             bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
@@ -97,7 +100,7 @@ namespace ctl {
                     return (this->current == _iter.current);
                 } else {
                     return ((this->buffer == _iter.buffer) &&
-                            (this->current == _iter.current));
+                        (this->current == _iter.current));
                 }
             }
             bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
@@ -134,10 +137,10 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// iterator_traits
-            /// - allows <algorithm> functions to be used
-            ///
+            //
+            // iterator_traits
+            // - allows <algorithm> functions to be used
+            //
             ////////////////////////////////////////////////////////////////////////////////
             typedef std::forward_iterator_tag   iterator_category;
             typedef IP_ADAPTER_ADDRESSES        value_type;
@@ -153,33 +156,33 @@ namespace ctl {
     public:
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// c'tor
-        ///
-        /// - default d'tor, copy c'tor, and copy assignment
-        /// - Takes an optional _gaaFlags argument which is passed through directly to
-        ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
-        ///
+        //
+        // c'tor
+        //
+        // - default d'tor, copy c'tor, and copy assignment
+        // - Takes an optional _gaaFlags argument which is passed through directly to
+        //   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
+        //
         ////////////////////////////////////////////////////////////////////////////////
-        explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) : 
+        explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) :
             buffer(new std::vector<BYTE>(16384))
         {
             this->refresh(_family, _gaaFlags);
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// refresh
-        ///
-        /// - retrieves the current set of adapter address information
-        /// - Takes an optional _gaaFlags argument which is passed through directly to
-        ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
-        ///
-        /// NOTE: this will invalidate any iterators from this instance
-        /// NOTE: this only implements the Basic exception guarantee
-        ///       if this fails, an exception is thrown, and any prior
-        ///       information is lost. This is still safe to call after errors.
-        ///
+        //
+        // refresh
+        //
+        // - retrieves the current set of adapter address information
+        // - Takes an optional _gaaFlags argument which is passed through directly to
+        //   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
+        //
+        // NOTE: this will invalidate any iterators from this instance
+        // NOTE: this only implements the Basic exception guarantee
+        //       if this fails, an exception is thrown, and any prior
+        //       information is lost. This is still safe to call after errors.
+        //
         ////////////////////////////////////////////////////////////////////////////////
         void refresh(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0)
         {
@@ -190,8 +193,8 @@ namespace ctl {
                 _gaaFlags, // Flags
                 nullptr,   // Reserved
                 reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
-                &byteSize
-                );
+                &byteSize);
+
             if (err == ERROR_BUFFER_OVERFLOW) {
                 this->buffer->resize(byteSize);
                 err = ::GetAdaptersAddresses(
@@ -199,8 +202,7 @@ namespace ctl {
                     _gaaFlags, // Flags
                     nullptr,   // Reserved
                     reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
-                    &byteSize
-                    );
+                    &byteSize);
             }
             if (err != NO_ERROR) {
                 throw ctl::ctException(err, L"GetAdaptersAddresses", L"ctNetAdapterAddresses::ctNetAdapterAddresses", false);
@@ -208,11 +210,11 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// begin/end
-        ///
-        /// - constructs ctNetAdapterAddresses::iterators
-        ///
+        //
+        // begin/end
+        //
+        // - constructs ctNetAdapterAddresses::iterators
+        //
         ////////////////////////////////////////////////////////////////////////////////
         iterator begin() const NOEXCEPT
         {
@@ -224,20 +226,23 @@ namespace ctl {
         }
 
     private:
-        ///
-        /// private members
-        ///
+        //
+        // private members
+        //
         std::shared_ptr<std::vector<BYTE>> buffer;
     };
 
-    ///
-    /// functor ctNetAdapterMatchingAddrPredicate
-    ///
-    /// Created to leverage STL algorigthms to parse a ctNetAdapterAddresses set of iterators
-    /// - to find the first interface that has the specified address assigned
-    ///
-    struct ctNetAdapterMatchingAddrPredicate {
-        explicit ctNetAdapterMatchingAddrPredicate(_In_ const ctl::ctSockaddr& _addr) : 
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // functor ctNetAdapterMatchingAddrPredicate
+    //
+    // Created to leverage STL algorigthms to parse a ctNetAdapterAddresses set of iterators
+    // - to find the first interface that has the specified address assigned
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    struct ctNetAdapterMatchingAddrPredicate
+    {
+        explicit ctNetAdapterMatchingAddrPredicate(_In_ const ctl::ctSockaddr& _addr) :
             targetAddr(_addr)
         {
         }
@@ -245,8 +250,8 @@ namespace ctl {
         bool operator () (_In_ const IP_ADAPTER_ADDRESSES& _ipAddress) NOEXCEPT
         {
             for (PIP_ADAPTER_UNICAST_ADDRESS unicastAddress = _ipAddress.FirstUnicastAddress;
-                 unicastAddress != nullptr;
-                 unicastAddress = unicastAddress->Next) 
+                unicastAddress != nullptr;
+                unicastAddress = unicastAddress->Next)
             {
                 ctSockaddr unicastSockaddr(&unicastAddress->Address);
                 if (unicastSockaddr == targetAddr) {

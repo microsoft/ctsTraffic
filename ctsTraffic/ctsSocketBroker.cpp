@@ -33,10 +33,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
 
-
-
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     using namespace ctl;
     using namespace std;
 
@@ -72,7 +70,7 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketBroker", false);
         }
-        ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
+        ctlScopeGuard(deleteCsOnExit, {::DeleteCriticalSection(&this->cs);});
 
         // create our manual-reset notification event
         done_event.reset(::CreateEvent(nullptr, TRUE, FALSE, nullptr));
@@ -125,7 +123,7 @@ namespace ctsTraffic {
 
         // intiate the threadpool timer
         wakeup_timer->schedule_reoccuring(
-            [this]() { ctsSocketBroker::TimerCallback(this); },
+            [this] () { ctsSocketBroker::TimerCallback(this); },
             0LL,
             TimerCallbackTimeout);
     }
@@ -171,7 +169,7 @@ namespace ctsTraffic {
 
     bool ctsSocketBroker::wait(DWORD _milliseconds) NOEXCEPT
     {
-        HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
+        HANDLE arWait[2] = {this->done_event.get(), ctsConfig::Settings->CtrlCHandle};
 
         bool fReturn = false;
         switch (::WaitForMultipleObjects(2, arWait, FALSE, _milliseconds)) {

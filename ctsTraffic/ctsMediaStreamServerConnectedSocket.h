@@ -27,11 +27,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketGuard.hpp"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     class ctsMediaStreamServerConnectedSocket;
     typedef std::function<wsIOResult(ctsMediaStreamServerConnectedSocket*)> ctsMediaStreamConnectedSocketIoFunctor;
 
-    class ctsMediaStreamServerConnectedSocket {
+    class ctsMediaStreamServerConnectedSocket
+    {
     private:
         //
         // ctsSocketGuard is given friend-access to call lock_socket and unlock_socket
@@ -69,9 +71,9 @@ namespace ctsTraffic {
 
     public:
         ctsMediaStreamServerConnectedSocket(
-            const std::weak_ptr<ctsSocket>& _weak_socket, 
-            SOCKET _sending_socket, 
-            const ctl::ctSockaddr& _remote_addr, 
+            const std::weak_ptr<ctsSocket>& _weak_socket,
+            SOCKET _sending_socket,
+            const ctl::ctSockaddr& _remote_addr,
             ctsMediaStreamConnectedSocketIoFunctor _io_functor);
 
         ~ctsMediaStreamServerConnectedSocket() NOEXCEPT;

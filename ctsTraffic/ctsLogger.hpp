@@ -28,7 +28,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsPrintStatus.hpp"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Base class for all ctsTraffic Loggers
@@ -43,7 +44,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    class ctsLogger {
+    class ctsLogger
+    {
     public:
         explicit ctsLogger(ctsConfig::StatusFormatting _format) NOEXCEPT :
             format(_format)
@@ -104,7 +106,8 @@ namespace ctsTraffic {
         virtual void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT = 0;
     };
 
-    class ctsTextLogger : public ctsLogger {
+    class ctsTextLogger : public ctsLogger
+    {
     public:
         ctsTextLogger(_In_ LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
             ctsLogger(_format)
@@ -112,7 +115,7 @@ namespace ctsTraffic {
             if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsTextLogger", false);
             }
-            ctlScopeGuard(deleteCSOnError, { ::DeleteCriticalSection(&file_cs); });
+            ctlScopeGuard(deleteCSOnError, {::DeleteCriticalSection(&file_cs);});
 
             file_handle = ::CreateFileW(
                 _file_name,
@@ -130,7 +133,7 @@ namespace ctsTraffic {
                     L"ctsTextLogger",
                     true);
             }
-            ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); });
+            ctlScopeGuard(closeHandleOnError, {::CloseHandle(file_handle);});
 
             // write the UTF16 Byte order mark
             static const WCHAR BOM_UTF16 = 0xFEFF;
@@ -140,7 +143,7 @@ namespace ctsTraffic {
                 &BOM_UTF16,
                 static_cast<DWORD>(sizeof WCHAR),
                 &BytesWritten,
-                nullptr)) 
+                nullptr))
             {
                 auto gle = ::GetLastError();
                 throw ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false);
@@ -179,7 +182,7 @@ namespace ctsTraffic {
                 _message,
                 static_cast<DWORD>(::wcslen(_message) * sizeof(WCHAR)),
                 &BytesWritten,
-                nullptr)) 
+                nullptr))
             {
                 auto gle = ::GetLastError();
                 ctsConfig::PrintException(

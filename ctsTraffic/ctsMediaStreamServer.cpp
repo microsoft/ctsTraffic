@@ -35,13 +35,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamProtocol.hpp"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called to 'accept' incoming connections
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Called to 'accept' incoming connections
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         try {
@@ -60,10 +60,10 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called initiate IO on a datagram socket
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Called initiate IO on a datagram socket
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         ctsIOTask next_task;
@@ -79,7 +79,8 @@ namespace ctsTraffic {
                     if (next_task.ioAction != IOTaskAction::None) {
                         ctsMediaStreamServerImpl::schedule_io(_weak_socket, next_task);
                     }
-                } while (next_task.ioAction != IOTaskAction::None);
+                }
+                while (next_task.ioAction != IOTaskAction::None);
             }
         }
         catch (const std::exception& e) {
@@ -100,9 +101,9 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called to remove that socket from the tracked vector of connected sockets
-    ///
+    //
+    // Called to remove that socket from the tracked vector of connected sockets
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
@@ -119,30 +120,31 @@ namespace ctsTraffic {
     }
 
 
-    namespace ctsMediaStreamServerImpl {
+    namespace ctsMediaStreamServerImpl
+    {
         std::vector<std::unique_ptr<ctsMediaStreamServerListeningSocket>> listening_sockets;
-        
+
         // function for doing the actual IO for a UDP media stream datagram connection
         wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr);
 
         CRITICAL_SECTION connected_object_guard;
         _Guarded_by_(connected_object_guard)
-            std::vector<std::shared_ptr<ctsMediaStreamServerConnectedSocket>> connected_sockets;
+        std::vector<std::shared_ptr<ctsMediaStreamServerConnectedSocket>> connected_sockets;
 
         CRITICAL_SECTION awaiting_object_guard;
         // weak_ptr<> to ctsSocket objects ready to accept a connection
         _Guarded_by_(awaiting_object_guard)
-            std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
+        std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
 
         // endpoints that have been received from clients not yet matched to ctsSockets
         _Guarded_by_(awaiting_object_guard)
-            std::vector<std::pair<SOCKET, ctl::ctSockaddr>> awaiting_endpoints;
+        std::vector<std::pair<SOCKET, ctl::ctSockaddr>> awaiting_endpoints;
 
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Singleton values used as the actual implementation for every 'connection'
-        ///
+        //
+        // Singleton values used as the actual implementation for every 'connection'
+        //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         static INIT_ONCE InitImpl = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID *)
@@ -153,17 +155,18 @@ namespace ctsTraffic {
                 }
                 ctlScopeGuard(
                     deleteConnectedObjectguardOnError,
-                    {::DeleteCriticalSection(&ctsMediaStreamServerImpl::connected_object_guard);});
+                    {::DeleteCriticalSection(&ctsMediaStreamServerImpl::connected_object_guard); });
 
                 if (!::InitializeCriticalSectionEx(&ctsMediaStreamServerImpl::awaiting_object_guard, 4000, 0)) {
                     throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
                 }
                 ctlScopeGuard(
                     deleteAwaitingObjectguardOnError,
-                    {::DeleteCriticalSection(&ctsMediaStreamServerImpl::awaiting_object_guard);});
+                    {::DeleteCriticalSection(&ctsMediaStreamServerImpl::awaiting_object_guard); });
 
                 // 'listen' to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
+
                     ctl::ctScopedSocket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
 
                     auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
@@ -214,9 +217,9 @@ namespace ctsTraffic {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Schedule the first IO on the specified ctsSocket
-        /// 
+        //
+        // Schedule the first IO on the specified ctsSocket
+        // 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void ctsMediaStreamServerImpl::schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
         {
@@ -235,9 +238,8 @@ namespace ctsTraffic {
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
                     [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
-                        return (shared_socket->target_address() == _connected_socket->get_address());
-                    }
-                );
+                    return (shared_socket->target_address() == _connected_socket->get_address());
+                });
 
                 if (found_socket == std::end(ctsMediaStreamServerImpl::connected_sockets)) {
                     PrintDebugInfo(
@@ -255,11 +257,11 @@ namespace ctsTraffic {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Process a new ctsSocket from the ctsSocketBroker
-        /// - accept_socket takes the ctsSocket to create a new entry
-        ///   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
-        /// 
+        //
+        // Process a new ctsSocket from the ctsSocketBroker
+        // - accept_socket takes the ctsSocket to create a new entry
+        //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
+        // 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void ctsMediaStreamServerImpl::accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
         {
@@ -280,10 +282,10 @@ namespace ctsTraffic {
                         ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
                         ctsMediaStreamServerImpl::connected_sockets.emplace_back(
                             std::make_shared<ctsMediaStreamServerConnectedSocket>(
-                            _weak_socket, 
-                            waiting_endpoint->first, 
-                            waiting_endpoint->second,
-                            ctsMediaStreamServerImpl::ConnectedSocketIo));
+                                _weak_socket,
+                                waiting_endpoint->first,
+                                waiting_endpoint->second,
+                                ctsMediaStreamServerImpl::ConnectedSocketIo));
                     }
 
                     // now complete the ctsSocket 'Create' request
@@ -312,10 +314,10 @@ namespace ctsTraffic {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Process the removal of a connected socket once it is completed
-        /// - remove_socket takes the remote address to find the socket
-        /// 
+        //
+        // Process the removal of a connected socket once it is completed
+        // - remove_socket takes the remote address to find the socket
+        // 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void ctsMediaStreamServerImpl::remove_socket(const ctl::ctSockaddr& _target_addr)
         {
@@ -334,11 +336,11 @@ namespace ctsTraffic {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Processes the incoming START request from the client
-        /// - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
-        /// - else we'll queue it to awaiting_endpoints
-        ///
+        //
+        // Processes the incoming START request from the client
+        // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
+        // - else we'll queue it to awaiting_endpoints
+        //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void ctsMediaStreamServerImpl::start(const ctl::ctScopedSocket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
         {
@@ -379,10 +381,10 @@ namespace ctsTraffic {
                         ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
                         ctsMediaStreamServerImpl::connected_sockets.emplace_back(
                             std::make_shared<ctsMediaStreamServerConnectedSocket>(
-                            weak_instance,
-                            _socket.get(),
-                            _target_addr,
-                            ctsMediaStreamServerImpl::ConnectedSocketIo));
+                                weak_instance,
+                                _socket.get(),
+                                _target_addr,
+                                ctsMediaStreamServerImpl::ConnectedSocketIo));
                     }
 
                     // verify is successfully added to connected_sockets before popping off accepting_sockets
@@ -405,7 +407,6 @@ namespace ctsTraffic {
                 ctsMediaStreamServerImpl::awaiting_endpoints.emplace_back(_socket.get(), _target_addr);
             }
         }
-
 
         wsIOResult ctsMediaStreamServerImpl::ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr)
         {
@@ -435,7 +436,6 @@ namespace ctsTraffic {
                     remote_addr.length(),
                     nullptr,
                     nullptr);
-
                 if (SOCKET_ERROR == send_result) {
                     auto error = ::WSAGetLastError();
                     try {
@@ -477,7 +477,6 @@ namespace ctsTraffic {
                         remote_addr.length(),
                         nullptr,
                         nullptr);
-
                     if (SOCKET_ERROR == send_result) {
                         auto error = ::WSAGetLastError();
                         try {
@@ -507,7 +506,7 @@ namespace ctsTraffic {
                         }
                         return wsIOResult(error);
                     }
-                    
+
                     // successfully completed synchronously
                     return_results.bytes_transferred += bytes_sent;
                 }

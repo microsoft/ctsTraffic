@@ -69,7 +69,8 @@ namespace ctl
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctComInitialize {
+    class ctComInitialize
+    {
     public:
         ///////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -81,15 +82,15 @@ namespace ctl
         {
             HRESULT hr = ::CoInitializeEx(nullptr, _threading_model);
             switch (hr) {
-            case S_OK:
-            case S_FALSE:
-                uninit_required = true;
-                break;
-            case RPC_E_CHANGED_MODE:
-                uninit_required = false;
-                break;
-            default:
-                throw ctException(hr, L"CoInitializeEx", L"ctComInitialize::ctComInitialize", false);
+                case S_OK:
+                case S_FALSE:
+                    uninit_required = true;
+                    break;
+                case RPC_E_CHANGED_MODE:
+                    uninit_required = false;
+                    break;
+                default:
+                    throw ctException(hr, L"CoInitializeEx", L"ctComInitialize::ctComInitialize", false);
             }
         }
         ~ctComInitialize() NOEXCEPT
@@ -128,7 +129,8 @@ namespace ctl
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     template <typename T>
-    class ctComPtr {
+    class ctComPtr
+    {
     public:
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -371,7 +373,8 @@ namespace ctl
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctComBstr {
+    class ctComBstr
+    {
     public:
         ////////////////////////////////////////////////////////////////////////////////
         ///
@@ -569,7 +572,8 @@ namespace ctl
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctComVariant {
+    class ctComVariant
+    {
     public:
         ///////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -583,101 +587,120 @@ namespace ctl
         struct VarTypeConverter {};
 
         template <>
-        struct VarTypeConverter<VT_I1> {
+        struct VarTypeConverter<VT_I1>
+        {
             typedef signed char assign_type;
             typedef signed char return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI1> {
+        struct VarTypeConverter<VT_UI1>
+        {
             typedef unsigned char assign_type;
             typedef unsigned char return_type;
         };
         template <>
-        struct VarTypeConverter<VT_I2> {
+        struct VarTypeConverter<VT_I2>
+        {
             typedef signed short assign_type;
             typedef signed short return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI2> {
+        struct VarTypeConverter<VT_UI2>
+        {
             typedef unsigned short assign_type;
             typedef unsigned short return_type;
         };
         template <>
-        struct VarTypeConverter<VT_I4> {
+        struct VarTypeConverter<VT_I4>
+        {
             typedef signed long assign_type;
             typedef signed long return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI4> {
+        struct VarTypeConverter<VT_UI4>
+        {
             typedef unsigned long assign_type;
             typedef unsigned long return_type;
         };
         template <>
-        struct VarTypeConverter<VT_INT> {
+        struct VarTypeConverter<VT_INT>
+        {
             typedef signed int assign_type;
             typedef signed int return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UINT> {
+        struct VarTypeConverter<VT_UINT>
+        {
             typedef unsigned int assign_type;
             typedef unsigned int return_type;
         };
         template <>
-        struct VarTypeConverter<VT_I8> {
+        struct VarTypeConverter<VT_I8>
+        {
             typedef signed long long assign_type;
             typedef signed long long return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI8> {
+        struct VarTypeConverter<VT_UI8>
+        {
             typedef unsigned long long assign_type;
             typedef unsigned long long return_type;
         };
         template <>
-        struct VarTypeConverter<VT_R4> {
+        struct VarTypeConverter<VT_R4>
+        {
             typedef float assign_type;
             typedef float return_type;
         };
         template <>
-        struct VarTypeConverter<VT_R8> {
+        struct VarTypeConverter<VT_R8>
+        {
             typedef double assign_type;
             typedef double return_type;
         };
         template <>
-        struct VarTypeConverter<VT_BOOL> {
+        struct VarTypeConverter<VT_BOOL>
+        {
             typedef bool assign_type;
             typedef bool return_type;
         };
         template <>
-        struct VarTypeConverter<VT_BSTR> {
-            // Defaulting the VT_BSTR type to LPCWSTR instead of type BSTR
-            //   so the user can pass either an LPCWSTR or a BSTR through
-            // - a BSTR can pass to a function taking a LPCWSTR
-            // - a LPCWSTR can *not* pass to a function taking a BSTR
+        struct VarTypeConverter<VT_BSTR>
+        {
+// Defaulting the VT_BSTR type to LPCWSTR instead of type BSTR
+//   so the user can pass either an LPCWSTR or a BSTR through
+// - a BSTR can pass to a function taking a LPCWSTR
+// - a LPCWSTR can *not* pass to a function taking a BSTR
             typedef LPCWSTR   assign_type;
             typedef ctComBstr return_type;
         };
         template <>
-        struct VarTypeConverter<VT_DATE> {
+        struct VarTypeConverter<VT_DATE>
+        {
             typedef SYSTEMTIME assign_type;
             typedef SYSTEMTIME return_type;
         };
         template <>
-        struct VarTypeConverter<VT_BSTR | VT_ARRAY> {
+        struct VarTypeConverter<VT_BSTR | VT_ARRAY>
+        {
             typedef const std::vector<std::wstring>& assign_type;
             typedef std::vector<std::wstring>        return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI4 | VT_ARRAY> {
+        struct VarTypeConverter<VT_UI4 | VT_ARRAY>
+        {
             typedef const std::vector<unsigned long>& assign_type;
             typedef std::vector<unsigned long>        return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI2 | VT_ARRAY> {
+        struct VarTypeConverter<VT_UI2 | VT_ARRAY>
+        {
             typedef const std::vector<unsigned short>& assign_type;
             typedef std::vector<unsigned short>        return_type;
         };
         template <>
-        struct VarTypeConverter<VT_UI1 | VT_ARRAY> {
+        struct VarTypeConverter<VT_UI1 | VT_ARRAY>
+        {
             typedef const std::vector<unsigned char>& assign_type;
             typedef std::vector<unsigned char>        return_type;
         };
@@ -878,66 +901,66 @@ namespace ctl
             //
             unsigned lhs, rhs;
             switch (variant.vt) {
-            case VT_BOOL:
-                lhs = static_cast<unsigned>(variant.boolVal);
-                break;
-            case VT_I1:
-                lhs = static_cast<unsigned>(variant.cVal);
-                break;
-            case VT_UI1:
-                lhs = static_cast<unsigned>(variant.bVal);
-                break;
-            case VT_I2:
-                lhs = static_cast<unsigned>(variant.iVal);
-                break;
-            case VT_UI2:
-                lhs = static_cast<unsigned>(variant.uiVal);
-                break;
-            case VT_I4:
-                lhs = static_cast<unsigned>(variant.lVal);
-                break;
-            case VT_UI4:
-                lhs = static_cast<unsigned>(variant.ulVal);
-                break;
-            case VT_INT:
-                lhs = static_cast<unsigned>(variant.intVal);
-                break;
-            case VT_UINT:
-                lhs = static_cast<unsigned>(variant.uintVal);
-                break;
-            default:
-                return false;
+                case VT_BOOL:
+                    lhs = static_cast<unsigned>(variant.boolVal);
+                    break;
+                case VT_I1:
+                    lhs = static_cast<unsigned>(variant.cVal);
+                    break;
+                case VT_UI1:
+                    lhs = static_cast<unsigned>(variant.bVal);
+                    break;
+                case VT_I2:
+                    lhs = static_cast<unsigned>(variant.iVal);
+                    break;
+                case VT_UI2:
+                    lhs = static_cast<unsigned>(variant.uiVal);
+                    break;
+                case VT_I4:
+                    lhs = static_cast<unsigned>(variant.lVal);
+                    break;
+                case VT_UI4:
+                    lhs = static_cast<unsigned>(variant.ulVal);
+                    break;
+                case VT_INT:
+                    lhs = static_cast<unsigned>(variant.intVal);
+                    break;
+                case VT_UINT:
+                    lhs = static_cast<unsigned>(variant.uintVal);
+                    break;
+                default:
+                    return false;
             }
             switch (_in.variant.vt) {
-            case VT_BOOL:
-                rhs = static_cast<unsigned>(_in.variant.boolVal);
-                break;
-            case VT_I1:
-                rhs = static_cast<unsigned>(_in.variant.cVal);
-                break;
-            case VT_UI1:
-                rhs = static_cast<unsigned>(_in.variant.bVal);
-                break;
-            case VT_I2:
-                rhs = static_cast<unsigned>(_in.variant.iVal);
-                break;
-            case VT_UI2:
-                rhs = static_cast<unsigned>(_in.variant.uiVal);
-                break;
-            case VT_I4:
-                rhs = static_cast<unsigned>(_in.variant.lVal);
-                break;
-            case VT_UI4:
-                rhs = static_cast<unsigned>(_in.variant.ulVal);
-                break;
-            case VT_INT:
-                rhs = static_cast<unsigned>(_in.variant.intVal);
-                break;
-            case VT_UINT:
-                rhs = static_cast<unsigned>(_in.variant.uintVal);
-                break;
-            default:
-                return false;
+                case VT_BOOL:
+                    rhs = static_cast<unsigned>(_in.variant.boolVal);
+                    break;
+                case VT_I1:
+                    rhs = static_cast<unsigned>(_in.variant.cVal);
+                    break;
+                case VT_UI1:
+                    rhs = static_cast<unsigned>(_in.variant.bVal);
+                    break;
+                case VT_I2:
+                    rhs = static_cast<unsigned>(_in.variant.iVal);
+                    break;
+                case VT_UI2:
+                    rhs = static_cast<unsigned>(_in.variant.uiVal);
+                    break;
+                case VT_I4:
+                    rhs = static_cast<unsigned>(_in.variant.lVal);
+                    break;
+                case VT_UI4:
+                    rhs = static_cast<unsigned>(_in.variant.ulVal);
+                    break;
+                case VT_INT:
+                    rhs = static_cast<unsigned>(_in.variant.intVal);
+                    break;
+                case VT_UINT:
+                    rhs = static_cast<unsigned>(_in.variant.uintVal);
+                    break;
+                default:
+                    return false;
             }
 
             if (variant.vt == VT_BOOL) {
@@ -968,128 +991,128 @@ namespace ctl
             unsigned int_radix = (_int_in_hex) ? 16 : 10;
 
             switch (variant.vt) {
-            case VT_EMPTY:
-                bstr.set(L"<empty>");
-                break;
+                case VT_EMPTY:
+                    bstr.set(L"<empty>");
+                    break;
 
-            case VT_NULL:
-                bstr.set(L"<null>");
-                break;
+                case VT_NULL:
+                    bstr.set(L"<null>");
+                    break;
 
-            case VT_BOOL:
-                bstr.set((variant.boolVal) ? L"true" : L"false");
-                break;;
+                case VT_BOOL:
+                    bstr.set((variant.boolVal) ? L"true" : L"false");
+                    break;;
 
-            case VT_I1:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.cVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_I1:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.cVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_UI1:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.bVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_UI1:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.bVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_I2:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.iVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_I2:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.iVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_UI2:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.uiVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_UI2:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.uiVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_I4:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.lVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_I4:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.lVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_UI4:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.ulVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_UI4:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.ulVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_INT:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.intVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_INT:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.intVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
-            case VT_UINT:
-                bstr.resize(IntegerLength);
-                _itow_s(variant.uintVal, bstr.get(), IntegerLength, int_radix);
-                break;
+                case VT_UINT:
+                    bstr.resize(IntegerLength);
+                    _itow_s(variant.uintVal, bstr.get(), IntegerLength, int_radix);
+                    break;
 
 
-            case VT_R4:
-            {
-                std::string float_str(_CVTBUFSIZE, 0x00);
-                int err = _gcvt_s(&float_str[0], float_str.size(), variant.fltVal, 4); // up to 4 significant digits
-                if (err != 0) {
-                    throw ctException(err, L"_gcvt_s", L"ctComVariant::write", false);
-                }
-                float_str.resize(strlen(&float_str[0]));
+                case VT_R4:
+                {
+                    std::string float_str(_CVTBUFSIZE, 0x00);
+                    int err = _gcvt_s(&float_str[0], float_str.size(), variant.fltVal, 4); // up to 4 significant digits
+                    if (err != 0) {
+                        throw ctException(err, L"_gcvt_s", L"ctComVariant::write", false);
+                    }
+                    float_str.resize(strlen(&float_str[0]));
 
-                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
-                if (len == 0) {
-                    throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
-                }
+                    int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
+                    if (len == 0) {
+                        throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                    }
 
-                bstr.resize(len);
-                len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, bstr.get(), len);
-                if (len == 0) {
-                    throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
-                }
-                break;
-            }
-
-            case VT_R8:
-            {
-                std::string float_str(_CVTBUFSIZE, 0x00);
-                int err = _gcvt_s(&float_str[0], float_str.size(), variant.dblVal, 4); // up to 4 significant digits
-                if (err != 0) {
-                    throw ctException(err, L"_gcvt_s", L"ctComVariant::write", false);
-                }
-                float_str.resize(strlen(&float_str[0]));
-
-                int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
-                if (len == 0) {
-                    throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                    bstr.resize(len);
+                    len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, bstr.get(), len);
+                    if (len == 0) {
+                        throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                    }
+                    break;
                 }
 
-                bstr.resize(len);
-                len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, bstr.get(), len);
-                if (len == 0) {
-                    throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                case VT_R8:
+                {
+                    std::string float_str(_CVTBUFSIZE, 0x00);
+                    int err = _gcvt_s(&float_str[0], float_str.size(), variant.dblVal, 4); // up to 4 significant digits
+                    if (err != 0) {
+                        throw ctException(err, L"_gcvt_s", L"ctComVariant::write", false);
+                    }
+                    float_str.resize(strlen(&float_str[0]));
+
+                    int len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, nullptr, 0);
+                    if (len == 0) {
+                        throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                    }
+
+                    bstr.resize(len);
+                    len = ::MultiByteToWideChar(CP_UTF8, 0, float_str.c_str(), -1, bstr.get(), len);
+                    if (len == 0) {
+                        throw ctException(::GetLastError(), L"MultiByteToWideChar", L"ctComVariant::write", false);
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case VT_BSTR:
-                bstr.set(variant.bstrVal);
-                break;
+                case VT_BSTR:
+                    bstr.set(variant.bstrVal);
+                    break;
 
-            case VT_DATE:
-            {
-                SYSTEMTIME st;
-                retrieve(&st);
-                // write out: yyy-mm-dd HH:MM:SS:mmm
-                // - based off of how CIM DATETIME is written per http://msdn.microsoft.com/en-us/library/aa387237(VS.85).aspx
-                wchar_t sz_time[25];
-                if (-1 == ::_snwprintf_s(
-                    sz_time, 25, 24,
-                    L"%04u-%02u-%02u %02u:%02u:%02u.%03u",
-                    st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
+                case VT_DATE:
+                {
+                    SYSTEMTIME st;
+                    retrieve(&st);
+                    // write out: yyy-mm-dd HH:MM:SS:mmm
+                    // - based off of how CIM DATETIME is written per http://msdn.microsoft.com/en-us/library/aa387237(VS.85).aspx
+                    wchar_t sz_time[25];
+                    if (-1 == ::_snwprintf_s(
+                        sz_time, 25, 24,
+                        L"%04u-%02u-%02u %02u:%02u:%02u.%03u",
+                        st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
                     )) {
-                    throw ctException(errno, L"_snwprintf_s VT_DATE conversion", L"ctComVariant::write", false);
+                        throw ctException(errno, L"_snwprintf_s VT_DATE conversion", L"ctComVariant::write", false);
+                    }
+                    bstr.set(sz_time);
+                    break;
                 }
-                bstr.set(sz_time);
-                break;
-            }
 
 
-            default:
-                throw ctException(variant.vt, L"Unknown VARAINT type", L"ctComVariant::write", false);
+                default:
+                    throw ctException(variant.vt, L"Unknown VARAINT type", L"ctComVariant::write", false);
             }
 
             return bstr;
@@ -1198,17 +1221,17 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = static_cast<signed char>(variant.boolVal);
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for char", L"ctComVariant::retrieve(signed char)", false);
+                case VT_BOOL:
+                    *_data = static_cast<signed char>(variant.boolVal);
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for char", L"ctComVariant::retrieve(signed char)", false);
             }
             return *_data;
         }
@@ -1216,17 +1239,17 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = static_cast<unsigned char>(variant.boolVal);
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned char", L"ctComVariant::retrieve(unsigned char)", false);
+                case VT_BOOL:
+                    *_data = static_cast<unsigned char>(variant.boolVal);
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned char", L"ctComVariant::retrieve(unsigned char)", false);
             }
             return *_data;
         }
@@ -1234,23 +1257,23 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for short", L"ctComVariant::retrieve(signed short)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for short", L"ctComVariant::retrieve(signed short)", false);
             }
             return *_data;
         }
@@ -1258,23 +1281,23 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned short", L"ctComVariant::retrieve(unsigned short)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned short", L"ctComVariant::retrieve(unsigned short)", false);
             }
             return *_data;
         }
@@ -1282,35 +1305,35 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for long", L"ctComVariant::retrieve(signed long)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for long", L"ctComVariant::retrieve(signed long)", false);
             }
             return *_data;
         }
@@ -1318,35 +1341,35 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned long", L"ctComVariant::retrieve(unsigned long)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned long", L"ctComVariant::retrieve(unsigned long)", false);
             }
             return *_data;
         }
@@ -1354,35 +1377,35 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for int", L"ctComVariant::retrieve(signed int)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for int", L"ctComVariant::retrieve(signed int)", false);
             }
             return *_data;
         }
@@ -1390,35 +1413,35 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned int", L"ctComVariant::retrieve(unsigned int)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned int", L"ctComVariant::retrieve(unsigned int)", false);
             }
             return *_data;
         }
@@ -1426,41 +1449,41 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            case VT_I8:
-                *_data = variant.llVal;
-                break;
-            case VT_UI8:
-                *_data = variant.ullVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for long", L"ctComVariant::retrieve(signed long)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                case VT_I8:
+                    *_data = variant.llVal;
+                    break;
+                case VT_UI8:
+                    *_data = variant.ullVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for long", L"ctComVariant::retrieve(signed long)", false);
             }
             return *_data;
         }
@@ -1468,41 +1491,41 @@ namespace ctl
         {
             // allow any convertable integer types as long as not losing data
             switch (variant.vt) {
-            case VT_BOOL:
-                *_data = variant.boolVal;
-                break;
-            case VT_I1:
-                *_data = variant.cVal;
-                break;
-            case VT_UI1:
-                *_data = variant.bVal; // BYTE == unsigned char
-                break;
-            case VT_I2:
-                *_data = variant.iVal;
-                break;
-            case VT_UI2:
-                *_data = variant.uiVal;
-                break;
-            case VT_I4:
-                *_data = variant.lVal;
-                break;
-            case VT_UI4:
-                *_data = variant.ulVal;
-                break;
-            case VT_INT:
-                *_data = variant.intVal;
-                break;
-            case VT_UINT:
-                *_data = variant.uintVal;
-                break;
-            case VT_I8:
-                *_data = variant.llVal;
-                break;
-            case VT_UI8:
-                *_data = variant.ullVal;
-                break;
-            default:
-                throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned long", L"ctComVariant::retrieve(unsigned long)", false);
+                case VT_BOOL:
+                    *_data = variant.boolVal;
+                    break;
+                case VT_I1:
+                    *_data = variant.cVal;
+                    break;
+                case VT_UI1:
+                    *_data = variant.bVal; // BYTE == unsigned char
+                    break;
+                case VT_I2:
+                    *_data = variant.iVal;
+                    break;
+                case VT_UI2:
+                    *_data = variant.uiVal;
+                    break;
+                case VT_I4:
+                    *_data = variant.lVal;
+                    break;
+                case VT_UI4:
+                    *_data = variant.ulVal;
+                    break;
+                case VT_INT:
+                    *_data = variant.intVal;
+                    break;
+                case VT_UINT:
+                    *_data = variant.uintVal;
+                    break;
+                case VT_I8:
+                    *_data = variant.llVal;
+                    break;
+                case VT_UI8:
+                    *_data = variant.ullVal;
+                    break;
+                default:
+                    throw ctException(variant.vt, L"Mismatching VARTYPE for unsigned long", L"ctComVariant::retrieve(unsigned long)", false);
             }
             return *_data;
         }
@@ -1606,7 +1629,7 @@ namespace ctl
             }
 
             // scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray);});
 
             // don't modify the out param should an exception be thrown - don't leave the user with bogus data
             std::vector<std::wstring> tempData;
@@ -1636,7 +1659,7 @@ namespace ctl
             }
 
             // scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray);});
 
             // don't modify the out param should an exception be thrown - don't leave the user with bogus data
             std::vector<unsigned long> tempData;
@@ -1682,7 +1705,7 @@ namespace ctl
             }
 
             // scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+            ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray);});
 
             // don't modify the out param should an exception be thrown - don't leave the user with bogus data
             std::vector<ctComPtr<T>> tempData;
@@ -1801,7 +1824,7 @@ namespace ctl
                 throw std::bad_alloc();
             }
             // store the SAFEARRY in an exception safe container
-            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array);});
 
             for (size_t loop = 0; loop < _data.size(); ++loop) {
                 //
@@ -1830,7 +1853,7 @@ namespace ctl
                 throw std::bad_alloc();
             }
             // store the SAFEARRY in an exception safe container
-            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array);});
 
             for (size_t loop = 0; loop < _data.size(); ++loop) {
                 //
@@ -1858,7 +1881,7 @@ namespace ctl
                 throw std::bad_alloc();
             }
             // store the SAFEARRY in an exception safe container
-            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array);});
 
             for (size_t loop = 0; loop < _data.size(); ++loop) {
                 //
@@ -1886,7 +1909,7 @@ namespace ctl
                 throw std::bad_alloc();
             }
             // store the SAFEARRY in an exception safe container
-            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array);});
 
             for (size_t loop = 0; loop < _data.size(); ++loop) {
                 //
@@ -1922,7 +1945,7 @@ namespace ctl
                 throw std::bad_alloc();
             }
             // store the SAFEARRY in an exception safe container
-            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+            ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array);});
 
             // to be exception safe, AddRef every object before trying to add them to the safe-array
             // - on exception, the ScopeGuard will Release these extra references

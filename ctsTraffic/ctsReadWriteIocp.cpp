@@ -27,15 +27,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSocketGuard.hpp"
 
-
-namespace ctsTraffic {
-
-    /// forward delcaration
+namespace ctsTraffic
+{
+    // forward delcaration
     void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
-    ///
-    /// IO Threadpool completion callback 
-    ///
+    //
+    // IO Threadpool completion callback 
+    //
     static void ctsReadWriteIocpIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
@@ -70,26 +69,26 @@ namespace ctsTraffic {
         DWORD readwrite_status = NO_ERROR;
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
-        case ctsIOStatus::ContinueIo:
-            // more IO is requested from the protocol
-            // - invoke the new IO call while holding a refcount to the prior IO
-            ctsReadWriteIocp(_weak_socket);
-            break;
+            case ctsIOStatus::ContinueIo:
+                // more IO is requested from the protocol
+                // - invoke the new IO call while holding a refcount to the prior IO
+                ctsReadWriteIocp(_weak_socket);
+                break;
 
-        case ctsIOStatus::CompletedIo:
-            // protocol didn't fail this IO: no more IO is requested from the protocol
-            readwrite_status = NO_ERROR;
-            break;
+            case ctsIOStatus::CompletedIo:
+                // protocol didn't fail this IO: no more IO is requested from the protocol
+                readwrite_status = NO_ERROR;
+                break;
 
-        case ctsIOStatus::FailedIo:
-            // write out the error
-            ctsConfig::PrintErrorIfFailed(Function, gle);
-            // protocol sees this as a failure - capture the error the protocol recorded
-            readwrite_status = shared_pattern->get_last_error();
-            break;
+            case ctsIOStatus::FailedIo:
+                // write out the error
+                ctsConfig::PrintErrorIfFailed(Function, gle);
+                // protocol sees this as a failure - capture the error the protocol recorded
+                readwrite_status = shared_pattern->get_last_error();
+                break;
 
-        default:
-            ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+            default:
+                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO
@@ -100,9 +99,9 @@ namespace ctsTraffic {
         }
     }
 
-    ///
-    /// The registered function with ctsConfig
-    ///
+    //
+    // The registered function with ctsConfig
+    //
     void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // must get a reference to the socket and the IO pattern
@@ -155,8 +154,7 @@ namespace ctsTraffic {
                         // these are the only calls which can throw in this function
                         io_thread_pool = shared_socket->thread_pool();
                         pov = io_thread_pool->new_request(
-                            [_weak_socket, next_io](OVERLAPPED* _ov)
-                        { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
+                            [_weak_socket, next_io] (OVERLAPPED* _ov) { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
                     catch (const ctl::ctException& e) {
                         ctsConfig::PrintException(e);
@@ -205,28 +203,28 @@ namespace ctsTraffic {
                         ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
                         io_done = (protocol_status != ctsIOStatus::ContinueIo);
                         switch (protocol_status) {
-                        case ctsIOStatus::ContinueIo:
-                            // the protocol wants to ignore the error and send more data
-                            io_error = NO_ERROR;
-                            io_done = false;
-                            break;
+                            case ctsIOStatus::ContinueIo:
+                                // the protocol wants to ignore the error and send more data
+                                io_error = NO_ERROR;
+                                io_done = false;
+                                break;
 
-                        case ctsIOStatus::CompletedIo:
-                            // the protocol wants to ignore the error but is done with IO
-                            io_error = NO_ERROR;
-                            io_done = true;
-                            break;
+                            case ctsIOStatus::CompletedIo:
+                                // the protocol wants to ignore the error but is done with IO
+                                io_error = NO_ERROR;
+                                io_done = true;
+                                break;
 
-                        case ctsIOStatus::FailedIo:
-                            // print the error on failure
-                            ctsConfig::PrintErrorIfFailed(Function, io_error);
-                            // the protocol acknoledged the failure - socket is done with IO
-                            io_error = shared_pattern->get_last_error();
-                            io_done = true;
-                            break;
+                            case ctsIOStatus::FailedIo:
+                                // print the error on failure
+                                ctsConfig::PrintErrorIfFailed(Function, io_error);
+                                // the protocol acknoledged the failure - socket is done with IO
+                                io_error = shared_pattern->get_last_error();
+                                io_done = true;
+                                break;
 
-                        default:
-                            ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                            default:
+                                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                         }
                     }
                 }

@@ -19,7 +19,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // Callers should call ctsGuardSocket() in order to gain access to the SOCKET.
     // Callers then have exclusive access to the SOCKET through the returned ctsSocketGuard
@@ -58,8 +59,8 @@ namespace ctsTraffic {
         }
 
         // movable
-        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT
-        : t(std::move(_rvalue.t)), movedFrom(false)
+        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT :
+            t(std::move(_rvalue.t))
         {
             _rvalue.movedFrom = true;
         }
@@ -80,12 +81,12 @@ namespace ctsTraffic {
         friend ctsSocketGuard<T> ctsGuardSocket(const T&);
         const T& t;
         // tracking moved from by hand, as we cannot modify the const ref
-        bool movedFrom;
+        bool movedFrom = false;
 
         // private c'tor guarded by the factory function
         // _Acquires_lock_
-        explicit ctsSocketGuard(const T& _t) NOEXCEPT 
-        : t(_t), movedFrom(false)
+        explicit ctsSocketGuard(const T& _t) NOEXCEPT :
+            t(_t)
         {
             t->lock_socket();
         }

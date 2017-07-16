@@ -21,8 +21,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// The ctsIOTask struct instructs the caller on what action to perform
@@ -40,12 +40,12 @@ namespace ctsTraffic {
         FatalAbort
     };
 
-    struct ctsIOTask {
+    struct ctsIOTask
+    {
         long long time_offset_milliseconds = 0LL;
         RIO_BUFFERID rio_bufferid = RIO_INVALID_BUFFERID;
 
-        _Field_size_full_(buffer_length)
-        char* buffer = nullptr;
+        _Field_size_full_(buffer_length) char* buffer = nullptr;
         unsigned long buffer_length = 0UL;
         unsigned long buffer_offset = 0UL;
         unsigned long expected_pattern_offset = 0UL;

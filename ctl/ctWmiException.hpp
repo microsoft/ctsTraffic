@@ -33,45 +33,46 @@ namespace ctl
 {
 
     ////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctWmiErrorInfo
-    ///
-    /// class which encapsulates information about CIM_Error's that are returned
-    ///   through *_async methods.
-    /// 
-    /// Each __ExtendedStatus and CIM_Error property is exposed though a method
-    /// All properties return bool - if that property was returned or not.
-    ///
-    /// class __ExtendedStatus 
-    /// {
-    ///   string ProviderName;
-    ///   string Operation;
-    ///   string ParameterInfo;
-    ///   string Description;
-    ///   uint StatusCode; 
-    /// };
-    ///
-    /// class CIM_Error
-    /// {
-    ///   uint16 ErrorType; xxx
-    ///   string OtherErrorType;
-    ///   string OwningEntity;
-    ///   string MessageID;
-    ///   string Message;
-    ///   string MessageArguments[];
-    ///   uint16 PerceivedSeverity;
-    ///   uint16 ProbableCause;
-    ///   string ProbableCauseDescription;
-    ///   string RecommendedActions[];
-    ///   string ErrorSource;
-    ///   uint16 ErrorSourceFormat = 0;
-    ///   string OtherErrorSourceFormat;
-    ///   uint32 CIMStatusCode;
-    ///   string CIMStatusCodeDescription;
-    /// };
-    /// 
+    //
+    // ctWmiErrorInfo
+    //
+    // class which encapsulates information about CIM_Error's that are returned
+    //   through *_async methods.
+    // 
+    // Each __ExtendedStatus and CIM_Error property is exposed though a method
+    // All properties return bool - if that property was returned or not.
+    //
+    // class __ExtendedStatus 
+    // {
+    //   string ProviderName;
+    //   string Operation;
+    //   string ParameterInfo;
+    //   string Description;
+    //   uint StatusCode; 
+    // };
+    //
+    // class CIM_Error
+    // {
+    //   uint16 ErrorType; xxx
+    //   string OtherErrorType;
+    //   string OwningEntity;
+    //   string MessageID;
+    //   string Message;
+    //   string MessageArguments[];
+    //   uint16 PerceivedSeverity;
+    //   uint16 ProbableCause;
+    //   string ProbableCauseDescription;
+    //   string RecommendedActions[];
+    //   string ErrorSource;
+    //   uint16 ErrorSourceFormat = 0;
+    //   string OtherErrorSourceFormat;
+    //   uint32 CIMStatusCode;
+    //   string CIMStatusCodeDescription;
+    // };
+    // 
     ////////////////////////////////////////////////////////////////////////////////
-    class ctWmiErrorInfo {
+    class ctWmiErrorInfo
+    {
     private:
         //
         // Marking mutable as the COM methods are not marked 'const'
@@ -289,11 +290,12 @@ namespace ctl
         _Success_(return) bool get_parameter_value(_In_ LPCWSTR _parameter, _Out_ T* _value) const;
     };
 
-    class ctWmiException : public ctException {
+    class ctWmiException : public ctException
+    {
     public:
-        ///
-        /// constructors
-        ///
+        //
+        // constructors
+        //
         ctWmiException() NOEXCEPT : ctException(), className(nullptr), errorInfo()
         {
         }
@@ -353,9 +355,9 @@ namespace ctl
         {
             get_className(_classObject);
         }
-        ///
-        /// Copy c'tor
-        ///
+        //
+        // Copy c'tor
+        //
         ctWmiException(_In_ const ctWmiException& e) NOEXCEPT :
         ctException(e),
             className(nullptr),
@@ -369,9 +371,9 @@ namespace ctl
             }
         }
 
-        ///
-        /// destructor
-        ///
+        //
+        // destructor
+        //
         virtual ~ctWmiException() NOEXCEPT
         {
             // SysFreeString handles NULL
@@ -420,14 +422,14 @@ namespace ctl
 
     inline std::wstring ctWmiErrorInfo::write_ExtendedStatus() const
     {
-        /// class __ExtendedStatus 
-        /// {
-        ///   string ProviderName;
-        ///   string Operation;
-        ///   string ParameterInfo;
-        ///   string Description;
-        ///   uint StatusCode; 
-        /// };
+        // class __ExtendedStatus 
+        // {
+        //   string ProviderName;
+        //   string Operation;
+        //   string ParameterInfo;
+        //   string Description;
+        //   uint StatusCode; 
+        // };
         std::wstring wsTemp;
         unsigned int intTemp;
         wchar_t intString[32];
@@ -468,24 +470,24 @@ namespace ctl
 
     inline std::wstring ctWmiErrorInfo::write_CIMError() const
     {
-        /// class CIM_Error
-        /// {
-        ///   uint16 ErrorType;
-        ///   string OtherErrorType;
-        ///   string OwningEntity;
-        ///   string MessageID;
-        ///   string Message;
-        ///   string MessageArguments[];
-        ///   uint16 PerceivedSeverity;
-        ///   uint16 ProbableCause;
-        ///   string ProbableCauseDescription;
-        ///   string RecommendedActions[];
-        ///   string ErrorSource;
-        ///   uint16 ErrorSourceFormat = 0;
-        ///   string OtherErrorSourceFormat;
-        ///   uint32 CIMStatusCode;
-        ///   string CIMStatusCodeDescription;
-        /// };
+        // class CIM_Error
+        // {
+        //   uint16 ErrorType;
+        //   string OtherErrorType;
+        //   string OwningEntity;
+        //   string MessageID;
+        //   string Message;
+        //   string MessageArguments[];
+        //   uint16 PerceivedSeverity;
+        //   uint16 ProbableCause;
+        //   string ProbableCauseDescription;
+        //   string RecommendedActions[];
+        //   string ErrorSource;
+        //   uint16 ErrorSourceFormat = 0;
+        //   string OtherErrorSourceFormat;
+        //   uint32 CIMStatusCode;
+        //   string CIMStatusCodeDescription;
+        // };
         std::wstring wsTemp;
         unsigned int intTemp;
         unsigned short shortTemp;

@@ -30,14 +30,6 @@ template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFram
 {
     return std::to_wstring(_value);
 }
-template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<ctsTraffic::MediaStreamAction>(const ctsTraffic::MediaStreamAction& _message)
-{
-    switch (_message) {
-        case ctsTraffic::MediaStreamAction::START:
-            return L"START";
-    }
-    return ctl::ctString::format_string(L"Unknown Message (0x%x)", _message);
-}
 
 namespace ctsUnitTest
 {		
@@ -162,11 +154,8 @@ namespace ctsUnitTest
         {
             Assert::AreEqual(UdpDatagramStartStringLength, static_cast<unsigned long>(::strlen(UdpDatagramStartString)));
 
-            ctsIOTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
+            ctsIOTask test_task(ctsMediaStreamMessage::Construct());
             Assert::AreEqual(UdpDatagramStartStringLength, test_task.buffer_length);
-
-            ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(test_task.buffer, test_task.buffer_length));
-            Assert::AreEqual(MediaStreamAction::START, round_trip.action);
         }
 
     private:

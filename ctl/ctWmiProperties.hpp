@@ -27,16 +27,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctVersionConversion.hpp"
 
 
-namespace ctl {
-
+namespace ctl
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// class ctWmiProperties
-    ///
-    /// Exposes enumerating properties of a WMI Provider through an iterator interface.
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // class ctWmiProperties
+    //
+    // Exposes enumerating properties of a WMI Provider through an iterator interface.
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctWmiProperties
     {
@@ -51,12 +49,12 @@ namespace ctl {
         class iterator;
 
 
-        ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _wbemClass) : 
+        ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _wbemClass) :
             wbemServices(_wbemServices), wbemClass(_wbemClass)
         {
         }
 
-        ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) : 
+        ctWmiProperties(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) :
             wbemServices(_wbemServices), wbemClass()
         {
             HRESULT hr = this->wbemServices->GetObjectW(
@@ -84,20 +82,19 @@ namespace ctl {
             }
         }
 
-
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// begin() and end() to return property iterators
-        ///
-        /// begin() arguments:
-        ///   _wbemServices: a instance of IWbemServices
-        ///   _className: a string of the class name which to enumerate
-        ///   _fNonSystemPropertiesOnly: flag to control if should only enumerate
-        ///       non-system properties
-        ///
-        /// begin() will throw an exception derived from std::exception on error
-        /// end() is no-fail / no-throw
-        ///
+        //
+        // begin() and end() to return property iterators
+        //
+        // begin() arguments:
+        //   _wbemServices: a instance of IWbemServices
+        //   _className: a string of the class name which to enumerate
+        //   _fNonSystemPropertiesOnly: flag to control if should only enumerate
+        //       non-system properties
+        //
+        // begin() will throw an exception derived from std::exception on error
+        // end() is no-fail / no-throw
+        //
         ////////////////////////////////////////////////////////////////////////////////
         iterator begin(_In_ bool _fNonSystemPropertiesOnly = true)
         {
@@ -109,14 +106,12 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// class ctWmiProperties::iterator
-        ///
-        /// A forward iterator class type to enable forward-traversing instances of the queried
-        ///  WMI provider
-        ///
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // class ctWmiProperties::iterator
+        //
+        // A forward iterator class type to enable forward-traversing instances of the queried
+        //  WMI provider
+        //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         class iterator
         {
@@ -130,20 +125,20 @@ namespace ctl {
 
         public:
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// c'tor and d'tor
-            /// - default c'tor is an 'end' iterator
-            /// - traversal requires the callers IWbemServices interface and class name
-            ///
+            //
+            // c'tor and d'tor
+            // - default c'tor is an 'end' iterator
+            // - traversal requires the callers IWbemServices interface and class name
+            //
             ////////////////////////////////////////////////////////////////////////////////
-            iterator() NOEXCEPT : 
+            iterator() NOEXCEPT :
                 wbemClassObj(),
                 propName(),
                 propType(0),
                 dwIndex(END_ITERATOR_INDEX)
             {
             }
-            iterator(_In_ const ctComPtr<IWbemClassObject>& _classObj, _In_ bool _fNonSystemPropertiesOnly) : 
+            iterator(_In_ const ctComPtr<IWbemClassObject>& _classObj, _In_ bool _fNonSystemPropertiesOnly) :
                 dwIndex(0),
                 wbemClassObj(_classObj),
                 propName(),
@@ -162,14 +157,14 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// copy c'tor and copy assignment
-            ///
-            /// Note that both are no-fail/no-throw operations
-            ///
+            //
+            // copy c'tor and copy assignment
+            //
+            // Note that both are no-fail/no-throw operations
+            //
             ////////////////////////////////////////////////////////////////////////////////
-            iterator(_In_ const iterator& _i) NOEXCEPT : 
-                dwIndex(_i.dwIndex),
+            iterator(_In_ const iterator& _i) NOEXCEPT :
+            dwIndex(_i.dwIndex),
                 wbemClassObj(_i.wbemClassObj),
                 propName(_i.propName),
                 propType(_i.propType)
@@ -192,11 +187,11 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// accessors:
-            /// - dereference operators to access the property name
-            /// - explicit type() method to expose its CIM type
-            ///
+            //
+            // accessors:
+            // - dereference operators to access the property name
+            // - explicit type() method to expose its CIM type
+            //
             ////////////////////////////////////////////////////////////////////////////////
             ctComBstr& operator*()
             {
@@ -221,19 +216,19 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// comparison and arithmatic operators
-            /// 
-            /// comparison operators are no-throw/no-fail
-            /// arithmatic operators can fail 
-            /// - throwing a ctWmiException object capturing the WMI failures
-            ///
+            //
+            // comparison and arithmatic operators
+            // 
+            // comparison operators are no-throw/no-fail
+            // arithmatic operators can fail 
+            // - throwing a ctWmiException object capturing the WMI failures
+            //
             ////////////////////////////////////////////////////////////////////////////////
             bool operator==(_In_ const iterator& _iter) const NOEXCEPT
             {
                 if (this->dwIndex != this->END_ITERATOR_INDEX) {
                     return ((this->dwIndex == _iter.dwIndex) &&
-                            (this->wbemClassObj == _iter.wbemClassObj));
+                        (this->wbemClassObj == _iter.wbemClassObj));
                 } else {
                     return (this->dwIndex == _iter.dwIndex);
                 }
@@ -269,17 +264,16 @@ namespace ctl {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// iterator_traits
-            /// - allows <algorithm> functions to be used
-            ///
+            //
+            // iterator_traits
+            // - allows <algorithm> functions to be used
+            //
             ////////////////////////////////////////////////////////////////////////////////
             typedef std::forward_iterator_tag  iterator_category;
             typedef ctComBstr                  value_type;
             typedef int                        difference_type;
             typedef ctComBstr*                 pointer;
             typedef ctComBstr&                 reference;
-
 
         private:
             void increment()
@@ -299,7 +293,8 @@ namespace ctl {
                     nullptr);
 
                 switch (hr) {
-                    case WBEM_S_NO_ERROR: {
+                    case WBEM_S_NO_ERROR:
+                    {
                         // update the instance members
                         ++dwIndex;
                         using std::swap;
@@ -311,7 +306,8 @@ namespace ctl {
 #pragma warning (suppress : 6221)
                     // "Implicit cast between semantically different integer types:  comparing HRESULT to an integer.  Consider using SUCCEEDED or FAILED macros instead."
                     // Directly comparing the HRESULT return to WBEM_S_NO_ERROR, even though WBEM did not properly define that constant as an HRESULT
-                    case WBEM_S_NO_MORE_DATA: {
+                    case WBEM_S_NO_MORE_DATA:
+                    {
                         // at the end...
                         dwIndex = END_ITERATOR_INDEX;
                         propName.reset();
@@ -321,10 +317,10 @@ namespace ctl {
 
                     default:
                         throw ctWmiException(
-                            hr, 
-                            this->wbemClassObj.get(), 
-                            L"IEnumWbemClassObject::Next", 
-                            L"ctWmiProperties::iterator::increment", 
+                            hr,
+                            this->wbemClassObj.get(),
+                            L"IEnumWbemClassObject::Next",
+                            L"ctWmiProperties::iterator::increment",
                             false);
                 }
             }

@@ -24,12 +24,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     //
     // Abstract base class for status - printing classes
     //
-    class ctsStatusInformation {
+    class ctsStatusInformation
+    {
     protected:
         enum class PrintingStatus
         {
@@ -362,7 +363,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsUdpStatusInformation : public ctsStatusInformation {
+    class ctsUdpStatusInformation : public ctsStatusInformation
+    {
     public:
         ctsUdpStatusInformation() NOEXCEPT
         {
@@ -500,7 +502,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsTcpStatusInformation : public ctsStatusInformation {
+    class ctsTcpStatusInformation : public ctsStatusInformation
+    {
     public:
         ctsTcpStatusInformation() NOEXCEPT : ctsStatusInformation()
         {

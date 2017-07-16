@@ -19,7 +19,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include "ctVersionConversion.hpp"
 
-namespace ctl {
+namespace ctl
+{
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,7 +46,8 @@ namespace ctl {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
     template <typename T, T tNullValue, typename Fn>
-    class ctScopedT {
+    class ctScopedT
+    {
     public:
         ///////////////////////////////////////////////////////////////
         // constructors
@@ -68,7 +70,7 @@ namespace ctl {
         ctScopedT(ctScopedT const&) = delete;
         ctScopedT& operator=(ctScopedT const&) = delete;
 
-        ctScopedT(ctScopedT&& other) NOEXCEPT : 
+        ctScopedT(ctScopedT&& other) NOEXCEPT :
             tValue(std::move(other.tValue)),
             closeFunctor(std::move(other.closeFunctor))
         {

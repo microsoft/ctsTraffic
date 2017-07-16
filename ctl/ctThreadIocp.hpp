@@ -25,7 +25,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctException.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
 
     //
     // not using an unnamed namespace as debugging this is unnecessarily difficult with Windows debuggers
@@ -40,14 +41,15 @@ namespace ctl {
     // - to allow the callback function to find the callback
     //   associated with that completed OVERLAPPED* 
     //
-    struct ctThreadIocpCallbackInfo {
+    struct ctThreadIocpCallbackInfo
+    {
         OVERLAPPED ov;
         PVOID _padding; // required padding before the std::function for the below C_ASSERT alignment/sizing to be correct
         ctThreadIocpCallback_t callback;
 
         // ReSharper disable once CppPossiblyUninitializedMember
         explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback)
-        : callback(std::move(_callback))
+            : callback(std::move(_callback))
         {
             ::ZeroMemory(&ov, sizeof ov);
         }
@@ -57,40 +59,41 @@ namespace ctl {
         ctThreadIocpCallbackInfo& operator=(const ctThreadIocpCallbackInfo&) = delete;
     };
     // asserting at compile time, as we assume this when we reinterpret_cast in the callback
-    C_ASSERT(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) +sizeof(PVOID) +sizeof(ctThreadIocpCallback_t));
+    C_ASSERT(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) + sizeof(PVOID) + sizeof(ctThreadIocpCallback_t));
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctThreadIocp
-    ///
-    /// class that encapsulates the new-to-Vista ThreadPool APIs around OVERLAPPED IO completion ports
-    ///
-    /// it creates a handle to the system-managed thread pool, 
-    /// - and exposes a method to get an OVERLAPPED* for asynchronous Win32 API calls which use OVERLAPPED I/O
-    ///
-    /// Basic usage:
-    /// - construct a ctThreadIocp object by passing in the HANDLE/SOCKET on which overlapped IO calls will be made
-    /// - call new_request to get an OVERLAPPED* for an asynchronous Win32 API call the associated HANDLE/SOCKET
-    ///   - additionally pass a function to be invoked on IO completion 
-    /// - if the Win32 API succeeds or returns ERROR_IO_PENDING:
-    ///    - the user's callback function will be called on completion [if succeeds or fails]
-    ///    - from the callback function, the user then calls GetOverlappedResult/WSAGetOverlappedResult 
-    ///      on the given OVERLAPPED* to get further details of the IO request [status, bytes transferred]
-    /// - if the Win32 API fails with an error other than ERROR_IO_PENDING
-    ///    - the user *must* call cancel_request, providing the OVERLAPPED* used in the failed API call
-    ///    - that OVERLAPPED* is no longer valid and cannot be reused 
-    ///      [new_request must be called again for another OVLERAPPED*]
-    ///
-    /// Additional notes regarding OVERLAPPED I/O:
-    /// - the user must call new_request to get a new OVERLAPPED* before every Win32 API being made
-    ///   - an OVERLAPPED* is valid only for that one API call and is invalid once the corresponding callback completes
-    /// - if the IO call must be canceled after is completed successfully or returned ERROR_IO_PENDING, 
-    ///   the user should take care to call the appropriate API (CancelIo, CancelIoEx, CloseHandle, closesocket)
-    ///   - the user should then expect the callback to be invoked for all IO requests on that HANDLE/SOCKET
-    ///
+    //
+    // ctThreadIocp
+    //
+    // class that encapsulates the new-to-Vista ThreadPool APIs around OVERLAPPED IO completion ports
+    //
+    // it creates a handle to the system-managed thread pool, 
+    // - and exposes a method to get an OVERLAPPED* for asynchronous Win32 API calls which use OVERLAPPED I/O
+    //
+    // Basic usage:
+    // - construct a ctThreadIocp object by passing in the HANDLE/SOCKET on which overlapped IO calls will be made
+    // - call new_request to get an OVERLAPPED* for an asynchronous Win32 API call the associated HANDLE/SOCKET
+    //   - additionally pass a function to be invoked on IO completion 
+    // - if the Win32 API succeeds or returns ERROR_IO_PENDING:
+    //    - the user's callback function will be called on completion [if succeeds or fails]
+    //    - from the callback function, the user then calls GetOverlappedResult/WSAGetOverlappedResult 
+    //      on the given OVERLAPPED* to get further details of the IO request [status, bytes transferred]
+    // - if the Win32 API fails with an error other than ERROR_IO_PENDING
+    //    - the user *must* call cancel_request, providing the OVERLAPPED* used in the failed API call
+    //    - that OVERLAPPED* is no longer valid and cannot be reused 
+    //      [new_request must be called again for another OVLERAPPED*]
+    //
+    // Additional notes regarding OVERLAPPED I/O:
+    // - the user must call new_request to get a new OVERLAPPED* before every Win32 API being made
+    //   - an OVERLAPPED* is valid only for that one API call and is invalid once the corresponding callback completes
+    // - if the IO call must be canceled after is completed successfully or returned ERROR_IO_PENDING, 
+    //   the user should take care to call the appropriate API (CancelIo, CancelIoEx, CloseHandle, closesocket)
+    //   - the user should then expect the callback to be invoked for all IO requests on that HANDLE/SOCKET
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctThreadIocp {
+    class ctThreadIocp
+    {
     public:
         //
         // These c'tors can fail under low resources
@@ -111,7 +114,7 @@ namespace ctl {
                 throw ctException(::GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
             }
         }
-        ~ctThreadIocp()
+        ~ctThreadIocp() NOEXCEPT
         {
             // wait for all callbacks
             ::WaitForThreadpoolIoCallbacks(this->ptp_io, FALSE);
@@ -208,4 +211,3 @@ namespace ctl {
     };
 
 } // namespace
-

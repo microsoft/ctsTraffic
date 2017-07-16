@@ -32,23 +32,26 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsStatistics.hpp"
 
 
-namespace ctsTraffic {
-    ///
-    /// Forward declaring ctsSocket project headers cannot be included due to circular references
-    ///
-    /// In the ctsTraffic namespace, typedef for all function types
-    /// - function pointers, functors, lambdas, etc.
-    ///
+namespace ctsTraffic
+{
+///
+/// Forward declaring ctsSocket project headers cannot be included due to circular references
+///
+/// In the ctsTraffic namespace, typedef for all function types
+/// - function pointers, functors, lambdas, etc.
+///
     class ctsSocket;
     typedef std::function<void(std::weak_ptr<ctsSocket>)> ctsSocketFunction;
 
-    namespace ctsConfig {
+    namespace ctsConfig
+    {
 
-        ///
-        /// Declaring enum types in the ctsConfig namespace
-        /// - to be referenced by ctsConfig functions
-        ///
-        enum class ProtocolType {
+///
+/// Declaring enum types in the ctsConfig namespace
+/// - to be referenced by ctsConfig functions
+///
+        enum class ProtocolType
+        {
             NoProtocolSet,
             TCP,
             UDP
@@ -101,47 +104,40 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         /// OR
-        inline
-        OptionType operator| (OptionType& lhs, OptionType rhs)
+        inline OptionType operator| (OptionType& lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
-        inline
-        OptionType& operator|= (OptionType& lhs, OptionType rhs)
+        inline OptionType& operator|= (OptionType& lhs, OptionType rhs)
         {
             lhs = lhs | rhs;
             return lhs;
         }
 
         /// AND
-        inline
-        OptionType operator& (OptionType lhs, OptionType rhs)
+        inline OptionType operator& (OptionType lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
         }
-        inline
-        OptionType& operator&= (OptionType& lhs, OptionType rhs)
+        inline OptionType& operator&= (OptionType& lhs, OptionType rhs)
         {
             lhs = lhs & rhs;
             return lhs;
         }
 
         /// XOR
-        inline
-        OptionType operator^ (OptionType lhs, OptionType rhs)
+        inline OptionType operator^ (OptionType lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
         }
-        inline
-        OptionType& operator^= (OptionType& lhs, OptionType rhs)
+        inline OptionType& operator^= (OptionType& lhs, OptionType rhs)
         {
             lhs = lhs ^ rhs;
             return lhs;
         }
 
         /// NOT
-        inline
-        OptionType operator~ (OptionType lhs)
+        inline OptionType operator~ (OptionType lhs)
         {
             return OptionType(~static_cast<unsigned long>(lhs));
         }
@@ -167,7 +163,8 @@ namespace ctsTraffic {
 
         void PrintLegend() NOEXCEPT;
 
-        struct JitterFrameEntry {
+        struct JitterFrameEntry
+        {
             long long sequence_number = 0LL;
             long long sender_qpc = 0LL;
             long long sender_qpf = 0LL;
@@ -222,19 +219,8 @@ namespace ctsTraffic {
         int SetPreConnectOptions(SOCKET s);
 
         // for the MediaStream pattern
-        struct MediaStreamSettings {
-
-            MediaStreamSettings() NOEXCEPT
-            : BitsPerSecond(0LL),
-              FramesPerSecond(0UL),
-              BufferDepthSeconds(0UL),
-              StreamLengthSeconds(0UL),
-              FrameSizeBytes(0UL),
-              StreamLengthFrames(0UL),
-              BufferedFrames(0UL)
-            {
-            }
-
+        struct MediaStreamSettings
+        {
             ctsUnsignedLongLong CalculateTransferSize()
             {
                 ctl::ctFatalCondition(
@@ -295,18 +281,19 @@ namespace ctsTraffic {
             }
 
             // set by ctsConfig from command-line arguments
-            ctsSignedLongLong BitsPerSecond;
-            ctsUnsignedLong FramesPerSecond;
-            ctsUnsignedLong BufferDepthSeconds;
-            ctsUnsignedLong StreamLengthSeconds;
+            ctsSignedLongLong BitsPerSecond = 0;
+            ctsUnsignedLong FramesPerSecond = 0;
+            ctsUnsignedLong BufferDepthSeconds = 0;
+            ctsUnsignedLong StreamLengthSeconds = 0;
             // internally calculated
-            ctsUnsignedLong FrameSizeBytes;
-            ctsUnsignedLong StreamLengthFrames;
-            ctsUnsignedLong BufferedFrames;
+            ctsUnsignedLong FrameSizeBytes = 0;
+            ctsUnsignedLong StreamLengthFrames = 0;
+            ctsUnsignedLong BufferedFrames = 0;
         };
         const MediaStreamSettings& GetMediaStream() NOEXCEPT;
 
-        struct ctsConfigSettings {
+        struct ctsConfigSettings
+        {
             ctsConfigSettings() NOEXCEPT :
                 // dynamically initialize status details with current qpc
                 ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
@@ -362,7 +349,6 @@ namespace ctsTraffic {
 
             bool UseSharedBuffer = false;
             bool ShouldVerifyBuffers = false;
-
 
             USHORT LocalPortLow = 0;
             USHORT LocalPortHigh = 0;

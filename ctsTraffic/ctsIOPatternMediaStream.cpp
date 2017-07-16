@@ -11,7 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-
 // cpp headers
 #include <vector>
 // os headers
@@ -32,28 +31,27 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace ctl;
 using std::vector;
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     - ctsIOPatternMediaStream (Client) Pattern
-    ///    -- UDP-only
-    ///    -- The server sends data at a specified rate
-    ///    -- The client receives data continuously
-    ///       After a 'buffer period' of data has been received,
-    ///       The client starts as timer to 'process' a time-slice of data
-    ///    -- e.g. FrameRate = 60 frames/sec
-    ///            FrameSize = 4096 byte frames
-    ///            BufferDepth = 81920 bytes (2 seconds)
-    ///
-    ///   -- The client must maintain a vector of up to ExtraBufferDepthFactor * the buffer depth requested
-    ///      - after the initial BufferDepth is received, 
-    ///        it will start its timer to access the next frame's data
-    ///
-    ///   -- The client is only using untracked_task requests from the base
-    ///      since the correctness and lifetime of the session is only known from this instance
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    //     - ctsIOPatternMediaStream (Client) Pattern
+    //    -- UDP-only
+    //    -- The server sends data at a specified rate
+    //    -- The client receives data continuously
+    //       After a 'buffer period' of data has been received,
+    //       The client starts as timer to 'process' a time-slice of data
+    //    -- e.g. FrameRate = 60 frames/sec
+    //            FrameSize = 4096 byte frames
+    //            BufferDepth = 81920 bytes (2 seconds)
+    //
+    //   -- The client must maintain a vector of up to ExtraBufferDepthFactor * the buffer depth requested
+    //      - after the initial BufferDepth is received, 
+    //        it will start its timer to access the next frame's data
+    //
+    //   -- The client is only using untracked_task requests from the base
+    //      since the correctness and lifetime of the session is only known from this instance
+    //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternMediaStreamClient::ctsIOPatternMediaStreamClient() :
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
@@ -118,8 +116,8 @@ namespace ctsTraffic {
         // no errors, dismiss the scope guard
         deleteTimerCallbackOnError.dismiss();
     }
-    
-    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient()
+
+    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() NOEXCEPT
     {
         // cleanly shutdown the TP timer
         // - indicate this by setting the TP_TIMER to null under the cs
@@ -443,7 +441,7 @@ namespace ctsTraffic {
         // take the base lock before touching any internal members
         this_ptr->base_lock();
         // guarantee the lock is released on exit
-        ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock();});
+        ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock(); });
 
         if (this_ptr->finished_stream) {
             return;
@@ -477,7 +475,7 @@ namespace ctsTraffic {
             // take the base lock before touching any internal members
             this_ptr->base_lock();
             // guarantee the lock is released on exit
-            ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
+            ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock();});
 
             if (this_ptr->finished_stream) {
                 return;

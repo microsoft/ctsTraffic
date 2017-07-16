@@ -24,7 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include "ctVersionConversion.hpp"
 
-namespace ctl {
+namespace ctl
+{
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     //  ctException
@@ -51,7 +52,8 @@ namespace ctl {
     //    for the lifetime of the ctException object.
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctException : public std::exception {
+    class ctException : public std::exception
+    {
     public:
         // constructors
         explicit ctException(unsigned long _ulCode) NOEXCEPT;
@@ -125,21 +127,21 @@ namespace ctl {
     //   - if no copy is made, the pointer won't be deleted on destruction
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    inline ctException::ctException() NOEXCEPT : 
+    inline ctException::ctException() NOEXCEPT :
         std::exception("") // initialize the base c'tor
     {
     }
 
-    inline ctException::ctException(unsigned long _ulCode) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode) // initializing with args
+        ulCode(_ulCode)
     {
     }
 
-    inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT: 
+    inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT:
         std::exception(""), // initialize the base c'tor
-        szMessage(_szMessage), // initializing with args
-        bMessageCopy_s(_bMessageCopy)  // initializing with args
+        szMessage(_szMessage),
+        bMessageCopy_s(_bMessageCopy) 
     {
         if (bMessageCopy_s) {
             szMessage = calloc_and_copy_s(_szMessage);
@@ -148,10 +150,10 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT : 
+    inline ctException::ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
-        wszMessage(_wszMessage), // initializing with args
-        bMessageCopy_w(_bMessageCopy) // initializing with args
+        wszMessage(_wszMessage),
+        bMessageCopy_w(_bMessageCopy)
     {
         if (bMessageCopy_w) {
             wszMessage = calloc_and_copy_w(_wszMessage);
@@ -160,7 +162,7 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::wstring& _wsMessage) NOEXCEPT : 
+    inline ctException::ctException(_In_ const std::wstring& _wsMessage) NOEXCEPT :
         std::exception("") // initialize the base c'tor
     {
         wszMessage = calloc_and_copy_w(_wsMessage.c_str());
@@ -169,7 +171,7 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::string& _sMessage) NOEXCEPT : 
+    inline ctException::ctException(_In_ const std::string& _sMessage) NOEXCEPT :
         std::exception("") // initialize the base c'tor
     {
         szMessage = calloc_and_copy_s(_sMessage.c_str());
@@ -178,11 +180,11 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode), // initializing with args
-        wszMessage(_wszMessage), // initializing with args
-        bMessageCopy_w(_bMessageCopy) // initializing with args
+        ulCode(_ulCode),
+        wszMessage(_wszMessage),
+        bMessageCopy_w(_bMessageCopy)
     {
         if (bMessageCopy_w) {
             wszMessage = calloc_and_copy_w(_wszMessage);
@@ -191,13 +193,13 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
         ulCode(_ulCode),
-        wszMessage(_wszMessage), // initializing with args
-        wszLocation(_wszLocation), // initializing with args
-        bMessageCopy_w(_bBothStringCopy), // initializing with args
-        bLocationCopy_w(_bBothStringCopy) // initializing with args
+        wszMessage(_wszMessage),
+        wszLocation(_wszLocation),
+        bMessageCopy_w(_bBothStringCopy),
+        bLocationCopy_w(_bBothStringCopy)
     {
         if (_bBothStringCopy) {
             wszMessage = calloc_and_copy_w(_wszMessage);
@@ -207,11 +209,11 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT :
         std::exception(_szMessage), // initialize the base c'tor
-        ulCode(_ulCode), // initializing with args
-        szMessage(_szMessage), // initializing with args
-        bMessageCopy_s(_bMessageCopy) // initializing with args
+        ulCode(_ulCode),
+        szMessage(_szMessage),
+        bMessageCopy_s(_bMessageCopy)
     {
         if (bMessageCopy_s) {
             szMessage = calloc_and_copy_s(_szMessage);
@@ -220,9 +222,9 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ const std::wstring& _wsMessage) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode, _In_ const std::wstring& _wsMessage) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode) // initializing with args
+        ulCode(_ulCode)
     {
         wszMessage = calloc_and_copy_w(_wsMessage.c_str());
         bMessageCopy_w = true;
@@ -230,9 +232,9 @@ namespace ctl {
         wszMessageToszMessage();
     }
 
-    inline ctException::ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) NOEXCEPT : 
+    inline ctException::ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
-        ulCode(_ulCode) // initializing with args
+        ulCode(_ulCode)
     {
         szMessage = calloc_and_copy_s(_sMessage.c_str());
         bMessageCopy_s = true;
@@ -240,7 +242,7 @@ namespace ctl {
         szMessageTowszMessage();
     }
 
-    inline ctException::ctException(_In_ const std::exception& e) NOEXCEPT : 
+    inline ctException::ctException(_In_ const std::exception& e) NOEXCEPT :
         std::exception(e) // initialize the base c'tor
     {
         szMessage = calloc_and_copy_s(e.what());
@@ -254,13 +256,13 @@ namespace ctl {
     // Copy constructor
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    inline ctException::ctException(_In_ const ctException& e) NOEXCEPT : 
+    inline ctException::ctException(_In_ const ctException& e) NOEXCEPT :
         std::exception(""), // initialize the base c'tor
         ulCode(e.ulCode),
         szMessage(e.szMessage),
         wszMessage(e.wszMessage),
         wszLocation(e.wszLocation),
-        wszTranslation(nullptr), // don't copy this buffer allocated by FormatString
+        wszTranslation(nullptr), // don't copy the buffer allocated by FormatString
         bMessageCopy_s(e.bMessageCopy_s),
         bMessageCopy_w(e.bMessageCopy_w),
         bLocationCopy_w(e.bLocationCopy_w)
@@ -286,25 +288,17 @@ namespace ctl {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     inline ctException& ctException::operator=(_In_ const std::exception& e) NOEXCEPT
     {
-        //
         // Make a copy before setting local variables
-        //
         ctException ctTemp(e);
-        //
         // swap and return
-        //
         this->swap(ctTemp);
         return *this;
     }
     inline ctException& ctException::operator=(_In_ const ctException& e) NOEXCEPT
     {
-        //
         // Make a copy before setting local variables
-        //
         ctException ctTemp(e);
-        //
         // swap and return
-        //
         this->swap(ctTemp);
         return *this;
     }
@@ -419,7 +413,7 @@ namespace ctl {
                 wszBuffer,
                 cchBuffer,
                 nullptr
-                );
+            );
             if (0 == dwReturn) {
                 // Free the temporary buffer here, as it won't be assigned to wszTranslation to be freed later.
                 ::free(static_cast<void*>(wszBuffer));
@@ -444,31 +438,29 @@ namespace ctl {
         }
 
         int iResult = ::WideCharToMultiByte(
-            CP_ACP,
+            CP_UTF8,
             WC_NO_BEST_FIT_CHARS,
             this->wszMessage,
             -1,
             nullptr,
             0,
             nullptr,
-            nullptr
-            );
+            nullptr);
         if (iResult != 0) {
             char* temp_szMessage = static_cast<char*>(::calloc(iResult, sizeof(char)));
             if (temp_szMessage != nullptr) {
                 iResult = ::WideCharToMultiByte(
-                    CP_ACP,
+                    CP_UTF8,
                     WC_NO_BEST_FIT_CHARS,
                     this->wszMessage,
                     -1,
                     temp_szMessage,
                     iResult,
                     nullptr,
-                    nullptr
-                    );
+                    nullptr);
                 if (0 == iResult) {
                     // failed to populate the buffer, so should free it
-                    free(temp_szMessage);
+                    ::free(temp_szMessage);
                 } else {
                     this->szMessage = temp_szMessage;
                     this->bMessageCopy_s = true;
@@ -489,14 +481,26 @@ namespace ctl {
             return;
         }
 
-        int iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, nullptr, 0);
+        int iResult = ::MultiByteToWideChar(
+            CP_UTF8,
+            0,
+            this->szMessage,
+            -1,
+            nullptr,
+            0);
         if (iResult != 0) {
             wchar_t* temp_wszMessage = static_cast<wchar_t*>(::calloc(iResult, sizeof(wchar_t)));
             if (temp_wszMessage != nullptr) {
-                iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, temp_wszMessage, iResult);
+                iResult = ::MultiByteToWideChar(
+                    CP_UTF8,
+                    0,
+                    this->szMessage,
+                    -1,
+                    temp_wszMessage,
+                    iResult);
                 if (0 == iResult) {
                     // failed to populate the buffer, so should free it
-                    free(temp_wszMessage);
+                    ::free(temp_wszMessage);
                 } else {
                     this->wszMessage = temp_wszMessage;
                     this->bMessageCopy_w = true;
@@ -526,7 +530,7 @@ namespace ctl {
         if (tDest != nullptr) {
             errno_t err = strcpy_s(tDest, tSize, tSrc);
             if (err != 0) {
-                free(tDest);
+                ::free(tDest);
                 tDest = nullptr;
             }
         }
@@ -555,7 +559,7 @@ namespace ctl {
         if (tDest != nullptr) {
             errno_t err = wcscpy_s(tDest, tSize, tSrc);
             if (err != 0) {
-                free(tDest);
+                ::free(tDest);
                 tDest = nullptr;
             }
         }
@@ -591,26 +595,26 @@ namespace ctl {
     // The relevant string details of the failed condition is written to the debugger before it breaks.
     // The string is additionally written to the STDERR file handle - if a console is waiting for it
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+
     // NTSTATUS being used: 1110 (E) for severity, c71f00d for facility & code (ctl)
     static const unsigned long ctFatalConditionExceptionCode = 0xec71f00d;
-    namespace {
-        ///
-        /// the call to RaiseFailFastException is put into its own function
-        ///  - so it can be described __analysis_noreturn for SAL
-        ///
-        __analysis_noreturn
-        void FailFast(_In_ EXCEPTION_RECORD* _exr)
+    namespace
+    {
+        //
+        // the call to RaiseFailFastException is put into its own function
+        //  - so it can be described __analysis_noreturn for SAL
+        //
+        inline __analysis_noreturn void FailFast(_In_ EXCEPTION_RECORD* _exr)
         {
             ::RaiseFailFastException(_exr, nullptr, 0);
         }
     }
-    inline
-        void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+    inline void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
     {
         if (_condition) {
             // write everyting out into a single string
             static const size_t exception_length = 512;
-            wchar_t exception_text[exception_length] = { L'\0' };
+            wchar_t exception_text[exception_length] = {L'\0'};
             ::_vsnwprintf_s(exception_text, exception_length, _TRUNCATE, _text, _argptr);
 
             // first print it to the output stream
@@ -631,14 +635,11 @@ namespace ctl {
             FailFast(&exr);
         }
     }
-    inline
-    __analysis_noreturn
-    void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+    inline __analysis_noreturn void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
     {
         ctFatalConditionVa(true, _text, _argptr);
     }
-    inline
-    void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+    inline void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
     {
         if (_condition) {
             va_list argptr;
@@ -647,23 +648,19 @@ namespace ctl {
             va_end(argptr);
         }
     }
-    inline
-    __analysis_noreturn
-    void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+    inline __analysis_noreturn void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
     {
         va_list argptr;
         va_start(argptr, _text);
         ctFatalConditionVa(true, _text, argptr);
         va_end(argptr);
     }
-    ///
-    /// If enabled Runtime Type Information, will detect which exception based off the actual type
-    /// - this is the /GR flag to the compiler
-    /// - in the sources makefile: USE_RTTI = 1
-    ///
-    inline
-    __analysis_noreturn
-    void ctFatalCondition(_In_ const ctException& _exception) NOEXCEPT
+    //
+    // If enabled Runtime Type Information, will detect which exception based off the actual type
+    // - this is the /GR flag to the compiler
+    // - in the sources makefile: USE_RTTI = 1
+    //
+    inline __analysis_noreturn void ctFatalCondition(_In_ const ctException& _exception) NOEXCEPT
     {
         ctFatalCondition(
             true,
@@ -676,9 +673,7 @@ namespace ctl {
     }
 
 #ifdef _CPPRTTI
-    inline
-    __analysis_noreturn
-    void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
+    inline __analysis_noreturn void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
     {
         const ctException* ctex = dynamic_cast<const ctException*>(&_exception);
         if (ctex != nullptr) {
@@ -691,9 +686,7 @@ namespace ctl {
         }
     }
 #else
-    inline
-    __analysis_noreturn
-    void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
+    inline __analysis_noreturn void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
     {
         ctFatalCondition(
             true,
@@ -703,4 +696,3 @@ namespace ctl {
 #endif
 
 }  // namespace ctl
-

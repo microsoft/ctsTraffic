@@ -27,8 +27,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 
-
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // Functor class for implementing ctsSocketFunction
     //
@@ -42,9 +42,10 @@ namespace ctsTraffic {
     // The refcount_sockets vector will optimize in balancing accept calls
     // - across all listeners
     //
-    namespace details {
-
-        class ctsSimpleAcceptImpl {
+    namespace details
+    {
+        class ctsSimpleAcceptImpl
+        {
         private:
             PTP_WORK thread_pool_worker = nullptr;
             TP_CALLBACK_ENVIRON thread_pool_environment;
@@ -81,8 +82,9 @@ namespace ctsTraffic {
 
                 // listen to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
+
                     SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
-                    ctlScopeGuard(closeSocketOnError, { ::closesocket(listening); });
+                    ctlScopeGuard(closeSocketOnError, {::closesocket(listening);});
 
                     auto gle = ctsConfig::SetPreBindOptions(listening, addr);
                     if (gle != NO_ERROR) {
@@ -115,7 +117,7 @@ namespace ctsTraffic {
                 }
                 listening_sockets_refcount.resize(listening_sockets.size(), 0L);
             }
-            ~ctsSimpleAcceptImpl()
+            ~ctsSimpleAcceptImpl() NOEXCEPT
             {
                 ::EnterCriticalSection(&accepting_cs);
                 /// close all listening sockets to release any pended accept's
@@ -157,7 +159,7 @@ namespace ctsTraffic {
 
                 // get an accept-socket off the vector (protected with its cs)
                 ::EnterCriticalSection(&pimpl->accepting_cs);
-                ctlScopeGuard(leaveCriticalSectionOnExit, { ::LeaveCriticalSection(&pimpl->accepting_cs); });
+                ctlScopeGuard(leaveCriticalSectionOnExit, {::LeaveCriticalSection(&pimpl->accepting_cs);});
 
                 std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
                 pimpl->accepting_sockets.pop_back();

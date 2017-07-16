@@ -31,20 +31,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOPattern.h"
 
-
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     using namespace ctl;
     using namespace std;
 
-    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) 
-    : thread_pool_worker(nullptr),
-      state_guard(),
-      broker(move(_broker)),
-      socket(),
-      last_error(0UL),
-      state(InternalState::Creating),
-      initiated_io(false)
+    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) :
+        thread_pool_worker(nullptr),
+        state_guard(),
+        broker(move(_broker)),
+        socket(),
+        last_error(0UL),
+        state(InternalState::Creating),
+        initiated_io(false)
     {
         if (!::InitializeCriticalSectionEx(&state_guard, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketState", false);
@@ -95,7 +94,8 @@ namespace ctsTraffic {
         ::EnterCriticalSection(&this->state_guard);
         if (NO_ERROR == _error) {
             switch (this->state) {
-                case InternalState::Created: {
+                case InternalState::Created:
+                {
                     // if no connectFunction specified, go straight to IO
                     if (ctsConfig::Settings->ConnectFunction) {
                         this->state = InternalState::Connecting;
@@ -108,7 +108,8 @@ namespace ctsTraffic {
                     break;
                 }
 
-                case InternalState::Connected: {
+                case InternalState::Connected:
+                {
                     initiating_io = true;
                     this->state = InternalState::InitiatingIO;
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.increment();
@@ -126,7 +127,7 @@ namespace ctsTraffic {
                     // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
                     // deliberately not changing any internal values these since the socket is already being close
                     PrintDebugInfo(
-                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n", 
+                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n",
                         static_cast<unsigned long>(this->state));
                     break;
 
@@ -187,7 +188,8 @@ namespace ctsTraffic {
         //
         ctsSocketState* context = reinterpret_cast<ctsSocketState*>(_context);
         switch (context->state) {
-            case InternalState::Creating: {
+            case InternalState::Creating:
+            {
                 unsigned long error = 0;
                 try { context->socket = make_shared<ctsSocket>(context->shared_from_this()); }
                 catch (const ctException& e) {
@@ -211,7 +213,8 @@ namespace ctsTraffic {
                 break;
             }
 
-            case InternalState::Connecting: {
+            case InternalState::Connecting:
+            {
                 ::EnterCriticalSection(&context->state_guard);
                 context->state = InternalState::Connected;
                 ::LeaveCriticalSection(&context->state_guard);
@@ -221,7 +224,8 @@ namespace ctsTraffic {
                 break;
             }
 
-            case InternalState::InitiatingIO: {
+            case InternalState::InitiatingIO:
+            {
                 unsigned long error = 0;
                 try { context->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
                 catch (const ctException& e) {
@@ -245,13 +249,14 @@ namespace ctsTraffic {
                 break;
             }
 
-            ///
-            /// Processing all closing tasks on a separate threadpool thread
-            /// - this guarantees no other locks are taken
+            //
+            // Processing all closing tasks on a separate threadpool thread
+            // - this guarantees no other locks are taken
             /// - this guarantess ctsSocket won't hold the final reference to the ctsSocketState
-            ///   on a threadpool thread - in which case it would deadlock on itself
-            ///
-            case InternalState::Closing: {
+            //   on a threadpool thread - in which case it would deadlock on itself
+            //
+            case InternalState::Closing:
+            {
                 if (context->initiated_io) {
                     // Update the status counter if we previously tracked this connection as active
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.decrement();
@@ -289,12 +294,13 @@ namespace ctsTraffic {
                 if (parent) {
                     parent->closing(context->initiated_io);
                 }
-                
+
                 PrintDebugInfo(L"\t\tctsSocketState Closed\n");
                 break;
             }
 
-            default: {
+            default:
+            {
                 // the callback should never see any other states
                 ctAlwaysFatalCondition(
                     L"ctsSocketState::ThreadPoolWorker - invalid socket state [%d]",

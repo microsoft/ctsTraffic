@@ -31,8 +31,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamProtocol.hpp"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     struct IoImplStatus
     {
         unsigned long error_code = 0;
@@ -51,20 +51,18 @@ namespace ctsTraffic {
     void ctsMediaStreamClientIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctsIOTask& _io_task
-        ) NOEXCEPT;
+        const ctsIOTask& _io_task) NOEXCEPT;
 
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctl::ctSockaddr& _target_address
-        ) NOEXCEPT;
+        const ctl::ctSockaddr& _target_address) NOEXCEPT;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
-    /// - with the specified ctsSocket
-    ///
+    //
+    // The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
+    // - with the specified ctsSocket
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
@@ -127,10 +125,10 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
-    /// using IO Completion Ports
-    ///
+    //
+    // The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
+    // using IO Completion Ports
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
@@ -158,7 +156,7 @@ namespace ctsTraffic {
         }
 
         ctl::ctSockaddr targetAddress(shared_socket->target_address());
-        ctsIOTask start_task = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
+        ctsIOTask start_task = ctsMediaStreamMessage::Construct();
 
         // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
         auto response = ctsWSASendTo(
@@ -203,9 +201,9 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// implementation of processing a ctsIOTask
-    ///
+    //
+    // implementation of processing a ctsIOTask
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IoImplStatus ctsMediaStreamClientIoImpl(const std::shared_ptr<ctsSocket>& _shared_socket, const ctsIOTask& _next_io) NOEXCEPT
     {
@@ -213,10 +211,11 @@ namespace ctsTraffic {
 
         switch (_next_io.ioAction) {
             case IOTaskAction::Send: // fall-through
-            case IOTaskAction::Recv: {
+            case IOTaskAction::Recv:
+            {
                 // add-ref the IO about to start
                 LONG io_count = _shared_socket->increment_io();
-                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) {
+                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io](OVERLAPPED* _ov) {
                     ctsMediaStreamClientIoCompletionCallback(_ov, weak_reference, _next_io);
                 };
 
@@ -290,14 +289,16 @@ namespace ctsTraffic {
                 break;
             }
 
-            case IOTaskAction::None: {
+            case IOTaskAction::None:
+            {
                 // nothing failed, just no more IO right now
                 return_status.error_code = NO_ERROR;
                 return_status.continue_io = false;
                 break;
             }
 
-            case IOTaskAction::Abort: {
+            case IOTaskAction::Abort:
+            {
                 // the protocol signaled to immediately stop the stream
                 auto shared_pattern(_shared_socket->io_pattern());
                 shared_pattern->complete_io(_next_io, 0, 0);
@@ -308,7 +309,8 @@ namespace ctsTraffic {
                 break;
             }
 
-            case IOTaskAction::FatalAbort: {
+            case IOTaskAction::FatalAbort:
+            {
                 // the protocol indicated to rudely abort the connection
                 auto shared_pattern(_shared_socket->io_pattern());
                 shared_pattern->complete_io(_next_io, 0, 0);
@@ -323,17 +325,15 @@ namespace ctsTraffic {
         return return_status;
     }
 
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// IO Threadpool completion callback 
-    ///
+    //
+    // IO Threadpool completion callback 
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctsIOTask& _io_task
-        ) NOEXCEPT
+        const ctsIOTask& _io_task) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -363,13 +363,15 @@ namespace ctsTraffic {
         // see if complete_io requests more IO
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
-            case ctsIOStatus::ContinueIo: {
+            case ctsIOStatus::ContinueIo:
+            {
                 // more IO is requested from the protocol
                 IoImplStatus status;
                 do {
                     // invoke the new IO call while holding a refcount to the prior IO in a tight loop
                     status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
-                } while (status.continue_io);
+                }
+                while (status.continue_io);
 
                 gle = status.error_code;
                 break;
@@ -399,7 +401,7 @@ namespace ctsTraffic {
 
             default:
                 ctl::ctAlwaysFatalCondition(
-                    L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n", 
+                    L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n",
                     static_cast<unsigned>(protocol_status));
         }
 
@@ -411,15 +413,14 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// IO Threadpool completion callback for the 'connect' request
-    ///
+    //
+    // IO Threadpool completion callback for the 'connect' request
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctl::ctSockaddr& _target_address
-        ) NOEXCEPT
+        const ctl::ctSockaddr& _target_address) NOEXCEPT
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {

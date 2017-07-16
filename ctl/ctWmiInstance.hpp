@@ -31,49 +31,50 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctVersionConversion.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
 
     class ctWmiInstance
     {
     public:
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Constructors:
-        /// - requires a IWbemServices object already connected to WMI
-        ///   
-        /// - one c'tor creates an empty instance (if set later)
-        /// - one c'tor takes the WMI class name to instantiate a new instance
-        /// - one c'tor takes an existing IWbemClassObject instance
-        ///
-        /// Default d'tor, copy c'tor, and copy assignment operator
-        ///
+        //
+        // Constructors:
+        // - requires a IWbemServices object already connected to WMI
+        //   
+        // - one c'tor creates an empty instance (if set later)
+        // - one c'tor takes the WMI class name to instantiate a new instance
+        // - one c'tor takes an existing IWbemClassObject instance
+        //
+        // Default d'tor, copy c'tor, and copy assignment operator
+        //
         ////////////////////////////////////////////////////////////////////////////////
-        explicit ctWmiInstance(_In_ const ctWmiService& _wbemServices) : 
+        explicit ctWmiInstance(_In_ const ctWmiService& _wbemServices) :
             wbemServices(_wbemServices),
             instanceObject()
         {
         }
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) : 
+        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ LPCWSTR _className) :
             wbemServices(_wbemServices),
             instanceObject()
         {
             create_instance(_className);
         }
-        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _instance) NOEXCEPT : 
+        ctWmiInstance(_In_ const ctWmiService& _wbemServices, _In_ const ctComPtr<IWbemClassObject>& _instance) NOEXCEPT :
             wbemServices(_wbemServices),
             instanceObject(_instance)
         {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// comparison operators
-        ///
+        //
+        // comparison operators
+        //
         ////////////////////////////////////////////////////////////////////////////////
         bool operator ==(_In_ const ctWmiInstance& _obj) const NOEXCEPT
         {
             return ((this->wbemServices == _obj.wbemServices) &&
-                    (this->instanceObject == _obj.instanceObject));
+                (this->instanceObject == _obj.instanceObject));
         }
         bool operator !=(_In_ const ctWmiInstance& _obj) const NOEXCEPT
         {
@@ -81,11 +82,11 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Accessor to retrieve the encapsulated IWbemClassObject
-        ///
-        /// - returns the IWbemClassObject holding the instantiated class instance
-        ///
+        //
+        // Accessor to retrieve the encapsulated IWbemClassObject
+        //
+        // - returns the IWbemClassObject holding the instantiated class instance
+        //
         ////////////////////////////////////////////////////////////////////////////////
         ctComPtr<IWbemClassObject> get_instance() const NOEXCEPT
         {
@@ -111,9 +112,9 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Retrieves the class name this ctWmiInstance is representing if any
-        ///
+        //
+        // - Retrieves the class name this ctWmiInstance is representing if any
+        //
         ////////////////////////////////////////////////////////////////////////////////
         ctComBstr get_class_name() const
         {
@@ -129,9 +130,9 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Returns a class object for the class represented by this instance
-        ///
+        //
+        // - Returns a class object for the class represented by this instance
+        //
         ////////////////////////////////////////////////////////////////////////////////
         ctWmiClassObject get_class_object() const
         {
@@ -139,14 +140,14 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Writes the instantiated object to the WMI repository
-        ///
-        /// - supported _wbemFlags:
-        ///   WBEM_FLAG_CREATE_OR_UPDATE
-        ///   WBEM_FLAG_UPDATE_ONLY
-        ///   WBEM_FLAG_CREATE_ONLY
-        ///
+        //
+        // - Writes the instantiated object to the WMI repository
+        //
+        // - supported _wbemFlags:
+        //   WBEM_FLAG_CREATE_OR_UPDATE
+        //   WBEM_FLAG_UPDATE_ONLY
+        //   WBEM_FLAG_CREATE_ONLY
+        //
         ////////////////////////////////////////////////////////////////////////////////
         void write_instance(_In_opt_ const ctComPtr<IWbemContext>& _context, _In_ LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
@@ -179,9 +180,9 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Deletes the WMI object matching the instantiated IWbemClassObject
-        ///
+        //
+        // - Deletes the WMI object matching the instantiated IWbemClassObject
+        //
         ////////////////////////////////////////////////////////////////////////////////
         void delete_instance()
         {
@@ -212,36 +213,36 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with zero arguments
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with zero arguments
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         ctWmiInstance execute_method(_In_ LPCWSTR _method)
         {
             return this->execute_method_private(_method, nullptr);
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with one argument
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with one argument
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         template <typename Arg1>
         ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1)
@@ -279,18 +280,18 @@ namespace ctl {
             return this->execute_method_private(_method, inParamsInstance.get());
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with two arguments
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with two arguments
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         template <typename Arg1, typename Arg2>
         ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2)
@@ -330,18 +331,18 @@ namespace ctl {
             return this->execute_method_private(_method, inParamsInstance.get());
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with three arguments
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with three arguments
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         template <typename Arg1, typename Arg2, typename Arg3>
         ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3)
@@ -383,18 +384,18 @@ namespace ctl {
             return this->execute_method_private(_method, inParamsInstance.get());
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with four arguments
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with four arguments
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
         ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
@@ -438,18 +439,18 @@ namespace ctl {
             return this->execute_method_private(_method, inParamsInstance.get());
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// - Executes an instance method from the WMI object matching the 
-        ///   instantiated IWbemClassObject
-        ///
-        /// - Invokes method with five arguments
-        ///
-        /// - Returns a ctWmiInstace containing the [out] parameters
-        ///   The property "ReturnValue" contains the return value of the method
-        ///
-        /// execute_method is *not* a const method as this class cannot guarantee
-        ///    any method executed won't have other modifying side-effects
-        ///
+        //
+        // - Executes an instance method from the WMI object matching the 
+        //   instantiated IWbemClassObject
+        //
+        // - Invokes method with five arguments
+        //
+        // - Returns a ctWmiInstace containing the [out] parameters
+        //   The property "ReturnValue" contains the return value of the method
+        //
+        // execute_method is *not* a const method as this class cannot guarantee
+        //    any method executed won't have other modifying side-effects
+        //
         ////////////////////////////////////////////////////////////////////////////////
         template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
         ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
@@ -496,19 +497,19 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// get() - exposes the properties of the WMI object instantiated
-        ///       - accepts types that can be passed to ctComVariant::retrieve
-        ///       - WMI instances don't use all VARIANT types - some special get specializations
-        ///         exist because, for example, 64-bit integers actually get passed through
-        ///         WMI as BSTRs (even though variants support 64-bit integers directly).
-        ///         See the MSDN documentation for WMI MOF Data Types (Numbers):
-        ///         http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
-        ///       - can throw under low resources of the type copied into needs allocation
-        ///       - can throw if the VARIANT conversion fails after the WMI call succeeds
-        ///       - a const method - as the only side-effect known is incrementing 
-        ///         a refcount of an embedded COM object in the VARIANT
-        ///
+        //
+        // get() - exposes the properties of the WMI object instantiated
+        //       - accepts types that can be passed to ctComVariant::retrieve
+        //       - WMI instances don't use all VARIANT types - some special get specializations
+        //         exist because, for example, 64-bit integers actually get passed through
+        //         WMI as BSTRs (even though variants support 64-bit integers directly).
+        //         See the MSDN documentation for WMI MOF Data Types (Numbers):
+        //         http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
+        //       - can throw under low resources of the type copied into needs allocation
+        //       - can throw if the VARIANT conversion fails after the WMI call succeeds
+        //       - a const method - as the only side-effect known is incrementing 
+        //         a refcount of an embedded COM object in the VARIANT
+        //
         ////////////////////////////////////////////////////////////////////////////////
 
         bool is_null(_In_ LPCWSTR _propname) const
@@ -518,17 +519,17 @@ namespace ctl {
             return vtProp.is_null();
         }
 
-        /// this has a complex annotation as T* can be a POD (like an int*) which must be _Out_
-        /// or T* could be a non-POD (like a std::wstring*) which must be _Inout_
+        // this has a complex annotation as T* can be a POD (like an int*) which must be _Out_
+        // or T* could be a non-POD (like a std::wstring*) which must be _Inout_
         template <typename T>
         void get(_In_ LPCWSTR _propname, _Out_ T* _t) const
         {
             ctComVariant vtProp;
             this->get_impl(_propname, vtProp.get());
-            ///
-            /// if Get succeeds but the resulting VARIANT is NULL or Empty,
-            /// - will throw with e.why() == S_FALSE
-            ///
+            //
+            // if Get succeeds but the resulting VARIANT is NULL or Empty,
+            // - will throw with e.why() == S_FALSE
+            //
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
                 ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
@@ -540,10 +541,10 @@ namespace ctl {
 #pragma warning( suppress : 6001 )
             vtProp.retrieve(_t);
         }
-        ///
-        /// Overriding the get() function template for retrieving VARIANT values directly
-        /// - requires a properly initialized VARIANT
-        ///
+        //
+        // Overriding the get() function template for retrieving VARIANT values directly
+        // - requires a properly initialized VARIANT
+        //
         void get(_In_ LPCWSTR _propname, _Inout_ VARIANT* _variant) const
         {
             ::VariantClear(_variant);
@@ -556,17 +557,17 @@ namespace ctl {
             _variant->swap(vtProp);
         }
 
-        ///
-        /// Overriding the get() function template to marshal a WMI instance from the underlying variant
-        ///
+        //
+        // Overriding the get() function template to marshal a WMI instance from the underlying variant
+        //
         void get(_In_ LPCWSTR _propname, _Inout_ ctComPtr<IWbemClassObject>* _instance) const
         {
             ctComVariant vtProp;
             this->get_impl(_propname, vtProp.get());
-            ///
-            /// if Get succeeds but the resulting VARIANT is NULL or Empty,
-            /// - will throw with e.why() == S_FALSE
-            ///
+            //
+            // if Get succeeds but the resulting VARIANT is NULL or Empty,
+            // - will throw with e.why() == S_FALSE
+            //
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
                 ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
@@ -586,10 +587,10 @@ namespace ctl {
         {
             ctComVariant vtProp;
             this->get_impl(_propname, vtProp.get());
-            ///
-            /// if Get succeeds but the resulting VARIANT is NULL or Empty,
-            /// - will throw with e.why() == S_FALSE
-            ///
+            //
+            // if Get succeeds but the resulting VARIANT is NULL or Empty,
+            // - will throw with e.why() == S_FALSE
+            //
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
                 ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
@@ -599,15 +600,15 @@ namespace ctl {
             vtProp.retrieve<IWbemClassObject>(_instance);
         }
 
-        ///
-        /// Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
-        ///
-        /// This does NOT do any checks to see whether the underlying BSTR is a valid number -
-        /// if it's a BSTR but it didn't come from the relevant type of 64-bit integer, these
-        /// getters will appear to succeed (the output value will be whatever _wcstoi64/_wcstoui64
-        /// on the BSTR returns, normally the appropriate MAX or MIN value on overflow and 0 on other
-        /// errors).
-        ///
+        //
+        // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
+        //
+        // This does NOT do any checks to see whether the underlying BSTR is a valid number -
+        // if it's a BSTR but it didn't come from the relevant type of 64-bit integer, these
+        // getters will appear to succeed (the output value will be whatever _wcstoi64/_wcstoui64
+        // on the BSTR returns, normally the appropriate MAX or MIN value on overflow and 0 on other
+        // errors).
+        //
         void get(_In_ LPCWSTR _propname, _Out_ UINT64* _t) const
         {
             ctComBstr intermediaryStr;
@@ -622,17 +623,17 @@ namespace ctl {
             *_t = _wcstoi64(intermediaryStr.get(), nullptr, 10);
         }
 
-        ///
-        /// Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
-        /// around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
-        /// correctly through WMI directly.
-        ///
-        /// The ctComVariant::retrieve method will correctly convert the 32-bit case, but not the
-        /// 16-bit case (since it would normally risk losing information).
-        ///
-        /// This method does NOT do any overflow checking whatsoever. Be sure not to use this
-        /// specialization on anything that actually is an INT32.
-        ///
+        //
+        // Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
+        // around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
+        // correctly through WMI directly.
+        //
+        // The ctComVariant::retrieve method will correctly convert the 32-bit case, but not the
+        // 16-bit case (since it would normally risk losing information).
+        //
+        // This method does NOT do any overflow checking whatsoever. Be sure not to use this
+        // specialization on anything that actually is an INT32.
+        //
         void get(_In_ LPCWSTR _propname, _Out_ UINT16* _t) const
         {
             INT32 intermediaryInt32;
@@ -641,15 +642,15 @@ namespace ctl {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// set() - allows writing to the WMI object instantiated
-        ///       - accepts types that are convertable to a ctComVariant
-        ///       - only specific VARIANT Types are supported through WMI
-        ///         this template provides that filter
-        ///       - *not* a const method
-        ///       - WMI also supports VT_NULL, VT_DISPATCH and VT_UNKNOWN
-        ///         - these are not yet implemented.
-        ///
+        //
+        // set() - allows writing to the WMI object instantiated
+        //       - accepts types that are convertable to a ctComVariant
+        //       - only specific VARIANT Types are supported through WMI
+        //         this template provides that filter
+        //       - *not* a const method
+        //       - WMI also supports VT_NULL, VT_DISPATCH and VT_UNKNOWN
+        //         - these are not yet implemented.
+        //
         ////////////////////////////////////////////////////////////////////////////////////
         void set(_In_ LPCWSTR _propname, _In_ const VARIANT* _vtProp)
         {
@@ -844,12 +845,12 @@ namespace ctl {
             }
         }
         ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// void set_default(LPCWSTR)
-        ///
-        /// - Calling IWbemClassObject::Delete on a property of an instance resets
-        ///   to the default value.
-        ///
+        //
+        // void set_default(LPCWSTR)
+        //
+        // - Calling IWbemClassObject::Delete on a property of an instance resets
+        //   to the default value.
+        //
         ////////////////////////////////////////////////////////////////////////////////
         void set_default(_In_ LPCWSTR _propname)
         {

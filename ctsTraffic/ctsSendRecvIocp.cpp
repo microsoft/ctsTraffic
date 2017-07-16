@@ -26,9 +26,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSocketGuard.hpp"
 
-namespace ctsTraffic {
-
-    /// forward delcaration
+namespace ctsTraffic
+{
+    // forward delcaration
     void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
     struct ctsSendRecvStatus
@@ -41,9 +41,9 @@ namespace ctsTraffic {
         bool io_started = false;
     };
 
-    ///
-    /// IO Threadpool completion callback 
-    ///
+    //
+    // IO Threadpool completion callback 
+    //
     static void ctsIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
@@ -81,25 +81,25 @@ namespace ctsTraffic {
         // see if complete_io requests more IO
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
-        case ctsIOStatus::ContinueIo:
-            // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
-            ctsSendRecvIocp(_weak_socket);
-            break;
+            case ctsIOStatus::ContinueIo:
+                // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
+                ctsSendRecvIocp(_weak_socket);
+                break;
 
-        case ctsIOStatus::CompletedIo:
-            // no more IO is requested from the protocol : indicate success
-            gle = NO_ERROR;
-            break;
+            case ctsIOStatus::CompletedIo:
+                // no more IO is requested from the protocol : indicate success
+                gle = NO_ERROR;
+                break;
 
-        case ctsIOStatus::FailedIo:
-            // write out the error to the error log since the protocol sees this as a hard error
-            ctsConfig::PrintErrorIfFailed(function, gle);
-            // protocol sees this as a failure : capture the error the protocol recorded
-            gle = shared_pattern->get_last_error();
-            break;
+            case ctsIOStatus::FailedIo:
+                // write out the error to the error log since the protocol sees this as a hard error
+                ctsConfig::PrintErrorIfFailed(function, gle);
+                // protocol sees this as a failure : capture the error the protocol recorded
+                gle = shared_pattern->get_last_error();
+                break;
 
-        default:
-            ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
+            default:
+                ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO : the prior IO is now formally "done"
@@ -110,11 +110,11 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Attempts the IO specified in the ctsIOTask on the ctsSocket
-    ///
-    /// ** ctsSocket::increment_io must have been called before this function was invoked
-    ///
+    //
+    // Attempts the IO specified in the ctsIOTask on the ctsSocket
+    //
+    // ** ctsSocket::increment_io must have been called before this function was invoked
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) NOEXCEPT
     {
@@ -196,30 +196,30 @@ namespace ctsTraffic {
                     // call back to the socket to see if wants more IO
                     ctsIOStatus protocol_status = _shared_pattern->complete_io(next_io, bytes_transferred, return_status.io_errorcode);
                     switch (protocol_status) {
-                    case ctsIOStatus::ContinueIo:
-                        // The protocol layer wants to transfer more data
-                        // if prior IO failed, the protocol wants to ignore the error
-                        return_status.io_errorcode = NO_ERROR;
-                        return_status.io_done = false;
-                        break;
+                        case ctsIOStatus::ContinueIo:
+                            // The protocol layer wants to transfer more data
+                            // if prior IO failed, the protocol wants to ignore the error
+                            return_status.io_errorcode = NO_ERROR;
+                            return_status.io_done = false;
+                            break;
 
-                    case ctsIOStatus::CompletedIo:
-                        // The protocol layer has successfully complete all IO on this connection
-                        // if prior IO failed, the protocol wants to ignore the error
-                        return_status.io_errorcode = NO_ERROR;
-                        return_status.io_done = true;
-                        break;
+                        case ctsIOStatus::CompletedIo:
+                            // The protocol layer has successfully complete all IO on this connection
+                            // if prior IO failed, the protocol wants to ignore the error
+                            return_status.io_errorcode = NO_ERROR;
+                            return_status.io_done = true;
+                            break;
 
-                    case ctsIOStatus::FailedIo:
-                        // write out the error
-                        ctsConfig::PrintErrorIfFailed(function_name, _shared_pattern->get_last_error());
-                        // the protocol acknoledged the failure - socket is done with IO
-                        return_status.io_errorcode = _shared_pattern->get_last_error();
-                        return_status.io_done = true;
-                        break;
+                        case ctsIOStatus::FailedIo:
+                            // write out the error
+                            ctsConfig::PrintErrorIfFailed(function_name, _shared_pattern->get_last_error());
+                            // the protocol acknoledged the failure - socket is done with IO
+                            return_status.io_errorcode = _shared_pattern->get_last_error();
+                            return_status.io_done = true;
+                            break;
 
-                    default:
-                        ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                        default:
+                            ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                     }
                 }
             }
@@ -241,10 +241,10 @@ namespace ctsTraffic {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// This is the callback for the threadpool timer.
-    /// Processes the given task and then calls ctsSendRecvIocp function to deal with any additional tasks
-    ///
+    //
+    // This is the callback for the threadpool timer.
+    // Processes the given task and then calls ctsSendRecvIocp function to deal with any additional tasks
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) NOEXCEPT
     {
@@ -279,9 +279,9 @@ namespace ctsTraffic {
         }
     }
 
-    ///
-    /// The function registered with ctsConfig
-    ///
+    //
+    // The function registered with ctsConfig
+    //
     void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
     {
         // attempt to get a reference to the socket

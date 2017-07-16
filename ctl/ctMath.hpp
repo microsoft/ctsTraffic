@@ -18,15 +18,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <ctException.hpp>
 
-namespace ctl {
-    ///
-    /// calculating a sampled standard deviation and mean
-    ///
-    /// Returns a tuple of doubles recording the results:
-    ///   get<0> : the mean minus one standard deviation
-    ///   get<1> : the mean value
-    ///   get<2> : the mean plus one standard deviation
-    ///
+namespace ctl
+{
+    //
+    // calculating a sampled standard deviation and mean
+    //
+    // Returns a tuple of doubles recording the results:
+    //   get<0> : the mean minus one standard deviation
+    //   get<1> : the mean value
+    //   get<2> : the mean plus one standard deviation
+    //
     template <typename BidirectionalIterator>
     std::tuple<double, double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
     {
@@ -53,19 +54,19 @@ namespace ctl {
             mean + stdev);
     }
 
-    ///
-    /// calculating the interquartile range from this basic algorithm
-    /// 1. split data into 2 sections evenly
-    /// 2. determine the median of these 2 groups
-    ////   - median is either the number splitting the group evenly, or the average between the middle 2 values
-    ///
-    /// ** Requires input to be sorted **
-    ///
-    /// Returns a tuple of doubles recording the results:
-    ///   get<0> : quartile 1 (median of the lower half - at the 25% mark)
-    ///   get<1> : quartile 2 (the median value - at the 50% mark)
-    ///   get<2> : quartile 3 (median of the upper half - at the 75% mark)
-    ///
+    //
+    // calculating the interquartile range from this basic algorithm
+    // 1. split data into 2 sections evenly
+    // 2. determine the median of these 2 groups
+    //   - median is either the number splitting the group evenly, or the average between the middle 2 values
+    //
+    // ** Requires input to be sorted **
+    //
+    // Returns a tuple of doubles recording the results:
+    //   get<0> : quartile 1 (median of the lower half - at the 25% mark)
+    //   get<1> : quartile 2 (the median value - at the 50% mark)
+    //   get<2> : quartile 3 (median of the upper half - at the 75% mark)
+    //
     template <typename BidirectionalIterator>
     std::tuple<double, double, double> ctInterquartileRange(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
     {
@@ -115,29 +116,31 @@ namespace ctl {
 
             double median_value = 0.0;
             switch (rhs - lhs) {
-            case 1: {
-                // next to each other: take the average for the median
-                // must guard against overflow
-                auto lhs_value = *lhs;
-                auto rhs_value = *rhs;
-                auto sum = lhs_value + rhs_value;
-                if (sum < lhs_value || sum < rhs_value) {
-                    // overflow - divide first, then add
-                    median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
-                } else {
-                    median_value = static_cast<double>(sum) / 2.0;
+                case 1:
+                {
+                   // next to each other: take the average for the median
+                   // must guard against overflow
+                    auto lhs_value = *lhs;
+                    auto rhs_value = *rhs;
+                    auto sum = lhs_value + rhs_value;
+                    if (sum < lhs_value || sum < rhs_value) {
+                        // overflow - divide first, then add
+                        median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
+                    } else {
+                        median_value = static_cast<double>(sum) / 2.0;
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case 2: {
-                // two apart: the one in the middle is the median
-                median_value = static_cast<double>(*(lhs + 1));
-                break;
-            }
+                case 2:
+                {
+                   // two apart: the one in the middle is the median
+                    median_value = static_cast<double>(*(lhs + 1));
+                    break;
+                }
 
-            default:
-                ctl::ctAlwaysFatalCondition(L"ntsInterquartileRange internal error - returned iterators more than one apart [%Iu]", rhs - lhs);
+                default:
+                    ctl::ctAlwaysFatalCondition(L"ntsInterquartileRange internal error - returned iterators more than one apart [%Iu]", rhs - lhs);
             }
             return median_value;
         };

@@ -31,9 +31,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSafeInt.hpp"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
-    namespace statics {
+    namespace statics
+    {
         // forward-declarations
         inline static bool GrowConnectionIdBuffer() NOEXCEPT;
 
@@ -178,11 +180,10 @@ namespace ctsTraffic {
             }
             return true;
         }
-
     }
 
-    namespace ctsIOBuffers {
-
+    namespace ctsIOBuffers
+    {
         //////////////////////////////////////////////////////////////////////////
         //
         // Will throw std::bad_alloc on low resource conditions

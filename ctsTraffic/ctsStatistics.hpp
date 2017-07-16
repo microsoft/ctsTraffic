@@ -77,7 +77,8 @@ namespace ctsTraffic
         }
     }
 
-    struct ctStatsTracking {
+    struct ctStatsTracking
+    {
     private:
         long long current_value;
         long long previous_value;
@@ -178,7 +179,8 @@ namespace ctsTraffic
     };
 
 
-    struct ctsConnectionStatistics {
+    struct ctsConnectionStatistics
+    {
     private:
         // not implementing the assignment operator
         // only implemeting the copy c'tor (due to maintaining memory barriers)
@@ -239,7 +241,8 @@ namespace ctsTraffic
         }
     };
 
-    struct ctsUdpStatistics {
+    struct ctsUdpStatistics
+    {
     private:
         ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
 
@@ -319,10 +322,8 @@ namespace ctsTraffic
         }
     };
 
-    struct ctsTcpStatistics {
-    private:
-        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
-
+    struct ctsTcpStatistics
+    {
     public:
         ctStatsTracking start_time;
         ctStatsTracking end_time;
@@ -355,6 +356,8 @@ namespace ctsTraffic
             ::memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
+        // not implementing the assignment operator
+        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
 
         long long current_bytes() NOEXCEPT
         {

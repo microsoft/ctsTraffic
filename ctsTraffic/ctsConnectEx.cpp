@@ -27,8 +27,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsSocketGuard.hpp"
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     static void ctsConnectExIoCompletionCallback(
         OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
@@ -107,8 +107,7 @@ namespace ctsTraffic {
                     // get a new IO request from the socket's TP
                     const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
                     OVERLAPPED* pov = connect_iocp->new_request(
-                        [_weak_socket, targetAddress](OVERLAPPED* _ov)
-                    { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
+                        [_weak_socket, targetAddress] (OVERLAPPED* _ov) { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                     if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {
                         error = ::WSAGetLastError();

@@ -20,7 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctVersionConversion.hpp>
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // forward declare ctsSocketBroker
     // - can't include ctsSocketBroker.h in this header to avoid circular declarations
@@ -39,7 +40,8 @@ namespace ctsTraffic {
     // Encapsulates a ctsSocket instance
     // - tracking socket state and corresponding statistics
     //
-    class ctsSocketState : public std::enable_shared_from_this<ctsSocketState> {
+    class ctsSocketState : public std::enable_shared_from_this<ctsSocketState>
+    {
     public:
         enum class InternalState
         {
@@ -99,8 +101,7 @@ namespace ctsTraffic {
         //
         // static threadpool callback function
         //
-        static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) NOEXCEPT;
+        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID, PTP_WORK) NOEXCEPT;
     };
 
 } // namespace

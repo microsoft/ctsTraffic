@@ -32,7 +32,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ignore IDN warnings when explicitly asking to resolve a short-string
 #pragma prefast(disable: 38026)
 
-namespace ctl {
+namespace ctl
+{
 
     enum class ByteOrder
     {
@@ -42,14 +43,13 @@ namespace ctl {
 
     static const DWORD IP_STRING_MAX_LENGTH = 65;
 
-    class ctSockaddr {
+    class ctSockaddr
+    {
     public:
-
-        static
-        std::vector<ctSockaddr> ResolveName(_In_ LPCWSTR _name)
+        static std::vector<ctSockaddr> ResolveName(_In_ LPCWSTR _name)
         {
             ADDRINFOW* addr_result = nullptr;
-            ctlScopeGuard(freeAddrOnExit, { if (addr_result) ::FreeAddrInfoW(addr_result); });
+            ctlScopeGuard(freeAddrOnExit, {if (addr_result) ::FreeAddrInfoW(addr_result);});
 
             std::vector<ctSockaddr> return_addrs;
             if (0 == ::GetAddrInfoW(_name, nullptr, nullptr, &addr_result)) {
@@ -122,16 +122,14 @@ namespace ctl {
         // necessary as the [] operators take precedence over the ref & operator
         // writeAddress only prints the IP address, not the scope or port
         std::wstring writeAddress() const;
-        bool writeAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
-        bool writeAddress(CHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
+        bool writeAddress(WCHAR(&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
+        bool writeAddress(CHAR(&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT;
         // writeCompleteAddress prints the IP address, scope, and port
         std::wstring writeCompleteAddress(bool trim_scope = false) const;
-        bool writeCompleteAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
-        bool writeCompleteAddress(CHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
+        bool writeCompleteAddress(WCHAR(&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
+        bool writeCompleteAddress(CHAR(&address)[IP_STRING_MAX_LENGTH], bool trim_scope = false) const NOEXCEPT;
 
-        //
         // Accessors
-        //
         int               length() const NOEXCEPT;
         unsigned short    port() const NOEXCEPT;
         short             family() const NOEXCEPT;
@@ -154,19 +152,16 @@ namespace ctl {
     //
     // non-member swap
     //
-    inline
-    void swap(_Inout_ ctSockaddr& left_, _Inout_ ctSockaddr& right_) NOEXCEPT
+    inline void swap(_Inout_ ctSockaddr& left_, _Inout_ ctSockaddr& right_) NOEXCEPT
     {
         left_.swap(right_);
     }
-
 
     inline ctSockaddr::ctSockaddr(short family) NOEXCEPT
     {
         ::ZeroMemory(&saddr, SADDR_SIZE);
         saddr.ss_family = family;
     }
-
     inline ctSockaddr::ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) NOEXCEPT
     {
         size_t length = (static_cast<size_t>(inLength) <= SADDR_SIZE) ? inLength : SADDR_SIZE;
@@ -230,6 +225,7 @@ namespace ctl {
     inline ctSockaddr::ctSockaddr(ctSockaddr&& inAddr) NOEXCEPT
     {
         ::CopyMemory(&saddr, &inAddr.saddr, SADDR_SIZE);
+        ::ZeroMemory(&inAddr.saddr, SADDR_SIZE);
     }
     inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) NOEXCEPT
     {
@@ -451,7 +447,7 @@ namespace ctl {
         return_string[IP_STRING_MAX_LENGTH - 1] = L'\0';
         return return_string;
     }
-    inline bool ctSockaddr::writeAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
+    inline bool ctSockaddr::writeAddress(WCHAR(&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
     {
         ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(WCHAR));
 
@@ -462,10 +458,10 @@ namespace ctl {
         return false;
     }
 
-    inline bool ctSockaddr::writeAddress(CHAR (&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
+    inline bool ctSockaddr::writeAddress(CHAR(&address)[IP_STRING_MAX_LENGTH]) const NOEXCEPT
     {
         ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(CHAR));
-        
+
         const PVOID pAddr = (AF_INET == saddr.ss_family) ? reinterpret_cast<PVOID>(this->in_addr()) : reinterpret_cast<PVOID>(this->in6_addr());
         if (NULL != ::InetNtopA(saddr.ss_family, pAddr, address, IP_STRING_MAX_LENGTH)) {
             return true;
@@ -480,7 +476,7 @@ namespace ctl {
         return_string[IP_STRING_MAX_LENGTH - 1] = L'\0';
         return return_string;
     }
-    inline bool ctSockaddr::writeCompleteAddress(WCHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
+    inline bool ctSockaddr::writeCompleteAddress(WCHAR(&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
     {
         ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(WCHAR));
 
@@ -511,7 +507,7 @@ namespace ctl {
         return false;
     }
 
-    inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
+    inline bool ctSockaddr::writeCompleteAddress(CHAR(&address)[IP_STRING_MAX_LENGTH], bool trim_scope) const NOEXCEPT
     {
         ::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(CHAR));
 

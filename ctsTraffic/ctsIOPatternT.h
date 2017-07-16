@@ -27,7 +27,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPatternRateLimitPolicy.hpp"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     enum class ctsIOStatus
     {
@@ -39,7 +40,7 @@ namespace ctsTraffic {
     class ctsIOPattern
     {
     public:
-        virtual ~ctsIOPattern()
+        virtual ~ctsIOPattern() NOEXCEPT
         {
         }
 
@@ -82,9 +83,7 @@ namespace ctsTraffic {
     };
 
 
-    template <typename Stats,
-              typename ProtocolPolicy,
-              typename RateLimitPolicy>
+    template <typename Stats, typename ProtocolPolicy, typename RateLimitPolicy>
     class ctsIOPatternT : public ctsIOPattern
     {
     public:

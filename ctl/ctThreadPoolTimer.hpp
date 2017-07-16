@@ -28,10 +28,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctLocks.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
     namespace details
     {
-        struct ctThreadpoolTimerCallbackInfo {
+        struct ctThreadpoolTimerCallbackInfo
+        {
             std::function<void(void)> callback;
             FILETIME timer_expiration = {0};
             unsigned long reoccuring_period = 0;
@@ -43,13 +45,13 @@ namespace ctl {
             ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
 
             explicit ctThreadpoolTimerCallbackInfo(std::function<void(void)>&& _callback, long long _milliseconds) NOEXCEPT :
-                callback(std::move(_callback))
+            callback(std::move(_callback))
             {
                 using namespace ctl::ctTimer;
                 timer_expiration = convert_msec_absolute_filetime(snap_system_time_as_msec() + _milliseconds);
             }
             explicit ctThreadpoolTimerCallbackInfo(std::function<void(void)>&& _callback, long long _milliseconds, unsigned long _period) NOEXCEPT :
-                callback(std::move(_callback)),
+            callback(std::move(_callback)),
                 reoccuring_period(_period)
             {
                 using namespace ctl::ctTimer;
@@ -84,13 +86,14 @@ namespace ctl {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// ctThreadpoolTimer
-    ///
-    /// class that encapsulates the new-to-Vista ThreadPool APIs around Timer usage
-    ///
+    //
+    // ctThreadpoolTimer
+    //
+    // class that encapsulates the new-to-Vista ThreadPool APIs around Timer usage
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctThreadpoolTimer {
+    class ctThreadpoolTimer
+    {
     public:
         //
         // These c'tors can fail under low resources
@@ -130,7 +133,7 @@ namespace ctl {
             // capture the caller's context in a lambda to be invoked in the callback
             this->insert_callback_info(
                 ::ctl::details::ctThreadpoolTimerCallbackInfo(
-                    std::move(_function), 
+                    std::move(_function),
                     _millisecond_offset));
         }
         void schedule_reoccuring(std::function<void(void)> _function, long long _millisecond_offset, unsigned long _period)
@@ -191,20 +194,18 @@ namespace ctl {
                 std::end(this->callback_objects),
                 [] (const ::ctl::details::ctThreadpoolTimerCallbackInfo& _info) {
                     // returns if a null callback (not being used)
-                    return !static_cast<bool>(_info.callback);
-                });
+                return !static_cast<bool>(_info.callback);
+            });
 
             if (unused_callback == std::end(this->callback_objects)) {
-                //
                 // need room in both the callback_objects && tp_timers vector for a new timer
-                //
                 this->callback_objects.emplace_back(std::move(_new_request));
                 // ensure this is exception safe with a scope guard
-                ctlScopeGuard(removeCallbackObjectOnFailure, { this->callback_objects.pop_back(); });
+                ctlScopeGuard(removeCallbackObjectOnFailure, {this->callback_objects.pop_back();});
 
                 PTP_TIMER temp_timer = this->create_tp();
                 // ensure the timer is closed (is exception safe) with a scope guard
-                ctlScopeGuard(deleteTemporaryTimerOnFailure, { ::CloseThreadpoolTimer(temp_timer); });
+                ctlScopeGuard(deleteTemporaryTimerOnFailure, {::CloseThreadpoolTimer(temp_timer);});
 
                 // now attempt to store the new timer
                 this->tp_timers.push_back(temp_timer);
@@ -231,9 +232,9 @@ namespace ctl {
         }
 
         static void CALLBACK ctThreadPoolTimerCallback(
-          PTP_CALLBACK_INSTANCE /*_instance*/,
-          PVOID _context,
-          PTP_TIMER _timer)
+            PTP_CALLBACK_INSTANCE /*_instance*/,
+            PVOID _context,
+            PTP_TIMER _timer)
         {
             ctThreadpoolTimer* this_ptr = reinterpret_cast<ctThreadpoolTimer*>(_context);
             // save off the functor to invoke outside the lock
@@ -274,4 +275,3 @@ namespace ctl {
         }
     };
 } // namespace
-

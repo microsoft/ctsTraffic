@@ -20,13 +20,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctException.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
 
-    ///
-    /// Pure RAII tracking the state of this CS
-    /// - notice there are no methods to explicitly control entering/leaving the CS
-    ///
-    class ctAutoReleaseCriticalSection {
+    //
+    // Pure RAII tracking the state of this CS
+    // - notice there are no methods to explicitly control entering/leaving the CS
+    //
+    class ctAutoReleaseCriticalSection
+    {
     public:
         _Acquires_lock_(*this->cs)
         _Post_same_lock_(*_cs, *this->cs)
@@ -49,11 +51,11 @@ namespace ctl {
         ctAutoReleaseCriticalSection operator=(const ctAutoReleaseCriticalSection&) = delete;
 
     private:
-        CRITICAL_SECTION* cs;
+        CRITICAL_SECTION* cs = nullptr;
     };
 
-
-    class ctPrioritizedCriticalSection {
+    class ctPrioritizedCriticalSection
+    {
     public:
         ctPrioritizedCriticalSection() NOEXCEPT
         {
@@ -101,7 +103,7 @@ namespace ctl {
             ::ReleaseSRWLockShared(&srwlock);
         }
 
-        /// not copyable
+        // not copyable
         ctPrioritizedCriticalSection(const ctPrioritizedCriticalSection&) = delete;
         ctPrioritizedCriticalSection& operator=(const ctPrioritizedCriticalSection&) = delete;
 
@@ -109,7 +111,9 @@ namespace ctl {
         SRWLOCK srwlock;
         CRITICAL_SECTION cs;
     };
-    class ctAutoReleasePriorityCriticalSection {
+
+    class ctAutoReleasePriorityCriticalSection
+    {
     public:
         explicit ctAutoReleasePriorityCriticalSection(ctPrioritizedCriticalSection& _priority_cs) NOEXCEPT :
             prioritized_cs(_priority_cs)
@@ -122,16 +126,18 @@ namespace ctl {
             prioritized_cs.priority_release();
         }
 
-        /// no default c'tor
+        // no default c'tor
         ctAutoReleasePriorityCriticalSection() = delete;
-        /// non-copyable
+        // non-copyable
         ctAutoReleasePriorityCriticalSection(const ctAutoReleasePriorityCriticalSection&) = delete;
         ctAutoReleasePriorityCriticalSection operator=(const ctAutoReleasePriorityCriticalSection&) = delete;
 
     private:
         ctPrioritizedCriticalSection& prioritized_cs;
     };
-    class ctAutoReleaseDefaultCriticalSection {
+
+    class ctAutoReleaseDefaultCriticalSection
+    {
     public:
         explicit ctAutoReleaseDefaultCriticalSection(ctPrioritizedCriticalSection& _priority_cs) NOEXCEPT :
             prioritized_cs(_priority_cs)
@@ -144,9 +150,9 @@ namespace ctl {
             prioritized_cs.default_release();
         }
 
-        /// no default c'tor
+        // no default c'tor
         ctAutoReleaseDefaultCriticalSection() = delete;
-        /// non-copyable
+        // non-copyable
         ctAutoReleaseDefaultCriticalSection(const ctAutoReleaseDefaultCriticalSection&) = delete;
         ctAutoReleaseDefaultCriticalSection operator=(const ctAutoReleaseDefaultCriticalSection&) = delete;
 
@@ -155,11 +161,11 @@ namespace ctl {
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Can concurrent-safely read from both const and non-const
-    ///  long long * 
-    ///  long *
-    ///
+    //
+    // Can concurrent-safely read from both const and non-const
+    //  long long * 
+    //  long *
+    //
     //////////////////////////////////////////////////////////////////////////////////////////
     inline long long ctMemoryGuardRead(_In_ const long long* _original_value) NOEXCEPT
     {
@@ -179,17 +185,17 @@ namespace ctl {
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Can concurrent-safely update a long long or long value
-    /// - *Write returns the *prior* value
-    /// - *WriteConditionally returns the *prior* value
-    /// - *Add returns the *prior* value
-    /// - *Subtract returns the *prior* value
-    ///   (Note subtraction is just the adding a negative long value)
-    ///
-    /// - *Increment returns the *new* value
-    /// - *Decrement returns the *new* value
-    ///
+    //
+    // Can concurrent-safely update a long long or long value
+    // - *Write returns the *prior* value
+    // - *WriteConditionally returns the *prior* value
+    // - *Add returns the *prior* value
+    // - *Subtract returns the *prior* value
+    //   (Note subtraction is just the adding a negative long value)
+    //
+    // - *Increment returns the *new* value
+    // - *Decrement returns the *new* value
+    //
     //////////////////////////////////////////////////////////////////////////////////////////
     inline long long ctMemoryGuardWrite(_Inout_ long long* _original_value, long long _new_value) NOEXCEPT
     {

@@ -21,16 +21,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctScopedT.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
 
-    ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctScopedT<T, Fn> using:
-    ///  - a general Win32 HANDLE resource type
-    ///  - a CloseHandle() function to close the HANDLE
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////
-    struct ctHandleDeleter {
+///////////////////////////////////////////////////////////////////////////////////
+//
+//  typedef of ctScopedT<T, Fn> using:
+//  - a general Win32 HANDLE resource type
+//  - a CloseHandle() function to close the HANDLE
+//
+///////////////////////////////////////////////////////////////////////////////////
+    struct ctHandleDeleter
+    {
         void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -42,13 +44,14 @@ namespace ctl {
 
 
     ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctScopedT<T, Fn> using:
-    ///  - a HKEY resource type (registry handles)
-    ///  - a RegCloseKey() function to close the HANDLE
-    ///
+    //
+    //  typedef of ctScopedT<T, Fn> using:
+    //  - a HKEY resource type (registry handles)
+    //  - a RegCloseKey() function to close the HANDLE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctHKeyDeleter {
+    struct ctHKeyDeleter
+    {
         void operator() (const HKEY h) const NOEXCEPT
         {
             if ((h != NULL) &&
@@ -66,13 +69,14 @@ namespace ctl {
 
 
     ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctSharedT<T, Fn> using:
-    ///  - a HANDLE created with the FindFirst* APIs
-    ///  - a FindClose() function to close the HANDLE
-    ///
+    //
+    //  typedef of ctSharedT<T, Fn> using:
+    //  - a HANDLE created with the FindFirst* APIs
+    //  - a FindClose() function to close the HANDLE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctFindHandleDeleter {
+    struct ctFindHandleDeleter
+    {
         void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -84,13 +88,14 @@ namespace ctl {
 
 
     ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctSharedT<T, Fn> using:
-    ///  - a HANDLE created with the OpenEventLog API
-    ///  - a CloseEventLog() function to close the HANDLE
-    ///
+    //
+    //  typedef of ctSharedT<T, Fn> using:
+    //  - a HANDLE created with the OpenEventLog API
+    //  - a CloseEventLog() function to close the HANDLE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctEventLogHandleDeleter {
+    struct ctEventLogHandleDeleter
+    {
         void operator() (const HANDLE h) const NOEXCEPT
         {
             if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -103,12 +108,13 @@ namespace ctl {
 
     ///////////////////////////////////////////////////////////////////////////////////
     //
-    ///  typedef of ctSharedT<T, Fn> using:
-    ///   - a HMODULE resource type
-    ///   - a FreeLibrary() function to close the HMODULE
-    ///
+    //  typedef of ctSharedT<T, Fn> using:
+    //   - a HMODULE resource type
+    //   - a FreeLibrary() function to close the HMODULE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctLibraryHandleDeleter {
+    struct ctLibraryHandleDeleter
+    {
         void operator() (const HMODULE h) const NOEXCEPT
         {
             if (h != NULL) {
@@ -120,13 +126,14 @@ namespace ctl {
 
 
     ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctSharedT<T, Fn> using:
-    ///  - a SC_HANDLE resource type
-    ///  - a CloseServiceHandle() function to close the SC_HANDLE
-    ///
+    //
+    //  typedef of ctSharedT<T, Fn> using:
+    //  - a SC_HANDLE resource type
+    //  - a CloseServiceHandle() function to close the SC_HANDLE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctServiceHandleDeleter {
+    struct ctServiceHandleDeleter
+    {
         void operator() (const SC_HANDLE h) const NOEXCEPT
         {
             if (h != NULL) {
@@ -139,13 +146,14 @@ namespace ctl {
 
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  typedef of ctSharedT<T, Fn> using:
-    ///  - a SOCKET resource type
-    ///  - a closesocket() function to close the HMODULE
-    ///
+    //
+    //  typedef of ctSharedT<T, Fn> using:
+    //  - a SOCKET resource type
+    //  - a closesocket() function to close the HMODULE
+    //
     ///////////////////////////////////////////////////////////////////////////////////
-    struct ctSocketHandleDeleter {
+    struct ctSocketHandleDeleter
+    {
         void operator() (const SOCKET s) const NOEXCEPT
         {
             if (s != INVALID_SOCKET) {

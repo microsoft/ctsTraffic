@@ -22,8 +22,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctThreadIocp.hpp"
 #include "ctHandle.hpp"
 
-namespace ctsTraffic {
-    class ctsMediaStreamServerListeningSocket {
+namespace ctsTraffic
+{
+    class ctsMediaStreamServerListeningSocket
+    {
     private:
         static const size_t RecvBufferSize = 1024;
         mutable CRITICAL_SECTION object_guard;
@@ -38,7 +40,7 @@ namespace ctsTraffic {
         _Guarded_by_(object_guard)
         ctl::ctSockaddr listening_addr;
 
-        // remote addr, length, and flags are updated on each recvfrom()
+            // remote addr, length, and flags are updated on each recvfrom()
         _Guarded_by_(object_guard)
         ctl::ctSockaddr remote_addr;
         _Guarded_by_(object_guard)

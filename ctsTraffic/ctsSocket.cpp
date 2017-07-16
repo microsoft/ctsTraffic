@@ -24,8 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsWinsockLayer.h"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     using namespace ctl;
     using namespace std;
 
@@ -242,8 +242,7 @@ namespace ctsTraffic {
                 if (SOCKET_ERROR == error) {
                     int gle = ::WSAGetLastError();
                     // expect this to be pending
-                    if (gle != WSA_IO_PENDING)
-                    {
+                    if (gle != WSA_IO_PENDING) {
                         // if the ISB notification failed, tell the TP to no longer track that IO
                         shared_iocp->cancel_request(ov);
                         if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR) {
@@ -294,21 +293,21 @@ namespace ctsTraffic {
         this->tp_timer.reset();
     }
 
-    ///
-    /// SetTimer schedules the callback function to be invoked with the given ctsSocket and ctsIOTask
-    /// - note that the timer 
-    /// - can throw under low resource conditions
-    ///
+    //
+    // SetTimer schedules the callback function to be invoked with the given ctsSocket and ctsIOTask
+    // - note that the timer 
+    // - can throw under low resource conditions
+    //
     void ctsSocket::set_timer(const ctsIOTask& _task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> _func)
     {
         ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
         if (!this->tp_timer) {
             this->tp_timer = make_shared<ctl::ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
         }
-        
+
         // register a weak pointer after creating a shared_ptr from the 'this' ptry
         this->tp_timer->schedule_singleton(
-            [_func = std::move(_func), weak_reference = this->shared_from_this(), _task] () { _func(weak_reference, _task); },
+            [_func = std::move(_func), weak_reference = this->shared_from_this(), _task]() { _func(weak_reference, _task); },
             _task.time_offset_milliseconds);
     }
 

@@ -32,7 +32,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(ctl::ctScopedSocket&& _listening_socket, const ctl::ctSockaddr& _listening_addr) :
         object_guard(),
@@ -101,12 +102,12 @@ namespace ctsTraffic {
                         this->recv_completion(_ov); });
 
                     error = ::WSARecvFrom(
-                        this->socket.get(), 
-                        &wsabuf, 
-                        1, 
-                        nullptr, 
-                        &this->recv_flags, 
-                        this->remote_addr.sockaddr(), 
+                        this->socket.get(),
+                        &wsabuf,
+                        1,
+                        nullptr,
+                        &this->recv_flags,
+                        this->remote_addr.sockaddr(),
                         &this->remote_addr_len,
                         pov,
                         nullptr);
@@ -115,7 +116,7 @@ namespace ctsTraffic {
                         error = ::WSAGetLastError();
                         if (WSA_IO_PENDING == error) {
                             // pending is not an error
-                            error = NO_ERROR; 
+                            error = NO_ERROR;
                         } else {
                             this->thread_iocp->cancel_request(pov);
                             if (WSAECONNRESET == error) {
@@ -198,22 +199,20 @@ namespace ctsTraffic {
                     // - just attempt to post another recv at the end of this function
 
                 } else {
-                    ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
-                    switch (message.action) {
-                        case MediaStreamAction::START:
-                            PrintDebugInfo(
-                                L"\t\tctsMediaStreamServer - processing START from %s\n",
-                                this->remote_addr.writeCompleteAddress().c_str());
+                    if (ctsMediaStreamMessage::IsStart(this->recv_buffer.data(), bytes_received)) {
+                        PrintDebugInfo(
+                            L"\t\tctsMediaStreamServer - processing START from %s\n",
+                            this->remote_addr.writeCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
-                            // Cannot be holding the object_guard when calling into any pimpl-> methods
-                            pimpl_operation = [this] () {
-                                ctsMediaStreamServerImpl::start(this->socket, this->listening_addr, this->remote_addr);
-                            };
+                        // Cannot be holding the object_guard when calling into any pimpl-> methods
+                        pimpl_operation = [this] () {
+                            ctsMediaStreamServerImpl::start(this->socket, this->listening_addr, this->remote_addr);
+                        };
 #endif
-                            break;
-
-                        default:
-                            ctl::ctAlwaysFatalCondition(L"ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.action, this->recv_buffer.data());
+                    } else {
+                        ctsConfig::PrintErrorInfo(
+                            L"ctsMediaStreamServer - Rejected an invalid START request from %s\n",
+                            this->remote_addr.writeCompleteAddress().c_str());
                     }
                 }
             }

@@ -30,7 +30,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketGuard.hpp"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // forward declare ctsSocketState
     // - can't include ctsSocketState.h in this header to avoid circular declarations
@@ -41,15 +42,15 @@ namespace ctsTraffic {
     // A safe socket container
     // - ensures has a lock on the socket while in scope
     //
-    class ctsSocket : public std::enable_shared_from_this<ctsSocket> {
+    class ctsSocket : public std::enable_shared_from_this<ctsSocket>
+    {
     public:
         //
         // c'tor requiring a parent ctsSocket reference
         //
         explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent);
 
-        _No_competing_thread_
-        ~ctsSocket() NOEXCEPT;
+        _No_competing_thread_ ~ctsSocket() NOEXCEPT;
 
         //
         // Assigns the object a new SOCKET value and fully initializes the object for use
@@ -161,7 +162,7 @@ namespace ctsTraffic {
         // maintain a shared_ptr to the pattern
         std::shared_ptr<ctsIOPattern> pattern;
 
-        /// only guarded when returning to the caller
+        // only guarded when returning to the caller
         std::shared_ptr<ctl::ctThreadIocp>      tp_iocp;
         std::shared_ptr<ctl::ctThreadpoolTimer> tp_timer;
 

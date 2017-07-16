@@ -25,9 +25,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 
-
-
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // ctsSimpleConnect makes *blocking* calls to connect
     // - callers should be careful to ensure that this is really what they want

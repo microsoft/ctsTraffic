@@ -22,13 +22,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsSocket.h"
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
     void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
     void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
-    
+
     void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
     void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 

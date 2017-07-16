@@ -31,17 +31,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsStatistics.hpp"
 
 
-namespace ctsTraffic {
-    ///
-    /// ctsMediaStreamMessage encapsulates requests sent from clients
-    ///
-    ///
-    /// Grammar:
-    ///
-    ///   REQUEST_ID
-    ///   START
-    ///
-
+namespace ctsTraffic
+{
+    //
+    // ctsMediaStreamMessage encapsulates requests sent from clients
+    //
     static const unsigned short UdpDatagramProtocolHeaderFlagData = 0x0000;
     static const unsigned short UdpDatagramProtocolHeaderFlagId = 0x1000;
 
@@ -58,11 +52,6 @@ namespace ctsTraffic {
     static const char* UdpDatagramStartString = "START";
     static const unsigned long UdpDatagramStartStringLength = 5;
 
-    enum class MediaStreamAction : char
-    {
-        START
-    };
-
     class ctsMediaStreamSendRequests
     {
     public:
@@ -70,19 +59,18 @@ namespace ctsTraffic {
         ctsMediaStreamSendRequests(const ctsMediaStreamSendRequests&) = delete;
         ctsMediaStreamSendRequests& operator=(const ctsMediaStreamSendRequests&) = delete;
 
-
         static const unsigned long BufferArraySize = 5;
-        ///
-        /// compose iteration across buffers to be sent per instantiated request
-        ///
+        //
+        // compose iteration across buffers to be sent per instantiated request
+        //
         class iterator
         {
         public:
             ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// iterator_traits
-            /// - allows <algorithm> functions to be used
-            ///
+            //
+            // iterator_traits
+            // - allows <algorithm> functions to be used
+            //
             ////////////////////////////////////////////////////////////////////////////////
             typedef std::forward_iterator_tag              iterator_category;
             typedef std::array<WSABUF, BufferArraySize>    value_type;
@@ -96,10 +84,10 @@ namespace ctsTraffic {
             iterator(const iterator& _in) = default;
             iterator& operator=(const iterator& _in) = default;
 
-            ///
-            /// Dereferencing operators
-            /// - returning non-const array references as Winsock APIs don't take const WSABUF*
-            ///
+            //
+            // Dereferencing operators
+            // - returning non-const array references as Winsock APIs don't take const WSABUF*
+            //
             std::array<WSABUF, BufferArraySize>* operator->() NOEXCEPT
             {
                 ctl::ctFatalCondition(
@@ -124,20 +112,20 @@ namespace ctsTraffic {
                 return this->wsa_buf_array;
             }
 
-            ///
-            /// Equality operators
-            ///
+            //
+            // Equality operators
+            //
             bool operator ==(const iterator& _comparand) const NOEXCEPT
             {
                 return (this->qpc_address == _comparand.qpc_address &&
-                        this->bytes_to_send == _comparand.bytes_to_send);
+                    this->bytes_to_send == _comparand.bytes_to_send);
             }
             bool operator !=(const iterator& _comparand) const NOEXCEPT
             {
                 return !(*this == _comparand);
             }
 
-            /// preincrement
+            // preincrement
             iterator& operator++() NOEXCEPT
             {
                 ctl::ctFatalCondition(
@@ -164,10 +152,10 @@ namespace ctsTraffic {
         private:
             // c'tor is only available to the begin() and end() methods of ctsMediaStreamSendRequests
             friend class ctsMediaStreamSendRequests;
-            iterator(_In_opt_ LARGE_INTEGER* _qpc_address, long long _bytes_to_send, const std::array<WSABUF, BufferArraySize>& _wsa_buf_array) NOEXCEPT
-            : qpc_address(_qpc_address),
-              bytes_to_send(_bytes_to_send),
-              wsa_buf_array(_wsa_buf_array)
+            iterator(_In_opt_ LARGE_INTEGER* _qpc_address, long long _bytes_to_send, const std::array<WSABUF, BufferArraySize>& _wsa_buf_array) NOEXCEPT :
+                qpc_address(_qpc_address),
+                bytes_to_send(_bytes_to_send),
+                wsa_buf_array(_wsa_buf_array)
             {
                 // set the buffer length for the first iterator
                 this->bytes_to_send -= this->update_buffer_length();
@@ -210,18 +198,17 @@ namespace ctsTraffic {
             std::array<WSABUF, BufferArraySize> wsa_buf_array;
         };
 
-
-        ///
-        /// Constructor of the ctsMediaStreamSendRequests captures the properties of the next Send() request
-        /// - the total # of bytes to send (across X number of send requests)
-        /// - the sequence number to tag in every send request
-        ///
-        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, _In_ char* _send_buffer) NOEXCEPT 
-        : wsabuf(),
-          qpc_value(),
-          qpf(ctl::ctTimer::snap_qpf()),
-          bytes_to_send(_bytes_to_send),
-          sequence_number(_sequence_number)
+        //
+        // Constructor of the ctsMediaStreamSendRequests captures the properties of the next Send() request
+        // - the total # of bytes to send (across X number of send requests)
+        // - the sequence number to tag in every send request
+        //
+        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, _In_ char* _send_buffer) NOEXCEPT :
+            wsabuf(),
+            qpc_value(),
+            qpf(ctl::ctTimer::snap_qpf()),
+            bytes_to_send(_bytes_to_send),
+            sequence_number(_sequence_number)
         {
             ctl::ctFatalCondition(
                 _bytes_to_send <= UdpDatagramDataHeaderLength,
@@ -255,7 +242,6 @@ namespace ctsTraffic {
             return iterator(nullptr, 0, this->wsabuf);
         }
 
-
     private:
         std::array<WSABUF, BufferArraySize> wsabuf;
         LARGE_INTEGER qpc_value;
@@ -265,19 +251,14 @@ namespace ctsTraffic {
     };
 
 
-    struct ctsMediaStreamMessage
+    namespace ctsMediaStreamMessage
     {
-        long long sequence_number;
-        MediaStreamAction action;
-
-        explicit ctsMediaStreamMessage(MediaStreamAction _action) NOEXCEPT
-        : sequence_number(0LL),
-          action(_action)
+        inline static unsigned short GetProtocolHeaderFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
         {
+            return *reinterpret_cast<unsigned short*>(_task.buffer);
         }
 
-
-        static bool ValidateBufferLengthFromTask(_In_ const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+        inline static bool ValidateBufferLengthFromTask(_In_ const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
         {
             if (_completed_bytes < UdpDatagramProtocolHeaderFlagLength) {
                 ctsConfig::PrintErrorInfo(
@@ -320,12 +301,7 @@ namespace ctsTraffic {
             return true;
         }
 
-        static unsigned short GetProtocolHeaderFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
-        {
-            return *reinterpret_cast<unsigned short*>(_task.buffer);
-        }
-
-        static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, _In_ const ctsIOTask& _task) NOEXCEPT
+        inline static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, _In_ const ctsIOTask& _task) NOEXCEPT
         {
             auto copy_error = ::memcpy_s(
                 _connection_id,
@@ -340,7 +316,7 @@ namespace ctsTraffic {
                 copy_error);
         }
 
-        static long long GetSequenceNumberFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
+        inline static long long GetSequenceNumberFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
             auto copy_error = ::memcpy_s(
@@ -353,38 +329,10 @@ namespace ctsTraffic {
                 L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",
                 &_task,
                 copy_error);
-
             return return_value;
         }
 
-        static long long GetQueryPerfCounterFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
-        {
-            long long return_value;
-            auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
-            ctl::ctFatalCondition(
-                copy_error != 0,
-                L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",
-                &_task,
-                copy_error);
-
-            return return_value;
-        }
-
-        static long long GetQueryPerfFrequencyFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
-        {
-            long long return_value;
-            auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
-            ctl::ctFatalCondition(
-                copy_error != 0,
-                L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - target buffer (%p) ctsIOTask (%p) (error : %d)",
-                &return_value,
-                &_task,
-                copy_error);
-
-            return return_value;
-        }
-
-        static ctsIOTask MakeConnectionIdTask(_In_ const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
+        inline static ctsIOTask MakeConnectionIdTask(_In_ const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 _raw_task.buffer_length != ctsStatistics::ConnectionIdLength + UdpDatagramProtocolHeaderFlagLength,
@@ -394,8 +342,16 @@ namespace ctsTraffic {
 
             ctsIOTask return_task(_raw_task);
             // populate the buffer with the connection Id and protocol field
-            ::memcpy_s(return_task.buffer, UdpDatagramProtocolHeaderFlagLength, &UdpDatagramProtocolHeaderFlagId, UdpDatagramProtocolHeaderFlagLength);
-            ::memcpy_s(return_task.buffer + UdpDatagramProtocolHeaderFlagLength, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
+            ::memcpy_s(
+                return_task.buffer,
+                UdpDatagramProtocolHeaderFlagLength,
+                &UdpDatagramProtocolHeaderFlagId,
+                UdpDatagramProtocolHeaderFlagLength);
+            ::memcpy_s(
+                return_task.buffer + UdpDatagramProtocolHeaderFlagLength,
+                ctsStatistics::ConnectionIdLength,
+                _connection_id,
+                ctsStatistics::ConnectionIdLength);
 
             return_task.ioAction = IOTaskAction::Send;
             return_task.buffer_type = ctsIOTask::BufferType::UdpConnectionId;
@@ -403,43 +359,23 @@ namespace ctsTraffic {
             return return_task;
         }
 
-        static ctsIOTask Construct(MediaStreamAction _action) NOEXCEPT
+        inline static ctsIOTask Construct() NOEXCEPT
         {
             ctsIOTask return_task;
             return_task.ioAction = IOTaskAction::Send;
             return_task.buffer_type = ctsIOTask::BufferType::Static;
             return_task.track_io = false;
-
-            // safe to const-cast as we are sending these buffers
-            switch (_action) {
-                case MediaStreamAction::START:
-                    return_task.buffer = const_cast<char*>(UdpDatagramStartString);
-                    return_task.buffer_length = UdpDatagramStartStringLength;
-                    break;
-
-                default:
-                    ctl::ctAlwaysFatalCondition(L"Invalid Action specified : %d", _action);
-            }
-
+            return_task.buffer = const_cast<char*>(UdpDatagramStartString);
+            return_task.buffer_length = UdpDatagramStartStringLength;
             return return_task;
         }
 
-        static ctsMediaStreamMessage Extract(_In_reads_bytes_(_input_length) const char* _input, _In_ unsigned _input_length)
+        inline static bool IsStart(_In_reads_bytes_(_input_length) const char* _input, _In_ unsigned _input_length) NOEXCEPT
         {
-            std::string buffer(_input, _input + _input_length);
-
-            if (ctl::ctString::iordinal_equals(UdpDatagramStartString, buffer)) {
-                return ctsMediaStreamMessage(MediaStreamAction::START);
+            if (_input_length != UdpDatagramStartStringLength) {
+                return false;
             }
-
-            throw ctl::ctException(
-                ERROR_INVALID_DATA,
-                ctl::ctString::format_string(
-                L"Invalid MediaStream message: %S",
-                buffer.c_str()).c_str(),
-                L"ctsMediaStreamMessage",
-                true);
+            return (::memcmp(_input, UdpDatagramStartString, UdpDatagramStartStringLength) == 0);
         }
-    };
+    }
 }
-

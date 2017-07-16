@@ -21,21 +21,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
-    /// - with the specified ctsSocket
-    ///
+    //
+    // The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
+    // - with the specified ctsSocket
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
-    /// using IO Completion Ports
-    ///
+    //
+    // The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
+    // using IO Completion Ports
+    //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
 

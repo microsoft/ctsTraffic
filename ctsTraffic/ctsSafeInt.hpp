@@ -20,12 +20,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 
 
-namespace ctsTraffic {
-    ///
-    /// 'SafeInt' support differs across toolsets
-    /// - using typedefs to differentiate between the various options in one place
-    ///
-    struct ctsSafeIntErrorPolicy {
+namespace ctsTraffic
+{
+    //
+    // 'SafeInt' support differs across toolsets
+    // - using typedefs to differentiate between the various options in one place
+    //
+    struct ctsSafeIntErrorPolicy
+    {
         static __declspec(noreturn) void __stdcall SafeIntOnOverflow() NOEXCEPT
         {
             ctl::ctAlwaysFatalCondition(L"SafeInt has detected an integer overflow");
@@ -35,7 +37,7 @@ namespace ctsTraffic {
             ctl::ctAlwaysFatalCondition(L"SafeInt has detected divide by zero");
         }
     };
-    /// Visual Studio build system using safeint.h
+    // Visual Studio build system using safeint.h
     typedef msl::utilities::SafeInt<unsigned long, ctsSafeIntErrorPolicy>       ctsUnsignedLong;
     typedef msl::utilities::SafeInt<unsigned long long, ctsSafeIntErrorPolicy>  ctsUnsignedLongLong;
     typedef msl::utilities::SafeInt<signed long, ctsSafeIntErrorPolicy>         ctsSignedLong;
@@ -45,7 +47,7 @@ namespace ctsTraffic {
     typedef msl::utilities::SafeIntException ctsSafeIntException;
 
     inline
-    LPCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) NOEXCEPT
+        LPCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) NOEXCEPT
     {
         switch (_ex.m_code) {
             case msl::utilities::SafeIntNoError: return L"SafeInt - No Error";

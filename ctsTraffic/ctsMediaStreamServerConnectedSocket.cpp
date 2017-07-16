@@ -29,9 +29,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace ctl;
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
-        const std::weak_ptr<ctsSocket>& _weak_socket, 
+        const std::weak_ptr<ctsSocket>& _weak_socket,
         SOCKET _sending_socket,
         const ctSockaddr& _remote_addr,
         ctsMediaStreamConnectedSocketIoFunctor _io_functor)
@@ -100,7 +101,7 @@ namespace ctsTraffic {
     {
         return ctMemoryGuardIncrement(&sequence_number);
     }
-    
+
     void ctsMediaStreamServerConnectedSocket::schedule_task(const ctsIOTask& _task) NOEXCEPT
     {
         auto shared_socket(this->weak_socket.lock());
@@ -128,7 +129,7 @@ namespace ctsTraffic {
             shared_socket->complete_state(_error_code);
         }
     }
-        
+
     VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER)
     {
         ctsMediaStreamServerConnectedSocket* this_ptr = reinterpret_cast<ctsMediaStreamServerConnectedSocket*>(_context);

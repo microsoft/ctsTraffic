@@ -23,9 +23,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 
-
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     static long long s_BindCounter = 0LL;
     static long long s_TargetCounter = 0LL;
     static long long s_PortCounter = 0LL;
@@ -73,19 +72,19 @@ namespace ctsTraffic {
         const wchar_t* function = L"CreateWSASocket";
         try {
             switch (ctsConfig::Settings->Protocol) {
-            case ctsConfig::ProtocolType::TCP:
-                socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
-                break;
+                case ctsConfig::ProtocolType::TCP:
+                    socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
+                    break;
 
-            case ctsConfig::ProtocolType::UDP:
-                socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags);
-                break;
+                case ctsConfig::ProtocolType::UDP:
+                    socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags);
+                    break;
 
-            default:
-                ctsConfig::PrintErrorInfo(
-                    L"Unknown socket protocol (%u)",
-                    static_cast<unsigned>(ctsConfig::Settings->Protocol));
-                gle = WSAEINVAL;
+                default:
+                    ctsConfig::PrintErrorInfo(
+                        L"Unknown socket protocol (%u)",
+                        static_cast<unsigned>(ctsConfig::Settings->Protocol));
+                    gle = WSAEINVAL;
             }
         }
         catch (const ctl::ctException& ex) {
@@ -140,4 +139,3 @@ namespace ctsTraffic {
     }
 
 } // namespace
-
