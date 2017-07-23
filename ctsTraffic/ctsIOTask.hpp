@@ -23,6 +23,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
+    enum class ctsIOStatus
+    {
+        ContinueIo,
+        CompletedIo,
+        FailedIo
+    };
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// The ctsIOTask struct instructs the caller on what action to perform
@@ -60,6 +67,7 @@ namespace ctsTraffic
             Static,
             Tracked
         } buffer_type = BufferType::Null;
+
         // (internal) flag if this IO request is tracked and verified
         bool track_io = false;
 

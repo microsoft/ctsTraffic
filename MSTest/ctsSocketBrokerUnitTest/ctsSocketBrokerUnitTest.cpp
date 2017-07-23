@@ -311,7 +311,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulClientConnection)
@@ -344,7 +344,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -378,7 +378,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithExit)
@@ -411,7 +411,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -446,7 +446,7 @@ namespace ctsUnitTest {
             Assert::IsFalse(completed);
             // should create the next socket to accept on
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(1);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithoutExit)
@@ -480,7 +480,7 @@ namespace ctsUnitTest {
             Assert::IsFalse(completed);
             // should create the next socket to accept on
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(100);
         }
 
@@ -510,7 +510,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedConnect)
@@ -539,7 +539,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -569,7 +569,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit)
@@ -598,7 +598,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -632,7 +632,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedIO)
@@ -665,7 +665,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -699,7 +699,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit_FailedIO)
@@ -732,7 +732,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -781,7 +781,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -823,7 +823,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -866,7 +866,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -915,7 +915,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -952,7 +952,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
 
@@ -1105,7 +1105,7 @@ namespace ctsUnitTest {
             auto completed = test_broker->wait(1000);
             Assert::IsTrue(completed);
             // let the TP complete
-            ::Sleep(333);
+            ::Sleep(350);
             s_SocketPool->validate_expected_count(0);
         }
     };

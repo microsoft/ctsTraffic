@@ -22,7 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctScopeGuard.hpp>
 #include <ctString.hpp>
 
-#include "ctsIOBuffers.hpp"
+#include "ctsConnectionIdBuffers.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

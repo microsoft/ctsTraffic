@@ -294,7 +294,7 @@
     <ClInclude Include="..\ctl\ctWmiService.hpp" />
     <ClInclude Include="..\SdkChanges\WbemDisp.h" />
     <ClInclude Include="ctsConfig.h" />
-    <ClInclude Include="ctsIOBuffers.hpp" />
+    <ClInclude Include="ctsConnectionIdBuffers.hpp" />
     <ClInclude Include="ctsIOPattern.h" />
     <ClInclude Include="ctsIOPatternBufferPolicy.hpp" />
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp" />

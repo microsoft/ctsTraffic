@@ -25,7 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
-#include "ctsIOBuffers.hpp"
+#include "ctsConnectionIdBuffers.hpp"
 
 
 namespace ctsTraffic

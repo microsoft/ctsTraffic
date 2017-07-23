@@ -31,19 +31,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Possible status values returned to the caller upon completing IO
-    // - on failure, these codes can be reported as errors back to the caller
-    //
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    enum class ctsIOStatus
-    {
-        ContinueIo,
-        CompletedIo,
-        FailedIo
-    };
-
     static const unsigned long ctsStatusIORunning = MAXINT;
     static const unsigned long ctsStatusErrorNotAllDataTransferred = MAXINT - 1;
     static const unsigned long ctsStatusErrorTooMuchDataTransferred = MAXINT - 2;

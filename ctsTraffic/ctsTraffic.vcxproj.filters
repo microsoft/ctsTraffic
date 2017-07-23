@@ -178,9 +178,6 @@
     <ClInclude Include="ctsStatistics.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ctsIOBuffers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp">
       <Filter>FutureIOPattern</Filter>
     </ClInclude>
@@ -255,6 +252,9 @@
     </ClInclude>
     <ClInclude Include="ctsTCPFunctions.h">
       <Filter>TCPFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctsConnectionIdBuffers.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -63,8 +63,8 @@ namespace ctsTraffic
         ctsUnsignedLongLong quantum_start_time_ms;
 
     public:
-        ctsIOPatternRateLimitPolicy() NOEXCEPT
-            : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
+        ctsIOPatternRateLimitPolicy() NOEXCEPT :
+            BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
             QuantumPeriodMs(ctsConfig::Settings->TcpBytesPerSecondPeriod),
             bytes_sent_this_quantum(0ULL),
             quantum_start_time_ms(ctl::ctTimer::snap_qpc_as_msec())
