@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctException.hpp>
+#include <ctSocketExtensions.hpp>
 
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
@@ -103,40 +104,53 @@ namespace ctsTraffic
         return TRUE;
     }
 
-    void ctsIOPatternBufferPolicyInit() NOEXCEPT
-    {
-        (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
-    }
+	namespace ctsIOPatternBufferPolicyBuffers
+	{
+		void Init() NOEXCEPT
+		{
+			(void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
+		}
 
-    constexpr unsigned long ctsIOPatternBufferPolicyBufferPatternSize() NOEXCEPT
-    {
-        return BufferPatternSize;
-    }
+		constexpr unsigned long BufferSize() NOEXCEPT
+		{
+			return BufferPatternSize;
+		}
 
-    bool ctsIOPatternBufferPolicyVerify(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
-    {
-        //
-        // We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
-        // which is more useful than memcmp's "sign of the difference between the first two differing elements"
-        //
-        auto pattern_buffer = s_ProtectedSharedBuffer + _task.expected_pattern_offset;
-        size_t length_matched = ::RtlCompareMemory(
-            pattern_buffer,
-            _task.buffer + _task.buffer_offset,
-            _current_transfer);
+		bool Verify(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+		{
+			//
+			// We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
+			// which is more useful than memcmp's "sign of the difference between the first two differing elements"
+			//
+			auto pattern_buffer = s_ProtectedSharedBuffer + _task.expected_pattern_offset;
+			size_t length_matched = ::RtlCompareMemory(
+				pattern_buffer,
+				_task.buffer + _task.buffer_offset,
+				_current_transfer);
 
-        if (length_matched != _current_transfer) {
-            ctsConfig::PrintErrorInfo(
-                L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
-                L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
-                _current_transfer,
-                _task.buffer + _task.buffer_offset,
-                pattern_buffer,
-                length_matched,
-                pattern_buffer[length_matched],
-                *(_task.buffer + _task.buffer_offset + length_matched));
-        }
+			if (length_matched != _current_transfer) {
+				ctsConfig::PrintErrorInfo(
+					L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
+					L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
+					_current_transfer,
+					_task.buffer + _task.buffer_offset,
+					pattern_buffer,
+					length_matched,
+					pattern_buffer[length_matched],
+					*(_task.buffer + _task.buffer_offset + length_matched));
+			}
 
-        return (length_matched == _current_transfer);
-    }
+			return (length_matched == _current_transfer);
+		}
+
+		RIO_BUFFERID GetRIOSendBuffer() NOEXCEPT
+		{
+			// establish a RIO ID for the writable shared buffer if we're using RIO APIs
+			auto send_buffer_id = ctl::ctRIORegisterBuffer(s_WriteableSharedBuffer, s_SharedBufferSize);
+			if (RIO_INVALID_BUFFERID == send_buffer_id) {
+				ctl::ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", ::WSAGetLastError());
+			}
+			return send_buffer_id;
+		}
+	}
 }

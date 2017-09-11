@@ -266,7 +266,7 @@ namespace ctsTraffic
         ///
         ctsIOPatternProtocolPolicyTask get_next_task() const NOEXCEPT;
         void notify_next_task(const ctsIOTask& _next_task) NOEXCEPT;
-        void completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT;
+        ctsIOStatus completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT;
 
     private:
         //
@@ -350,7 +350,7 @@ namespace ctsTraffic
     }
 
     template <typename Protocol>
-    inline void ctsIOPatternProtocolPolicy<Protocol>::completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT
+    inline ctsIOStatus ctsIOPatternProtocolPolicy<Protocol>::completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT
     {
         this->pended_state = false;
         //
@@ -402,6 +402,7 @@ namespace ctsTraffic
         // notify the protocol of the completed task
         //
         this->completed_task_per_protocol(_completed_task, _completed_transfer_bytes);
+        return this->get_status();
     }
 
     template <>

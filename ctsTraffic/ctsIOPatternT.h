@@ -267,6 +267,7 @@ namespace ctsTraffic
 
                         if (_status_code != NO_ERROR) {
                             this->protocol_policy.update_last_error(_status_code);
+
                         } else {
                             if (IOTaskAction::Recv == _original_task.ioAction) {
                                 // save off the connection ID when we receive it
@@ -306,30 +307,24 @@ namespace ctsTraffic
                         //
                         // IO succeeded - update state machine with the completed task if this task had IO
                         //
-                        this->protocol_policy.completed_task(_original_task, _current_transfer);
+                        auto pattern_status = this->protocol_policy.completed_task(_original_task, _current_transfer);
                         //
                         // if this is a TCP receive completion
                         // and no IO or protocol errors
                         // and the user requested to verify buffers
                         // then actually validate the received completion
                         //
+                        if (pattern_status != ctsIOStatus::FailedIo) {
+                        /*
                         if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
                             ctsConfig::Settings->ShouldVerifyBuffers &&
                             _original_task.ioAction == IOTaskAction::Recv &&
                             _original_task.track_io &&
                             (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status)) {
-
-                            ctFatalCondition(
-                                _original_task.expected_pattern_offset != this->recv_pattern_offset,
-                                L"ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%Iu)",
-                                &_original_task, _original_task.expected_pattern_offset, static_cast<size_t>(this->recv_pattern_offset));
-
+                        */
                             if (!this->buffer_policy.verify_buffer(_original_task, _current_transfer)) {
                                 this->protocol_policy.update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
                             }
-
-                            this->recv_pattern_offset += _current_transfer;
-                            this->recv_pattern_offset %= BufferPatternSize;
                         }
                     }
                     break;

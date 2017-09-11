@@ -13,12 +13,26 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// OS headers
+#include <windows.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
+#include <ctException.hpp>
+#include <ctSocketExtensions.hpp>
 
+#include "ctsIOTask.hpp"
+#include "ctsConfig.h"
 
 namespace ctsTraffic
 {
+    // defined in ctsIOPatternBufferPolicy.cpp
+	namespace ctsIOPatternBufferPolicyBuffers
+	{
+		void Init() NOEXCEPT;
+		constexpr unsigned long BufferSize() NOEXCEPT;
+		bool Verify(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT;
+		RIO_BUFFERID GetRIOSendBuffer() NOEXCEPT;
+	}
 
     typedef struct ctsIOPatternAllocationTypeStatic_t   ctsIOPatternAllocationTypeStatic;
     typedef struct ctsIOPatternAllocationtypeDynamic_t  ctsIOPatternAllocationtypeDynamic;
@@ -26,61 +40,242 @@ namespace ctsTraffic
     typedef struct ctsIOPatternBufferTypeHeap_t         ctsIOPatternBufferTypeHeap;
     typedef struct ctsIOPatternBufferTypeRegisteredIo_t ctsIOPatternBufferTypeRegisteredIo;
 
+	typedef struct ctsIOPatternVerifyBufferTypeNone_t   ctsIOPatternVerifyBufferTypeNone;
+	typedef struct ctsIOPatternVerifyBufferTypeRecv_t   ctsIOPatternVerifyBufferTypeRecv;
 
-    template <typename AllocationType, typename BufferType>
+    template <typename AllocationType, typename BufferType, typename VerifyType>
     class ctsIOPatternBufferPolicy
     {
     public:
-        char* get_buffer(size_t _size) NOEXCEPT;
-        bool  verify_buffer(_In_ const char* _buffer) NOEXCEPT;
+        // the final send & recv buffer count is only known by the protocol pattern
+        void set_send_count(unsigned long _send_count) NOEXCEPT;
+        void set_recv_count(unsigned long _recv_count) NOEXCEPT;
+
+        ctsIOTask get_send_buffer(size_t _size) NOEXCEPT = 0;
+        ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT = 0;
+        bool verify_buffer(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT = 0;
     };
 
-
-    //
-    // Static heap buffers
-    // - won't be verified
-    //
     template<>
     class ctsIOPatternBufferPolicy<
         ctsIOPatternAllocationTypeStatic,
-        ctsIOPatternBufferTypeHeap>
+        ctsIOPatternBufferTypeHeap,
+	    ctsIOPatternVerifyBufferTypeNone>
     {
+    public:
+        ctsIOPatternBufferPolicy() NOEXCEPT
+        {
+			ctsIOPatternBufferPolicyBuffers::Init();
+        }
+        void set_send_count(unsigned long _send_count) NOEXCEPT
+        {
 
+        }
+        void set_recv_count(unsigned long _send_count) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        bool verify_buffer(const ctsIOTask&, unsigned long) NOEXCEPT
+        {
+            return true;
+        }
     };
 
-    //
-    // Static RIO buffers
-    // - won't be verified
-    //
     template<>
     class ctsIOPatternBufferPolicy<
         ctsIOPatternAllocationTypeStatic,
-        ctsIOPatternBufferTypeRegisteredIo>
+        ctsIOPatternBufferTypeRegisteredIo,
+		ctsIOPatternVerifyBufferTypeNone>
     {
+    public:
+        ctsIOPatternBufferPolicy() NOEXCEPT
+        {
+            ctsIOPatternBufferPolicyBuffers::Init();
+        }
+        void set_send_count(unsigned long _send_count) NOEXCEPT
+        {
 
+        }
+        void set_recv_count(unsigned long _send_count) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        bool verify_buffer(_In_ const ctsIOTask&, unsigned long) NOEXCEPT
+        {
+            return true;
+        }
     };
 
-    //
-    // Dynamic heap buffers
-    // - won't be verified
-    //
     template<>
     class ctsIOPatternBufferPolicy<
         ctsIOPatternAllocationtypeDynamic,
-        ctsIOPatternBufferTypeHeap>
+        ctsIOPatternBufferTypeHeap,
+		ctsIOPatternVerifyBufferTypeNone>
     {
+    public:
+        ctsIOPatternBufferPolicy()
+        {
+			ctsIOPatternBufferPolicyBuffers::Init();
+		}
+        void set_send_count(unsigned long _send_count) NOEXCEPT
+        {
 
+        }
+        void set_recv_count(unsigned long _send_count) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        bool verify_buffer(const ctsIOTask&, unsigned long) NOEXCEPT
+        {
+            return true;
+        }
     };
 
-    //
-    // Static RIO buffers
-    // - won't be verified
-    //
+	template<>
+	class ctsIOPatternBufferPolicy<
+		ctsIOPatternAllocationtypeDynamic,
+		ctsIOPatternBufferTypeHeap,
+		ctsIOPatternVerifyBufferTypeRecv>
+	{
+	public:
+		ctsIOPatternBufferPolicy()
+		{
+			ctsIOPatternBufferPolicyBuffers::Init();
+		}
+		void set_send_count(unsigned long _send_count) NOEXCEPT
+		{
+
+		}
+		void set_recv_count(unsigned long _send_count) NOEXCEPT
+		{
+
+		}
+		ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+		{
+
+		}
+		ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+		{
+
+		}
+		bool verify_buffer(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+		{
+			if (_task.track_io && _task.ioAction == IOTaskAction::Recv) {
+				recv_pattern_offset += _current_transfer;
+				recv_pattern_offset %= ctsIOPatternBufferPolicyBuffers::BufferSize();
+
+				return ctsIOPatternBufferPolicyBuffers::Verify(_task, _current_transfer);
+			}
+		}
+
+	private:
+		size_t recv_pattern_offset = 0;
+	};
+	
     template<>
     class ctsIOPatternBufferPolicy<
         ctsIOPatternAllocationtypeDynamic,
-        ctsIOPatternBufferTypeRegisteredIo>
+        ctsIOPatternBufferTypeRegisteredIo,
+		ctsIOPatternVerifyBufferTypeNone>
     {
+    public:
+        ctsIOPatternBufferPolicy()
+        {
+			ctsIOPatternBufferPolicyBuffers::Init();
 
+			send_buffer_id = ctsIOPatternBufferPolicyBuffers::GetRIOSendBuffer();
+		}
+        void set_send_count(unsigned long _send_count) NOEXCEPT
+        {
+
+        }
+        void set_recv_count(unsigned long _send_count) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+        {
+
+        }
+        bool verify_buffer(const ctsIOTask&, unsigned long) NOEXCEPT
+        {
+            return true;
+        }
+
+    private:
+        RIO_BUFFERID send_buffer_id = RIO_INVALID_BUFFERID;
+        size_t recv_pattern_offset = 0;
     };
+
+	template<>
+	class ctsIOPatternBufferPolicy<
+		ctsIOPatternAllocationtypeDynamic,
+		ctsIOPatternBufferTypeRegisteredIo,
+		ctsIOPatternVerifyBufferTypeRecv>
+	{
+	public:
+		ctsIOPatternBufferPolicy()
+		{
+			ctsIOPatternBufferPolicyBuffers::Init();
+
+			send_buffer_id = ctsIOPatternBufferPolicyBuffers::GetRIOSendBuffer();
+		}
+		void set_send_count(unsigned long _send_count) NOEXCEPT
+		{
+
+		}
+		void set_recv_count(unsigned long _send_count) NOEXCEPT
+		{
+
+		}
+		ctsIOTask get_send_buffer(size_t _size) NOEXCEPT
+		{
+
+		}
+		ctsIOTask get_recv_buffer(size_t _size) NOEXCEPT
+		{
+
+		}
+		bool verify_buffer(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+		{
+			if (_task.track_io && _task.ioAction == IOTaskAction::Recv) {
+				recv_pattern_offset += _current_transfer;
+				recv_pattern_offset %= ctsIOPatternBufferPolicyBuffers::BufferSize();
+
+				return ctsIOPatternBufferPolicyBuffers::Verify(_task, _current_transfer);
+			}
+		}
+
+	private:
+		RIO_BUFFERID send_buffer_id = RIO_INVALID_BUFFERID;
+		size_t recv_pattern_offset = 0;
+	};
 }

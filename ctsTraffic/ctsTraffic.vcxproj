@@ -247,6 +247,7 @@
     <ClCompile Include="ctsConfig.cpp" />
     <ClCompile Include="ctsConnectEx.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
+    <ClCompile Include="ctsIOPatternBufferPolicy.cpp" />
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsMediaStreamClient.cpp" />
     <ClCompile Include="ctsMediaStreamServer.cpp" />
