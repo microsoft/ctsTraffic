@@ -65,7 +65,7 @@ namespace ctsTraffic
         char* writeable_destination = s_WriteableSharedBuffer;
         unsigned long write_size_remaining = s_SharedBufferSize;
         while (write_size_remaining > 0) {
-            unsigned long bytes_to_write = (write_size_remaining > BufferPatternSize) ? BufferPatternSize : write_size_remaining;
+            const unsigned long bytes_to_write = (write_size_remaining > BufferPatternSize) ? BufferPatternSize : write_size_remaining;
 
             auto memerror = ::memcpy_s(protected_destination, write_size_remaining, BufferPattern, bytes_to_write);
             ctFatalCondition(
@@ -115,24 +115,26 @@ namespace ctsTraffic
 		{
 			return BufferPatternSize;
 		}
-
-		bool Verify(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+		constexpr unsigned long CompletionBufferSize() NOEXCEPT
 		{
-			//
+			return s_CompletionMessageSize;
+		}
+
+		bool Verify(const ctsIOTask& _task, unsigned long _received_bytes) NOEXCEPT
+		{
 			// We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
 			// which is more useful than memcmp's "sign of the difference between the first two differing elements"
-			//
 			auto pattern_buffer = s_ProtectedSharedBuffer + _task.expected_pattern_offset;
 			size_t length_matched = ::RtlCompareMemory(
 				pattern_buffer,
 				_task.buffer + _task.buffer_offset,
-				_current_transfer);
+				_received_bytes);
 
-			if (length_matched != _current_transfer) {
+			if (length_matched != _received_bytes) {
 				ctsConfig::PrintErrorInfo(
 					L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
 					L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
-					_current_transfer,
+					_received_bytes,
 					_task.buffer + _task.buffer_offset,
 					pattern_buffer,
 					length_matched,
@@ -140,17 +142,54 @@ namespace ctsTraffic
 					*(_task.buffer + _task.buffer_offset + length_matched));
 			}
 
-			return (length_matched == _current_transfer);
+			return (length_matched == _received_bytes);
 		}
 
-		RIO_BUFFERID GetRIOSendBuffer() NOEXCEPT
+		RIO_BUFFERID GetRIOSendBuffer()
 		{
 			// establish a RIO ID for the writable shared buffer if we're using RIO APIs
 			auto send_buffer_id = ctl::ctRIORegisterBuffer(s_WriteableSharedBuffer, s_SharedBufferSize);
 			if (RIO_INVALID_BUFFERID == send_buffer_id) {
-				ctl::ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", ::WSAGetLastError());
+				throw ctl::ctException(::WSAGetLastError(), L"ctl::ctRIORegisterBuffer", L"ctsIOPatternBufferPolicy");
 			}
 			return send_buffer_id;
+		}
+
+		ctsIOTask GetSendCompletion() NOEXCEPT
+		{
+			ctsIOTask return_task;
+			return_task.ioAction = IOTaskAction::Send;
+			return_task.buffer = s_ProtectedSharedBuffer;
+			return_task.buffer_length = s_CompletionMessageSize;
+			return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+			return_task.buffer_type = ctsIOTask::BufferType::Static;
+			return_task.rio_bufferid = RIO_INVALID_BUFFERID;
+			return_task.track_io = false;
+			return return_task;
+		}
+		ctsIOTask GetRecvCompletion() NOEXCEPT
+		{
+			ctsIOTask return_task;
+			return_task.ioAction = IOTaskAction::Recv;
+			return_task.buffer = s_WriteableSharedBuffer;
+			return_task.buffer_length = s_CompletionMessageSize;
+			return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+			return_task.buffer_type = ctsIOTask::BufferType::Static;
+			return_task.rio_bufferid = RIO_INVALID_BUFFERID;
+			return_task.track_io = false;
+			return return_task;
+		}
+		ctsIOTask GetFin() NOEXCEPT
+		{
+			ctsIOTask return_task;
+			return_task.ioAction = IOTaskAction::Recv;
+			return_task.buffer = s_FinBuffer;
+			return_task.buffer_length = s_FinBufferSize;
+			return_task.buffer_offset = 0;
+			return_task.buffer_type = ctsIOTask::BufferType::Static;
+			return_task.rio_bufferid = RIO_INVALID_BUFFERID;
+			return_task.track_io = false;
+			return return_task;
 		}
 	}
 }

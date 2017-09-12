@@ -25,7 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsIOPatternProtocolPolicy.hpp"
 #include "ctsIOPatternRateLimitPolicy.hpp"
-
+#include "ctsIOPatternBufferPolicy.hpp"
 
 namespace ctsTraffic
 {
@@ -65,7 +65,8 @@ namespace ctsTraffic
         typename IOPatternPolicy,
         typename ProtocolPolicy,
         typename RateLimitPolicy,
-        typename BufferPolicy>
+        typename AllocationType,
+		typename BufferType>
     class ctsIOPatternT : public ctsIOPattern
     {
     public:
@@ -75,7 +76,10 @@ namespace ctsTraffic
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
             }
         }
-        ~ctsIOPattern() = default;
+		~ctsIOPattern() NOEXCEPT
+		{
+			::DeleteCriticalSection(&cs);
+		}
 
         void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override final
         {
@@ -136,81 +140,32 @@ namespace ctsTraffic
                 case ctsIOPatternProtocolPolicyTask::SendCompletion:
                     // end-stats as early as possible after the actual IO finished
                     ctsStatistics::End(this->stats_policy);
-
-                    // using the static buffer - identical for both RIO and non-RIO
-                    // - currently won't be validating the completion message
-                    return_task.ioAction = IOTaskAction::Send;
-                    return_task.buffer = s_ProtectedSharedBuffer;
-                    return_task.rio_bufferid = s_SharedBufferId;
-                    return_task.buffer_length = s_CompletionMessageSize;
-                    return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
-                    return_task.track_io = false;
-                    return_task.buffer_type = ctsIOTask::BufferType::Static;
+					return_task = buffer_policy.send_completion();
                     break;
 
                 case ctsIOPatternProtocolPolicyTask::RecvCompletion:
                     // end-stats as early as possible after the actual IO finished
                     ctsStatistics::End(this->stats_policy);
-
-                    // using the static buffer - identical for both RIO and non-RIO
-                    // - currently won't be validating the completion message
-                    return_task.ioAction = IOTaskAction::Recv;
-                    return_task.buffer = s_WriteableSharedBuffer;
-                    return_task.rio_bufferid = s_SharedBufferId;
-                    return_task.buffer_length = s_CompletionMessageSize;
-                    return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
-                    return_task.track_io = false;
-                    return_task.buffer_type = ctsIOTask::BufferType::Static;
+					return_task = buffer_policy.recv_completion();
                     break;
 
-                case ctsIOPatternProtocolPolicyTask::HardShutdown:
+				case ctsIOPatternProtocolPolicyTask::RequestFIN:
+					// post one final recv for the zero byte FIN
+					// end-stats as early as possible after the actual IO finished
+					ctsStatistics::End(this->stats_policy);
+					return_task = buffer_policy.recv_fin();
+					break;
+
+				case ctsIOPatternProtocolPolicyTask::HardShutdown:
                     // end-stats as early as possible after the actual IO finished
                     ctsStatistics::End(this->stats_policy);
-
-                    return_task.ioAction = IOTaskAction::HardShutdown;
-                    return_task.buffer = nullptr;
-                    return_task.buffer_length = 0;
-                    return_task.buffer_offset = 0;
-                    return_task.track_io = false;
-                    return_task.buffer_type = ctsIOTask::BufferType::Null;
+					return_task = ctsIOPatternBufferPolicy<AllocationType, BufferType>::hard_shutdown();
                     break;
 
                 case ctsIOPatternProtocolPolicyTask::GracefulShutdown:
                     // end-stats as early as possible after the actual IO finished
                     ctsStatistics::End(this->stats_policy);
-
-                    return_task.ioAction = IOTaskAction::GracefulShutdown;
-                    return_task.buffer = nullptr;
-                    return_task.buffer_length = 0;
-                    return_task.buffer_offset = 0;
-                    return_task.track_io = false;
-                    return_task.buffer_type = ctsIOTask::BufferType::Null;
-                    break;
-
-                case ctsIOPatternProtocolPolicyTask::RequestFIN:
-                    // post one final recv for the zero byte FIN
-                    // end-stats as early as possible after the actual IO finished
-                    ctsStatistics::End(this->stats_policy);
-
-                    ctFatalCondition(
-                        this->recv_buffer_free_list.empty(),
-                        L"ctsIOPattern::initiate_io : (%p) recv_buffer_free_list is empty", this);
-
-                    if (this->recv_rio_bufferid != RIO_INVALID_BUFFERID) {
-                        // RIO must always use the allocated buffers which were registered
-                        return_task.buffer = *this->recv_buffer_free_list.rbegin();
-                        this->recv_buffer_free_list.pop_back();
-                        return_task.rio_bufferid = this->recv_rio_bufferid;
-                        return_task.buffer_type = ctsIOTask::BufferType::Tracked;
-                    } else {
-                        return_task.buffer = s_FinBuffer;
-                        return_task.buffer_type = ctsIOTask::BufferType::Static;
-                    }
-
-                    return_task.ioAction = IOTaskAction::Recv;
-                    return_task.buffer_length = s_FinBufferSize;
-                    return_task.buffer_offset = 0;
-                    return_task.track_io = false;
+					return_task = ctsIOPatternBufferPolicy<AllocationType, BufferType>::graceful_shutdown();
                     break;
 
                 default:
@@ -225,13 +180,8 @@ namespace ctsTraffic
         {
             ctAutoReleaseCriticalSection local_cs(&this->cs);
 
-            // Only add the recv buffer back if it was one of our listed recv buffers
-            if (ctsIOTask::BufferType::Tracked == _original_task.buffer_type) {
-                this->recv_buffer_free_list.push_back(_original_task.buffer);
-            }
-
             // preserve the previous task
-            bool notify_iopattern = this->protocol_policy.is_more_io();
+            bool fOriginalStateMoreIo = this->protocol_policy.is_more_io();
 
             switch (_original_task.ioAction) {
                 case IOTaskAction::None:
@@ -259,10 +209,8 @@ namespace ctsTraffic
                 {
                     bool verify_io = true;
                     if (ctsIOTask::BufferType::TcpConnectionId == _original_task.buffer_type) {
-                        //
                         // not verifying the IO buffer if this is the connection id request
                         // - but must complete the task to update the protocol
-                        //
                         verify_io = false;
 
                         if (_status_code != NO_ERROR) {
@@ -288,10 +236,8 @@ namespace ctsTraffic
                         ctsIOBuffers::ReleaseConnectionIdBuffer(_original_task);
 
                     } else if (_status_code != NO_ERROR) {
-                        //
                         // if the IO task failed, the entire IO pattern is now failed
                         // - unless this is an extra recv that was canceled once we completed the transfer
-                        //
                         if (IOTaskAction::Recv == _original_task.ioAction && this->protocol_policy.is_completed()) {
                             PrintDebugInfo(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", _status_code);
                         } else {
@@ -304,24 +250,9 @@ namespace ctsTraffic
                     }
 
                     if (verify_io) {
-                        //
                         // IO succeeded - update state machine with the completed task if this task had IO
-                        //
                         auto pattern_status = this->protocol_policy.completed_task(_original_task, _current_transfer);
-                        //
-                        // if this is a TCP receive completion
-                        // and no IO or protocol errors
-                        // and the user requested to verify buffers
-                        // then actually validate the received completion
-                        //
                         if (pattern_status != ctsIOStatus::FailedIo) {
-                        /*
-                        if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
-                            ctsConfig::Settings->ShouldVerifyBuffers &&
-                            _original_task.ioAction == IOTaskAction::Recv &&
-                            _original_task.track_io &&
-                            (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status)) {
-                        */
                             if (!this->buffer_policy.verify_buffer(_original_task, _current_transfer)) {
                                 this->protocol_policy.update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
                             }
@@ -345,8 +276,9 @@ namespace ctsTraffic
                 } else {
                     ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
                 }
-                // only complete tasks that were requested
-                if (notify_iopattern) {
+
+                // only complete tasks that requested more IO
+                if (fOriginalStateMoreIo) {
                     this->protocol_policy.update_protocol_error(
                         this->iopattern_policy.completed_task(_original_task, _current_transfer));
                 }
@@ -375,7 +307,7 @@ namespace ctsTraffic
         IOPatternPolicy iopattern_policy;
         ctsIOPatternProtocolPolicy<ProtocolPolicy> protocol_policy;
         ctsIOPatternRateLimitPolicy<RateLimitPolicy> ratelimit_policy;
-        ctsIOPatternBufferPolicy<BufferPolicy> buffer_policy;
+        ctsIOPatternBufferPolicy<AllocationType, BufferType> buffer_policy;
         ///
         /// void start_stats() NOEXCEPT
         /// - has been replaced with ctsStatistics::Start(this->stats_policy)
