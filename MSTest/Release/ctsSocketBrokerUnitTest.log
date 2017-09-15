@@ -1,8 +1,0 @@
-﻿  ctsSocketBroker.cpp
-  ctsSocketBrokerUnitTest.cpp
-  ctsSocketBroker.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
-     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketBrokerUnitTest.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketBrokerUnitTest.exp
-  Generating code
-  Finished generating code
-  ctsSocketBrokerUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketBrokerUnitTest.dll
-  ctsSocketBrokerUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsSocketBrokerUnitTest.pdb (Full PDB)

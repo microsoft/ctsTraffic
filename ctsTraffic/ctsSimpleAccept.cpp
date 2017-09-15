@@ -107,7 +107,7 @@ namespace ctsTraffic {
                     closeSocketOnError.dismiss();
 
                     PrintDebugInfo(
-                        L"\t\tListening to %s\n", addr.writeCompleteAddress().c_str());
+                        L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
                 }
 
                 if (listening_sockets.empty()) {
@@ -244,7 +244,7 @@ namespace ctsTraffic {
                 *reinterpret_cast<DWORD*>(perror) = e.why();
                 return FALSE;
             }
-            catch (const std::exception e) {
+            catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
                 *reinterpret_cast<DWORD*>(perror) = ERROR_OUTOFMEMORY;
                 return FALSE;

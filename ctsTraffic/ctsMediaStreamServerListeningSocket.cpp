@@ -182,7 +182,7 @@ namespace ctsTraffic {
                         auto gle = ::WSAGetLastError();
                         if (WSAECONNRESET == gle) {
                             ctsConfig::PrintErrorInfo(
-                                L"ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%s) failed with port unreachable",
+                                L"ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%ws) failed with port unreachable",
                                 this->remote_addr.writeCompleteAddress().c_str());
                         } else {
                             ctsConfig::PrintErrorInfo(
@@ -202,7 +202,7 @@ namespace ctsTraffic {
                     switch (message.action) {
                         case MediaStreamAction::START:
                             PrintDebugInfo(
-                                L"\t\tctsMediaStreamServer - processing START from %s\n",
+                                L"\t\tctsMediaStreamServer - processing START from %ws\n",
                                 this->remote_addr.writeCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods

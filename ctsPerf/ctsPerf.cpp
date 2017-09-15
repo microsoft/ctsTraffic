@@ -20,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <windows.h>
+#include <WinSock2.h>
 
 // ctl headers
 #include <ctString.hpp>
@@ -49,8 +50,9 @@ BOOL WINAPI BreakHandlerRoutine(DWORD)
 static const WCHAR UsageStatement[] = 
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
-    L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
+    L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
     L" -Filename:########  [default is Performance.csv]\n"
+    L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
     L"\n"
     L" [optionally additional performance counters]\n"
     L"  -Memory   [will collect paged-pool and non-paged-pool counters]\n"
@@ -132,6 +134,14 @@ bool g_MeanOnly = false;
 
 int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
+    WSADATA wsadata;
+    int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+    if (wsError != 0) {
+        ::wprintf(L"ctsPerf failed at WSAStartup [%u]\n", wsError);
+        return wsError;
+    }
+
+    bool trackEstats = false;
     bool trackMemory = false;
     bool trackNetworkAdapter = false;
     bool trackNetworkInterface = false;
@@ -185,7 +195,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             // the user could have specified zero, which happens to be what is returned from wcstoul on error
             if (pidString == L"0") {
                 processId = 0;
-            
+
             } else {
                 processId = wcstoul(pidString.c_str(), nullptr, 10);
                 if (processId == 0 || processId == ULONG_MAX) {
@@ -194,7 +204,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                     return 1;
                 }
             }
-        
+
+        } else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
+            trackEstats = true;
+
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-memory")) {
             trackMemory = true;
         
@@ -254,15 +267,26 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return 1;
     }
 
-    wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
-    ctComInitialize coinit;
-    ctWmiService wmi(L"root\\cimv2");
-    g_wmi = &wmi;
-
     try {
+        ctsPerf::ctsEstats estats;
+        if (trackEstats) {
+            if (estats.Start()) {
+                wprintf(L"Enabling ESTATS\n");
+            } else {
+                wprintf(L"ESTATS cannot be started - verify running as Administrator\n");
+            }
+        }
+
+        wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
+        ctComInitialize coinit;
+        ctWmiService wmi(L"root\\cimv2");
+        g_wmi = &wmi;
+
         ctlScopeGuard(deleteAllCounters, { DeleteAllCounters(); });
 
-        ctsPerf::ctsWriteDetails writer(g_FileName.c_str(), g_MeanOnly);
+        ctsPerf::ctsWriteDetails writer(g_FileName.c_str());
+        writer.create_file(g_MeanOnly);
+
         wprintf(L".");
 
         // create a perf counter objects to maintain these counters
@@ -329,7 +353,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ProcessPerProcessCounters(trackProcess, processId, writer);
     }
     catch (const exception& e) {
-        wprintf(L"ERROR: %s\n", ctString::format_exception(e).c_str());
+        wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
         return 1;
     }
 
@@ -399,13 +423,13 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
             writer.write_mean(
                 L"Processor",
                 ctString::format_string(
-                    L"Raw CPU Usage [%s]",
+                    L"Raw CPU Usage [%ws]",
                     name.c_str()).c_str(),
                 processor_time_vector);
             writer.write_mean(
                 L"Processor",
                 ctString::format_string(
-                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%s]",
+                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%ws]",
                     name.c_str()).c_str(),
                 normalized_processor_time);
 
@@ -425,13 +449,13 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
             writer.write_details(
                 L"Processor",
                 ctString::format_string(
-                    L"Raw CPU Usage [%s]",
+                    L"Raw CPU Usage [%ws]",
                     name.c_str()).c_str(),
                 processor_time_vector);
             writer.write_details(
                 L"Processor",
                 ctString::format_string(
-                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%s]",
+                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%ws]",
                     name.c_str()).c_str(),
                 normalized_processor_time);
         }
@@ -631,14 +655,14 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
             writer.write_mean(
                 L"NetworkAdapter",
                 ctString::format_string(
-                    L"PacketsPersec for interface %s",
+                    L"PacketsPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkAdapter",
                 ctString::format_string(
-                    L"PacketsPersec for interface %s",
+                    L"PacketsPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         }
@@ -648,14 +672,14 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
             writer.write_mean(
                 L"NetworkAdapter",
                 ctString::format_string(
-                    L"BytesTotalPersec for interface %s",
+                    L"BytesTotalPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkAdapter",
                 ctString::format_string(
-                    L"BytesTotalPersec for interface %s",
+                    L"BytesTotalPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         }
@@ -665,7 +689,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"OffloadedConnections for interface %s",
+                L"OffloadedConnections for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -674,7 +698,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"TCPActiveRSCConnections for interface %s",
+                L"TCPActiveRSCConnections for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -683,7 +707,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"PacketsOutboundDiscarded for interface %s",
+                L"PacketsOutboundDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -692,7 +716,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"PacketsOutboundErrors for interface %s",
+                L"PacketsOutboundErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -701,7 +725,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"PacketsReceivedDiscarded for interface %s",
+                L"PacketsReceivedDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -710,7 +734,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkAdapter",
             ctString::format_string(
-                L"PacketsReceivedErrors for interface %s",
+                L"PacketsReceivedErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
     }
@@ -823,14 +847,14 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
             writer.write_mean(
                 L"NetworkInterface",
                 ctString::format_string(
-                    L"BytesTotalPerSec for interface %s",
+                    L"BytesTotalPerSec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkInterface",
                 ctString::format_string(
-                    L"BytesTotalPerSec for interface %s",
+                    L"BytesTotalPerSec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         }
@@ -839,7 +863,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkInterface",
             ctString::format_string(
-                L"PacketsOutboundDiscarded for interface %s",
+                L"PacketsOutboundDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -848,7 +872,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkInterface",
             ctString::format_string(
-                L"PacketsOutboundErrors for interface %s",
+                L"PacketsOutboundErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -857,7 +881,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkInterface",
             ctString::format_string(
-                L"PacketsReceivedDiscarded for interface %s",
+                L"PacketsReceivedDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -866,7 +890,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkInterface",
             ctString::format_string(
-                L"PacketsReceivedErrors for interface %s",
+                L"PacketsReceivedErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
 
@@ -875,7 +899,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         writer.write_difference(
             L"NetworkInterface",
             ctString::format_string(
-                L"PacketsReceivedUnknown for interface %s",
+                L"PacketsReceivedUnknown for interface %ws",
                 name.c_str()).c_str(),
             ullData);
     }
@@ -1645,7 +1669,7 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
         if (!trackProcess.empty()) {
             wstring full_name(trackProcess);
             full_name += L".exe";
-            counter_classname = ctString::format_string(L"Process (%s)", full_name.c_str());
+            counter_classname = ctString::format_string(L"Process (%ws)", full_name.c_str());
         
         } else {
             counter_classname = ctString::format_string(L"Process (pid %u)", processId);

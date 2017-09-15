@@ -148,7 +148,7 @@ namespace ctl {
                     throw ctException(
                         ERROR_INVALID_DATA,
                         ctString::format_string(
-                            L"ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %s is of type %u",
+                            L"ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
                             _counter_name, property_type).c_str(),
                         L"ctWmiPerformance::ctReadIWbemObjectAccess",
                         true);
@@ -276,12 +276,12 @@ namespace ctl {
             ctWmiService wmi(L"root\\cimv2");
 
             ctWmiEnumerate enum_instances(wmi);
-            enum_instances.query(ctString::format_string(L"SELECT * FROM %s", _classname).c_str());
+            enum_instances.query(ctString::format_string(L"SELECT * FROM %ws", _classname).c_str());
             if (enum_instances.begin() == enum_instances.end()) {
                 throw ctException(
                     ERROR_NOT_FOUND,
                     ctString::format_string(
-                        L"Failed to refresh a static instances of the WMI class %s",
+                        L"Failed to refresh a static instances of the WMI class %ws",
                         _classname).c_str(),
                     L"ctWmiPerformanceDataAccessor",
                     true);
@@ -502,7 +502,7 @@ namespace ctl {
                     throw ctException(
                         ERROR_INVALID_DATA,
                         ctString::format_string(
-                            L"ctWmiPeformanceCounterData was given an IWbemClassObject to track that had a non-null 'Name' key field ['%s']. Expected to be a NULL key field as to only support single-instances",
+                            L"ctWmiPeformanceCounterData was given an IWbemClassObject to track that had a non-null 'Name' key field ['%ws']. Expected to be a NULL key field as to only support single-instances",
                             value->bstrVal).c_str(),
                         L"ctWmiPeformanceCounterData",
                         true);
@@ -542,7 +542,7 @@ namespace ctl {
                     throw ctException(
                         hr,
                         ctString::format_string(
-                            L"IWbemClassObject::Get(%s)",
+                            L"IWbemClassObject::Get(%ws)",
                             counter_name.c_str()).c_str(),
                         L"ctWmiPeformanceCounterData<T>::add",
                         true);
@@ -597,7 +597,7 @@ namespace ctl {
                 throw ctException(
                     hr,
                     ctString::format_string(
-                        L"IWbemClassObject::Get(%s)",
+                        L"IWbemClassObject::Get(%ws)",
                         counter_name.c_str()).c_str(),
                     L"ctWmiPeformanceCounterData<ULONGLONG>::add",
                     true);
@@ -622,7 +622,7 @@ namespace ctl {
                 throw ctException(
                     hr,
                     ctString::format_string(
-                        L"IWbemClassObject::Get(%s)",
+                        L"IWbemClassObject::Get(%ws)",
                         counter_name.c_str()).c_str(),
                     L"ctWmiPeformanceCounterData<LONGLONG>::add",
                     true);
@@ -899,7 +899,7 @@ namespace ctl {
                 }
                 ctFatalCondition(
                     value->vt != property_value->vt,
-                    L"VARIANT types do not match to make a comparison : Counter name '%s', retrieved type '%u', expected type '%u'",
+                    L"VARIANT types do not match to make a comparison : Counter name '%ws', retrieved type '%u', expected type '%u'",
                     counter_name.c_str(), value->vt, property_value->vt);
 
                 return (property_value == value);
@@ -1196,11 +1196,9 @@ namespace ctl {
                     [this_ptr, _interval] () { TimerCallback(this_ptr, _interval); }, 
                     _interval);
             }
-            catch (const ctl::ctException& e) {
-                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read [%ws : %u]", e.what_w(), e.why());
-            }
             catch (const std::exception& e) {
-                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read [%hs]", e.what());
+                ctl::ctAlwaysFatalCondition(L"Failed to schedule the next Performance Counter read [%ws]",
+                    ctl::ctString::format_exception(e).c_str());
             }
         }
     };

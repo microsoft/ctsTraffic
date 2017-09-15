@@ -46,9 +46,8 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     WSADATA wsadata;
     int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
-        DWORD gle = ::WSAGetLastError();
-        ::wprintf(L"ctsTraffic failed at WSAStartup [%u]\n", gle);
-        return gle;
+        ::wprintf(L"ctsTraffic failed at WSAStartup [%u]\n", wsError);
+        return wsError;
     }
 
     DWORD err = ERROR_SUCCESS;
@@ -59,12 +58,12 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
     catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %s", ctsPrintSafeIntException(e));
+        ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %ws", ctsPrintSafeIntException(e));
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
     catch (const invalid_argument& e) {
-        ctsConfig::PrintErrorInfoOverride(L"Invalid argument specified: %S", e.what());
+        ctsConfig::PrintErrorInfoOverride(L"Invalid argument specified: %hs", e.what());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
@@ -109,7 +108,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
     catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed when converting integers : %s", ctsPrintSafeIntException(e));
+        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e));
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
@@ -124,7 +123,7 @@ __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e) {
-        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %S", e.what());
+        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %hs", e.what());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;
     }

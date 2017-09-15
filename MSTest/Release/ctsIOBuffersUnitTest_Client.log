@@ -1,7 +1,0 @@
-﻿  ctsIOBuffersUnitTest_Client.cpp
-  ctsIOBuffersUnitTest_Client.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
-     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOBuffersUnitTest_Client.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOBuffersUnitTest_Client.exp
-  Generating code
-  Finished generating code
-  ctsIOBuffersUnitTest_Client.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOBuffersUnitTest_Client.dll
-  ctsIOBuffersUnitTest_Client.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOBuffersUnitTest_Client.pdb (Full PDB)

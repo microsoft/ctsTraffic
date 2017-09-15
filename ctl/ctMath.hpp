@@ -11,6 +11,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+#pragma once
+
 #include <tuple>
 #include <vector>
 #include <numeric>
@@ -31,10 +33,16 @@ namespace ctl {
     std::tuple<double, double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
     {
         auto size = _end - _begin;
-        if (size < 2) {
+        if (size == 0) {
             return std::make_tuple(
                 static_cast<double>(0),
                 static_cast<double>(0),
+                static_cast<double>(0));
+        }
+        if (size == 1) {
+            return std::make_tuple(
+                static_cast<double>(0),
+                static_cast<double>(*_begin),
                 static_cast<double>(0));
         }
 
@@ -112,7 +120,8 @@ namespace ctl {
         auto find_median = [] (const std::tuple<BidirectionalIterator, BidirectionalIterator>& _split) -> double {
             const BidirectionalIterator& lhs = std::get<0>(_split);
             const BidirectionalIterator& rhs = std::get<1>(_split);
-
+            ctl::ctFatalCondition(rhs < lhs, L"ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
+            
             double median_value = 0.0;
             switch (rhs - lhs) {
             case 1: {
@@ -120,7 +129,7 @@ namespace ctl {
                 // must guard against overflow
                 auto lhs_value = *lhs;
                 auto rhs_value = *rhs;
-                auto sum = lhs_value + rhs_value;
+                double sum = static_cast<double>(lhs_value) + static_cast<double>(rhs_value);
                 if (sum < lhs_value || sum < rhs_value) {
                     // overflow - divide first, then add
                     median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
@@ -137,8 +146,9 @@ namespace ctl {
             }
 
             default:
-                ctl::ctAlwaysFatalCondition(L"ntsInterquartileRange internal error - returned iterators more than one apart [%Iu]", rhs - lhs);
+                ctl::ctAlwaysFatalCondition(L"ctInterquartileRange internal error - returned iterators more than two apart [%Iu]", rhs - lhs);
             }
+
             return median_value;
         };
 

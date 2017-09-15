@@ -65,7 +65,7 @@ namespace ctsTraffic {
         }
 
         const wchar_t* Function = (IOTaskAction::Send == _io_task.ioAction) ? L"WriteFile" : L"ReadFile";
-        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", Function, gle);
+        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, gle);
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
@@ -162,7 +162,7 @@ namespace ctsTraffic {
                         ctsConfig::PrintException(e);
                         io_error = (0 == e.why()) ? WSAENOBUFS : e.why();
                     }
-                    catch (const std::bad_alloc& e) {
+                    catch (const std::exception& e) {
                         ctsConfig::PrintException(e);
                         io_error = WSAENOBUFS;
                     }
@@ -200,7 +200,7 @@ namespace ctsTraffic {
                         io_count = shared_socket->decrement_io();
                         // call back to the socket that it failed to see if wants more IO
                         const wchar_t* Function = (IOTaskAction::Send == next_io.ioAction) ? L"WriteFile" : L"ReadFile";
-                        PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", Function, io_error);
+                        PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, io_error);
 
                         ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
                         io_done = (protocol_status != ctsIOStatus::ContinueIo);

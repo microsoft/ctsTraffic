@@ -1,9 +1,0 @@
-﻿  ctsIOPattern.cpp
-  ctsIOPatternMediaStream.cpp
-  ctsIOPatternUnitTest_Server.cpp
-  ctsIOPattern.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
-     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternUnitTest_Server.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternUnitTest_Server.exp
-  Generating code
-  Finished generating code
-  ctsIOPatternUnitTest_Server.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternUnitTest_Server.dll
-  ctsIOPatternUnitTest_Server.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsIOPatternUnitTest_Server.pdb (Full PDB)

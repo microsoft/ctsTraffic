@@ -531,7 +531,7 @@ namespace ctl {
             ///
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
-                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
+                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
                 throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
             }
             // suppressing the 'Using uninitialized memory' warning since T* must be an _Out_ 
@@ -569,7 +569,7 @@ namespace ctl {
             ///
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
-                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
+                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
                 throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
             }
 
@@ -592,7 +592,7 @@ namespace ctl {
             ///
             if (vtProp.is_empty() || vtProp.is_null()) {
                 wchar_t propName[128];
-                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %s is empty or null", _propname);
+                ::_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
                 throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
             }
 

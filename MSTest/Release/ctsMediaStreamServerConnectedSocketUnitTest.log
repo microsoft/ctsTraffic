@@ -1,8 +1,0 @@
-﻿  ctsMediaStreamServerConnectedSocket.cpp
-  ctsMediaStreamServerConnectedSocketUnitTest.cpp
-  ctsMediaStreamServerConnectedSocket.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
-     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamServerConnectedSocketUnitTest.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamServerConnectedSocketUnitTest.exp
-  Generating code
-  Finished generating code
-  ctsMediaStreamServerConnectedSocketUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamServerConnectedSocketUnitTest.dll
-  ctsMediaStreamServerConnectedSocketUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamServerConnectedSocketUnitTest.pdb (Full PDB)

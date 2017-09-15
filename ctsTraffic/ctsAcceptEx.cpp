@@ -171,7 +171,7 @@ namespace ctsTraffic {
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                     // Make the structures for the listener and its accept sockets
                     std::shared_ptr<ctsListenSocketInfo> listen_socket_info = std::make_shared<ctsListenSocketInfo>(addr);
-                    PrintDebugInfo(L"\t\tListening to %s\n", addr.writeCompleteAddress().c_str());
+                    PrintDebugInfo(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
@@ -409,7 +409,7 @@ namespace ctsTraffic {
                 *reinterpret_cast<DWORD*>(perror) = e.why();
                 return FALSE;
             }
-            catch (const std::exception e) {
+            catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
                 *reinterpret_cast<DWORD*>(perror) = ERROR_OUTOFMEMORY;
                 return FALSE;
@@ -462,7 +462,7 @@ namespace ctsTraffic {
                 // - queue this one for when a request comes in
                 //
                 try { s_pimpl->accepted_connections.push(std::move(accepted_socket)); }
-                catch (const std::bad_alloc&) {
+                catch (const std::exception&) {
                     // if fails to be added to our queue, it's OK 
                     // - it will be destroyed and we'll make another later
                 }
@@ -508,7 +508,7 @@ namespace ctsTraffic {
             if (details::s_pimpl->accepted_connections.empty()) {
                 // no accepted connections yet -- save the weak_ptr, *not* the shared_ptr
                 try { details::s_pimpl->pended_accept_requests.push(_weak_socket); }
-                catch (const std::bad_alloc&) {
+                catch (const std::exception&) {
                     // fail the caller if can't save this request
                     error = WSAENOBUFS;
                 }

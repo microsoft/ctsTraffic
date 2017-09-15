@@ -52,7 +52,7 @@ namespace ctsTraffic {
             va_start(args, _text);
 
             auto formatted(ctl::ctString::format_string_va(_text, args));
-            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %s\n", formatted.c_str()).c_str());
+            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
         }
@@ -76,7 +76,7 @@ namespace ctsTraffic {
         void PrintException(const std::exception& e) NOEXCEPT
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"ctsConfig::PrintException(%s)",
+                ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
                 ctl::ctString::format_exception(e).c_str()).c_str());
         }
         bool IsListening() NOEXCEPT

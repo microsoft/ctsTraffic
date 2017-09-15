@@ -1612,7 +1612,7 @@ namespace ctsTraffic {
                     throw ctException(
                         ERROR_NOT_FOUND,
                         ctString::format_string(
-                            L"GetAdaptersAddresses could not find the interface alias '%s'",
+                            L"GetAdaptersAddresses could not find the interface alias '%ws'",
                             value).c_str(),
                         L"ctsConfig::set_compartment",
                         true);
@@ -2135,7 +2135,7 @@ namespace ctsTraffic {
                     break;
             }
 
-            ::fwprintf_s(stdout, L"%s", usage.c_str());
+            ::fwprintf_s(stdout, L"%ws", usage.c_str());
         }
 
         bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv)
@@ -2352,7 +2352,7 @@ namespace ctsTraffic {
             if (!args.empty()) {
                 wstring error_string;
                 for (const auto& arg_string : args) {
-                    error_string.append(ctString::format_string(L" %s", arg_string));
+                    error_string.append(ctString::format_string(L" %ws", arg_string));
                 }
                 error_string.append(L"\n");
                 PrintErrorInfoOverride(error_string.c_str());
@@ -2417,11 +2417,11 @@ namespace ctsTraffic {
                 if (write_to_console) {
                     LPCWSTR legend = s_PrintStatusInformation->print_legend(ctsConfig::StatusFormatting::ConsoleOutput);
                     if (legend != nullptr) {
-                        ::fwprintf(stdout, L"%s\n", legend);
+                        ::fwprintf(stdout, L"%ws\n", legend);
                     }
                     LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ConsoleOutput);
                     if (header != nullptr) {
-                        ::fwprintf(stdout, L"%s\n", header);
+                        ::fwprintf(stdout, L"%ws\n", header);
                     }
                 }
 
@@ -2449,19 +2449,19 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
-            ctFatalCondition(s_BreakOnError, L"[ctsTraffic] >> exception - %S\n", e.what());
+            ctFatalCondition(s_BreakOnError, L"[ctsTraffic] >> exception - %hs\n", e.what());
 
             try {
                 auto formatted_string(
                     ctl::ctString::format_string(
-                    L"[%.3f] %s",
+                    L"[%.3f] %ws",
                     ctsConfig::GetStatusTimeStamp(),
                     ctString::format_exception(e).c_str()));
 
-                ::fwprintf(stderr, L"%s\n", formatted_string.c_str());
+                ::fwprintf(stderr, L"%ws\n", formatted_string.c_str());
                 if (s_ErrorLogger) {
                     s_ErrorLogger->LogError(
-                        ctString::format_string(L"%s\r\n", formatted_string.c_str()).c_str());
+                        ctString::format_string(L"%ws\r\n", formatted_string.c_str()).c_str());
                 }
             }
             catch (const exception&) {
@@ -2486,14 +2486,14 @@ namespace ctsTraffic {
                 wstring exception_text(ctString::format_exception(e));
 
                 if (!s_ShutdownCalled) {
-                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %s", exception_text.c_str());
+                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %ws", exception_text.c_str());
                 }
 
                 PrintErrorInfo(exception_text.c_str());
             }
             catch (const exception&) {
                 if (!s_ShutdownCalled) {
-                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %S", e.what());
+                    ctFatalCondition(s_BreakOnError, L"Fatal exception: %hs", e.what());
                 }
 
                 switch (s_ConsoleVerbosity) {
@@ -2506,7 +2506,7 @@ namespace ctsTraffic {
                     case 6: // above + debug info
                     {
                         ::wprintf(
-                            L"[%.3f] Exception thrown: %S\n",
+                            L"[%.3f] Exception thrown: %hs\n",
                             ctsConfig::GetStatusTimeStamp(),
                             e.what());
                     }
@@ -2529,7 +2529,7 @@ namespace ctsTraffic {
                 try {
                     s_ErrorLogger->LogError(
                         ctString::format_string(
-                            L"[%.3f] %s\r\n",
+                            L"[%.3f] %ws\r\n",
                             ctsConfig::GetStatusTimeStamp(),
                             ctString::format_string_va(_text, argptr).c_str()).c_str());
                 }
@@ -2567,7 +2567,7 @@ namespace ctsTraffic {
                     wstring formatted_string;
                     if (write_to_console) {
                         formatted_string = ctString::format_string_va(_text, argptr);
-                        ::wprintf_s(L"%s\n", formatted_string.c_str());
+                        ::wprintf_s(L"%ws\n", formatted_string.c_str());
                     }
 
                     if (s_ErrorLogger) {
@@ -2576,7 +2576,7 @@ namespace ctsTraffic {
                         }
                         s_ErrorLogger->LogError(
                             ctString::format_string(
-                                L"[%.3f] %s\r\n",
+                                L"[%.3f] %ws\r\n",
                                 ctsConfig::GetStatusTimeStamp(),
                                 formatted_string.c_str()).c_str());
                     }
@@ -2592,7 +2592,7 @@ namespace ctsTraffic {
             ctsConfigInitOnce();
 
             if (!s_ShutdownCalled && (_why != 0)) {
-                ctFatalCondition(s_BreakOnError, L"%s failed (%u)\n", _what, _why);
+                ctFatalCondition(s_BreakOnError, L"%ws failed (%u)\n", _what, _why);
 
                 bool write_to_console = false;
                 switch (s_ConsoleVerbosity) {
@@ -2612,13 +2612,13 @@ namespace ctsTraffic {
                     wstring error_string;
                     if (ctsIOPattern::IsProtocolError(_why)) {
                         error_string = ctl::ctString::format_string(
-                            L"[%.3f] Connection aborted due to the protocol error %s",
+                            L"[%.3f] Connection aborted due to the protocol error %ws",
                             ctsConfig::GetStatusTimeStamp(),
                             ctsIOPattern::BuildProtocolErrorString(_why));
                     } else {
                         ctException error_details(_why, _what);
                         error_string = ctl::ctString::format_string(
-                            L"[%.3f] %s failed (%u) %s",
+                            L"[%.3f] %ws failed (%u) %ws",
                             ctsConfig::GetStatusTimeStamp(),
                             _what,
                             _why,
@@ -2626,12 +2626,12 @@ namespace ctsTraffic {
                     }
 
                     if (write_to_console) {
-                        ::fwprintf(stderr, L"%s\n", error_string.c_str());
+                        ::fwprintf(stderr, L"%ws\n", error_string.c_str());
                     }
 
                     if (s_ErrorLogger) {
                         s_ErrorLogger->LogError(
-                            ctString::format_string(L"%s\r\n", error_string.c_str()).c_str());
+                            ctString::format_string(L"%ws\r\n", error_string.c_str()).c_str());
                     }
                 }
                 catch (const exception&) {
@@ -2669,7 +2669,7 @@ namespace ctsTraffic {
                                 if (s_PrintTimesliceCount != 0 && 0 == s_PrintTimesliceCount % 40) {
                                     LPCWSTR header = s_PrintStatusInformation->print_header(ctsConfig::StatusFormatting::ConsoleOutput);
                                     if (header != nullptr) {
-                                        ::fwprintf(stdout, L"%s", header);
+                                        ::fwprintf(stdout, L"%ws", header);
                                     }
                                 }
                             }
@@ -2693,7 +2693,7 @@ namespace ctsTraffic {
                                     l_current_timeslice,
                                     clear_status);
                                 if (print_string != nullptr) {
-                                    ::fwprintf(stdout, L"%s", print_string);
+                                    ::fwprintf(stdout, L"%ws", print_string);
                                 }
                             }
 
@@ -2779,8 +2779,8 @@ namespace ctsTraffic {
             if (write_to_console) {
                 ::wprintf_s(
                     (ProtocolType::TCP == Settings->Protocol) ?
-                        L"[%.3f] TCP connection established [%s - %s]\n" :
-                        L"[%.3f] UDP connection established [%s - %s]\n",
+                        L"[%.3f] TCP connection established [%ws - %ws]\n" :
+                        L"[%.3f] UDP connection established [%ws - %ws]\n",
                     GetStatusTimeStamp(),
                     _local_addr.writeCompleteAddress().c_str(),
                     _remote_addr.writeCompleteAddress().c_str());
@@ -2791,8 +2791,8 @@ namespace ctsTraffic {
                     s_ConnectionLogger->LogMessage(
                         ctString::format_string(
                             (ProtocolType::TCP == Settings->Protocol) ?
-                                L"[%.3f] TCP connection established [%s - %s]\r\n" :
-                                L"[%.3f] UDP connection established [%s - %s]\r\n",
+                                L"[%.3f] TCP connection established [%ws - %ws]\r\n" :
+                                L"[%.3f] UDP connection established [%ws - %ws]\r\n",
                             GetStatusTimeStamp(),
                             _local_addr.writeCompleteAddress().c_str(),
                             _remote_addr.writeCompleteAddress().c_str()).c_str());
@@ -2836,12 +2836,12 @@ namespace ctsTraffic {
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%s - %s] [%S]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
-            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
-            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %s : [%s - %s] [%S] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%ws - %ws] [%hs]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
 
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
-            static LPCWSTR TCPResultCsvFormat = L"%.3f,%s,%s,%lld,%lld,%lld,%lld,%lld,%s,%S\r\n";
+            static LPCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
 
             long long total_time = (_stats.end_time.get() - _stats.start_time.get());
             ctl::ctFatalCondition(
@@ -2858,7 +2858,7 @@ namespace ctsTraffic {
                         error_string = L"Succeeded";
                     } else {
                         error_string = ctl::ctString::format_string(
-                            L"%lu: %s",
+                            L"%lu: %ws",
                             _error,
                             ctl::ctException(_error).translation_w());
                         // remove any commas from the formatted string - since that will mess up csv files
@@ -2915,7 +2915,7 @@ namespace ctsTraffic {
 
                 if (write_to_console) {
                     // text strings always go to the console
-                    ::wprintf(L"%s\n", text_string.c_str());
+                    ::wprintf(L"%ws\n", text_string.c_str());
                 }
 
                 if (s_ConnectionLogger) {
@@ -2923,7 +2923,7 @@ namespace ctsTraffic {
                         s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
                         s_ConnectionLogger->LogMessage(
-                            ctString::format_string(L"%s\r\n", text_string.c_str()).c_str());
+                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -2964,12 +2964,12 @@ namespace ctsTraffic {
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
-            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
-            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %s : [%s - %s] [%S] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
 
             // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
-            static LPCWSTR UDPResultCsvFormat = L"%.3f,%s,%s,%llu,%llu,%llu,%llu,%llu,%s,%S\r\n";
+            static LPCWSTR UDPResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
 
             float current_time = ctsConfig::GetStatusTimeStamp();
             long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
@@ -2984,7 +2984,7 @@ namespace ctsTraffic {
                         error_string = L"Succeeded";
                     } else {
                         error_string = ctl::ctString::format_string(
-                            L"%lu: %s",
+                            L"%lu: %ws",
                             _error,
                             ctl::ctException(_error).translation_w());
                         // remove any commas from the formatted string - since that will mess up csv files
@@ -3043,7 +3043,7 @@ namespace ctsTraffic {
 
                 if (write_to_console) {
                     // text strings always go to the console
-                    ::wprintf(L"%s\n", text_string.c_str());
+                    ::wprintf(L"%ws\n", text_string.c_str());
                 }
 
                 if (s_ConnectionLogger) {
@@ -3051,7 +3051,7 @@ namespace ctsTraffic {
                         s_ConnectionLogger->LogMessage(csv_string.c_str());
                     } else {
                         s_ConnectionLogger->LogMessage(
-                            ctString::format_string(L"%s\r\n", text_string.c_str()).c_str());
+                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -3092,7 +3092,7 @@ namespace ctsTraffic {
                 wstring formatted_string;
                 if (write_to_console) {
                     formatted_string = ctString::format_string_va(_text, argptr);
-                    ::wprintf(L"%s", formatted_string.c_str());
+                    ::wprintf(L"%ws", formatted_string.c_str());
                 }
 
                 if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()) {
@@ -3414,7 +3414,7 @@ namespace ctsTraffic {
             }
             setting_string.append(L"\n");
 
-            setting_string.append(ctString::format_string(L"\tIO function: %s\n", s_IoFunctionName));
+            setting_string.append(ctString::format_string(L"\tIO function: %ws\n", s_IoFunctionName));
 
             setting_string.append(L"\tIoPattern: ");
             switch (Settings->IoPattern) {
@@ -3451,7 +3451,7 @@ namespace ctsTraffic {
 
             setting_string.append(
                 ctString::format_string(
-                    L"\tLevel of verification: %s\n",
+                    L"\tLevel of verification: %ws\n",
                     Settings->ShouldVerifyBuffers ? L"Connections & Data" : L"Connections"));
 
             setting_string.append(ctString::format_string(L"\tPort: %u\n", Settings->Port));
@@ -3538,7 +3538,7 @@ namespace ctsTraffic {
                 }
 
                 setting_string.append(
-                    ctString::format_string(L"\tAccepting function: %s\n", s_AcceptFunctionName));
+                    ctString::format_string(L"\tAccepting function: %ws\n", s_AcceptFunctionName));
 
             } else {
                 setting_string.append(L"\tConnecting out to addresses:\n");
@@ -3575,7 +3575,7 @@ namespace ctsTraffic {
                 }
 
                 setting_string.append(
-                    ctString::format_string(L"\tConnection function: %s\n", s_ConnectFunctionName));
+                    ctString::format_string(L"\tConnection function: %ws\n", s_ConnectFunctionName));
                 setting_string.append(
                     ctString::format_string(
                         L"\tConnection limit (maximum established connections): %u [0x%x]\n",
@@ -3634,7 +3634,7 @@ namespace ctsTraffic {
                 case 5: // connection info + error info + status updates
                 case 6: // above + debug info
                 {
-                    ::fwprintf(stdout, L"%s", setting_string.c_str());
+                    ::fwprintf(stdout, L"%ws", setting_string.c_str());
                 }
             }
 

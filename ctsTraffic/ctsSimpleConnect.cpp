@@ -78,7 +78,7 @@ namespace ctsTraffic {
                         L"ctException (%p) thrown with a zero error code", &e);
                     error = e.why();
                 }
-                catch (const std::bad_alloc& e) {
+                catch (const std::exception& e) {
                     ctsConfig::PrintException(e);
                     error = WSAENOBUFS;
                 }
