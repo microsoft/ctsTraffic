@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0622 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -731,8 +731,11 @@ extern RPC_IF_HANDLE __MIDL_itf_wbemdisp_0000_0000_v0_0_s_ifspec;
 
 
 
+
+
 static const BSTR WBEMDISP_EMPTY_STRING = (BSTR)L"";
 static const BSTR WBEMDISP_WQL_STRING = (BSTR)L"WQL";
+
 
 typedef /* [helpstring][uuid][v1_enum] */  DECLSPEC_UUID("4A249B72-FC9A-11d1-8B1E-00600806D9B6") 
 enum WbemChangeFlagEnum
