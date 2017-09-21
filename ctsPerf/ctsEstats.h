@@ -174,7 +174,7 @@ namespace details {
         EstatsDataTracking() = default;
         ~EstatsDataTracking() = default;
 
-        static LPWSTR PrintHeader();
+        static LPCWSTR PrintHeader();
         void PrintData() const;
 
         template <typename PTCPROW>
@@ -187,7 +187,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSynOpts> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"Mss-Received,Mss-Sent";
         }
@@ -222,7 +222,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsData> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"Bytes-In,Bytes-Out";
         }
@@ -257,7 +257,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSndCong> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"CongWin(mean),CongWin(stddev),"
                 L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
@@ -266,7 +266,7 @@ namespace details {
         std::wstring PrintData() const
         {
             return
-                ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjectionWindows) +
+                ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
                 ctl::ctString::format_string(
                     L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
                     transitionsIntoReceiverLimited,
@@ -290,7 +290,7 @@ namespace details {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             ZeroMemory(&Rod, sizeof(Rod));
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
-                conjectionWindows.push_back(Rod.CurCwnd);
+                conjestionWindows.push_back(Rod.CurCwnd);
                 bytesSentInReceiverLimited = Rod.SndLimBytesRwin;
                 bytesSentInSenderLimited = Rod.SndLimBytesSnd;
                 bytesSentInCongestionLimited = Rod.SndLimBytesCwnd;
@@ -301,7 +301,7 @@ namespace details {
         }
 
     private:
-        std::vector<ULONG> conjectionWindows;
+        std::vector<ULONG> conjestionWindows;
 
         SIZE_T bytesSentInReceiverLimited = 0;
         SIZE_T bytesSentInSenderLimited = 0;
@@ -315,7 +315,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsPath> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
                 L"RetransTimer(mean),RetransTimer(stddev),"
@@ -370,7 +370,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsRec> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(mean),LocalRecvWin(stddev)";
         }
@@ -413,7 +413,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsObsRec> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(mean),RemoteRecvWin(stddev)";
         }
@@ -456,7 +456,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsBandwidth> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"";
         }
@@ -490,7 +490,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsFineRtt> {
     public:
-        static LPWSTR PrintHeader()
+        static LPCWSTR PrintHeader()
         {
             return L"";
         }

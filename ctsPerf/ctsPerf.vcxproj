@@ -97,6 +97,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /permissive- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,6 +129,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <OmitFramePointers>false</OmitFramePointers>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /permissive- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,6 +163,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <BrowseInformation>true</BrowseInformation>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Zc:strictStrings  /Gw /permissive- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -194,6 +197,7 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <BrowseInformation>true</BrowseInformation>
       <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7"  /Zc:strictStrings  /Gw /permissive- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
