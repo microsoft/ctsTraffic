@@ -366,8 +366,10 @@ namespace ctsTraffic {
             unsigned long PushBytes = 0;
             unsigned long PullBytes = 0;
 
-            USHORT LocalPortLow = 0;
-            USHORT LocalPortHigh = 0;
+            unsigned long OutgoingIfIndex = 0;
+
+            unsigned short LocalPortLow = 0;
+            unsigned short LocalPortHigh = 0;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

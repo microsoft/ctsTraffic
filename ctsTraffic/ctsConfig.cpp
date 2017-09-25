@@ -1221,7 +1221,7 @@ namespace ctsTraffic {
                 } else {
                     // single value are written to localport_low with localport_high left at zero
                     Settings->LocalPortHigh = 0;
-                    Settings->LocalPortLow = as_integral<USHORT>(value);
+                    Settings->LocalPortLow = as_integral<unsigned short>(value);
                 }
                 if (0 == Settings->LocalPortLow) {
                     throw invalid_argument("-LocalPort");
@@ -1232,6 +1232,33 @@ namespace ctsTraffic {
             }
         }
 
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Parses for an explicitly specified interface index for outgoing connections
+        /// 
+        /// -IfIndex:##
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static
+        void set_ifindex(vector<const wchar_t*>& _args)
+        {
+            auto found_arg = find_if(begin(_args), end(_args), [](const wchar_t* parameter) -> bool {
+                const wchar_t* value = ParseArgument(parameter, L"-IfIndex");
+                return (value != nullptr);
+            });
+
+            if (found_arg != end(_args)) {
+                const wchar_t* value = ParseArgument(*found_arg, L"-IfIndex");
+                Settings->OutgoingIfIndex = as_integral<unsigned long>(value);
+
+                if (0 == Settings->OutgoingIfIndex) {
+                    throw invalid_argument("-IfIndex");
+                }
+
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            }
+        }
 
         //////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -2058,6 +2085,10 @@ namespace ctsTraffic {
                                  L"\t- ConnectEx : uses OVERLAPPED ConnectEx with IO Completion ports\n"
                                  L"\t- connect : uses blocking calls to connect\n"
                                  L"\t          : be careful using this as it will not scale out well as each call blocks a thread\n"
+                                 L"-IfIndex:####\n"
+                                 L"   - the interface index which to use for outbound connectivity\n"
+                                 L"     assigns the interface with IP_UNICAST_IF / IPV6_UNICAST_IF\n"
+                                 L"\t- <default> == not set (will not restrict binding to any specific interface)\n"
                                  L"-IO:<readwritefile>\n"
                                  L"   - an additional IO option beyond iocp and rioiocp\n"
                                  L"\t- readwritefile : leverages ReadFile/WriteFile using IOCP for async completions\n"
@@ -2215,6 +2246,7 @@ namespace ctsTraffic {
             set_address(args);
             set_port(args);
             set_localport(args);
+            set_ifindex(args);
 
             //
             // ensure a Port is assigned to all listening addresses and target addresses
@@ -2228,6 +2260,10 @@ namespace ctsTraffic {
                 if (addr.port() == 0x0000) {
                     addr.setPort(Settings->Port);
                 }
+            }
+
+            if (Settings->OutgoingIfIndex != 0 && !Settings->ListenAddresses.empty()) {
+                throw invalid_argument("-IfIndex can only be used for outgoing connections, not listening sockets");
             }
 
             //
@@ -3212,6 +3248,41 @@ namespace ctsTraffic {
         {
             ctsConfigInitOnce();
 
+            if (Settings->OutgoingIfIndex > 0) {
+                int optlen = static_cast<int>(sizeof Settings->OutgoingIfIndex);
+
+                if (_local_address.family() == AF_INET) {
+                    // Interface index is in network byte order for IPPROTO_IP.
+
+                    DWORD optionValue = ::htonl(Settings->OutgoingIfIndex);
+                    auto error = ::setsockopt(
+                        _s,
+                        IPPROTO_IP,   // level
+                        IP_UNICAST_IF, // optname
+                        reinterpret_cast<const char *>(&optionValue),
+                        optlen);
+                    if (error != 0) {
+                        int gle = ::WSAGetLastError();
+                        PrintErrorIfFailed(L"setsockopt(IP_UNICAST_IF)", gle);
+                        return gle;
+                    }
+
+                }
+                else {
+                    auto error = ::setsockopt(
+                        _s,
+                        IPPROTO_IPV6,   // level
+                        IPV6_UNICAST_IF, // optname
+                        reinterpret_cast<const char *>(&Settings->OutgoingIfIndex),
+                        optlen);
+                    if (error != 0) {
+                        int gle = ::WSAGetLastError();
+                        PrintErrorIfFailed(L"setsockopt(IPV6_UNICAST_IF)", gle);
+                        return gle;
+                    }
+                }
+            }
+
             //
             // if the user specified bind addresses, enable SO_PORT_SCALABILITY
             // - this will allow each unique IP address the full range of ephemeral ports
@@ -3537,10 +3608,13 @@ namespace ctsTraffic {
                     }
                 }
 
-                setting_string.append(
-                    ctString::format_string(L"\tAccepting function: %ws\n", s_AcceptFunctionName));
-
             } else {
+                if (Settings->OutgoingIfIndex > 0) {
+                    setting_string.append(
+                        ctl::ctString::format_string(
+                            L"\tInterfaceIndex: %u\n", Settings->OutgoingIfIndex));
+                }
+
                 setting_string.append(L"\tConnecting out to addresses:\n");
                 WCHAR wsaddress[IP_STRING_MAX_LENGTH];
                 for (const auto& addr : Settings->TargetAddresses) {
@@ -3574,8 +3648,6 @@ namespace ctsTraffic {
                     }
                 }
 
-                setting_string.append(
-                    ctString::format_string(L"\tConnection function: %ws\n", s_ConnectFunctionName));
                 setting_string.append(
                     ctString::format_string(
                         L"\tConnection limit (maximum established connections): %u [0x%x]\n",
