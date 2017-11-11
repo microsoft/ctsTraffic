@@ -603,7 +603,7 @@ namespace ctl
             if (FAILED(hr)) {
                 if (hr != WBEM_E_NOT_FOUND) {
                     wchar_t function[128];
-                    ::_snwprintf_s(function, 128, _TRUNCATE, L"ctWmiErrorInfo::%s", _parameter);
+                    ::_snwprintf_s(function, 128, _TRUNCATE, L"ctWmiErrorInfo::%ws", _parameter);
                     throw ctWmiException(hr, this->error_info.get(), L"IWbemClassObject::Get", function, false);
                 }
             }

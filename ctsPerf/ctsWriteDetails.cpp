@@ -29,21 +29,20 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsPerf {
 
-    ctsWriteDetails::ctsWriteDetails(_In_ LPCWSTR _file_name, bool _mean_only) :
-        file_handle(INVALID_HANDLE_VALUE)
+    void ctsWriteDetails::create_file(bool _mean_only)
     {
         file_handle = ::CreateFileW(
-            _file_name,
+            file_name.c_str(),
             GENERIC_WRITE,
             FILE_SHARE_READ, // allow others to read the file while we write to it
             nullptr,
             CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL,
-            NULL);
+            nullptr);
         if (INVALID_HANDLE_VALUE == file_handle) {
             throw ctl::ctException(
                 ::GetLastError(),
-                ctl::ctString::format_string(L"CreateFile(%s)", _file_name).c_str(),
+                ctl::ctString::format_string(L"CreateFile(%ws)", file_name.c_str()).c_str(),
                 true);
         }
         ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
@@ -52,20 +51,20 @@ namespace ctsPerf {
         static const WCHAR BOM_UTF16 = 0xFEFF;
         DWORD length = sizeof(WCHAR);
         DWORD written;
-        if (!::WriteFile(file_handle, &BOM_UTF16, length, &written, NULL)) {
+        if (!::WriteFile(file_handle, &BOM_UTF16, length, &written, nullptr)) {
             throw ctl::ctException(::GetLastError(), L"WriteFile", false);
         }
 
         if (_mean_only) {
-            static const WCHAR MeanHeader[] = L"PerfCounter(CounterName),TotalCount,Min,Max,Mean\r\n";
+            static const WCHAR MeanHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,Mean\r\n";
             length = sizeof(MeanHeader);
-            if (!::WriteFile(file_handle, MeanHeader, length, &written, NULL)) {
+            if (!::WriteFile(file_handle, MeanHeader, length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
         } else {
-            static const WCHAR DetailedHeader[] = L"PerfCounter(CounterName),TotalCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR\r\n";
+            static const WCHAR DetailedHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR\r\n";
             length = sizeof(DetailedHeader);
-            if (!::WriteFile(file_handle, DetailedHeader, length, &written, NULL)) {
+            if (!::WriteFile(file_handle, DetailedHeader, length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
         }
@@ -73,33 +72,78 @@ namespace ctsPerf {
         // everything succeeded, dismiss the scope guards
         closeHandleOnError.dismiss();
     }
-
-    ctsWriteDetails::~ctsWriteDetails() NOEXCEPT
+    void ctsWriteDetails::create_file(const std::wstring& _banner_text)
     {
-        ::CloseHandle(file_handle);
+        file_handle = ::CreateFileW(
+            file_name.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ, // allow others to read the file while we write to it
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+        if (INVALID_HANDLE_VALUE == file_handle) {
+            throw ctl::ctException(
+                ::GetLastError(),
+                ctl::ctString::format_string(L"CreateFile(%ws)", file_name.c_str()).c_str(),
+                true);
+        }
+        ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
+
+        // write the UTF16 Byte order mark
+        static const WCHAR BOM_UTF16 = 0xFEFF;
+        DWORD length = sizeof(WCHAR);
+        DWORD written;
+        if (!::WriteFile(file_handle, &BOM_UTF16, length, &written, nullptr)) {
+            throw ctl::ctException(::GetLastError(), L"WriteFile", false);
+        }
+
+        length = static_cast<DWORD>(_banner_text.length() * sizeof(WCHAR));
+        if (!::WriteFile(file_handle, _banner_text.c_str(), length, &written, nullptr)) {
+            throw ctl::ctException(::GetLastError(), L"WriteFile", false);
+        }
+
+        end_row();
+
+        // everything succeeded, dismiss the scope guards
+        closeHandleOnError.dismiss();
     }
 
-    void ctsWriteDetails::start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name)
+    void ctsWriteDetails::write_row(const std::wstring& text) noexcept
+    {
+        DWORD length = static_cast<DWORD>(text.length() * sizeof(WCHAR));
+        DWORD written;
+        if (!::WriteFile(file_handle, text.c_str(), length, &written, NULL)) {
+            auto gle = ::GetLastError();
+            wprintf(L"\t[ctsWriteDetails::write_row] WriteFile failed (%u)\n", gle);
+        }
+
+        end_row();
+    }
+
+    void ctsWriteDetails::start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) noexcept
     {
         auto formatted_string(ctl::ctString::format_string(
-            L"%s (%s)", _class_name, _counter_name));
+            L"%ws (%ws)", _class_name, _counter_name));
         // since writing to csv, can't embed a comma in the data
         ctl::ctString::replace_all(formatted_string, L",", L"-");
 
-        DWORD length = static_cast<DWORD>(formatted_string.length() * sizeof(wchar_t));
+        DWORD length = static_cast<DWORD>(formatted_string.length() * sizeof(WCHAR));
         DWORD written;
-        if (!::WriteFile(file_handle, formatted_string.c_str(), length, &written, NULL)) {
-            throw ctl::ctException(::GetLastError(), L"WriteFile", false);
+        if (!::WriteFile(file_handle, formatted_string.c_str(), length, &written, nullptr)) {
+            auto gle = ::GetLastError();
+            wprintf(L"\t[ctsWriteDetails::start_row] WriteFile failed (%u)\n", gle);
         }
     }
 
-    void ctsWriteDetails::end_row()
+    void ctsWriteDetails::end_row() noexcept
     {
         static const WCHAR EOL[2] = { L'\r', L'\n' };
         static const DWORD EOL_LEN = sizeof(EOL);
         DWORD written;
-        if (!::WriteFile(file_handle, EOL, EOL_LEN, &written, NULL)) {
-            throw ctl::ctException(::GetLastError(), L"WriteFile", false);
+        if (!::WriteFile(file_handle, EOL, EOL_LEN, &written, nullptr)) {
+            auto gle = ::GetLastError();
+            wprintf(L"\t[ctsWriteDetails::end_row] WriteFile failed (%u)\n", gle);
         }
     }
 }

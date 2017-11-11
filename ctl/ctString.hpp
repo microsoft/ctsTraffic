@@ -74,7 +74,7 @@ namespace ctl {
         ///     std::wstring::const_iterator beginning_of_word  = std::begin(test_string);
         ///     std::for_each( std::begin(spaces), std::end(spaces), [&](std::wstring::const_iterator _iter) {
         ///         std::wstring next_word(beginning_of_word, _iter);
-        ///         wprintf(L"%s\n", next_word.c_str());
+        ///         wprintf(L"%ws\n", next_word.c_str());
         ///         // _iter points to the space - move to the first character of the next word
         ///         beginning_of_word = _iter;
         ///         ++beginning_of_word;
@@ -84,7 +84,7 @@ namespace ctl {
         ///     // - in this case we know beginning_of_word != begin() since there are spaces in the test_string
         ///     //   but showing the general case method one might process the returned data
         ///     std::wstring next_word(beginning_of_word, std::end(test_string));
-        ///     wprintf(L"%s\n", next_word.c_str());
+        ///     wprintf(L"%ws\n", next_word.c_str());
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -624,7 +624,7 @@ namespace ctl {
             bool translation_exists = ::wcslen(_exception.translation_w()) > 0;
 
             return format_string(
-                L"[ctl::ctException] %s%s%s%s [%u / 0x%x - %s]",
+                L"[ctl::ctException] %ws%ws%ws%ws [%u / 0x%x - %ws]",
                 what_exists ? L" " : L"",
                 what_exists ? _exception.what_w() : L"",
                 where_exists ? L" at " : L"",
@@ -643,7 +643,7 @@ namespace ctl {
                 return format_exception(*ctex);
             } else {
                 return format_string(
-                    L"[std::exception] %S",
+                    L"[std::exception] %hs",
                     _exception.what());
             }
         }
@@ -652,7 +652,7 @@ namespace ctl {
         std::wstring format_exception(const std::exception& _exception)
         {
             return format_string(
-                L"std::exception : %S",
+                L"std::exception : %hs",
                 _exception.what());
         }
 #endif

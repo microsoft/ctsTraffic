@@ -77,7 +77,7 @@ namespace ctsTraffic {
 
         // write to PrintError if the IO failed
         const wchar_t* function = (IOTaskAction::Send == _io_task.ioAction) ? L"WSASend" : L"WSARecv";
-        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsSendRecvIocp]\n", function, gle);
+        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsSendRecvIocp]\n", function, gle);
         // see if complete_io requests more IO
         ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
@@ -188,7 +188,7 @@ namespace ctsTraffic {
                         DWORD flags;
                         if (!::WSAGetOverlappedResult(_socket, pov, &bytes_transferred, FALSE, &flags)) {
                             ctl::ctAlwaysFatalCondition(
-                                L"WSAGetOverlappedResult failed (%d) after the IO request (%s) succeeded", ::WSAGetLastError(), function_name);
+                                L"WSAGetOverlappedResult failed (%d) after the IO request (%ws) succeeded", ::WSAGetLastError(), function_name);
                         }
                     }
                     // must cancel the IOCP TP since IO is not pended
@@ -229,7 +229,7 @@ namespace ctsTraffic {
                 return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
                 return_status.io_started = false;
             }
-            catch (const std::bad_alloc& e) {
+            catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
                 return_status.io_errorcode = WSAENOBUFS;
                 return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);

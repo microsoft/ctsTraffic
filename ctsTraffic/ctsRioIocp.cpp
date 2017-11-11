@@ -555,7 +555,7 @@ namespace ctsTraffic {
             }
             _Analysis_assume_(RIOFunction != nullptr);
 
-            if (_status != 0) PrintDebugInfo(L"\t\tIO Failed: %s (%d) [ctsReadWriteIocp]\n", RIOFunction, _status);
+            if (_status != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", RIOFunction, _status);
 
             DWORD error = _status;
             ctsIOStatus protocol_status = shared_pattern->complete_io(_task, _transferred, _status);

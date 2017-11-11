@@ -435,8 +435,8 @@ namespace ctsTraffic {
             throw ctl::ctException(
                 ERROR_INVALID_DATA,
                 ctl::ctString::format_string(
-                L"Invalid MediaStream message: %S",
-                buffer.c_str()).c_str(),
+                    L"Invalid MediaStream message: %hs",
+                    buffer.c_str()).c_str(),
                 L"ctsMediaStreamMessage",
                 true);
         }

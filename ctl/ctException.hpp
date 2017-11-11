@@ -667,7 +667,7 @@ namespace ctl {
     {
         ctFatalCondition(
             true,
-            L"ctException : %s at %s [%u / 0x%x - %s]",
+            L"ctException : %ws at %ws [%u / 0x%x - %ws]",
             _exception.what_w(),
             _exception.where_w(),
             _exception.why(),
@@ -686,7 +686,7 @@ namespace ctl {
         } else {
             ctFatalCondition(
                 true,
-                L"std::exception : %S",
+                L"std::exception : %hs",
                 _exception.what());
         }
     }
@@ -697,7 +697,7 @@ namespace ctl {
     {
         ctFatalCondition(
             true,
-            L"std::exception : %S",
+            L"std::exception : %hs",
             _exception.what());
     }
 #endif

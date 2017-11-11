@@ -46,7 +46,7 @@ namespace ctsPerf {
         }
         inline std::wstring write(double _first_value)
         {
-            return ctl::ctString::format_string(L",%f", _first_value);
+            return ctl::ctString::format_string(L",%.3f", _first_value);
         }
         inline std::wstring write(ULONGLONG _first_value, ULONGLONG _second_value)
         {
@@ -58,7 +58,7 @@ namespace ctsPerf {
         }
         inline std::wstring write(double _first_value, double _second_value)
         {
-            return ctl::ctString::format_string(L",%f,%f", _first_value, _second_value);
+            return ctl::ctString::format_string(L",%.3f,%.3f", _first_value, _second_value);
         }
         inline std::wstring write(ULONGLONG _first_value, ULONGLONG _second_value, ULONGLONG _third_value)
         {
@@ -70,22 +70,71 @@ namespace ctsPerf {
         }
         inline std::wstring write(double _first_value, double _second_value, double _third_value)
         {
-            return ctl::ctString::format_string(L",%f,%f,%f", _first_value, _second_value, _third_value);
+            return ctl::ctString::format_string(L",%.3f,%.3f,%.3f", _first_value, _second_value, _third_value);
         }
     }
 
     class ctsWriteDetails {
     private:
-        void start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name);
-        void end_row();
+        void start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) noexcept;
+        void end_row() noexcept;
 
+        std::wstring file_name;
         HANDLE file_handle = INVALID_HANDLE_VALUE;
 
     public:
-        ctsWriteDetails(_In_ LPCWSTR _file_name, bool _mean_only);
-        ~ctsWriteDetails() NOEXCEPT;
+        template <typename T>
+        static std::wstring PrintMeanStdDev(const std::vector<T>& _data)
+        {
+            if (_data.size() == 0) {
+                return details::write(static_cast<double>(-1.000), static_cast<double>(0.000)); // Mean,StdDev
+            }
+
+            if (_data.size() == 1) {
+                return details::write(static_cast<double>(*_data.begin()), static_cast<double>(0.000)); // Mean,StdDev
+            }
+
+            auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
+            return details::write(std::get<1>(std_tuple), std::get<1>(std_tuple) - std::get<0>(std_tuple)); // Mean,StdDev
+        }
+
+        template <typename T>
+        static std::wstring PrintDetails(std::vector<T>& _data)
+        {
+            if (_data.empty()) {
+                return std::wstring();
+            }
+
+            // sort the data for IQR calculations
+            sort(_data.begin(), _data.end());
+
+            auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
+            auto interquartile_tuple = ctInterquartileRange(_data.begin(), _data.end());
+
+            std::wstring formatted_data = details::write(static_cast<DWORD>(_data.size()));  // SampleCount
+            formatted_data += details::write(*_data.begin(), *_data.rbegin()); // Min,Max
+            formatted_data += details::write(std::get<0>(std_tuple), std::get<1>(std_tuple), std::get<2>(std_tuple)); // -1Std,Mean,+1Std
+            formatted_data += details::write(std::get<0>(interquartile_tuple), std::get<1>(interquartile_tuple), std::get<2>(interquartile_tuple)); // -1IQR,Median,+1IQR
+            return formatted_data;
+        }
+
+    public:
+        ctsWriteDetails(const std::wstring& _file_name) :
+            file_name(_file_name),
+            file_handle(INVALID_HANDLE_VALUE)
+        {
+        }
+        ~ctsWriteDetails() noexcept
+        {
+            ::CloseHandle(file_handle);
+        }
         ctsWriteDetails(const ctsWriteDetails&) = delete;
         ctsWriteDetails& operator=(const ctsWriteDetails&) = delete;
+
+        void create_file(bool _mean_only = false);
+        void create_file(const std::wstring& _banner_text);
+
+        void write_row(const std::wstring& text) noexcept;
 
         //
         // The vector *will* be sorted before being returned (this is why it's non-const).
@@ -99,23 +148,11 @@ namespace ctsPerf {
 
             start_row(_class_name, _counter_name);
 
-            if (!_data.empty()) {
-                // sort the data for IQR calculations
-                sort(_data.begin(), _data.end());
-
-                auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
-                auto interquartile_tuple = ctInterquartileRange(_data.begin(), _data.end());
-
-                std::wstring formatted_data(details::write(static_cast<DWORD>(_data.size())));  // TotalCount
-                formatted_data += details::write(*_data.begin(), *_data.rbegin()); // Min,Max
-                formatted_data += details::write(std::get<0>(std_tuple), std::get<1>(std_tuple), std::get<2>(std_tuple)); // -1Std,Mean,+1Std
-                formatted_data += details::write(std::get<0>(interquartile_tuple), std::get<1>(interquartile_tuple), std::get<2>(interquartile_tuple)); // -1IQR,Median,+1IQR
-
-                DWORD length = static_cast<DWORD>(formatted_data.length() * sizeof(wchar_t));
-                DWORD written;
-                if (!::WriteFile(file_handle, formatted_data.c_str(), length, &written, NULL)) {
-                    throw ctl::ctException(::GetLastError(), L"WriteFile", false);
-                }
+            std::wstring formatted_data(PrintDetails(_data));
+            DWORD length = static_cast<DWORD>(formatted_data.length() * sizeof(wchar_t));
+            DWORD written;
+            if (!::WriteFile(file_handle, formatted_data.c_str(), length, &written, NULL)) {
+                throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
             end_row();

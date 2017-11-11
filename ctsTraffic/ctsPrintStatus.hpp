@@ -117,7 +117,7 @@ namespace ctsTraffic {
             size_t value_length = ::wcslen(_value);
             ctl::ctFatalCondition(
                 value_length > _max_length,
-                L"ctsStatusInformation was given a string longer than the max value given (%u) -- '%s'",
+                L"ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
                 _max_length, _value);
 
             ::wmemcpy_s(
@@ -341,7 +341,7 @@ namespace ctsTraffic {
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 _add_comma ? _value_length + 1 : _value_length,
-                _add_comma ? L"%s," : L"%s",
+                _add_comma ? L"%ws," : L"%ws",
                 _value);
             ctl::ctFatalCondition(
                 -1 == converted,

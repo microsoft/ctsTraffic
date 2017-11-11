@@ -126,7 +126,7 @@ namespace ctsTraffic {
                 auto gle = ::GetLastError();
                 throw ctl::ctException(
                     gle,
-                    ctl::ctString::format_string(L"CreateFile(%s)", _file_name).c_str(),
+                    ctl::ctString::format_string(L"CreateFile(%ws)", _file_name).c_str(),
                     L"ctsTextLogger",
                     true);
             }

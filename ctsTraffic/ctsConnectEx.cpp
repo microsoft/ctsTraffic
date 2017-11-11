@@ -130,14 +130,14 @@ namespace ctsTraffic {
 
                     ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
                     if (NO_ERROR == error) {
-                        PrintDebugInfo(L"\t\tConnecting to %s\n", targetAddress.writeCompleteAddress().c_str());
+                        PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
                     }
                 }
                 catch (const ctl::ctException& e) {
                     ctsConfig::PrintException(e);
                     error = e.why();
                 }
-                catch (const std::bad_alloc& e) {
+                catch (const std::exception& e) {
                     ctsConfig::PrintException(e);
                     error = ERROR_NOT_ENOUGH_MEMORY;
                 }

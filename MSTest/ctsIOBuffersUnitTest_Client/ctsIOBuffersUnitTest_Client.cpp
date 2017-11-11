@@ -127,7 +127,7 @@ namespace ctsUnitTest
                 }
             });
 
-            for (auto add_tasks = 0; add_tasks < ctsConfig::Settings->ConnectionLimit; ++add_tasks) {
+            for (auto add_tasks = 0UL; add_tasks < ctsConfig::Settings->ConnectionLimit; ++add_tasks) {
                 test_tasks.push_back(ctsIOBuffers::NewConnectionIdBuffer(stats.connection_identifier));
             }
             for (auto& task : test_tasks) {
@@ -146,7 +146,7 @@ namespace ctsUnitTest
                 }
             });
 
-            for (auto add_tasks = 0; add_tasks < ctsConfig::Settings->ConnectionLimit; ++add_tasks) {
+            for (auto add_tasks = 0UL; add_tasks < ctsConfig::Settings->ConnectionLimit; ++add_tasks) {
                 test_tasks_second.push_back(ctsIOBuffers::NewConnectionIdBuffer(stats.connection_identifier));
             }
 

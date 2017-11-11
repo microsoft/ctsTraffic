@@ -1,7 +1,0 @@
-﻿  ctsMediaStreamProtocolUnitTest.cpp
-  ctsMediaStreamProtocolUnitTest.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
-     Creating library C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamProtocolUnitTest.lib and object C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamProtocolUnitTest.exp
-  Generating code
-  Finished generating code
-  ctsMediaStreamSendBufferUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamProtocolUnitTest.dll
-  ctsMediaStreamSendBufferUnitTest.vcxproj -> C:\Users\kehor\Source\Repos\ctstraffic\Release\ctsMediaStreamProtocolUnitTest.pdb (Full PDB)

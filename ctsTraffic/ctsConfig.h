@@ -334,11 +334,11 @@ namespace ctsTraffic {
             DWORD SocketFlags = 0;
             WORD  Port = 0;
 
-            ctsUnsignedLongLong Iterations = 0;
-            ctsUnsignedLong AcceptLimit = 0;
-            ctsUnsignedLong ConnectionLimit = 0;
-            ctsUnsignedLong ConnectionThrottleLimit = 0;
-            ctsUnsignedLongLong ServerExitLimit = 0;
+            unsigned long long Iterations = 0;
+            unsigned long long ServerExitLimit = 0;
+            unsigned long AcceptLimit = 0;
+            unsigned long ConnectionLimit = 0;
+            unsigned long ConnectionThrottleLimit = 0;
 
             std::vector<ctl::ctSockaddr> ListenAddresses;
             std::vector<ctl::ctSockaddr> TargetAddresses;
@@ -349,26 +349,27 @@ namespace ctsTraffic {
             ctsTcpStatistics TcpStatusDetails;
             ctsUdpStatistics UdpStatusDetails;
 
-            ctsUnsignedLong StatusUpdateFrequencyMilliseconds = 0;
+            unsigned long StatusUpdateFrequencyMilliseconds = 0;
 
-            ctsSignedLongLong TcpBytesPerSecondPeriod = 100LL;
-            ctsSignedLongLong StartTimeMilliseconds = 0;
+            long long TcpBytesPerSecondPeriod = 100LL;
+            long long StartTimeMilliseconds = 0;
 
-            ctsUnsignedLong TimeLimit = 0;
-            ctsUnsignedLong PrePostRecvs = 0;
-            ctsUnsignedLong PrePostSends = 0;
-            ctsUnsignedLong RecvBufValue = 0;
-            ctsUnsignedLong SendBufValue = 0;
+            unsigned long TimeLimit = 0;
+            unsigned long PrePostRecvs = 0;
+            unsigned long PrePostSends = 0;
+            unsigned long RecvBufValue = 0;
+            unsigned long SendBufValue = 0;
 
             bool UseSharedBuffer = false;
             bool ShouldVerifyBuffers = false;
 
+            unsigned long PushBytes = 0;
+            unsigned long PullBytes = 0;
 
-            USHORT LocalPortLow = 0;
-            USHORT LocalPortHigh = 0;
+            unsigned long OutgoingIfIndex = 0;
 
-            ctsUnsignedLong PushBytes = 0;
-            ctsUnsignedLong PullBytes = 0;
+            unsigned short LocalPortLow = 0;
+            unsigned short LocalPortHigh = 0;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

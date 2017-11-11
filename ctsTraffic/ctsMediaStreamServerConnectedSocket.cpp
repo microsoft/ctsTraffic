@@ -193,7 +193,7 @@ namespace ctsTraffic {
 
             try {
                 ctsConfig::PrintErrorInfo(
-                    L"MediaStream Server socket (%s) was indicated Failed IO from the protocol - aborting this stream",
+                    L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
                     this_ptr->remote_addr.writeCompleteAddress().c_str());
             }
             catch (const std::exception&) {
@@ -205,7 +205,7 @@ namespace ctsTraffic {
         } else if (ctsIOStatus::CompletedIo == status) {
             try {
                 PrintDebugInfo(
-                    L"\t\tctsMediaStreamServerConnectedSocket socket (%s) has completed its stream - closing this 'connection'\n",
+                    L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
                     this_ptr->remote_addr.writeCompleteAddress().c_str());
             }
             catch (const std::exception&) {

@@ -80,6 +80,7 @@ namespace ctl {
 
         bool operator==(const ctSockaddr&) const NOEXCEPT;
         bool operator!=(const ctSockaddr&) const NOEXCEPT;
+        bool operator< (const ctSockaddr&) const NOEXCEPT;
 
         virtual ~ctSockaddr() = default;
 
@@ -103,8 +104,8 @@ namespace ctl {
         void mapDualMode4To6() NOEXCEPT;
 
         // setting by string returns a bool if was able to convert to an address
-        bool setAddress(_In_ PCWSTR wszAddr) NOEXCEPT;
-        bool setAddress(_In_ LPCSTR szAddr) NOEXCEPT;
+        bool setAddress(_In_ PCWSTR) NOEXCEPT;
+        bool setAddress(_In_ LPCSTR) NOEXCEPT;
 
         void setAddress(_In_ const IN_ADDR*) NOEXCEPT;
         void setAddress(_In_ const IN6_ADDR*) NOEXCEPT;
@@ -246,6 +247,99 @@ namespace ctl {
     {
         return !(*this == _inAddr);
     }
+    inline bool ctSockaddr::operator<(const ctl::ctSockaddr& rhs) const NOEXCEPT
+    {
+        // Follows the same documented comparison logic as 
+        //   GetTcpTable2 and GetTcp6Table2
+        const ctSockaddr& lhs = *this;
+        if (lhs.family() != rhs.family()) {
+            return false;
+        }
+
+        if (lhs.family() == AF_INET) {
+            if (lhs.in_addr()->S_un.S_addr < rhs.in_addr()->S_un.S_addr) {
+                return true;
+            }
+            if (lhs.in_addr()->S_un.S_addr > rhs.in_addr()->S_un.S_addr) {
+                return false;
+            }
+            if (lhs.port() < rhs.port()) {
+                return true;
+            }
+            if (lhs.port() > rhs.port()) {
+                return false;
+            }
+
+        }
+        else {
+            // AF_INET6
+            if (lhs.in6_addr()->u.Word[0] < rhs.in6_addr()->u.Word[0]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[1] < rhs.in6_addr()->u.Word[1]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[2] < rhs.in6_addr()->u.Word[2]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[3] < rhs.in6_addr()->u.Word[3]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[4] < rhs.in6_addr()->u.Word[4]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[5] < rhs.in6_addr()->u.Word[5]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[6] < rhs.in6_addr()->u.Word[6]) {
+                return true;
+            }
+            if (lhs.in6_addr()->u.Word[7] < rhs.in6_addr()->u.Word[7]) {
+                return true;
+            }
+
+            if (lhs.in6_addr()->u.Word[0] > rhs.in6_addr()->u.Word[0]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[1] > rhs.in6_addr()->u.Word[1]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[2] > rhs.in6_addr()->u.Word[2]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[3] > rhs.in6_addr()->u.Word[3]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[4] > rhs.in6_addr()->u.Word[4]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[5] > rhs.in6_addr()->u.Word[5]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[6] > rhs.in6_addr()->u.Word[6]) {
+                return false;
+            }
+            if (lhs.in6_addr()->u.Word[7] > rhs.in6_addr()->u.Word[7]) {
+                return false;
+            }
+
+            if (lhs.scopeId() < rhs.scopeId()) {
+                return true;
+            }
+            if (lhs.scopeId() > rhs.scopeId()) {
+                return false;
+            }
+
+            if (lhs.port() < rhs.port()) {
+                return true;
+            }
+            if (lhs.port() > rhs.port()) {
+                return false;
+            }
+        }
+        // else they are all equal
+        return false;
+    }
 
     inline void ctSockaddr::reset(short family) NOEXCEPT
     {
@@ -359,10 +453,10 @@ namespace ctl {
         return (0 == ::memcmp(&(any_addr.saddr), &(this->saddr), sizeof(SOCKADDR_STORAGE)));
     }
 
-    inline void ctSockaddr::setPort(unsigned short port, ByteOrder order) NOEXCEPT
+    inline void ctSockaddr::setPort(unsigned short port, ByteOrder byteOrder) NOEXCEPT
     {
         PSOCKADDR_IN addr_in = reinterpret_cast<PSOCKADDR_IN>(&saddr);
-        addr_in->sin_port = (order == ByteOrder::HostOrder) ? ::htons(port) : port;
+        addr_in->sin_port = (byteOrder == ByteOrder::HostOrder) ? ::htons(port) : port;
     }
 
     inline void ctSockaddr::mapDualMode4To6() NOEXCEPT
@@ -420,7 +514,7 @@ namespace ctl {
     {
         saddr.ss_family = AF_INET;
         PSOCKADDR_IN addr_in = reinterpret_cast<PSOCKADDR_IN>(&saddr);
-        addr_in->sin_addr = *inAddr;
+        addr_in->sin_addr.S_un.S_addr = inAddr->S_un.S_addr;
     }
     inline void ctSockaddr::setAddress(_In_ const IN6_ADDR* inAddr) NOEXCEPT
     {
@@ -611,6 +705,6 @@ namespace ctl {
         return const_cast<IN6_ADDR*>(&(addr_in6->sin6_addr));
     }
 
-}; // namespace ctl
+} // namespace ctl
 
 #pragma prefast(pop)
