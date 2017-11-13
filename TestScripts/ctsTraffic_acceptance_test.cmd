@@ -57,12 +57,12 @@ REM Test : verify:connection and a single pended send
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostSends:1 -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -78,12 +78,12 @@ REM Test : verify:data with ISB controlling sends
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-   cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+   cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -99,12 +99,12 @@ REM Test : verify:connection with multiple IO requests
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -120,12 +120,12 @@ REM Test : verify one extremely long transfer verifying data
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -transfer:%VERY_LARGE_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -141,12 +141,12 @@ REM Test : verify one extremely long transfer not verifying data
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -listen:* -ServerExitLimit:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb -gG -snul -sins -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
+  cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -166,19 +166,19 @@ if '%Role%' == 'server' (
 
   if /i '%1' == 'push' (
     Set EXPECTED_ERROR=1
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'pull' (
     Set EXPECTED_ERROR=2
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 
   ) else if /i '%1' == 'pushpull' (
     Set EXPECTED_ERROR=2
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'duplex' (
     Set EXPECTED_ERROR=2
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
   )
 )
 
@@ -188,19 +188,19 @@ if '%Role%' == 'client' (
 
   if /i '%1' == 'push' (
     Set EXPECTED_ERROR=1
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 
   ) else if /i '%1' == 'pull' (
     Set EXPECTED_ERROR=1
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%VERY_SMALL_TRANSFER%
 
   ) else if /i '%1' == 'pushpull' (
     Set EXPECTED_ERROR=1
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
 
   ) else if /i '%1' == 'duplex' (
     Set EXPECTED_ERROR=1
-    cdb -gG -snul -sins -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
+    cdb -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER%
   )
 )
 
