@@ -503,11 +503,11 @@ namespace ctsTraffic {
                 if (ctString::iordinal_equals(L"iocp", value)) {
                     Settings->IoFunction = ctsSendRecvIocp;
                     Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
-                    s_IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
+                    s_IoFunctionName = L"Iocp (WSASend/WSARecv using IOCP)";
 
                 } else if (ctString::iordinal_equals(L"readwritefile", value)) {
                     Settings->IoFunction = ctsReadWriteIocp;
-                    s_IoFunctionName = L"readwritefile (ReadFile/WriteFile using IOCP)";
+                    s_IoFunctionName = L"ReadWriteFile (ReadFile/WriteFile using IOCP)";
 
                 } else if (ctString::iordinal_equals(L"rioiocp", value)) {
                     Settings->IoFunction = ctsRioIocp;
@@ -525,7 +525,7 @@ namespace ctsTraffic {
                     // Default for TCP is WSASend/WSARecv using IOCP
                     Settings->IoFunction = ctsSendRecvIocp;
                     Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
-                    s_IoFunctionName = L"iocp (WSASend/WSARecv using IOCP)";
+                    s_IoFunctionName = L"Iocp (WSASend/WSARecv using IOCP)";
 
                 } else {
                     if (IsListening()) {
@@ -539,6 +539,7 @@ namespace ctsTraffic {
                         Settings->Options |= OptionType::SET_RECV_BUF;
                         Settings->RecvBufValue = UDP_RECV_BUFF;
                         Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
+						Settings->Options |= OptionType::ENABLE_CIRCULAR_QUEUEING;
                         s_IoFunctionName = L"MediaStream Client";
                     }
                 }
@@ -3409,6 +3410,23 @@ namespace ctsTraffic {
                     return gle;
                 }
             }
+
+			if (Settings->Options & OptionType::ENABLE_CIRCULAR_QUEUEING) {
+				DWORD bytes_returned;
+				auto error = ::WSAIoctl(
+					_s,
+					SIO_ENABLE_CIRCULAR_QUEUEING,
+					nullptr, 0, // in buffer
+					nullptr, 0, // out buffer
+					&bytes_returned,
+					nullptr,
+					nullptr);
+				if (error != 0) {
+					int gle = ::WSAGetLastError();
+					PrintErrorIfFailed(L"WSAIoctl(SIO_ENABLE_CIRCULAR_QUEUEING)", gle);
+					return gle;
+				}
+			}
 
             if (Settings->Options & OptionType::HANDLE_INLINE_IOCP) {
                 if (!::SetFileCompletionNotificationModes(reinterpret_cast<HANDLE>(_s), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)) {

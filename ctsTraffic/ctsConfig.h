@@ -33,21 +33,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 
 namespace ctsTraffic {
-    ///
-    /// Forward declaring ctsSocket project headers cannot be included due to circular references
-    ///
-    /// In the ctsTraffic namespace, typedef for all function types
-    /// - function pointers, functors, lambdas, etc.
-    ///
+    //
+    // Forward declaring ctsSocket project headers cannot be included due to circular references
+    //
+    // In the ctsTraffic namespace, typedef for all function types
+    // - function pointers, functors, lambdas, etc.
+    //
     class ctsSocket;
     typedef std::function<void(std::weak_ptr<ctsSocket>)> ctsSocketFunction;
 
     namespace ctsConfig {
 
-        ///
-        /// Declaring enum types in the ctsConfig namespace
-        /// - to be referenced by ctsConfig functions
-        ///
+        //
+        // Declaring enum types in the ctsConfig namespace
+        // - to be referenced by ctsConfig functions
+        //
         enum class ProtocolType {
             NoProtocolSet,
             TCP,
@@ -91,18 +91,18 @@ namespace ctsTraffic {
             REUSE_UNICAST_PORT = 0x0010,
             SET_RECV_BUF = 0x0020,
             SET_SEND_BUF = 0x0040,
-            // next enum  = 0x0200
+			ENABLE_CIRCULAR_QUEUEING = 0x0080,
+            // next enum  = 0x0100
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// custom operators for the OptionType enum (since it's an to be used as a bitmask)
-        ///
+        //
+        // custom operators for the OptionType enum (since it's an to be used as a bitmask)
+        //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// OR
-        inline
-        OptionType operator| (OptionType& lhs, OptionType rhs)
+        // OR
+        inline OptionType operator| (OptionType& lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
@@ -113,43 +113,38 @@ namespace ctsTraffic {
             return lhs;
         }
 
-        /// AND
-        inline
-        OptionType operator& (OptionType lhs, OptionType rhs)
+        // AND
+        inline OptionType operator& (OptionType lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
         }
-        inline
-        OptionType& operator&= (OptionType& lhs, OptionType rhs)
+        inline OptionType& operator&= (OptionType& lhs, OptionType rhs)
         {
             lhs = lhs & rhs;
             return lhs;
         }
 
-        /// XOR
-        inline
-        OptionType operator^ (OptionType lhs, OptionType rhs)
+        // XOR
+        inline OptionType operator^ (OptionType lhs, OptionType rhs)
         {
             return OptionType(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
         }
-        inline
-        OptionType& operator^= (OptionType& lhs, OptionType rhs)
+        inline OptionType& operator^= (OptionType& lhs, OptionType rhs)
         {
             lhs = lhs ^ rhs;
             return lhs;
         }
 
-        /// NOT
-        inline
-        OptionType operator~ (OptionType lhs)
+        // NOT
+        inline OptionType operator~ (OptionType lhs)
         {
             return OptionType(~static_cast<unsigned long>(lhs));
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
-        ///
+        //
+        // Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
+        //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv);
         void Shutdown() NOEXCEPT;
@@ -223,17 +218,15 @@ namespace ctsTraffic {
 
         // for the MediaStream pattern
         struct MediaStreamSettings {
-
-            MediaStreamSettings() NOEXCEPT
-            : BitsPerSecond(0LL),
-              FramesPerSecond(0UL),
-              BufferDepthSeconds(0UL),
-              StreamLengthSeconds(0UL),
-              FrameSizeBytes(0UL),
-              StreamLengthFrames(0UL),
-              BufferedFrames(0UL)
-            {
-            }
+			// set by ctsConfig from command-line arguments
+			ctsSignedLongLong BitsPerSecond = 0;
+			ctsUnsignedLong FramesPerSecond = 0;
+			ctsUnsignedLong BufferDepthSeconds = 0;
+			ctsUnsignedLong StreamLengthSeconds = 0;
+			// internally calculated
+			ctsUnsignedLong FrameSizeBytes = 0;
+			ctsUnsignedLong StreamLengthFrames = 0;
+			ctsUnsignedLong BufferedFrames = 0;
 
             ctsUnsignedLongLong CalculateTransferSize()
             {
@@ -293,16 +286,6 @@ namespace ctsTraffic {
 
                 return total_stream_length_bytes;
             }
-
-            // set by ctsConfig from command-line arguments
-            ctsSignedLongLong BitsPerSecond;
-            ctsUnsignedLong FramesPerSecond;
-            ctsUnsignedLong BufferDepthSeconds;
-            ctsUnsignedLong StreamLengthSeconds;
-            // internally calculated
-            ctsUnsignedLong FrameSizeBytes;
-            ctsUnsignedLong StreamLengthFrames;
-            ctsUnsignedLong BufferedFrames;
         };
         const MediaStreamSettings& GetMediaStream() NOEXCEPT;
 
