@@ -149,7 +149,7 @@ namespace ctl {
                         ERROR_INVALID_DATA,
                         ctString::format_string(
                             L"ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
-                            _counter_name, property_type).c_str(),
+                            _counter_name, static_cast<unsigned>(property_type)).c_str(),
                         L"ctWmiPerformance::ctReadIWbemObjectAccess",
                         true);
             }
@@ -439,7 +439,7 @@ namespace ctl {
                     default:
                         ctAlwaysFatalCondition(
                             L"Unknown ctWmiPerformanceCollectionType (%u)",
-                            collection_type);
+                            static_cast<unsigned>(collection_type));
                 }
             }
 
@@ -1748,7 +1748,7 @@ namespace ctl {
                 ERROR_INVALID_DATA,
                 ctString::format_string(
                     L"CounterName (%ws) does not exist in the requested class (%u)",
-                    _counter_name, _class).c_str(),
+                    _counter_name, static_cast<unsigned>(_class)).c_str(),
                 L"ctCreatePerfCounter",
                 true);
         }

@@ -119,9 +119,7 @@ namespace ctsPerf {
         }
 
     public:
-        ctsWriteDetails(const std::wstring& _file_name) :
-            file_name(_file_name),
-            file_handle(INVALID_HANDLE_VALUE)
+        ctsWriteDetails(_In_ LPCWSTR _file_name) : file_name(_file_name)
         {
         }
         ~ctsWriteDetails() noexcept
@@ -135,6 +133,7 @@ namespace ctsPerf {
         void create_file(const std::wstring& _banner_text);
 
         void write_row(const std::wstring& text) noexcept;
+		void write_empty_row() noexcept;
 
         //
         // The vector *will* be sorted before being returned (this is why it's non-const).
@@ -170,7 +169,6 @@ namespace ctsPerf {
             // [1] == first
             // [2] == last
             std::wstring difference = details::write(_data[0], _data[2] - _data[1]);
-
             DWORD length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
             DWORD written;
             if (!::WriteFile(file_handle, difference.c_str(), length, &written, NULL)) {
@@ -193,9 +191,7 @@ namespace ctsPerf {
             // [1] == min
             // [2] == max
             // [3] == mean
-            std::wstring mean_string = details::write(_data[0], _data[1]);
-            mean_string += details::write(_data[2], _data[3]);
-
+            std::wstring mean_string = details::write(_data[0], _data[1]) + details::write(_data[2], _data[3]);
             DWORD length = static_cast<DWORD>(mean_string.length() * sizeof(wchar_t));
             DWORD written;
             if (!::WriteFile(file_handle, mean_string.c_str(), length, &written, NULL)) {

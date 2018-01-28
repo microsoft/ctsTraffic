@@ -50,20 +50,12 @@ BOOL WINAPI BreakHandlerRoutine(DWORD)
 static const WCHAR UsageStatement[] = 
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
-    L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
-    L" -Filename:########  [default is Performance.csv]\n"
-    L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
+	L" -Networking [will enable performance and reliability related Network counters]\n"
+	L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
+	L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
     L"\n"
-    L" [optionally additional performance counters]\n"
-    L"  -Memory   [will collect paged-pool and non-paged-pool counters]\n"
-    L"  -NetworkAdapter\n"
-    L"  -NetworkInterface\n"
-    L"  -IP   [will collect TCP/IP IPv4 and IPv6 counters]\n"
-    L"  -TCP   [will collect TCP/IP TCPv4 and TCPv6 counters]\n"
-    L"  -UDP   [will collect TCP/IP UDPv4 and UDPv6 counters]\n"
-    L"\n"
-    L" [optionally the specific interface description can be specified]\n"
-    L"  by default *all* interface counters are collected\n"
+    L" [optionally the specific interface description can be specified\n"
+    L"  by default *all* interface counters are collected]\n"
     L"  note: the Interface Description can be found from the powershell cmdlet Get-NetAdapter\n"
     L"        or by running ctsPerf.exe and viewing the names from the log file\n"
     L"  -InterfaceDescription #####\n"
@@ -75,16 +67,16 @@ static const WCHAR UsageStatement[] =
     L"\n\n"
     L"For example:\n"
     L"> ctsPerf.exe\n"
-    L"  -- will capture processor counters for the default 60 seconds\n"
+    L"  -- will capture processor and memory counters for the default 60 seconds\n"
     L"\n"
-    L"> ctsPerf.exe -NetworkAdapter -NetworkInterface -IP -TCP\n"
-    L"  -- will capture processor, network adapter, network interface, and TCP/IP IP and TCP counters\n"
+    L"> ctsPerf.exe -Networking\n"
+    L"  -- will capture processor, memory, network adapter, network interface, IP, TCP, and UDP counters\n"
     L"\n"
     L"> ctsPerf.exe 300 -process:outlook.exe\n"
-    L"  -- will capture processor counters + process counters for outlook.exe for 300 seconds"
+    L"  -- will capture processor and memory + process counters for outlook.exe for 300 seconds"
     L"\n"
     L"> ctsPerf.exe -pid:2048\n"
-    L"  -- will capture processor counters + process counters for process id 2048 for 60 seconds"
+    L"  -- will capture processor and memory + process counters for process id 2048 for 60 seconds"
     L"\n";
 
 // 0 is a possible process ID
@@ -120,6 +112,7 @@ void DeleteAllCounters()
     DeleteUDPCounters();
     DeletePerProcessCounters();
 }
+
 void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer);
@@ -129,7 +122,10 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processId, ctsPerf::ctsWriteDetails& writer);
 
-std::wstring g_FileName = L"ctsPerf.csv";
+LPCWSTR g_FileName = L"ctsPerf.csv";
+LPCWSTR g_NetworkingFilename = L"ctsNetworking.csv";
+LPCWSTR g_ProcessFilename = L"ctsPerProcess.csv";
+
 bool g_MeanOnly = false;
 
 int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
@@ -137,17 +133,9 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     WSADATA wsadata;
     int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
-        ::wprintf(L"ctsPerf failed at WSAStartup [%u]\n", wsError);
+        ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
-
-    bool trackEstats = false;
-    bool trackMemory = false;
-    bool trackNetworkAdapter = false;
-    bool trackNetworkInterface = false;
-    bool trackIP = false;
-    bool trackTCP = false;
-    bool trackUDP = false;
 
     // create a notification event to signal if the user wants to exit early
     g_hBreak = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -163,11 +151,16 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return gle;
     }
 
-    wstring trackInterfaceDescription;
+	bool trackNetworking = false;
+	bool trackPerProcess = false;
+	bool trackEstats = false;
+	
+	wstring trackInterfaceDescription;
     wstring trackProcess;
     DWORD processId = UninitializedProcessId;
     DWORD timeToRunMs = 60000; // default to 60 seconds
-    for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
+
+	for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
         if (ctString::istarts_with(argv[arg_count - 1], L"-process:")) {
             trackProcess = argv[arg_count - 1];
 
@@ -197,7 +190,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 processId = 0;
 
             } else {
-                processId = wcstoul(pidString.c_str(), nullptr, 10);
+                processId = ::wcstoul(pidString.c_str(), nullptr, 10);
                 if (processId == 0 || processId == ULONG_MAX) {
                     wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
                     wprintf(UsageStatement);
@@ -208,23 +201,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
             trackEstats = true;
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-memory")) {
-            trackMemory = true;
-        
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-NetworkAdapter")) {
-            trackNetworkAdapter = true;
-        
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-NetworkInterface")) {
-            trackNetworkInterface = true;
-
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-IP")) {
-            trackIP = true;
-        
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-TCP")) {
-            trackTCP = true;
-        
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-UDP")) {
-            trackUDP = true;
+        } else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
+            trackNetworking = true;
         
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:")) {
             trackInterfaceDescription = argv[arg_count - 1];
@@ -235,14 +213,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
             g_MeanOnly = true;
-
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-filename:")) {
-            wstring filename_string(argv[arg_count - 1]);
-
-            // strip off the "pid:" preface to the string
-            auto endOfToken = find(filename_string.begin(), filename_string.end(), L':');
-            filename_string.erase(filename_string.begin(), endOfToken + 1);
-            g_FileName = filename_string;
 
         } else {
             DWORD timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
@@ -261,6 +231,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
 
+	trackPerProcess = !trackProcess.empty() || processId != UninitializedProcessId;
+
     if (timeToRunMs <= 5000) {
         wprintf(L"ERROR: Must run over 5 seconds to have enough samples for analysis\n");
         wprintf(UsageStatement);
@@ -274,6 +246,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 wprintf(L"Enabling ESTATS\n");
             } else {
                 wprintf(L"ESTATS cannot be started - verify running as Administrator\n");
+				return 1;
             }
         }
 
@@ -284,8 +257,19 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         ctlScopeGuard(deleteAllCounters, { DeleteAllCounters(); });
 
-        ctsPerf::ctsWriteDetails writer(g_FileName.c_str());
-        writer.create_file(g_MeanOnly);
+        ctsPerf::ctsWriteDetails cpuwriter(g_FileName);
+		cpuwriter.create_file(g_MeanOnly);
+
+		ctsPerf::ctsWriteDetails networkWriter(g_NetworkingFilename);
+		if (trackNetworking) {
+			networkWriter.create_file(g_MeanOnly);
+		}
+
+		ctsPerf::ctsWriteDetails processWriter(g_ProcessFilename);
+		if (trackPerProcess)
+		{
+			processWriter.create_file(g_MeanOnly);
+		}
 
         wprintf(L".");
 
@@ -293,25 +277,16 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         std::vector<ctWmiPerformance> performance_vector;
 
         performance_vector.emplace_back(InstantiateProcessorCounters());
+		performance_vector.emplace_back(InstantiateMemoryCounters());
 
-        if (trackMemory) {
-            performance_vector.emplace_back(InstantiateMemoryCounters());
-        }
-        if (trackNetworkAdapter) {
+        if (trackNetworking) {
             performance_vector.emplace_back(InstantiateNetworkAdapterCounters(trackInterfaceDescription));
-        }
-        if (trackNetworkInterface) {
             performance_vector.emplace_back(InstantiateNetworkInterfaceCounters(trackInterfaceDescription));
-        }
-        if (trackIP) {
             performance_vector.emplace_back(InstantiateIPCounters());
-        }
-        if (trackTCP) {
             performance_vector.emplace_back(InstantiateTCPCounters());
-        }
-        if (trackUDP) {
             performance_vector.emplace_back(InstantiateUDPCounters());
         }
+
         if (!trackProcess.empty()) {
             performance_vector.emplace_back(InstantiatePerProcessByNameCounters(trackProcess));
         
@@ -331,26 +306,21 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             perf_object.stop_all_counters();
         }
 
-        ProcessProcessorCounters(writer);
-        if (trackMemory) {
-            ProcessMemoryCounters(writer);
+        ProcessProcessorCounters(cpuwriter);
+        ProcessMemoryCounters(cpuwriter);
+
+		if (trackNetworking) {
+            ProcessNetworkAdapterCounters(networkWriter);
+            ProcessNetworkInterfaceCounters(networkWriter);
+            ProcessIPCounters(networkWriter);
+            ProcessTCPCounters(networkWriter);
+            ProcessUDPCounters(networkWriter);
         }
-        if (trackNetworkAdapter) {
-            ProcessNetworkAdapterCounters(writer);
-        }
-        if (trackNetworkInterface) {
-            ProcessNetworkInterfaceCounters(writer);
-        }
-        if (trackIP) {
-            ProcessIPCounters(writer);
-        }
-        if (trackTCP) {
-            ProcessTCPCounters(writer);
-        }
-        if (trackUDP) {
-            ProcessUDPCounters(writer);
-        }
-        ProcessPerProcessCounters(trackProcess, processId, writer);
+
+		if (trackPerProcess)
+		{
+			ProcessPerProcessCounters(trackProcess, processId, processWriter);
+		}
     }
     catch (const exception& e) {
         wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
@@ -368,6 +338,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 /****************************************************************************************************/
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> processor_time;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> processor_percent_of_max;
+shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> processor_percent_dpc_time;
+shared_ptr<ctWmiPerformanceCounter<ULONG>> processor_dpcs_queued_per_second;
+shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> processor_percent_privileged_time;
+shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> processor_percent_user_time;
 ctWmiPerformance InstantiateProcessorCounters()
 {
     ctWmiPerformance performance_counter;
@@ -387,12 +361,44 @@ ctWmiPerformance InstantiateProcessorCounters()
     performance_counter.add_counter(processor_percent_of_max);
     wprintf(L".");
 
+	processor_percent_dpc_time = ctCreatePerfCounter<ULONGLONG>(
+		ctWmiClassName::Processor,
+		L"PercentDPCTime",
+		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+	performance_counter.add_counter(processor_percent_dpc_time);
+	wprintf(L".");
+
+	processor_dpcs_queued_per_second = ctCreatePerfCounter<ULONG>(
+		ctWmiClassName::Processor,
+		L"DPCsQueuedPersec",
+		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+	performance_counter.add_counter(processor_dpcs_queued_per_second);
+	wprintf(L".");
+	
+	processor_percent_privileged_time = ctCreatePerfCounter<ULONGLONG>(
+		ctWmiClassName::Processor,
+		L"PercentPrivilegedTime",
+		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+	performance_counter.add_counter(processor_percent_privileged_time);
+	wprintf(L".");
+	
+	processor_percent_user_time = ctCreatePerfCounter<ULONGLONG>(
+		ctWmiClassName::Processor,
+		L"PercentUserTime",
+		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+	performance_counter.add_counter(processor_percent_user_time);
+	wprintf(L".");
+
     return performance_counter;
 }
 void DeleteProcessorCounters()
 {
     processor_time.reset();
     processor_percent_of_max.reset();
+	processor_percent_dpc_time.reset();
+	processor_dpcs_queued_per_second.reset();
+	processor_percent_privileged_time.reset();
+	processor_percent_user_time.reset();
 }
 void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 {
@@ -401,65 +407,123 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
     if (enumProcessors.begin() == enumProcessors.end()) {
         throw exception("Unable to find any processors to report on - querying Win32_PerfFormattedData_Counters_ProcessorInformation returned nothing");
     }
+	vector<ULONGLONG> ullData;
+	vector<ULONG> ulData;
 
-    for (const auto& processor : enumProcessors) {
-        wstring name;
-        processor.get(L"Name", &name);
+	for (const auto& processor : enumProcessors) {
+		wstring name;
+		processor.get(L"Name", &name);
 
-        auto processor_range = processor_time->reference_range(name.c_str());
-        auto percent_range = processor_percent_of_max->reference_range(name.c_str());
+		// processor name strings look like "0,1" when there are more than one cores
+		// need to replace the comma so the csv will print correctly
+		writer.write_row(
+			ctString::format_string(
+				L"Processor %ws", 
+				ctString::replace_all_copy(name, L",", L" - ").c_str()).c_str());
 
-        vector<ULONGLONG> processor_time_vector(processor_range.first, processor_range.second);
-        vector<ULONG> processor_percent_vector(percent_range.first, percent_range.second);
+		auto processor_range = processor_time->reference_range(name.c_str());
+		vector<ULONGLONG> processor_time_vector(processor_range.first, processor_range.second);
 
-        if (g_MeanOnly) {
-            vector<ULONGLONG> normalized_processor_time(processor_time_vector);
+		auto percent_range = processor_percent_of_max->reference_range(name.c_str());
+		vector<ULONG> processor_percent_vector(percent_range.first, percent_range.second);
 
-            // convert to a percentage
-            auto calculated_processor_time = processor_time_vector[3] / 100.0;
-            calculated_processor_time *= (processor_percent_vector[3] / 100.0);
-            normalized_processor_time[3] = static_cast<ULONG>(calculated_processor_time * 100UL);
+		auto percent_dpc_time_range = processor_percent_dpc_time->reference_range(name.c_str());
+		auto dpcs_queued_per_second_range = processor_dpcs_queued_per_second->reference_range(name.c_str());
+		auto processor_percent_privileged_time_range = processor_percent_privileged_time->reference_range(name.c_str());
+		auto processor_percent_user_time_range = processor_percent_user_time->reference_range(name.c_str());
 
-            writer.write_mean(
-                L"Processor",
-                ctString::format_string(
-                    L"Raw CPU Usage [%ws]",
-                    name.c_str()).c_str(),
-                processor_time_vector);
-            writer.write_mean(
-                L"Processor",
-                ctString::format_string(
-                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%ws]",
-                    name.c_str()).c_str(),
-                normalized_processor_time);
+		if (g_MeanOnly) {
+			vector<ULONGLONG> normalized_processor_time(processor_time_vector);
 
-        } else {
-            vector<ULONG> normalized_processor_time;
-            // produce the raw % as well as the 'normalized' % based off of the PercentofMaximumFrequency
-            auto percentage_iterator(processor_percent_vector.begin());
-            for (const auto& processor_data : processor_time_vector) {
-                // convert to a percentage
-                auto calculated_processor_time = processor_data / 100.0;
-                calculated_processor_time *= (*percentage_iterator / 100.0);
+			// convert to a percentage
+			auto calculated_processor_time = processor_time_vector[3] / 100.0;
+			calculated_processor_time *= (processor_percent_vector[3] / 100.0);
+			normalized_processor_time[3] = static_cast<ULONG>(calculated_processor_time * 100UL);
 
-                normalized_processor_time.push_back(static_cast<ULONG>(calculated_processor_time * 100UL));
-                ++percentage_iterator;
-            }
+			writer.write_mean(
+				L"Processor",
+				L"Raw CPU Usage",
+				processor_time_vector);
 
-            writer.write_details(
-                L"Processor",
-                ctString::format_string(
-                    L"Raw CPU Usage [%ws]",
-                    name.c_str()).c_str(),
-                processor_time_vector);
-            writer.write_details(
-                L"Processor",
-                ctString::format_string(
-                    L"Normalized CPU Usage (Raw * PercentofMaximumFrequency) [%ws]",
-                    name.c_str()).c_str(),
-                normalized_processor_time);
-        }
-    }
+			writer.write_mean(
+				L"Processor",
+				L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
+				normalized_processor_time);
+
+			ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
+			writer.write_mean(
+				L"Processor",
+				L"Percent DPC Time",
+				ullData);
+
+			ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
+			writer.write_mean(
+				L"Processor",
+				L"DPCs Queued Per Second",
+				ulData);
+
+			ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
+			writer.write_mean(
+				L"Processor",
+				L"Percent Privileged Time",
+				ullData);
+
+			ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
+			writer.write_mean(
+				L"Processor",
+				L"Percent User Time",
+				ullData);
+		}
+		else {
+			vector<ULONG> normalized_processor_time;
+			// produce the raw % as well as the 'normalized' % based off of the PercentofMaximumFrequency
+			auto percentage_iterator(processor_percent_vector.begin());
+			for (const auto& processor_data : processor_time_vector) {
+				// convert to a percentage
+				auto calculated_processor_time = processor_data / 100.0;
+				calculated_processor_time *= (*percentage_iterator / 100.0);
+
+				normalized_processor_time.push_back(static_cast<ULONG>(calculated_processor_time * 100UL));
+				++percentage_iterator;
+			}
+
+			writer.write_details(
+				L"Processor",
+				L"Raw CPU Usage",
+				processor_time_vector);
+
+			writer.write_details(
+				L"Processor",
+				L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
+				normalized_processor_time);
+
+			ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
+			writer.write_details(
+				L"Processor",
+				L"Percent DPC Time",
+				ullData);
+
+			ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
+			writer.write_details(
+				L"Processor",
+				L"DPCs Queued Per Second",
+				ulData);
+
+			ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
+			writer.write_details(
+				L"Processor",
+				L"Percent Privileged Time",
+				ullData);
+
+			ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
+			writer.write_details(
+				L"Processor",
+				L"Percent User Time",
+				ullData);
+		}
+	}
+
+	writer.write_empty_row();
 }
 
 /****************************************************************************************************/
@@ -645,6 +709,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkAdapter returned nothing");
     }
 
+	writer.write_row(L"NetworkAdapter");
     for (const auto& _adapter : enumAdapter) {
         wstring name;
         _adapter.get(L"Name", &name);
@@ -737,6 +802,8 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
                 L"PacketsReceivedErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
+
+		writer.write_empty_row();
     }
 }
 
@@ -829,7 +896,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
     vector<ULONGLONG> ullData;
 
     // there is no great way to find the 'Name' for each network interface tracked
-    // - it is not guaranteed to match anything from NetAdapter or NetIPInteface
+    // - it is not guaranteed to match anything from NetAdapter or NetIPInterface
     // - making a single query directly here to at least get the names
     ctWmiEnumerate enumAdapter(*g_wmi);
     enumAdapter.query(L"SELECT * FROM Win32_PerfFormattedData_Tcpip_NetworkInterface");
@@ -837,6 +904,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkInterface returned nothing");
     }
 
+	writer.write_row(L"NetworkInterface");
     for (const auto& _adapter : enumAdapter) {
         wstring name;
         _adapter.get(L"Name", &name);
@@ -902,6 +970,8 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
                 L"PacketsReceivedUnknown for interface %ws",
                 name.c_str()).c_str(),
             ullData);
+
+		writer.write_empty_row();
     }
 }
 
@@ -1069,6 +1139,8 @@ void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
+	writer.write_row(L"TCPIP - IPv4");
+
     auto network_loss_range = tcpip_ipv4_outbound_discarded->reference_range();
     ulData.assign(network_loss_range.first, network_loss_range.second);
     writer.write_difference(
@@ -1180,6 +1252,8 @@ void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer)
         L"TCPIP - IPv6",
         L"FragmentationFailures",
         ulData);
+
+	writer.write_empty_row();
 }
 
 
@@ -1272,6 +1346,7 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
+	writer.write_row(L"TCPIP - TCPv4");
     auto network_range = tcpip_tcpv4_connections_established->reference_range();
     ulData.assign(network_range.first, network_range.second);
     if (g_MeanOnly) {
@@ -1349,6 +1424,8 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
             L"RejectedConnectionsPersec",
             ulData);
     }
+
+	writer.write_empty_row();
 }
 
 
@@ -1441,6 +1518,8 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
+	writer.write_row(L"TCPIP - UDPv4");
+
     auto udp_range = tcpip_udpv4_noport_per_sec->reference_range();
     ulData.assign(udp_range.first, udp_range.second);
     if (g_MeanOnly) {
@@ -1469,7 +1548,17 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
             ulData);
     }
 
-    udp_range = tcpip_udpv6_noport_per_sec->reference_range();
+	udp_range = tcpip_udpv4_received_errors->reference_range();
+	ulData.assign(udp_range.first, udp_range.second);
+	writer.write_difference(
+		L"TCPIP - UDPv4",
+		L"DatagramsReceivedErrors",
+		ulData);
+
+	writer.write_empty_row();
+	writer.write_row(L"TCPIP - UDPv6");
+
+	udp_range = tcpip_udpv6_noport_per_sec->reference_range();
     ulData.assign(udp_range.first, udp_range.second);
     if (g_MeanOnly) {
         writer.write_mean(
@@ -1497,19 +1586,15 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
             ulData);
     }
 
-    udp_range = tcpip_udpv4_received_errors->reference_range();
-    ulData.assign(udp_range.first, udp_range.second);
-    writer.write_difference(
-        L"TCPIP - UDPv4",
-        L"DatagramsReceivedErrors",
-        ulData);
-
     udp_range = tcpip_udpv6_received_errors->reference_range();
     ulData.assign(udp_range.first, udp_range.second);
     writer.write_difference(
         L"TCPIP - UDPv6",
         L"DatagramsReceivedErrors",
         ulData);
+
+	writer.write_empty_row();
+	writer.write_row(L"Winsock Datagrams");
 
     udp_range = winsock_bsp_dropped_datagrams->reference_range();
     ulData.assign(udp_range.first, udp_range.second);
@@ -1531,6 +1616,8 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
             L"DroppedDatagramsPersec",
             ulData);
     }
+
+	writer.write_empty_row();
 }
 
 
@@ -1661,102 +1748,99 @@ void DeletePerProcessCounters()
 }
 void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processId, ctsPerf::ctsWriteDetails& writer)
 {
-    if (!trackProcess.empty() || processId != UninitializedProcessId)
-    {
-        vector<ULONGLONG> ullData;
+    vector<ULONGLONG> ullData;
 
-        wstring counter_classname;
-        if (!trackProcess.empty()) {
-            wstring full_name(trackProcess);
-            full_name += L".exe";
-            counter_classname = ctString::format_string(L"Process (%ws)", full_name.c_str());
+    wstring counter_classname;
+    if (!trackProcess.empty()) {
+        wstring full_name(trackProcess);
+        full_name += L".exe";
+        counter_classname = ctString::format_string(L"Process (%ws)", full_name.c_str());
         
-        } else {
-            counter_classname = ctString::format_string(L"Process (pid %u)", processId);
-        }
+    } else {
+        counter_classname = ctString::format_string(L"Process (pid %u)", processId);
+    }
 
-        auto per_process_range = per_process_privileged_time->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"PercentPrivilegedTime",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"PercentPrivilegedTime",
-                ullData);
-        }
+    auto per_process_range = per_process_privileged_time->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"PercentPrivilegedTime",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"PercentPrivilegedTime",
+            ullData);
+    }
 
-        per_process_range = per_process_processor_time->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"PercentProcessorTime",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"PercentProcessorTime",
-                ullData);
-        }
+    per_process_range = per_process_processor_time->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"PercentProcessorTime",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"PercentProcessorTime",
+            ullData);
+    }
 
-        per_process_range = per_process_user_time->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"PercentUserTime",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"PercentUserTime",
-                ullData);
-        }
+    per_process_range = per_process_user_time->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"PercentUserTime",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"PercentUserTime",
+            ullData);
+    }
 
-        per_process_range = per_process_private_bytes->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"PrivateBytes",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"PrivateBytes",
-                ullData);
-        }
+    per_process_range = per_process_private_bytes->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"PrivateBytes",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"PrivateBytes",
+            ullData);
+    }
 
-        per_process_range = per_process_virtual_bytes->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"VirtualBytes",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"VirtualBytes",
-                ullData);
-        }
+    per_process_range = per_process_virtual_bytes->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"VirtualBytes",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"VirtualBytes",
+            ullData);
+    }
 
-        per_process_range = per_process_working_set->reference_range();
-        ullData.assign(per_process_range.first, per_process_range.second);
-        if (g_MeanOnly) {
-            writer.write_mean(
-                counter_classname.c_str(),
-                L"WorkingSet",
-                ullData);
-        } else {
-            writer.write_details(
-                counter_classname.c_str(),
-                L"WorkingSet",
-                ullData);
-        }
+    per_process_range = per_process_working_set->reference_range();
+    ullData.assign(per_process_range.first, per_process_range.second);
+    if (g_MeanOnly) {
+        writer.write_mean(
+            counter_classname.c_str(),
+            L"WorkingSet",
+            ullData);
+    } else {
+        writer.write_details(
+            counter_classname.c_str(),
+            L"WorkingSet",
+            ullData);
     }
 }

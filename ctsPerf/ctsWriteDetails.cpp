@@ -121,6 +121,11 @@ namespace ctsPerf {
         end_row();
     }
 
+	void ctsPerf::ctsWriteDetails::write_empty_row() noexcept
+	{
+		end_row();
+	}
+
     void ctsWriteDetails::start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) noexcept
     {
         auto formatted_string(ctl::ctString::format_string(
