@@ -24,6 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctException.hpp"
 #include "ctString.hpp"
+// ReSharper disable once CppUnusedIncludeDirective
 #include "ctMath.hpp"
 
 
@@ -76,8 +77,8 @@ namespace ctsPerf {
 
     class ctsWriteDetails {
     private:
-        void start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) noexcept;
-        void end_row() noexcept;
+        void start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) const noexcept;
+        void end_row() const noexcept;
 
         std::wstring file_name;
         HANDLE file_handle = INVALID_HANDLE_VALUE;
@@ -118,22 +119,43 @@ namespace ctsPerf {
             return formatted_data;
         }
 
-    public:
-        ctsWriteDetails(_In_ LPCWSTR _file_name) : file_name(_file_name)
+        explicit ctsWriteDetails(_In_ LPCWSTR _file_name) : file_name(_file_name)
         {
         }
         ~ctsWriteDetails() noexcept
         {
-            ::CloseHandle(file_handle);
+            if (file_handle != INVALID_HANDLE_VALUE) {
+                ::CloseHandle(file_handle);
+            }
         }
         ctsWriteDetails(const ctsWriteDetails&) = delete;
         ctsWriteDetails& operator=(const ctsWriteDetails&) = delete;
 
+        ctsWriteDetails(ctsWriteDetails&& rhs) NOEXCEPT
+        : file_name(std::move(rhs.file_name)),
+          file_handle(rhs.file_handle)
+        {
+            // don't let the moved-from object close the handle
+            rhs.file_handle = INVALID_HANDLE_VALUE;
+        }
+        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) NOEXCEPT
+        {
+            if (file_handle != INVALID_HANDLE_VALUE) {
+                ::CloseHandle(file_handle);
+            }
+
+            file_name = std::move(rhs.file_name);
+            file_handle = rhs.file_handle;
+            // don't let the moved-from object close the handle
+            rhs.file_handle = INVALID_HANDLE_VALUE;
+            return *this;
+        }
+
         void create_file(bool _mean_only = false);
         void create_file(const std::wstring& _banner_text);
 
-        void write_row(const std::wstring& text) noexcept;
-		void write_empty_row() noexcept;
+        void write_row(const std::wstring& text) const noexcept;
+		void write_empty_row() const noexcept;
 
         //
         // The vector *will* be sorted before being returned (this is why it's non-const).
@@ -148,9 +170,9 @@ namespace ctsPerf {
             start_row(_class_name, _counter_name);
 
             std::wstring formatted_data(PrintDetails(_data));
-            DWORD length = static_cast<DWORD>(formatted_data.length() * sizeof(wchar_t));
+            const auto length = static_cast<DWORD>(formatted_data.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, formatted_data.c_str(), length, &written, NULL)) {
+            if (!::WriteFile(file_handle, formatted_data.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
@@ -169,9 +191,9 @@ namespace ctsPerf {
             // [1] == first
             // [2] == last
             std::wstring difference = details::write(_data[0], _data[2] - _data[1]);
-            DWORD length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
+            const auto length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, difference.c_str(), length, &written, NULL)) {
+            if (!::WriteFile(file_handle, difference.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
@@ -192,9 +214,9 @@ namespace ctsPerf {
             // [2] == max
             // [3] == mean
             std::wstring mean_string = details::write(_data[0], _data[1]) + details::write(_data[2], _data[3]);
-            DWORD length = static_cast<DWORD>(mean_string.length() * sizeof(wchar_t));
+            const auto length = static_cast<DWORD>(mean_string.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, mean_string.c_str(), length, &written, NULL)) {
+            if (!::WriteFile(file_handle, mean_string.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 

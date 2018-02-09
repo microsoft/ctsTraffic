@@ -12,8 +12,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 // cpp headers
-#include <stdio.h>
-#include <wchar.h>
+#include <cstdio>
+#include <cwchar>
 #include <vector>
 #include <string>
 #include <memory>
@@ -25,9 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
-#include <ctWmiEnumerate.hpp>
 #include <ctWmiPerformance.hpp>
-#include <ctException.hpp>
 #include <ctScopeGuard.hpp>
 
 // project headers
@@ -37,7 +35,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace std;
 using namespace ctl;
 
-static HANDLE g_hBreak = NULL;
+static HANDLE g_hBreak = nullptr;
 static ctWmiService* g_wmi = nullptr;
 
 BOOL WINAPI BreakHandlerRoutine(DWORD)
@@ -131,7 +129,7 @@ bool g_MeanOnly = false;
 int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
-    int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+    const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
         ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
@@ -139,25 +137,24 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     // create a notification event to signal if the user wants to exit early
     g_hBreak = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (g_hBreak == NULL) {
-        DWORD gle = ::GetLastError();
+    if (g_hBreak == nullptr) {
+        const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
         return gle;
     }
 
     if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE)) {
-        DWORD gle = ::GetLastError();
+        const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
         return gle;
     }
 
-	bool trackNetworking = false;
-	bool trackPerProcess = false;
-	bool trackEstats = false;
+    auto trackNetworking = false;
+    auto trackEstats = false;
 	
 	wstring trackInterfaceDescription;
     wstring trackProcess;
-    DWORD processId = UninitializedProcessId;
+    auto processId = UninitializedProcessId;
     DWORD timeToRunMs = 60000; // default to 60 seconds
 
 	for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
@@ -165,7 +162,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackProcess = argv[arg_count - 1];
 
             // strip off the "process:" preface to the string
-            auto endOfToken = find(trackProcess.begin(), trackProcess.end(), L':');
+            const auto endOfToken = find(trackProcess.begin(), trackProcess.end(), L':');
             trackProcess.erase(trackProcess.begin(), endOfToken + 1);
 
             // the performance counter does not look at the extension, so remove .exe if it's there
@@ -182,7 +179,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             wstring pidString(argv[arg_count - 1]);
 
             // strip off the "pid:" preface to the string
-            auto endOfToken = find(pidString.begin(), pidString.end(), L':');
+            const auto endOfToken = find(pidString.begin(), pidString.end(), L':');
             pidString.erase(pidString.begin(), endOfToken + 1);
 
             // the user could have specified zero, which happens to be what is returned from wcstoul on error
@@ -208,14 +205,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackInterfaceDescription = argv[arg_count - 1];
 
             // strip off the "-InterfaceDescription:" preface to the string
-            auto endOfToken = find(trackInterfaceDescription.begin(), trackInterfaceDescription.end(), L':');
+            const auto endOfToken = find(trackInterfaceDescription.begin(), trackInterfaceDescription.end(), L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
 
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
             g_MeanOnly = true;
 
         } else {
-            DWORD timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
+            const auto timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
             if (timeToRun == 0 || timeToRun == ULONG_MAX) {
                 wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
                 wprintf(UsageStatement);
@@ -231,7 +228,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
 
-	trackPerProcess = !trackProcess.empty() || processId != UninitializedProcessId;
+    const auto trackPerProcess = !trackProcess.empty() || processId != UninitializedProcessId;
 
     if (timeToRunMs <= 5000) {
         wprintf(L"ERROR: Must run over 5 seconds to have enough samples for analysis\n");
@@ -419,25 +416,26 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 		writer.write_row(
 			ctString::format_string(
 				L"Processor %ws", 
-				ctString::replace_all_copy(name, L",", L" - ").c_str()).c_str());
+				ctString::replace_all_copy(name, L",", L" - ").c_str()));
 
-		auto processor_range = processor_time->reference_range(name.c_str());
+        const auto processor_range = processor_time->reference_range(name.c_str());
 		vector<ULONGLONG> processor_time_vector(processor_range.first, processor_range.second);
 
-		auto percent_range = processor_percent_of_max->reference_range(name.c_str());
+        const auto percent_range = processor_percent_of_max->reference_range(name.c_str());
 		vector<ULONG> processor_percent_vector(percent_range.first, percent_range.second);
 
-		auto percent_dpc_time_range = processor_percent_dpc_time->reference_range(name.c_str());
-		auto dpcs_queued_per_second_range = processor_dpcs_queued_per_second->reference_range(name.c_str());
-		auto processor_percent_privileged_time_range = processor_percent_privileged_time->reference_range(name.c_str());
-		auto processor_percent_user_time_range = processor_percent_user_time->reference_range(name.c_str());
+        const auto percent_dpc_time_range = processor_percent_dpc_time->reference_range(name.c_str());
+        const auto dpcs_queued_per_second_range = processor_dpcs_queued_per_second->reference_range(name.c_str());
+        const auto processor_percent_privileged_time_range = processor_percent_privileged_time->reference_range(name.c_str());
+        const auto processor_percent_user_time_range = processor_percent_user_time->reference_range(name.c_str());
 
 		if (g_MeanOnly) {
+		    // ReSharper disable once CppUseAuto
 			vector<ULONGLONG> normalized_processor_time(processor_time_vector);
 
 			// convert to a percentage
 			auto calculated_processor_time = processor_time_vector[3] / 100.0;
-			calculated_processor_time *= (processor_percent_vector[3] / 100.0);
+			calculated_processor_time *= processor_percent_vector[3] / 100.0;
 			normalized_processor_time[3] = static_cast<ULONG>(calculated_processor_time * 100UL);
 
 			writer.write_mean(
@@ -481,7 +479,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 			for (const auto& processor_data : processor_time_vector) {
 				// convert to a percentage
 				auto calculated_processor_time = processor_data / 100.0;
-				calculated_processor_time *= (*percentage_iterator / 100.0);
+				calculated_processor_time *= *percentage_iterator / 100.0;
 
 				normalized_processor_time.push_back(static_cast<ULONG>(calculated_processor_time * 100UL));
 				++percentage_iterator;
@@ -558,8 +556,8 @@ void DeleteMemoryCounters()
 void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONGLONG> ullData;
-    auto paged_pool_range = paged_pool_bytes->reference_range();
-    auto non_paged_pool_range = non_paged_pool_bytes->reference_range();
+    const auto paged_pool_range = paged_pool_bytes->reference_range();
+    const auto non_paged_pool_range = non_paged_pool_bytes->reference_range();
 
     if (g_MeanOnly) {
         ullData.assign(paged_pool_range.first, paged_pool_range.second);
@@ -909,7 +907,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         wstring name;
         _adapter.get(L"Name", &name);
 
-        auto byte_range = network_interface_total_bytes->reference_range(name.c_str());
+        const auto byte_range = network_interface_total_bytes->reference_range(name.c_str());
         ullData.assign(byte_range.first, byte_range.second);
         if (g_MeanOnly) {
             writer.write_mean(

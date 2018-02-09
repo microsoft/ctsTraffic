@@ -19,13 +19,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <set>
 // os headers
 #include <Windows.h>
+// Winsock2 is needed for IPHelper headers
+// ReSharper disable once CppUnusedIncludeDirective
 #include <WinSock2.h>
 #include <ws2ipdef.h>
 #include <Iphlpapi.h>
 #include <Tcpestats.h>
 
 // ctl headers
-#include <ctMath.hpp>
 #include <ctString.hpp>
 #include <ctSockaddr.hpp>
 #include <ctThreadPoolTimer.hpp>
@@ -99,10 +100,10 @@ namespace details {
         typedef PTCP_ESTATS_FINE_RTT_ROD_v0 read_only_dynamic_type;
     };
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline void SetEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)
+    template <TCP_ESTATS_TYPE TcpType>
+    void SetEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
     {
-        ULONG err = ::SetPerTcpConnectionEStats(
+        const auto err = ::SetPerTcpConnectionEStats(
             tcpRow,
             TcpType,
             reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)),
@@ -112,8 +113,8 @@ namespace details {
         }
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -123,8 +124,8 @@ namespace details {
             nullptr, 0, 0); // read-only dynamic information
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -134,10 +135,10 @@ namespace details {
             reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline void SetEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)
+    template <TCP_ESTATS_TYPE TcpType>
+    void SetEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
     {
-        ULONG err = ::SetPerTcp6ConnectionEStats(
+        const auto err = ::SetPerTcp6ConnectionEStats(
             tcpRow,
             TcpType,
             reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)),
@@ -147,8 +148,8 @@ namespace details {
         }
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -158,8 +159,8 @@ namespace details {
             nullptr, 0, 0); // read-only dynamic information
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
-    inline ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -169,19 +170,18 @@ namespace details {
             reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
     }
 
-    template <typename TCP_ESTATS_TYPE TcpType>
+    // the root template type that each ESTATS_TYPE will specialize for
+    template <TCP_ESTATS_TYPE TcpType>
     class EstatsDataTracking {
-        EstatsDataTracking() = default;
-        ~EstatsDataTracking() = default;
-
-        static LPCWSTR PrintHeader();
-        void PrintData() const;
+    public:
+        static LPCWSTR PrintHeader() = delete;
+        void PrintData() const = delete;
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const;
+        void StartTracking(_In_ const PTCPROW tcpRow) const = delete;
 
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow);
+        void UpdateData(_In_ const PTCPROW tcpRow) = delete;
     };
 
     template <>
@@ -199,14 +199,14 @@ namespace details {
         template <typename PTCPROW>
         void StartTracking(_In_ const PTCPROW) const
         {
-            return; // always on
+            // always on
         }
         template <typename PTCPROW>
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             if (MssRcvd == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
-                ZeroMemory(&Ros, sizeof(Ros));
+                ZeroMemory(&Ros, sizeof Ros);
                 if (0 == GetReadOnlyStaticEstats<TcpConnectionEstatsSynOpts>(tcpRow, &Ros)) {
                     MssRcvd = Ros.MssRcvd;
                     MssSent = Ros.MssSent;
@@ -242,7 +242,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_DATA_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsData>(tcpRow, &Rod)) {
                 bytesIn = Rod.DataBytesIn;
                 bytesOut = Rod.DataBytesOut;
@@ -288,7 +288,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
                 conjestionWindows.push_back(Rod.CurCwnd);
                 bytesSentInReceiverLimited = Rod.SndLimBytesRwin;
@@ -330,8 +330,8 @@ namespace details {
                 sacksRcvd,
                 congestionSignals,
                 maxSegmentSize) +
-            ctsPerf::ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
-            ctsPerf::ctsWriteDetails::PrintMeanStdDev(roundTripTime);
+            ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
+            ctsWriteDetails::PrintMeanStdDev(roundTripTime);
         }
 
         template <typename PTCPROW>
@@ -345,7 +345,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_PATH_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
                 retransmitTimer.push_back(Rod.CurRto);
                 roundTripTime.push_back(Rod.SmoothedRtt);
@@ -382,7 +382,7 @@ namespace details {
                     L",%ld,%ld",
                     static_cast<long>(minReceiveWindow),
                     static_cast<long>(maxReceiveWindow)) +
-                ctsPerf::ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
         }
 
         template <typename PTCPROW>
@@ -396,7 +396,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_REC_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
                 receiveWindow.push_back(Rod.CurRwinSent);
                 minReceiveWindow = Rod.MinRwinSent;
@@ -425,7 +425,7 @@ namespace details {
                     L",%ld,%ld",
                     static_cast<long>(minReceiveWindow),
                     static_cast<long>(maxReceiveWindow)) +
-                ctsPerf::ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
         }
 
         template <typename PTCPROW>
@@ -439,7 +439,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
                 receiveWindow.push_back(Rod.CurRwinRcvd);
                 minReceiveWindow = Rod.MinRwinRcvd;
@@ -477,14 +477,11 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
                 // store data from this instance
             }
         }
-
-    private:
-
     };
 
     template <>
@@ -510,14 +507,11 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof(Rod));
+            ZeroMemory(&Rod, sizeof Rod);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rod)) {
                 // store data from this instance
             }
         }
-
-    private:
-    
     };
 
     template <TCP_ESTATS_TYPE TcpType>
@@ -532,12 +526,13 @@ namespace details {
             return EstatsDataTracking<TcpType>::PrintHeader();
         }
 
-        EstatsDataPoint(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept :
-            localAddr(local_addr),
-            remoteAddr(remote_addr)
+        EstatsDataPoint(ctl::ctSockaddr local_addr, ctl::ctSockaddr remote_addr) noexcept :
+            localAddr(std::move(local_addr)),
+            remoteAddr(std::move(remote_addr))
         {
         }
-        EstatsDataPoint(_In_ const PMIB_TCPROW pTcpRow) noexcept :
+
+        explicit EstatsDataPoint(_In_ const PMIB_TCPROW pTcpRow) noexcept :  // NOLINT
             localAddr(AF_INET),
             remoteAddr(AF_INET)
         {
@@ -553,7 +548,8 @@ namespace details {
                 static_cast<unsigned short>(pTcpRow->dwRemotePort),
                 ctl::ByteOrder::NetworkOrder);
         }
-        EstatsDataPoint(_In_ const PMIB_TCP6ROW pTcpRow) noexcept :
+
+        explicit EstatsDataPoint(_In_ const PMIB_TCP6ROW pTcpRow) noexcept :  // NOLINT
             localAddr(AF_INET6),
             remoteAddr(AF_INET6)
         {
@@ -568,10 +564,13 @@ namespace details {
                 ctl::ByteOrder::NetworkOrder);
         }
 
+        ~EstatsDataPoint() = default;
         EstatsDataPoint(const EstatsDataPoint&) = delete;
         EstatsDataPoint& operator=(const EstatsDataPoint&) = delete;
+        EstatsDataPoint(EstatsDataPoint&&) = delete;
+        EstatsDataPoint& operator=(EstatsDataPoint&&) = delete;
 
-        bool operator< (const details::EstatsDataPoint<TcpType>& rhs) const noexcept
+        bool operator< (const EstatsDataPoint<TcpType>& rhs) const noexcept
         {
             if (localAddr < rhs.localAddr) {
                 return true;
@@ -591,9 +590,9 @@ namespace details {
         std::wstring PrintAddresses() const
         {
             WCHAR local_string[ctl::IP_STRING_MAX_LENGTH];
-            localAddr.writeCompleteAddress(local_string);
+            (void)localAddr.writeCompleteAddress(local_string);
             WCHAR remote_string[ctl::IP_STRING_MAX_LENGTH];
-            remoteAddr.writeCompleteAddress(remote_string);
+            (void)remoteAddr.writeCompleteAddress(remote_string);
 
             return ctl::ctString::format_string(
                 L"%ws,%ws",
@@ -618,11 +617,6 @@ namespace details {
             data.UpdateData(tcpRow);
         }
 
-        void StartWriter(_In_ LPCWSTR filename)
-        {
-            writer.reset(filename);
-        }
-
         ctl::ctSockaddr LocalAddr() const noexcept
         {
             return localAddr;
@@ -632,7 +626,7 @@ namespace details {
             return remoteAddr;
         }
 
-        const ULONG LastestCounter() const noexcept
+        ULONG LastestCounter() const noexcept
         {
             return latestCounter;
         }
@@ -660,6 +654,8 @@ public:
     }
     ctsEstats(const ctsEstats&) = delete;
     ctsEstats& operator=(const ctsEstats&) = delete;
+    ctsEstats(ctsEstats&&) = delete;
+    ctsEstats& operator=(ctsEstats&&) = delete;
 
     ~ctsEstats()
     {
@@ -673,11 +669,11 @@ public:
             }
 
             for (const auto& entry : localReceiveWindowData) {
-                details::EstatsDataPoint<TcpConnectionEstatsObsRec> matchingData(
+                const details::EstatsDataPoint<TcpConnectionEstatsObsRec> matchingData(
                     entry.LocalAddr(),
                     entry.RemoteAddr());
 
-                auto foundEntry = remoteReceiveWindowData.find(matchingData);
+                const auto foundEntry = remoteReceiveWindowData.find(matchingData);
                 if (foundEntry != remoteReceiveWindowData.end()) {
                     receiveWindowWriter.write_row(
                         entry.PrintAddresses() +
@@ -687,11 +683,11 @@ public:
             }
 
             for (const auto& entry : senderCongestionData) {
-                details::EstatsDataPoint<TcpConnectionEstatsData> matchingData(
+                const details::EstatsDataPoint<TcpConnectionEstatsData> matchingData(
                     entry.LocalAddr(),
                     entry.RemoteAddr());
 
-                auto foundEntry = byteTrackingData.find(matchingData);
+                const auto foundEntry = byteTrackingData.find(matchingData);
                 if (foundEntry != byteTrackingData.end()) {
                     senderCongestionWriter.write_row(
                         entry.PrintAddresses() +
@@ -707,7 +703,8 @@ public:
 
     bool Start() noexcept
     {
-        bool started = false;
+        // ReSharper disable once CppInitializedValueIsAlwaysRewritten
+        auto started = false;
         try {
             pathInfoWriter.create_file(
                 std::wstring(details::EstatsDataPoint<TcpConnectionEstatsPath>::PrintAddressHeader()) +
@@ -761,7 +758,7 @@ private:
         try {
             // IPv4
             RefreshIPv4Data();
-            PMIB_TCPTABLE pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&tcpTable[0]);
+            const auto pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&tcpTable[0]);
             for (unsigned count = 0; count < pIpv4TcpTable->dwNumEntries; ++count)
             {
                 const auto tableEntry = &pIpv4TcpTable->table[count];
@@ -787,7 +784,7 @@ private:
 
             // IPv6
             RefreshIPv6Data();
-            PMIB_TCP6TABLE pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&tcpTable[0]);
+            const auto pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&tcpTable[0]);
             for (unsigned count = 0; count < pIpv6TcpTable->dwNumEntries; ++count)
             {
                 const auto tableEntry = &pIpv6TcpTable->table[count];
@@ -896,44 +893,44 @@ private:
 
         while (foundInstance != std::end(synOptsData))
         {
-            ctl::ctSockaddr localAddr(foundInstance->LocalAddr());
-            ctl::ctSockaddr remoteAddr(foundInstance->RemoteAddr());
+            const ctl::ctSockaddr localAddr(foundInstance->LocalAddr());
+            const ctl::ctSockaddr remoteAddr(foundInstance->RemoteAddr());
 
             const auto synOptsInstance = foundInstance;
             const auto byteTrackingInstance = byteTrackingData.find(
                 details::EstatsDataPoint<TcpConnectionEstatsData>(localAddr, remoteAddr));
-            bool byteTrackingInstanceFound = byteTrackingInstance != byteTrackingData.end();
+            const auto fByteTrackingInstanceFound = byteTrackingInstance != byteTrackingData.end();
 
             const auto pathInfoInstance = pathInfoData.find(
                 details::EstatsDataPoint<TcpConnectionEstatsPath>(localAddr, remoteAddr));
-            bool pathInfoInstanceFound = pathInfoInstance != pathInfoData.end();
+            const auto fPathInfoInstanceFound = pathInfoInstance != pathInfoData.end();
 
             const auto localReceiveWindowInstance = localReceiveWindowData.find(
                 details::EstatsDataPoint<TcpConnectionEstatsRec>(localAddr, remoteAddr));
-            bool localReceiveWindowInstanceFound = localReceiveWindowInstance != localReceiveWindowData.end();
+            const auto fLocalReceiveWindowInstanceFound = localReceiveWindowInstance != localReceiveWindowData.end();
 
             const auto remoteReceiveWindowInstance = remoteReceiveWindowData.find(
                 details::EstatsDataPoint<TcpConnectionEstatsObsRec>(localAddr, remoteAddr));
-            bool remoteReceiveWindowInstanceFound = remoteReceiveWindowInstance != remoteReceiveWindowData.end();
+            const auto fRemoteReceiveWindowInstanceFound = remoteReceiveWindowInstance != remoteReceiveWindowData.end();
 
             const auto senderCongestionInstance = senderCongestionData.find(
                 details::EstatsDataPoint<TcpConnectionEstatsSndCong>(localAddr, remoteAddr));
-            bool senderCongestionInstanceFound = senderCongestionInstance != senderCongestionData.end();
+            const auto fSenderCongestionInstanceFound = senderCongestionInstance != senderCongestionData.end();
 
-            if (pathInfoInstanceFound) {
+            if (fPathInfoInstanceFound) {
                 pathInfoWriter.write_row(
                     pathInfoInstance->PrintAddresses() +
                     pathInfoInstance->PrintData());
             }
 
-            if (localReceiveWindowInstanceFound && remoteReceiveWindowInstanceFound) {
+            if (fLocalReceiveWindowInstanceFound && fRemoteReceiveWindowInstanceFound) {
                 receiveWindowWriter.write_row(
                     localReceiveWindowInstance->PrintAddresses() +
                     localReceiveWindowInstance->PrintData() +
                     remoteReceiveWindowInstance->PrintData());
             }
             
-            if (senderCongestionInstanceFound && byteTrackingInstanceFound) {
+            if (fSenderCongestionInstanceFound && fByteTrackingInstanceFound) {
                 senderCongestionWriter.write_row(
                     senderCongestionInstance->PrintAddresses() +
                     senderCongestionInstance->PrintData() +
@@ -941,16 +938,16 @@ private:
             }
 
             synOptsData.erase(synOptsInstance);
-            if (byteTrackingInstanceFound) {
+            if (fByteTrackingInstanceFound) {
                 byteTrackingData.erase(byteTrackingInstance);
             }
-            if (localReceiveWindowInstanceFound) {
+            if (fLocalReceiveWindowInstanceFound) {
                 localReceiveWindowData.erase(localReceiveWindowInstance);
             }
-            if (remoteReceiveWindowInstanceFound) {
+            if (fRemoteReceiveWindowInstanceFound) {
                 remoteReceiveWindowData.erase(remoteReceiveWindowInstance);
             }
-            if (senderCongestionInstanceFound) {
+            if (fSenderCongestionInstanceFound) {
                 senderCongestionData.erase(senderCongestionInstance);
             }
 

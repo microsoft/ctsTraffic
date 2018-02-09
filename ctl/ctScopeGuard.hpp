@@ -43,45 +43,48 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctVersionConversion.hpp"
 
 
-namespace ctl {
+namespace ctl
+{
+	template <typename F>
+	class ctScopeGuardT
+	{
+	public:
+		explicit ctScopeGuardT(F& f) NOEXCEPT :
+			m_p(std::addressof(f))
+		{
+		}
 
-    template <typename F> class ctScopeGuardT {
-    public:
-        explicit ctScopeGuardT(F& f) NOEXCEPT :
-            m_p(std::addressof(f))
-        {
-        }
+		void run_once() NOEXCEPT
+		{
+			if (m_p) {
+				(*m_p)();
+			}
+			m_p = nullptr;
+		}
 
-        void run_once( ) NOEXCEPT
-        {
-            if (m_p) {
-                (*m_p)();
-            }
-            m_p = nullptr;
-        }
+		void dismiss() NOEXCEPT
+		{
+			m_p = nullptr;
+		}
 
-        void dismiss() NOEXCEPT
-        {
-            m_p = nullptr;
-        }
+		~ctScopeGuardT() NOEXCEPT
+		{
+			if (m_p) {
+				(*m_p)();
+			}
+		}
 
-        ~ctScopeGuardT() NOEXCEPT
-        {
-            if (m_p) {
-                (*m_p)();
-            }
-        }
+		explicit ctScopeGuardT(F&&) = delete;
+		ctScopeGuardT(const ctScopeGuardT&) = delete;
+		ctScopeGuardT& operator=(const ctScopeGuardT&) = delete;
+		ctScopeGuardT(ctScopeGuardT&&) = delete;
+		ctScopeGuardT& operator=(ctScopeGuardT&&) = delete;
 
-        explicit ctScopeGuardT(F&&) = delete;
-        ctScopeGuardT(const ctScopeGuardT&) = delete;
-        ctScopeGuardT& operator=(const ctScopeGuardT&) = delete;
-
-    private:
-        F * m_p;
-    };
+	private:
+		F* m_p;
+	};
 
 #define ctlScopeGuard(NAME, BODY)  \
     auto xx##NAME##xx = [&]() BODY; \
     ::ctl::ctScopeGuardT<decltype(xx##NAME##xx)> NAME(xx##NAME##xx)
-
 } // namespace
