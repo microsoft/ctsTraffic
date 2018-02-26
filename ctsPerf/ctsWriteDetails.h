@@ -96,7 +96,7 @@ namespace ctsPerf {
             }
 
             auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
-            return details::write(std::get<1>(std_tuple), std::get<1>(std_tuple) - std::get<0>(std_tuple)); // Mean,StdDev
+            return details::write(std::get<0>(std_tuple), std::get<1>(std_tuple)); // Mean,StdDev
         }
 
         template <typename T>
@@ -112,9 +112,9 @@ namespace ctsPerf {
             auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
             auto interquartile_tuple = ctInterquartileRange(_data.begin(), _data.end());
 
-            std::wstring formatted_data = details::write(static_cast<DWORD>(_data.size()));  // SampleCount
+            auto formatted_data = details::write(static_cast<DWORD>(_data.size()));  // SampleCount
             formatted_data += details::write(*_data.begin(), *_data.rbegin()); // Min,Max
-            formatted_data += details::write(std::get<0>(std_tuple), std::get<1>(std_tuple), std::get<2>(std_tuple)); // -1Std,Mean,+1Std
+            formatted_data += details::write(std::get<0>(std_tuple) - std::get<1>(std_tuple),  std::get<0>(std_tuple), std::get<0>(std_tuple) + std::get<1>(std_tuple)); // -1Std,Mean,+1Std
             formatted_data += details::write(std::get<0>(interquartile_tuple), std::get<1>(interquartile_tuple), std::get<2>(interquartile_tuple)); // -1IQR,Median,+1IQR
             return formatted_data;
         }

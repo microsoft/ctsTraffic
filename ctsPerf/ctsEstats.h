@@ -34,6 +34,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsPerf {
 
 namespace details {
+    const ULONG UninitializedUlong = 0xffffffff;
+
     template <TCP_ESTATS_TYPE TcpType>
     struct EstatsTypeConverter {};
 
@@ -206,7 +208,7 @@ namespace details {
         {
             if (MssRcvd == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
-                ZeroMemory(&Ros, sizeof Ros);
+                FillMemory(&Ros, sizeof Ros, -1);
                 if (0 == GetReadOnlyStaticEstats<TcpConnectionEstatsSynOpts>(tcpRow, &Ros)) {
                     MssRcvd = Ros.MssRcvd;
                     MssSent = Ros.MssSent;
@@ -242,7 +244,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_DATA_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsData>(tcpRow, &Rod)) {
                 bytesIn = Rod.DataBytesIn;
                 bytesOut = Rod.DataBytesOut;
@@ -288,9 +290,11 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
-                conjestionWindows.push_back(Rod.CurCwnd);
+                if (Rod.CurCwnd != UninitializedUlong) {
+                    conjestionWindows.push_back(Rod.CurCwnd);
+                }
                 bytesSentInReceiverLimited = Rod.SndLimBytesRwin;
                 bytesSentInSenderLimited = Rod.SndLimBytesSnd;
                 bytesSentInCongestionLimited = Rod.SndLimBytesCwnd;
@@ -345,10 +349,14 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_PATH_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
-                retransmitTimer.push_back(Rod.CurRto);
-                roundTripTime.push_back(Rod.SmoothedRtt);
+                if (Rod.CurRto != UninitializedUlong) {
+                    retransmitTimer.push_back(Rod.CurRto);
+                }
+                if (Rod.SmoothedRtt != UninitializedUlong) {
+                    roundTripTime.push_back(Rod.SmoothedRtt);
+                }
                 bytesRetrans = Rod.BytesRetrans;
                 dupAcksRcvd = Rod.DupAcksIn;
                 sacksRcvd = Rod.SacksRcvd;
@@ -376,12 +384,16 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            // casting min and max to signed since -1 is a valid value
+            std::wstring formattedString(L",");
+            formattedString += (minReceiveWindow == UninitializedUlong) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu", minReceiveWindow);
+            formattedString += (maxReceiveWindow == UninitializedUlong) ?
+                L"-1" :
+                ctl::ctString::format_string(L"%lu", maxReceiveWindow);
+
             return
-                ctl::ctString::format_string(
-                    L",%ld,%ld",
-                    static_cast<long>(minReceiveWindow),
-                    static_cast<long>(maxReceiveWindow)) +
+                formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow);
         }
 
@@ -396,9 +408,16 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_REC_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
-                receiveWindow.push_back(Rod.CurRwinSent);
+                if (Rod.CurRwinSent != UninitializedUlong) {
+                    receiveWindow.push_back(Rod.CurRwinSent);
+                }
+                if (Rod.MinRwinSent > Rod.MaxRwinSent &&
+                    Rod.MaxRwinSent > 0)
+                {
+                    // DebugBreak();
+                }
                 minReceiveWindow = Rod.MinRwinSent;
                 maxReceiveWindow = Rod.MaxRwinSent;
             }
@@ -419,12 +438,16 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            // casting min and max to signed since -1 is a valid value
+            std::wstring formattedString(L",");
+            formattedString += (minReceiveWindow == UninitializedUlong) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu", minReceiveWindow);
+            formattedString += (maxReceiveWindow == UninitializedUlong) ?
+                L"-1" :
+                ctl::ctString::format_string(L"%lu", maxReceiveWindow);
+
             return
-                ctl::ctString::format_string(
-                    L",%ld,%ld",
-                    static_cast<long>(minReceiveWindow),
-                    static_cast<long>(maxReceiveWindow)) +
+                formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow);
         }
 
@@ -439,9 +462,11 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
-                receiveWindow.push_back(Rod.CurRwinRcvd);
+                if (Rod.CurRwinRcvd != UninitializedUlong) {
+                    receiveWindow.push_back(Rod.CurRwinRcvd);
+                }
                 minReceiveWindow = Rod.MinRwinRcvd;
                 maxReceiveWindow = Rod.MaxRwinRcvd;
             }
@@ -477,7 +502,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
                 // store data from this instance
             }
@@ -507,7 +532,7 @@ namespace details {
         void UpdateData(_In_ const PTCPROW tcpRow)
         {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
-            ZeroMemory(&Rod, sizeof Rod);
+            FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rod)) {
                 // store data from this instance
             }
@@ -762,7 +787,9 @@ private:
             for (unsigned count = 0; count < pIpv4TcpTable->dwNumEntries; ++count)
             {
                 const auto tableEntry = &pIpv4TcpTable->table[count];
-                if (tableEntry->dwState == MIB_TCP_STATE_LISTEN) {
+                if (tableEntry->dwState == MIB_TCP_STATE_LISTEN ||
+                    tableEntry->dwState == MIB_TCP_STATE_TIME_WAIT ||
+                    tableEntry->dwState == MIB_TCP_STATE_DELETE_TCB) {
                     continue;
                 }
 
@@ -788,7 +815,9 @@ private:
             for (unsigned count = 0; count < pIpv6TcpTable->dwNumEntries; ++count)
             {
                 const auto tableEntry = &pIpv6TcpTable->table[count];
-                if (tableEntry->State == MIB_TCP_STATE_LISTEN) {
+                if (tableEntry->State == MIB_TCP_STATE_LISTEN ||
+                    tableEntry->State == MIB_TCP_STATE_TIME_WAIT ||
+                    tableEntry->State == MIB_TCP_STATE_DELETE_TCB) {
                     continue;
                 }
 

@@ -653,8 +653,8 @@ namespace ctl
 		::ZeroMemory(address, IP_STRING_MAX_LENGTH * sizeof(CHAR));
 
 		DWORD addressLength = IP_STRING_MAX_LENGTH;
-#pragma warning( suppress : 4996)
 		// ReSharper disable once CppDeprecatedEntity
+		#pragma warning( suppress : 4996)
 		if (0 == ::WSAAddressToStringA(this->sockaddr(), static_cast<DWORD>(SADDR_SIZE), nullptr, address, &addressLength)) {
 			if ((this->family() == AF_INET6) && trim_scope) {
 				const auto end = address + addressLength;

@@ -170,8 +170,10 @@ namespace ctl
 			}
 
 			~property_iterator() NOEXCEPT = default;
-			property_iterator(const property_iterator&) NOEXCEPT = default;
-			property_iterator& operator =(const property_iterator& _i) NOEXCEPT = default;
+			// copy c'tors can throw since it will try to copy the BSTR
+			property_iterator(const property_iterator&) = default;
+			property_iterator& operator =(const property_iterator&) = default;
+			// move c'tors are no-throw
 			property_iterator(property_iterator&&) NOEXCEPT = default;
 			property_iterator& operator=(property_iterator&&) NOEXCEPT = default;
 
@@ -194,7 +196,7 @@ namespace ctl
 			ctComBstr& operator*()
 			{
 				if (this->dwIndex == END_ITERATOR_INDEX) {
-					throw std::out_of_range("ctWmiClassObject::property_iterator::operator - invalid subscript");
+					throw std::out_of_range("ctWmiClassObject::property_iterator::operator * - invalid subscript");
 				}
 				return this->propName;
 			}
@@ -202,7 +204,7 @@ namespace ctl
 			const ctComBstr& operator*() const
 			{
 				if (this->dwIndex == END_ITERATOR_INDEX) {
-					throw std::out_of_range("ctWmiClassObject::property_iterator::operator - invalid subscript");
+					throw std::out_of_range("ctWmiClassObject::property_iterator::operator * - invalid subscript");
 				}
 				return this->propName;
 			}

@@ -25,23 +25,20 @@ namespace ctl
 	/// calculating a sampled standard deviation and mean
 	///
 	/// Returns a tuple of doubles recording the results:
-	///   get<0> : the mean minus one standard deviation
-	///   get<1> : the mean value
-	///   get<2> : the mean plus one standard deviation
+	///   get<0> : the mean value
+	///   get<1> : the standard deviation
 	///
 	template <typename BidirectionalIterator>
-	std::tuple<double, double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
+	std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
 	{
 		auto size = _end - _begin;
 		if (size == 0) {
 			return std::make_tuple(
 				static_cast<double>(0),
-				static_cast<double>(0),
 				static_cast<double>(0));
 		}
 		if (size == 1) {
 			return std::make_tuple(
-				static_cast<double>(0),
 				static_cast<double>(*_begin),
 				static_cast<double>(0));
 		}
@@ -56,10 +53,7 @@ namespace ctl
 		}
 
 		const auto stdev = std::sqrt(static_cast<double>(accum / (size - 1.0)));
-		return std::make_tuple(
-			mean - stdev,
-			mean,
-			mean + stdev);
+		return std::make_tuple(mean, stdev);
 	}
 
 	///

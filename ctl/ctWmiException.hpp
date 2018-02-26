@@ -347,8 +347,23 @@ namespace ctl
 			swap(*this, temp);
 			return *this;
 		}
-		ctWmiException(ctWmiException&&) = delete;
-		ctWmiException& operator=(ctWmiException&&) = delete;
+		ctWmiException(ctWmiException&& rhs) NOEXCEPT
+		: className(rhs.className),
+		  errorInfo(std::move(rhs.errorInfo))
+		{
+			// took ownership of the bstr
+			rhs.className = nullptr;
+		}
+		ctWmiException& operator=(ctWmiException&& rhs) NOEXCEPT
+		{
+			SysFreeString(className);
+			className = rhs.className;
+			rhs.className = nullptr;
+
+			errorInfo = std::move(rhs.errorInfo);
+
+			return *this;
+		}
 
 		virtual ~ctWmiException() NOEXCEPT
 		{
