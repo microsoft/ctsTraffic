@@ -87,14 +87,6 @@ namespace ctsPerf {
         template <typename T>
         static std::wstring PrintMeanStdDev(const std::vector<T>& _data)
         {
-            if (_data.size() == 0) {
-                return details::write(static_cast<double>(-1.000), static_cast<double>(0.000)); // Mean,StdDev
-            }
-
-            if (_data.size() == 1) {
-                return details::write(static_cast<double>(*_data.begin()), static_cast<double>(0.000)); // Mean,StdDev
-            }
-
             auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
             return details::write(std::get<0>(std_tuple), std::get<1>(std_tuple)); // Mean,StdDev
         }

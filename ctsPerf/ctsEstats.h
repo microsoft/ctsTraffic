@@ -263,20 +263,22 @@ namespace details {
         {
             return L"CongWin(mean),CongWin(stddev),"
                 L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
-                L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited";
+                L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited, [xValidValues,xInvalidValues] ";
         }
         std::wstring PrintData() const
         {
             return
                 ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
                 ctl::ctString::format_string(
-                    L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
+                    L",%lu,%lu,%lu,%Iu,%Iu,%Iu, [%lu,%lu] ",
                     transitionsIntoReceiverLimited,
                     transitionsIntoSenderLimited,
                     transitionsIntoCongestionLimited,
                     bytesSentInReceiverLimited,
                     bytesSentInSenderLimited,
-                    bytesSentInCongestionLimited);
+                    bytesSentInCongestionLimited,
+                    validValues,
+                    invalidValues);
         }
 
         template <typename PTCPROW>
@@ -292,6 +294,35 @@ namespace details {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
+                if ((Rod.CurCwnd > 0x10000000 && Rod.CurCwnd != UninitializedUlong) ||
+                    Rod.SndLimBytesRwin > 0x10000000 ||
+                    Rod.SndLimBytesSnd > 0x10000000 ||
+                    Rod.SndLimBytesCwnd > 0x10000000 ||
+                    Rod.SndLimTransRwin > 0x10000000 ||
+                    Rod.SndLimTransSnd > 0x10000000 ||
+                    Rod.SndLimTransCwnd > 0x10000000)
+                {
+                    ++invalidValues;
+                    printf(
+                        "Bad TcpConnectionEstatsSndCong (TCP_ESTATS_SND_CONG_ROD_v0): "
+                        "CurCwnd (%lX) "
+                        "SndLimBytesRwin (%IX) "
+                        "SndLimBytesSnd (%IX) "
+                        "SndLimBytesCwnd (%IX) "
+                        "SndLimTransRwin (%lX) "
+                        "SndLimTransSnd (%lX) "
+                        "SndLimTransCwnd (%lX)\n",
+                        Rod.CurCwnd,
+                        Rod.SndLimBytesRwin,
+                        Rod.SndLimBytesSnd,
+                        Rod.SndLimBytesCwnd,
+                        Rod.SndLimTransRwin,
+                        Rod.SndLimTransSnd,
+                        Rod.SndLimTransCwnd);
+                } else {
+                    ++validValues;
+                }
+
                 if (Rod.CurCwnd != UninitializedUlong) {
                     conjestionWindows.push_back(Rod.CurCwnd);
                 }
@@ -314,6 +345,9 @@ namespace details {
         ULONG transitionsIntoReceiverLimited = 0;
         ULONG transitionsIntoSenderLimited = 0;
         ULONG transitionsIntoCongestionLimited = 0;
+
+        ULONG validValues = 0;
+        ULONG invalidValues = 0;
     };
 
     template <>
@@ -323,7 +357,7 @@ namespace details {
         {
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
                 L"RetransTimer(mean),RetransTimer(stddev),"
-                L"RTT(mean),Rtt(stddev)";
+                L"RTT(mean),Rtt(stddev), [xValidValues,xInvalidValues] ";
         }
         std::wstring PrintData() const
         {
@@ -334,8 +368,12 @@ namespace details {
                 sacksRcvd,
                 congestionSignals,
                 maxSegmentSize) +
-            ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
-            ctsWriteDetails::PrintMeanStdDev(roundTripTime);
+                ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
+                ctsWriteDetails::PrintMeanStdDev(roundTripTime) +
+                ctl::ctString::format_string(
+                    L" [%lu,%lu] ",
+                    validValues,
+                    invalidValues);
         }
 
         template <typename PTCPROW>
@@ -351,6 +389,35 @@ namespace details {
             TCP_ESTATS_PATH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
+                if ((Rod.CurRto > 0x10000000 && Rod.CurRto != UninitializedUlong) ||
+                    (Rod.SmoothedRtt > 0x10000000 && Rod.SmoothedRtt != UninitializedUlong) ||
+                    (Rod.BytesRetrans > 0x10000000 && Rod.BytesRetrans != UninitializedUlong) ||
+                    (Rod.DupAcksIn > 0x10000000 && Rod.DupAcksIn != UninitializedUlong) ||
+                    (Rod.SacksRcvd > 0x10000000 && Rod.SacksRcvd != UninitializedUlong) ||
+                    (Rod.CongSignals > 0x10000000 && Rod.CongSignals != UninitializedUlong) ||
+                    (Rod.CurMss > 0x10000000 && Rod.CurMss != UninitializedUlong))
+                {
+                    ++invalidValues;
+                    printf(
+                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "CurRto (%lX) "
+                        "SmoothedRtt (%lX) "
+                        "BytesRetrans (%lX) "
+                        "DupAcksIn (%lX) "
+                        "SacksRcvd (%lX) "
+                        "CongSignals (%lX) "
+                        "CurMss (%lX)\n",
+                        Rod.CurRto,
+                        Rod.SmoothedRtt,
+                        Rod.BytesRetrans,
+                        Rod.DupAcksIn,
+                        Rod.SacksRcvd,
+                        Rod.CongSignals,
+                        Rod.CurMss);
+                } else {
+                    ++validValues;
+                }
+
                 if (Rod.CurRto != UninitializedUlong) {
                     retransmitTimer.push_back(Rod.CurRto);
                 }
@@ -373,6 +440,9 @@ namespace details {
         ULONG sacksRcvd = 0;
         ULONG congestionSignals = 0;
         ULONG maxSegmentSize = 0;
+
+        ULONG validValues = 0;
+        ULONG invalidValues = 0;
     };
 
     template <>
@@ -380,21 +450,26 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
-            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(mean),LocalRecvWin(stddev)";
+            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(mean),LocalRecvWin(stddev), [xValidValues,xInvalidValues] ";
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
             formattedString += (minReceiveWindow == UninitializedUlong) ?
                 L"-1," :
-                ctl::ctString::format_string(L"%lu", minReceiveWindow);
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow);
+
             formattedString += (maxReceiveWindow == UninitializedUlong) ?
                 L"-1" :
                 ctl::ctString::format_string(L"%lu", maxReceiveWindow);
 
             return
                 formattedString +
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
+                ctl::ctString::format_string(
+                    L" [%lu,%lu] ",
+                    validValues,
+                    invalidValues);
         }
 
         template <typename PTCPROW>
@@ -410,13 +485,27 @@ namespace details {
             TCP_ESTATS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
+                if ((Rod.CurRwinSent > 0x10000000 && Rod.CurRwinSent != UninitializedUlong) ||
+                    (Rod.MinRwinSent > 0x10000000 && Rod.MinRwinSent != UninitializedUlong) ||
+                    (Rod.MaxRwinSent > 0x10000000 && Rod.MaxRwinSent != UninitializedUlong) ||
+                    (Rod.MinRwinSent != UninitializedUlong && Rod.MinRwinSent > Rod.MaxRwinSent && Rod.MaxRwinSent > 0))
+                {
+                    ++invalidValues;
+                    printf(
+                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "CurRwinSent (%lX) "
+                        "MinRwinSent (%lX) "
+                        "MaxRwinSent (%lX)\n",
+                        Rod.CurRwinSent,
+                        Rod.MinRwinSent,
+                        Rod.MaxRwinSent);
+                }
+                else {
+                    ++validValues;
+                }
+
                 if (Rod.CurRwinSent != UninitializedUlong) {
                     receiveWindow.push_back(Rod.CurRwinSent);
-                }
-                if (Rod.MinRwinSent > Rod.MaxRwinSent &&
-                    Rod.MaxRwinSent > 0)
-                {
-                    // DebugBreak();
                 }
                 minReceiveWindow = Rod.MinRwinSent;
                 maxReceiveWindow = Rod.MaxRwinSent;
@@ -427,6 +516,9 @@ namespace details {
         std::vector<ULONG> receiveWindow;
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
+
+        ULONG validValues = 0;
+        ULONG invalidValues = 0;
     };
 
     template <>
@@ -434,21 +526,26 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
-            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(mean),RemoteRecvWin(stddev)";
+            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(mean),RemoteRecvWin(stddev), [xValidValues,xInvalidValues] ";
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
             formattedString += (minReceiveWindow == UninitializedUlong) ?
                 L"-1," :
-                ctl::ctString::format_string(L"%lu", minReceiveWindow);
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow);
+
             formattedString += (maxReceiveWindow == UninitializedUlong) ?
                 L"-1" :
                 ctl::ctString::format_string(L"%lu", maxReceiveWindow);
 
             return
                 formattedString +
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
+                ctl::ctString::format_string(
+                    L" [%lu,%lu] ",
+                    validValues,
+                    invalidValues);
         }
 
         template <typename PTCPROW>
@@ -464,6 +561,25 @@ namespace details {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
+                if ((Rod.CurRwinRcvd > 0x10000000 && Rod.CurRwinRcvd != UninitializedUlong) ||
+                    (Rod.MinRwinRcvd > 0x10000000 && Rod.MinRwinRcvd != UninitializedUlong) ||
+                    (Rod.MaxRwinRcvd > 0x10000000 && Rod.MaxRwinRcvd != UninitializedUlong) ||
+                    (Rod.MinRwinRcvd != UninitializedUlong && Rod.MinRwinRcvd > Rod.MaxRwinRcvd && Rod.MaxRwinRcvd > 0))
+                {
+                    ++invalidValues;
+                    printf(
+                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "CurRwinRcvd (%lX) "
+                        "MinRwinRcvd (%lX) "
+                        "MaxRwinRcvd (%lX)\n",
+                        Rod.CurRwinRcvd,
+                        Rod.MinRwinRcvd,
+                        Rod.MaxRwinRcvd);
+                }
+                else {
+                    ++validValues;
+                }
+
                 if (Rod.CurRwinRcvd != UninitializedUlong) {
                     receiveWindow.push_back(Rod.CurRwinRcvd);
                 }
@@ -476,6 +592,9 @@ namespace details {
         std::vector<ULONG> receiveWindow;
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
+
+        ULONG validValues = 0;
+        ULONG invalidValues = 0;
     };
 
     template <>
