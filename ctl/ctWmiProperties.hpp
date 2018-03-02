@@ -52,12 +52,12 @@ namespace ctl
 		class iterator;
 
 
-		ctWmiProperties(_In_ ctWmiService _wbemServices, _In_ ctComPtr<IWbemClassObject> _wbemClass) :
+		ctWmiProperties(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _wbemClass) :
 			wbemServices(std::move(_wbemServices)), wbemClass(std::move(_wbemClass))
 		{
 		}
 
-		ctWmiProperties(_In_ ctWmiService _wbemServices, _In_ LPCWSTR _className) :
+		ctWmiProperties(ctWmiService _wbemServices, LPCWSTR _className) :
 			wbemServices(std::move(_wbemServices)), wbemClass()
 		{
 			const auto hr = this->wbemServices->GetObjectW(
@@ -72,7 +72,7 @@ namespace ctl
 			}
 		}
 
-		ctWmiProperties(_In_ ctWmiService _wbemServices, _In_ const ctComBstr& _className)
+		ctWmiProperties(ctWmiService _wbemServices, const ctComBstr& _className)
 			: wbemServices(std::move(_wbemServices))
 		{
 			const auto hr = this->wbemServices->GetObjectW(
@@ -102,7 +102,7 @@ namespace ctl
 		/// end() is no-fail / no-throw
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		iterator begin(_In_ bool _fNonSystemPropertiesOnly = true) const
+		iterator begin(bool _fNonSystemPropertiesOnly = true) const
 		{
 			return iterator(this->wbemClass, _fNonSystemPropertiesOnly);
 		}
@@ -142,7 +142,7 @@ namespace ctl
 			////////////////////////////////////////////////////////////////////////////////
 			iterator() NOEXCEPT = default;
 
-			iterator(_In_ ctComPtr<IWbemClassObject> _classObj, _In_ bool _fNonSystemPropertiesOnly) :
+			iterator(ctComPtr<IWbemClassObject> _classObj, bool _fNonSystemPropertiesOnly) :
 				wbemClassObj(std::move(_classObj)), dwIndex(0)
 			{
 				const auto hr = wbemClassObj->BeginEnumeration((_fNonSystemPropertiesOnly) ? WBEM_FLAG_NONSYSTEM_ONLY : 0);
@@ -212,7 +212,7 @@ namespace ctl
 			/// - throwing a ctWmiException object capturing the WMI failures
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(_In_ const iterator& _iter) const NOEXCEPT
+			bool operator==(const iterator& _iter) const NOEXCEPT
 			{
 				if (this->dwIndex != ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
 					return ((this->dwIndex == _iter.dwIndex) &&
@@ -221,7 +221,7 @@ namespace ctl
 				return (this->dwIndex == _iter.dwIndex);
 			}
 
-			bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
+			bool operator!=(const iterator& _iter) const NOEXCEPT
 			{
 				return !(*this == _iter);
 			}
@@ -234,7 +234,7 @@ namespace ctl
 			}
 
 			// postincrement
-			iterator operator++(_In_ int)
+			iterator operator++(int)
 			{
 				iterator temp(*this);
 				this->increment();
@@ -242,7 +242,7 @@ namespace ctl
 			}
 
 			// increment by integer
-			iterator& operator+=(_In_ DWORD _inc)
+			iterator& operator+=(DWORD _inc)
 			{
 				for (unsigned loop = 0; loop < _inc; ++loop) {
 					this->increment();

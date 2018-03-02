@@ -13,7 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <vector>
 // os headers
 #include <Windows.h>
 #include <winsock2.h>
@@ -92,58 +91,52 @@ namespace ctsTraffic {
         }
 
         int error = NO_ERROR;
-        // scope to the socket lock
+        try
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
-                try {
-                    const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
-                    error = ctsConfig::SetPreConnectOptions(socket);
-                    if (error != NO_ERROR) {
-                        throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
-                    }
+                const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
+                error = ctsConfig::SetPreConnectOptions(socket);
+                if (error != NO_ERROR) {
+                    throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
+                }
 
-                    // get a new IO request from the socket's TP
-                    const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
-                    OVERLAPPED* pov = connect_iocp->new_request(
-                        [_weak_socket, targetAddress](OVERLAPPED* _ov)
-                    { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
+                // get a new IO request from the socket's TP
+                const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
+                OVERLAPPED* pov = connect_iocp->new_request(
+                    [_weak_socket, targetAddress](OVERLAPPED* _ov)
+                { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
-                    if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {
-                        error = ::WSAGetLastError();
-                        if (ERROR_IO_PENDING == error) {
-                            // pended is not failure
-                            error = NO_ERROR;
-                        } else {
-                            // must call cancel() on the IOCP TP if the IO call fails
-                            connect_iocp->cancel_request(pov);
-                        }
-
-                    } else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
-                        // if inline completions are enabled, the IOCP won't be queued the completion
+                if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {
+                    error = ::WSAGetLastError();
+                    if (ERROR_IO_PENDING == error) {
+                        // pended is not failure
+                        error = NO_ERROR;
+                    } else {
+                        // must call cancel() on the IOCP TP if the IO call fails
                         connect_iocp->cancel_request(pov);
-                        // directly invoke the callback to complete the IO
-                        // - with a nullptr OVERLAPPED to indicate it's already completed
-                        ctsConnectExIoCompletionCallback(nullptr, _weak_socket, targetAddress);
                     }
 
-                    ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
-                    if (NO_ERROR == error) {
-                        PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
-                    }
+                } else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+                    // if inline completions are enabled, the IOCP won't be queued the completion
+                    connect_iocp->cancel_request(pov);
+                    // directly invoke the callback to complete the IO
+                    // - with a nullptr OVERLAPPED to indicate it's already completed
+                    ctsConnectExIoCompletionCallback(nullptr, _weak_socket, targetAddress);
                 }
-                catch (const ctl::ctException& e) {
-                    ctsConfig::PrintException(e);
-                    error = e.why();
-                }
-                catch (const std::exception& e) {
-                    ctsConfig::PrintException(e);
-                    error = ERROR_NOT_ENOUGH_MEMORY;
+
+                ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
+                if (NO_ERROR == error) {
+                    PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
                 }
             } else {
                 error = WSAECONNABORTED;
             }
+        }
+        catch (const std::exception& e) {
+            ctsConfig::PrintException(e);
+            error = ctl::ctErrorCode(e);
         }
 
         // complete on failure

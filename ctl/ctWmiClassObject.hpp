@@ -57,7 +57,7 @@ namespace ctl
 		{
 		}
 
-		ctWmiClassObject(ctWmiService _wbemServices, _In_ LPCWSTR _className) :
+		ctWmiClassObject(ctWmiService _wbemServices, LPCWSTR _className) :
 			wbemServices(std::move(_wbemServices))
 		{
 			const auto hr = this->wbemServices->GetObject(

@@ -77,12 +77,12 @@ namespace ctsTraffic {
             }
         }
 
-        void LogMessage(_In_ LPCWSTR _message) NOEXCEPT
+        void LogMessage(LPCWSTR _message) NOEXCEPT
         {
             log_message_impl(_message);
         }
 
-        void LogError(_In_ LPCWSTR _message) NOEXCEPT
+        void LogError(LPCWSTR _message) NOEXCEPT
         {
             log_error_impl(_message);
         }
@@ -100,13 +100,13 @@ namespace ctsTraffic {
         ctsConfig::StatusFormatting format;
 
         /// pure virtual methods concrete classes must implement
-        virtual void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT = 0;
-        virtual void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT = 0;
+        virtual void log_message_impl(LPCWSTR _message) NOEXCEPT = 0;
+        virtual void log_error_impl(LPCWSTR _message) NOEXCEPT = 0;
     };
 
     class ctsTextLogger : public ctsLogger {
     public:
-        ctsTextLogger(_In_ LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
+        ctsTextLogger(LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
             ctsLogger(_format)
         {
             if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
@@ -156,12 +156,12 @@ namespace ctsTraffic {
             ::DeleteCriticalSection(&file_cs);
         }
 
-        void log_message_impl(_In_ LPCWSTR _message) NOEXCEPT override
+        void log_message_impl(LPCWSTR _message) NOEXCEPT override
         {
             write_impl(_message);
         }
 
-        void log_error_impl(_In_ LPCWSTR _message) NOEXCEPT override
+        void log_error_impl(LPCWSTR _message) NOEXCEPT override
         {
             write_impl(_message);
         }
@@ -170,7 +170,7 @@ namespace ctsTraffic {
         CRITICAL_SECTION file_cs;
         HANDLE file_handle = INVALID_HANDLE_VALUE;
 
-        void write_impl(_In_ LPCWSTR _message) NOEXCEPT
+        void write_impl(LPCWSTR _message) NOEXCEPT
         {
             ::EnterCriticalSection(&file_cs);
             DWORD BytesWritten;

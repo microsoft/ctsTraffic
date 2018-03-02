@@ -13,7 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <vector>
 // os headers
 #include <Windows.h>
 #include <winsock2.h>
@@ -58,10 +57,12 @@ namespace ctsTraffic {
     /// - initialized with InitOneExecuteOnce
     /// 
     static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT;
+    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE s_sharedbuffer_initializer = INIT_ONCE_STATIC_INIT;
 
     static ctl::ctPrioritizedCriticalSection* s_prioritized_cs = nullptr;
     static RIO_NOTIFICATION_COMPLETION s_rio_notify_setttings;
+    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static RIO_CQ  s_rio_cq = RIO_INVALID_CQ;
     static ULONG   s_rio_cq_size = 0;
     static ULONG   s_rio_cq_used = 0;
@@ -225,14 +226,16 @@ namespace ctsTraffic {
         s_rio_worker_threads = nullptr;
         s_rio_worker_thread_count = 0;
 
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         if (s_rio_cq != RIO_INVALID_CQ) {
             ctl::ctRIOCloseCompletionQueue(s_rio_cq);
+            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             s_rio_cq = RIO_INVALID_CQ;
         }
 
-        if (s_rio_notify_setttings.Iocp.IocpHandle != NULL) {
+        if (s_rio_notify_setttings.Iocp.IocpHandle != nullptr) {
             ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle);
-            s_rio_notify_setttings.Iocp.IocpHandle = NULL;
+            s_rio_notify_setttings.Iocp.IocpHandle = nullptr;
         }
 
         ::free(s_rio_notify_setttings.Iocp.Overlapped);
@@ -268,7 +271,7 @@ namespace ctsTraffic {
         s_rio_notify_setttings.Type = RIO_NOTIFICATION_COMPLETION_TYPE::RIO_IOCP_COMPLETION;
         s_rio_notify_setttings.Iocp.CompletionKey = nullptr;
         s_rio_notify_setttings.Iocp.Overlapped = nullptr;
-        s_rio_notify_setttings.Iocp.IocpHandle = NULL;
+        s_rio_notify_setttings.Iocp.IocpHandle = nullptr;
 
         s_rio_notify_setttings.Iocp.Overlapped = ::calloc(1, sizeof OVERLAPPED);
         if (nullptr == s_rio_notify_setttings.Iocp.Overlapped) {
@@ -279,8 +282,8 @@ namespace ctsTraffic {
         // free the OVERLAPPED on error
         ctlScopeGuard(freeOverlappedOnError, { ::free(s_rio_notify_setttings.Iocp.Overlapped); });
 
-        s_rio_notify_setttings.Iocp.IocpHandle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-        if (NULL == s_rio_notify_setttings.Iocp.IocpHandle) {
+        s_rio_notify_setttings.Iocp.IocpHandle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+        if (!s_rio_notify_setttings.Iocp.IocpHandle) {
             DWORD gle = ::GetLastError();
             ctsConfig::PrintException(ctl::ctException(gle, L"CreateIoCompletionPort", L"ctsRioIocp", false));
             ::SetLastError(gle);
@@ -297,6 +300,7 @@ namespace ctsTraffic {
             new_queue_size = ctsConfig::Settings->ConnectionLimit * 2;
         }
         s_rio_cq = ctl::ctRIOCreateCompletionQueue(new_queue_size, &s_rio_notify_setttings);
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         if (RIO_INVALID_CQ == s_rio_cq) {
             DWORD gle = ::WSAGetLastError();
             ctsConfig::PrintException(ctl::ctException(gle, L"ctRIOCreateCompletionQueue", L"ctsRioIocp", false));
@@ -327,7 +331,7 @@ namespace ctsTraffic {
         // now that we are ready to go, kick off our thread-pool
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
             s_rio_worker_threads[loop_workers] = ::CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
-            if (NULL == s_rio_worker_threads[loop_workers]) {
+            if (!s_rio_worker_threads[loop_workers]) {
                 DWORD gle = ::GetLastError();
                 ctsConfig::PrintException(ctl::ctException(gle, L"CreateThread", L"ctsRioIocp", false));
                 ::SetLastError(gle);
@@ -408,13 +412,9 @@ namespace ctsTraffic {
                 // everything succeeded - update rqueue_used with the new slots being used for this next IO
                 this->rqueue_used = new_rqueue_used;
             }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                return e.why();
-            }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                return WSAENOBUFS;
+                return ctl::ctErrorCode(e);
             }
             return NO_ERROR;
         }
@@ -432,6 +432,7 @@ namespace ctsTraffic {
         explicit RioSocketContext(const std::weak_ptr<ctsSocket>& _weak_socket)
             : weak_socket(_weak_socket),
             remote_sockaddr(),
+              // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             rio_rq(RIO_INVALID_RQ),
             rio_remote_address(),
             rqueue_reserved(RioRQGrowthFactor),
@@ -442,7 +443,7 @@ namespace ctsTraffic {
             rio_remote_address.Length = 0;
             rio_remote_address.Offset = 0;
 
-            auto shared_socket = weak_socket.lock();
+            const auto shared_socket = weak_socket.lock();
             if (!shared_socket) {
                 throw std::exception("ctsRioIocp: null socket given to RioSocketContext");
             }
@@ -466,6 +467,7 @@ namespace ctsTraffic {
                 s_rio_cq,
                 s_rio_cq,
                 this);
+            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             if (RIO_INVALID_RQ == rio_rq) {
                 throw ctl::ctException(::WSAGetLastError(), L"RIOCreateRequestQueue", false);
             }
@@ -849,17 +851,13 @@ namespace ctsTraffic {
             // kick off IO on this RIO socket
             io_count = socket_context->execute_io();
         }
-        catch (const ctl::ctException& e) {
-            ctsConfig::PrintException(e);
-            error = (0 == e.why()) ? WSAENOBUFS : e.why();
-        }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            error = WSAENOBUFS;
+            error = ctl::ctErrorCode(e);
         }
 
         // complete the socket state back to the parent if there is no pended IO
-        if (0 == io_count) {
+        if (0 == io_count && shared_socket) {
             shared_socket->complete_state(error);
             delete socket_context;
         }

@@ -31,7 +31,7 @@ namespace ctsTraffic {
     {
     public:
         char* get_buffer(size_t _size) NOEXCEPT;
-        bool  verify_buffer(_In_ const char* _buffer) NOEXCEPT;
+        bool  verify_buffer(const char* _buffer) NOEXCEPT;
     };
 
 

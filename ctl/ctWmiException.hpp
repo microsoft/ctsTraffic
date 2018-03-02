@@ -87,19 +87,19 @@ namespace ctl
 			get_error_info();
 		}
 
-		explicit ctWmiErrorInfo(_In_ ctComPtr<IWbemClassObject> _error_info) NOEXCEPT
+		explicit ctWmiErrorInfo(ctComPtr<IWbemClassObject> _error_info) NOEXCEPT
 		: error_info(std::move(_error_info))
 		{
 		}
 
 		~ctWmiErrorInfo() NOEXCEPT = default;
 
-		ctWmiErrorInfo(_In_ const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo(const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
 
 		// assignment operators with lvalues and rvalues
-		ctWmiErrorInfo& operator=(_In_ const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
-		ctWmiErrorInfo(_In_ ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
-		ctWmiErrorInfo& operator=(_In_ ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo& operator=(const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo(ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo& operator=(ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
 
 		void get_error_info() const NOEXCEPT
 		{
@@ -275,7 +275,7 @@ namespace ctl
 		// common functions
 
 		template <typename T>
-		_Success_(return) bool get_parameter_value(_In_ LPCWSTR _parameter, _Out_ T* _value) const;
+		_Success_(return) bool get_parameter_value(LPCWSTR _parameter, _Out_ T* _value) const;
 	};
 
 	class ctWmiException : public ctException
@@ -290,46 +290,46 @@ namespace ctl
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject) :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject) :
 			ctException(_ulCode)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
 			ctException(_wszMessage, _bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(_In_ LPCWSTR _wszMessage, _In_ const IWbemClassObject* _classObject, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(LPCWSTR _wszMessage, const IWbemClassObject* _classObject, bool _bMessageCopy = true) NOEXCEPT :
 			ctException(_wszMessage, _bMessageCopy)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
 			ctException(_ulCode, _wszMessage, _bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
 			ctException(_ulCode, _wszMessage, _bMessageCopy)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
 			ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, _In_ const IWbemClassObject* _classObject, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
 			ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy)
 		{
 			get_className(_classObject);
 		}
 
-		ctWmiException(_In_ const ctWmiException& e) NOEXCEPT : 
+		ctWmiException(const ctWmiException& e) NOEXCEPT : 
 			ctException(e),
 		    errorInfo(e.errorInfo)
 		{
@@ -389,7 +389,7 @@ namespace ctl
 		BSTR className = nullptr;
 		ctWmiErrorInfo errorInfo;
 
-		void get_className(_In_ const IWbemClassObject* _classObject) NOEXCEPT
+		void get_className(const IWbemClassObject* _classObject) NOEXCEPT
 		{
 			//
 			// protect against a null IWbemClassObject pointer
@@ -588,7 +588,7 @@ namespace ctl
 	}
 
 	template <typename T>
-	_Success_(return) bool ctWmiErrorInfo::get_parameter_value(_In_ LPCWSTR _parameter, _Out_ T* _value) const
+	_Success_(return) bool ctWmiErrorInfo::get_parameter_value(LPCWSTR _parameter, _Out_ T* _value) const
 	{
 		ctComVariant var;
 		if (this->error_info.get() != nullptr) {

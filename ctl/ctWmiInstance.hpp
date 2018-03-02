@@ -54,7 +54,7 @@ namespace ctl
 		{
 		}
 
-		ctWmiInstance(ctWmiService _wbemServices, _In_ LPCWSTR _className) :
+		ctWmiInstance(ctWmiService _wbemServices, LPCWSTR _className) :
 			wbemServices(std::move(_wbemServices))
 		{
 			create_instance(_className);
@@ -175,7 +175,7 @@ namespace ctl
 			}
 		}
 
-		void write_instance(_In_ LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
+		void write_instance(LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
 		{
 			const ctComPtr<IWbemContext> null_context;
 			write_instance(null_context, _wbemFlags);
@@ -228,7 +228,7 @@ namespace ctl
 		///    any method executed won't have other modifying side-effects
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctWmiInstance execute_method(_In_ LPCWSTR _method)
+		ctWmiInstance execute_method(LPCWSTR _method)
 		{
 			return this->execute_method_private(_method, nullptr);
 		}
@@ -248,7 +248,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename Arg1>
-		ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1)
+		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1)
 		{
 			//
 			// establish the class object for the [in] params to the method
@@ -298,7 +298,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename Arg1, typename Arg2>
-		ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2)
+		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2)
 		{
 			//
 			// establish the class object for the [in] params to the method
@@ -350,7 +350,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename Arg1, typename Arg2, typename Arg3>
-		ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3)
+		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3)
 		{
 			//
 			// establish the class object for the [in] params to the method
@@ -404,7 +404,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-		ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
+		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
 		{
 			//
 			// establish the class object for the [in] params to the method
@@ -460,7 +460,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-		ctWmiInstance execute_method(_In_ LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
+		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
 		{
 			//
 			// establish the class object for the [in] params to the method
@@ -519,7 +519,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 
-		bool is_null(_In_ LPCWSTR _propname) const
+		bool is_null(LPCWSTR _propname) const
 		{
 			ctComVariant vtProp;
 			this->get_impl(_propname, vtProp.get());
@@ -529,7 +529,7 @@ namespace ctl
 		/// this has a complex annotation as T* can be a POD (like an int*) which must be _Out_
 		/// or T* could be a non-POD (like a std::wstring*) which must be _Inout_
 		template <typename T>
-		void get(_In_ LPCWSTR _propname, _Out_ T* _t) const
+		void get(LPCWSTR _propname, _Out_ T* _t) const
 		{
 			ctComVariant vtProp;
 			this->get_impl(_propname, vtProp.get());
@@ -553,13 +553,13 @@ namespace ctl
 		/// Overriding the get() function template for retrieving VARIANT values directly
 		/// - requires a properly initialized VARIANT
 		///
-		void get(_In_ LPCWSTR _propname, _Inout_ VARIANT* _variant) const
+		void get(LPCWSTR _propname, _Inout_ VARIANT* _variant) const
 		{
 			::VariantClear(_variant);
 			this->get_impl(_propname, _variant);
 		}
 
-		void get(_In_ LPCWSTR _propname, _Inout_ ctComVariant* _variant) const
+		void get(LPCWSTR _propname, _Inout_ ctComVariant* _variant) const
 		{
 			ctComVariant vtProp;
 			this->get_impl(_propname, vtProp.get());
@@ -569,7 +569,7 @@ namespace ctl
 		///
 		/// Overriding the get() function template to marshal a WMI instance from the underlying variant
 		///
-		void get(_In_ LPCWSTR _propname, _Inout_ ctComPtr<IWbemClassObject>* _instance) const
+		void get(LPCWSTR _propname, _Inout_ ctComPtr<IWbemClassObject>* _instance) const
 		{
 			ctComVariant vtProp;
 			this->get_impl(_propname, vtProp.get());
@@ -586,7 +586,7 @@ namespace ctl
 			(void)vtProp.retrieve<IWbemClassObject>(_instance);
 		}
 
-		void get(_In_ LPCWSTR _propname, _Inout_ ctWmiInstance* _instance) const
+		void get(LPCWSTR _propname, _Inout_ ctWmiInstance* _instance) const
 		{
 			ctComPtr<IWbemClassObject> instance_ptr(_instance->get_instance());
 			this->get(_propname, &instance_ptr);
@@ -594,7 +594,7 @@ namespace ctl
 			*_instance = ctWmiInstance(_instance->get_service(), instance_ptr);
 		}
 
-		void get(_In_ LPCWSTR _propname, _Inout_ std::vector<ctComPtr<IWbemClassObject>>* _instance) const
+		void get(LPCWSTR _propname, _Inout_ std::vector<ctComPtr<IWbemClassObject>>* _instance) const
 		{
 			ctComVariant vtProp;
 			this->get_impl(_propname, vtProp.get());
@@ -620,14 +620,14 @@ namespace ctl
 		/// on the BSTR returns, normally the appropriate MAX or MIN value on overflow and 0 on other
 		/// errors).
 		///
-		void get(_In_ LPCWSTR _propname, _Out_ UINT64* _t) const
+		void get(LPCWSTR _propname, _Out_ UINT64* _t) const
 		{
 			ctComBstr intermediaryStr;
 			this->get(_propname, &intermediaryStr);
 			*_t = _wcstoui64(intermediaryStr.get(), nullptr, 10);
 		}
 
-		void get(_In_ LPCWSTR _propname, _Out_ INT64* _t) const
+		void get(LPCWSTR _propname, _Out_ INT64* _t) const
 		{
 			ctComBstr intermediaryStr;
 			this->get(_propname, &intermediaryStr);
@@ -645,7 +645,7 @@ namespace ctl
 		/// This method does NOT do any overflow checking whatsoever. Be sure not to use this
 		/// specialization on anything that actually is an INT32.
 		///
-		void get(_In_ LPCWSTR _propname, _Out_ UINT16* _t) const
+		void get(LPCWSTR _propname, _Out_ UINT16* _t) const
 		{
 			INT32 intermediaryInt32;
 			this->get(_propname, &intermediaryInt32);
@@ -663,7 +663,7 @@ namespace ctl
 		///         - these are not yet implemented.
 		///
 		////////////////////////////////////////////////////////////////////////////////////
-		void set(_In_ LPCWSTR _propname, _In_ const VARIANT* _vtProp)
+		void set(LPCWSTR _propname, const VARIANT* _vtProp)
 		{
 			// IWbemClassObject::Put should have declared the VARIANT member const
 			const auto hr = this->instanceObject->Put(
@@ -673,7 +673,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const bool _vtProp)
+		void set(LPCWSTR _propname, const bool _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_BOOL>(_vtProp);
@@ -684,7 +684,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const char _vtProp)
+		void set(LPCWSTR _propname, const char _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_UI1>(_vtProp);
@@ -695,7 +695,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const unsigned char _vtProp)
+		void set(LPCWSTR _propname, const unsigned char _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_UI1>(_vtProp);
@@ -706,7 +706,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const short _vtProp)
+		void set(LPCWSTR _propname, const short _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I2>(_vtProp);
@@ -717,7 +717,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const unsigned short _vtProp)
+		void set(LPCWSTR _propname, const unsigned short _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I2>(_vtProp);
@@ -728,7 +728,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const long _vtProp)
+		void set(LPCWSTR _propname, const long _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I4>(_vtProp);
@@ -739,7 +739,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const unsigned long _vtProp)
+		void set(LPCWSTR _propname, const unsigned long _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I4>(_vtProp);
@@ -750,7 +750,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const int _vtProp)
+		void set(LPCWSTR _propname, const int _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I4>(_vtProp);
@@ -761,7 +761,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const unsigned int _vtProp)
+		void set(LPCWSTR _propname, const unsigned int _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_I4>(_vtProp);
@@ -772,7 +772,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const float _vtProp)
+		void set(LPCWSTR _propname, const float _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_R4>(_vtProp);
@@ -783,7 +783,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const double _vtProp)
+		void set(LPCWSTR _propname, const double _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_R8>(_vtProp);
@@ -794,7 +794,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const SYSTEMTIME _vtProp)
+		void set(LPCWSTR _propname, const SYSTEMTIME _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_DATE>(_vtProp);
@@ -805,7 +805,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const BSTR _vtProp)  // NOLINT
+		void set(LPCWSTR _propname, const BSTR _vtProp)  // NOLINT
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_BSTR>(_vtProp);
@@ -816,7 +816,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ LPCWSTR _vtProp)
+		void set(LPCWSTR _propname, LPCWSTR _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_BSTR>(_vtProp);
@@ -827,7 +827,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const std::vector<std::wstring>& _vtProp)
+		void set(LPCWSTR _propname, const std::vector<std::wstring>& _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_BSTR | VT_ARRAY>(_vtProp);
@@ -838,7 +838,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const std::vector<unsigned long>& _vtProp)
+		void set(LPCWSTR _propname, const std::vector<unsigned long>& _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_UI4 | VT_ARRAY>(_vtProp);
@@ -849,7 +849,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const std::vector<unsigned char>& _vtProp)
+		void set(LPCWSTR _propname, const std::vector<unsigned char>& _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_UI1 | VT_ARRAY>(_vtProp);
@@ -860,7 +860,7 @@ namespace ctl
 			}
 		}
 
-		void set(_In_ LPCWSTR _propname, _In_ const std::vector<unsigned short>& _vtProp)
+		void set(LPCWSTR _propname, const std::vector<unsigned short>& _vtProp)
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_UI2 | VT_ARRAY>(_vtProp);
@@ -879,7 +879,7 @@ namespace ctl
 		///   to the default value.
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void set_default(_In_ LPCWSTR _propname)
+		void set_default(LPCWSTR _propname)
 		{
 			const auto hr = this->instanceObject->Delete(_propname);
 			if (FAILED(hr)) {
@@ -891,7 +891,7 @@ namespace ctl
 		ctWmiService wbemServices;
 		ctComPtr<IWbemClassObject> instanceObject;
 
-		void get_impl(_In_ LPCWSTR _propname, _Inout_ VARIANT* _variant) const
+		void get_impl(LPCWSTR _propname, _Inout_ VARIANT* _variant) const
 		{
 			// since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
 			const auto hr = const_cast<IWbemClassObject*>(this->instanceObject.get())->Get(
@@ -901,7 +901,7 @@ namespace ctl
 			}
 		}
 
-		void create_instance(_In_ LPCWSTR _className)
+		void create_instance(LPCWSTR _className)
 		{
 			ctComBstr classBstr(_className);
 			ctComPtr<IWbemClassObject> classObject;
@@ -920,7 +920,7 @@ namespace ctl
 			}
 		}
 
-		ctWmiInstance execute_method_private(_In_ LPCWSTR _method, _In_opt_ IWbemClassObject* _inParams)
+		ctWmiInstance execute_method_private(LPCWSTR _method, _In_opt_ IWbemClassObject* _inParams)
 		{
 			auto bstrObjectPath(this->path());
 			//

@@ -187,7 +187,7 @@ namespace ctsTraffic {
             }                                                           \
         }
 
-        void PrintErrorIfFailed(_In_ LPCWSTR what, unsigned long why) NOEXCEPT;
+        void PrintErrorIfFailed(LPCWSTR what, unsigned long why) NOEXCEPT;
         void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
         // Override will always print to console regardless of settings (important if can't even start)
         void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;

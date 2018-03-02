@@ -223,15 +223,9 @@ namespace ctsTraffic {
                     }
                 }
             }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                return_status.io_errorcode = (0 == e.why()) ? WSAENOBUFS : e.why();
-                return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
-                return_status.io_started = false;
-            }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                return_status.io_errorcode = WSAENOBUFS;
+                return_status.io_errorcode = ctl::ctErrorCode(e);
                 return_status.io_done = (_shared_pattern->complete_io(next_io, 0, return_status.io_errorcode) != ctsIOStatus::ContinueIo);
                 return_status.io_started = false;
             }
@@ -321,15 +315,10 @@ namespace ctsTraffic {
                     shared_socket->set_timer(next_io, ctsProcessIOTaskCallback);
                     status.io_started = true; // IO started in the context of keeping the count incremented
                 }
-                catch (const ctl::ctException& e) {
-                    ctsConfig::PrintException(e);
-                    status.io_started = false;
-                    status.io_errorcode = e.why();
-                }
                 catch (const std::exception& e) {
                     ctsConfig::PrintException(e);
                     status.io_started = false;
-                    status.io_errorcode = WSAENOBUFS;
+                    status.io_errorcode = ctl::ctErrorCode(e);
                 }
 
             } else {

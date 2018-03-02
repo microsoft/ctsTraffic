@@ -41,12 +41,12 @@ BOOL WINAPI CtrlBreakHandlerRoutine(DWORD)
 }
 
 int
-__cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
+__cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
     int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
-        ::wprintf(L"ctsTraffic failed at WSAStartup [%u]\n", wsError);
+        ::wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 

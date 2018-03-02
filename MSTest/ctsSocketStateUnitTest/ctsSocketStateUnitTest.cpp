@@ -46,7 +46,7 @@ namespace ctsTraffic {
 	namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(_In_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(LPCWSTR _text, ...) NOEXCEPT
         {
             va_list args;
             va_start(args, _text);

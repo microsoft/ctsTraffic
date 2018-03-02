@@ -47,9 +47,9 @@ namespace ctsTraffic {
         class ctsSimpleAcceptImpl {
         private:
             PTP_WORK thread_pool_worker = nullptr;
-            TP_CALLBACK_ENVIRON thread_pool_environment;
+            TP_CALLBACK_ENVIRON thread_pool_environment{};
             // CS guards access to the accepting_sockets vector
-            CRITICAL_SECTION accepting_cs;
+            CRITICAL_SECTION accepting_cs{};
 
             std::vector<LONG> listening_sockets_refcount;
 
@@ -235,18 +235,14 @@ namespace ctsTraffic {
         };
 
         std::shared_ptr<ctsSimpleAcceptImpl> s_pimpl;
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static INIT_ONCE s_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
-        static BOOL CALLBACK s_ctsSimpleAcceptImplInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*)
+        static BOOL CALLBACK s_ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
         {
             try { s_pimpl = std::make_shared<ctsSimpleAcceptImpl>(); }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = e.why();
-                return FALSE;
-            }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = ERROR_OUTOFMEMORY;
+                *reinterpret_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
                 return FALSE;
             }
 

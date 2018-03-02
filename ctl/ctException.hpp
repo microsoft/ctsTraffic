@@ -58,18 +58,18 @@ namespace ctl
 		explicit ctException(const std::exception& e) NOEXCEPT;
 		explicit ctException(unsigned long _ulCode) NOEXCEPT;
 		explicit ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
+		explicit ctException(LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
 		explicit ctException(const std::wstring& _wsMessage) NOEXCEPT;
 		explicit ctException(const std::string& _sMessage) NOEXCEPT;
 
-		explicit ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT;
+		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
+		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT;
 		explicit ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy = true) NOEXCEPT;
 		explicit ctException(unsigned long _ulCode, const std::wstring& _wsMessage) NOEXCEPT;
 		explicit ctException(unsigned long _ulCode, const std::string& _sMessage) NOEXCEPT;
 
 		// ReSharper disable once CppHidingFunction
-		virtual ctException& operator=(_In_ const std::exception& e) NOEXCEPT;
+		virtual ctException& operator=(const std::exception& e) NOEXCEPT;
 
 		ctException(const ctException& e) NOEXCEPT;
 		ctException& operator=(const ctException& e) NOEXCEPT;
@@ -92,7 +92,7 @@ namespace ctl
 	private:
 		// private functions to alloc and copy string buffers
 		char* calloc_and_copy_s(_In_ LPCSTR tSrc) const NOEXCEPT;
-		wchar_t* calloc_and_copy_w(_In_ LPCWSTR tSrc) const NOEXCEPT;
+		wchar_t* calloc_and_copy_w(LPCWSTR tSrc) const NOEXCEPT;
 
 		// not making swap() public since the base class does not implement swap()
 		// - and that risks getting our objects out of sync
@@ -147,7 +147,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(_In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
+	inline ctException::ctException(LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage), // initializing with args
 		bMessageCopy_w(_bMessageCopy) // initializing with args
@@ -159,7 +159,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(_In_ const std::wstring& _wsMessage) NOEXCEPT :
+	inline ctException::ctException(const std::wstring& _wsMessage) NOEXCEPT :
 		std::exception("") // initialize the base c'tor
 	{
 		wszMessage = calloc_and_copy_w(_wsMessage.c_str());
@@ -168,7 +168,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(_In_ const std::string& _sMessage) NOEXCEPT :
+	inline ctException::ctException(const std::string& _sMessage) NOEXCEPT :
 		std::exception("") // initialize the base c'tor
 	{
 		szMessage = calloc_and_copy_s(_sMessage.c_str());
@@ -177,7 +177,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage), // initializing with args
 		ulCode(_ulCode), // initializing with args
@@ -190,7 +190,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, _In_ LPCWSTR _wszMessage, _In_ LPCWSTR _wszLocation,
+	inline ctException::ctException(unsigned long _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation,
 	                                bool _bBothStringCopy) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage),
@@ -220,7 +220,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, _In_ const std::wstring& _wsMessage) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, const std::wstring& _wsMessage) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		ulCode(_ulCode) // initializing with args
 	{
@@ -230,7 +230,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, _In_ const std::string& _sMessage) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, const std::string& _sMessage) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		ulCode(_ulCode) // initializing with args
 	{
@@ -240,7 +240,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(_In_ const std::exception& e) NOEXCEPT :
+	inline ctException::ctException(const std::exception& e) NOEXCEPT :
 		std::exception(e) // initialize the base c'tor
 	{
 		szMessage = calloc_and_copy_s(e.what());
@@ -254,7 +254,7 @@ namespace ctl
 	// Copy constructor
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException::ctException(_In_ const ctException& e) NOEXCEPT :
+	inline ctException::ctException(const ctException& e) NOEXCEPT :
 		std::exception(""), // initialize the base c'tor
 		szMessage(e.szMessage),
 		wszMessage(e.wszMessage),
@@ -283,14 +283,14 @@ namespace ctl
 	// - safe even if (this == &e)
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException& ctException::operator=(_In_ const std::exception& e) NOEXCEPT
+	inline ctException& ctException::operator=(const std::exception& e) NOEXCEPT
 	{
 		ctException ctTemp(e);
 		this->swap(ctTemp);
 		return *this;
 	}
 
-	inline ctException& ctException::operator=(_In_ const ctException& e) NOEXCEPT
+	inline ctException& ctException::operator=(const ctException& e) NOEXCEPT
 	{
 		// ReSharper disable once CppUseAuto
 		ctException ctTemp(e);
@@ -567,7 +567,7 @@ namespace ctl
 	//        - or nullptr if failed to allocate
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline wchar_t* ctException::calloc_and_copy_w(_In_ LPCWSTR tSrc) const NOEXCEPT
+	inline wchar_t* ctException::calloc_and_copy_w(LPCWSTR tSrc) const NOEXCEPT
 	{
 		// no need to copy a nullptr ptr
 		if (!tSrc) {
@@ -605,6 +605,23 @@ namespace ctl
 		swap(this->bMessageCopy_w, e.bMessageCopy_w);
 		swap(this->bLocationCopy_w, e.bLocationCopy_w);
 	}
+
+#ifdef _CPPRTTI
+	inline unsigned long ctErrorCode(const std::exception& _exception) NOEXCEPT
+	{
+		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
+		if (ctex) {
+			return ctex->why() == 0 ? ERROR_OUTOFMEMORY : ctex->why();
+		} else {
+			return ERROR_OUTOFMEMORY;
+		}
+	}
+#else
+	inline unsigned long ctErrorCode(const std::exception& _exception) NOEXCEPT
+	{
+		return ERROR_OUTOFMEMORY;
+	}
+#endif
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	//
@@ -697,7 +714,7 @@ namespace ctl
 	///
 	inline
 	__analysis_noreturn
-	void ctFatalCondition(_In_ const ctException& _exception) NOEXCEPT
+	void ctFatalCondition(const ctException& _exception) NOEXCEPT
 	{
 		ctFatalCondition(
 			true,
@@ -712,7 +729,7 @@ namespace ctl
 #ifdef _CPPRTTI
 	inline
 	__analysis_noreturn
-	void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
+	void ctFatalCondition(const std::exception& _exception) NOEXCEPT
 	{
 		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
 		if (ctex) {
@@ -727,7 +744,7 @@ namespace ctl
 #else
     inline
     __analysis_noreturn
-    void ctFatalCondition(_In_ const std::exception& _exception) NOEXCEPT
+    void ctFatalCondition(const std::exception& _exception) NOEXCEPT
     {
         ctFatalCondition(
             true,

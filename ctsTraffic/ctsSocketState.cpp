@@ -190,12 +190,7 @@ namespace ctsTraffic {
             case InternalState::Creating: {
                 unsigned long error = 0;
                 try { context->socket = make_shared<ctsSocket>(context->shared_from_this()); }
-                catch (const ctException& e) {
-                    error = e.why() == 0 ? ERROR_OUTOFMEMORY : e.why();
-                }
-                catch (const exception&) {
-                    error = ERROR_OUTOFMEMORY;
-                }
+                catch (const exception& e) { error = ctl::ctErrorCode(e); }
 
                 if (error != 0) {
                     context->complete_state(error);
@@ -224,12 +219,7 @@ namespace ctsTraffic {
             case InternalState::InitiatingIO: {
                 unsigned long error = 0;
                 try { context->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
-                catch (const ctException& e) {
-                    error = e.why() == 0 ? ERROR_OUTOFMEMORY : e.why();
-                }
-                catch (const exception&) {
-                    error = ERROR_OUTOFMEMORY;
-                }
+                catch (const exception& e) { error = ctl::ctErrorCode(e); }
 
                 if (error != 0) {
                     context->complete_state(error);

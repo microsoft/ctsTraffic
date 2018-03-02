@@ -124,12 +124,12 @@ namespace ctl
 			/// - throwing a ctWmiException object capturing the WMI failures
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(_In_ const iterator&) const NOEXCEPT;
-			bool operator!=(_In_ const iterator&) const NOEXCEPT;
+			bool operator==(const iterator&) const NOEXCEPT;
+			bool operator!=(const iterator&) const NOEXCEPT;
 
 			iterator& operator++(); // preincrement
-			iterator operator++(_In_ int); // postincrement
-			iterator& operator+=(_In_ DWORD); // increment by integer
+			iterator operator++(int); // postincrement
+			iterator& operator+=(DWORD); // increment by integer
 
 			////////////////////////////////////////////////////////////////////////////////
 			///
@@ -181,7 +181,7 @@ namespace ctl
 		/// Will throw a std::bad_alloc if fails to low-resources
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void query(_In_ LPCWSTR _query)
+		void query(LPCWSTR _query)
 		{
 			ctComBstr wql(L"WQL");
 			ctComBstr query(_query);
@@ -197,7 +197,7 @@ namespace ctl
 			}
 		}
 
-		void query(_In_ LPCWSTR _query, _In_ const ctComPtr<IWbemContext>& _context)
+		void query(LPCWSTR _query, const ctComPtr<IWbemContext>& _context)
 		{
 			ctComBstr wql(L"WQL");
 			ctComBstr query(_query);
@@ -282,7 +282,7 @@ namespace ctl
 	///
 	////////////////////////////////////////////////////////////////////////////////
 	inline
-	bool ctWmiEnumerate::iterator::operator==(_In_ const iterator& _iter) const NOEXCEPT
+	bool ctWmiEnumerate::iterator::operator==(const iterator& _iter) const NOEXCEPT
 	{
 		if (this->index != END_ITERATOR_INDEX) {
 			return (
@@ -296,7 +296,7 @@ namespace ctl
 	}
 
 	inline
-	bool ctWmiEnumerate::iterator::operator!=(_In_ const iterator& _iter) const NOEXCEPT
+	bool ctWmiEnumerate::iterator::operator!=(const iterator& _iter) const NOEXCEPT
 	{
 		return !(*this == _iter);
 	}
@@ -311,7 +311,7 @@ namespace ctl
 
 	// postincrement
 	inline
-	ctWmiEnumerate::iterator ctWmiEnumerate::iterator::operator++(_In_ int)
+	ctWmiEnumerate::iterator ctWmiEnumerate::iterator::operator++(int)
 	{
 		auto temp(*this);
 		this->increment();
@@ -320,7 +320,7 @@ namespace ctl
 
 	// increment by integer
 	inline
-	ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(_In_ DWORD _inc)
+	ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(DWORD _inc)
 	{
 		for (unsigned loop = 0; loop < _inc; ++loop) {
 			this->increment();

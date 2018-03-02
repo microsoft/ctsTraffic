@@ -53,7 +53,7 @@ namespace ctl
 		/// LPCWSTR _path: this is the WMI namespace path to connect with
 		///
 		/////////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiService(_In_ LPCWSTR _path)
+		explicit ctWmiService(LPCWSTR _path)
 		{
 			this->wbemLocator = ctComPtr<IWbemLocator>::createInstance(CLSID_WbemLocator, IID_IWbemLocator);
 
@@ -154,7 +154,7 @@ namespace ctl
 			return this->wbemServices.get();
 		}
 
-		void delete_path(_In_ LPCWSTR _objPath, _In_ const ctComPtr<IWbemContext>& _context)
+		void delete_path(LPCWSTR _objPath, const ctComPtr<IWbemContext>& _context)
 		{
 			ctComBstr bstrObjectPath(_objPath);
 			ctComPtr<IWbemCallResult> result;
@@ -191,7 +191,7 @@ namespace ctl
 		///    MyClass.MyProperty1='33',MyProperty2='value'
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void delete_path(_In_ LPCWSTR _objPath)
+		void delete_path(LPCWSTR _objPath)
 		{
 			const ctComPtr<IWbemContext> null_context;
 			delete_path(_objPath, null_context);

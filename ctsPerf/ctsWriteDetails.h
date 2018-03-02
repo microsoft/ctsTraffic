@@ -77,7 +77,7 @@ namespace ctsPerf {
 
     class ctsWriteDetails {
     private:
-        void start_row(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name) const noexcept;
+        void start_row(LPCWSTR _class_name, LPCWSTR _counter_name) const noexcept;
         void end_row() const noexcept;
 
         std::wstring file_name;
@@ -111,7 +111,7 @@ namespace ctsPerf {
             return formatted_data;
         }
 
-        explicit ctsWriteDetails(_In_ LPCWSTR _file_name) : file_name(_file_name)
+        explicit ctsWriteDetails(LPCWSTR _file_name) : file_name(_file_name)
         {
         }
         ~ctsWriteDetails() noexcept
@@ -153,7 +153,7 @@ namespace ctsPerf {
         // The vector *will* be sorted before being returned (this is why it's non-const).
         //
         template <typename T>
-        void write_details(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, std::vector<T>& _data)
+        void write_details(LPCWSTR _class_name, LPCWSTR _counter_name, std::vector<T>& _data)
         {
             if (_data.empty()) {
                 return;
@@ -172,7 +172,7 @@ namespace ctsPerf {
         }
 
         template <typename T>
-        void write_difference(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const std::vector<T>& _data)
+        void write_difference(LPCWSTR _class_name, LPCWSTR _counter_name, const std::vector<T>& _data)
         {
             if (_data.size() < 3) {
                 return;
@@ -193,7 +193,7 @@ namespace ctsPerf {
         }
 
         template <typename T>
-        void write_mean(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const std::vector<T>& _data)
+        void write_mean(LPCWSTR _class_name, LPCWSTR _counter_name, const std::vector<T>& _data)
         {
             if (_data.size() < 4) {
                 return;

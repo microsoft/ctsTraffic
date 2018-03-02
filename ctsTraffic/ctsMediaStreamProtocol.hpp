@@ -216,7 +216,7 @@ namespace ctsTraffic {
         /// - the total # of bytes to send (across X number of send requests)
         /// - the sequence number to tag in every send request
         ///
-        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, _In_ char* _send_buffer) NOEXCEPT 
+        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, const char* _send_buffer) NOEXCEPT 
         : wsabuf(),
           qpc_value(),
           qpf(ctl::ctTimer::snap_qpf()),
@@ -240,7 +240,7 @@ namespace ctsTraffic {
             this->wsabuf[3].buf = reinterpret_cast<char*>(&this->qpf);
             this->wsabuf[3].len = UdpDatagramQPFLength;
 
-            this->wsabuf[4].buf = _send_buffer;
+            this->wsabuf[4].buf = const_cast<char*>(_send_buffer);
             // the this->wsabuf[4].len field is dependent on bytes_to_send and can change by iterator()
         }
 
@@ -277,7 +277,7 @@ namespace ctsTraffic {
         }
 
 
-        static bool ValidateBufferLengthFromTask(_In_ const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+        static bool ValidateBufferLengthFromTask(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
         {
             if (_completed_bytes < UdpDatagramProtocolHeaderFlagLength) {
                 ctsConfig::PrintErrorInfo(
@@ -320,12 +320,12 @@ namespace ctsTraffic {
             return true;
         }
 
-        static unsigned short GetProtocolHeaderFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
+        static unsigned short GetProtocolHeaderFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             return *reinterpret_cast<unsigned short*>(_task.buffer);
         }
 
-        static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, _In_ const ctsIOTask& _task) NOEXCEPT
+        static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, const ctsIOTask& _task) NOEXCEPT
         {
             auto copy_error = ::memcpy_s(
                 _connection_id,
@@ -340,7 +340,7 @@ namespace ctsTraffic {
                 copy_error);
         }
 
-        static long long GetSequenceNumberFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
+        static long long GetSequenceNumberFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
             auto copy_error = ::memcpy_s(
@@ -357,7 +357,7 @@ namespace ctsTraffic {
             return return_value;
         }
 
-        static long long GetQueryPerfCounterFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
+        static long long GetQueryPerfCounterFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
             auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
@@ -370,7 +370,7 @@ namespace ctsTraffic {
             return return_value;
         }
 
-        static long long GetQueryPerfFrequencyFromTask(_In_ const ctsIOTask& _task) NOEXCEPT
+        static long long GetQueryPerfFrequencyFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
             auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
@@ -384,7 +384,7 @@ namespace ctsTraffic {
             return return_value;
         }
 
-        static ctsIOTask MakeConnectionIdTask(_In_ const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
+        static ctsIOTask MakeConnectionIdTask(const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 _raw_task.buffer_length != ctsStatistics::ConnectionIdLength + UdpDatagramProtocolHeaderFlagLength,
@@ -424,7 +424,7 @@ namespace ctsTraffic {
             return return_task;
         }
 
-        static ctsMediaStreamMessage Extract(_In_reads_bytes_(_input_length) const char* _input, _In_ unsigned _input_length)
+        static ctsMediaStreamMessage Extract(_In_reads_bytes_(_input_length) const char* _input, unsigned _input_length)
         {
             std::string buffer(_input, _input + _input_length);
 

@@ -103,7 +103,7 @@ namespace details {
     };
 
     template <TCP_ESTATS_TYPE TcpType>
-    void SetEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
+    void SetEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
     {
         const auto err = ::SetPerTcpConnectionEStats(
             tcpRow,
@@ -116,7 +116,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -127,7 +127,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -138,7 +138,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    void SetEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
+    void SetEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
     {
         const auto err = ::SetPerTcp6ConnectionEStats(
             tcpRow,
@@ -151,7 +151,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -162,7 +162,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(_In_ const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -180,10 +180,10 @@ namespace details {
         void PrintData() const = delete;
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const = delete;
+        void StartTracking(const PTCPROW tcpRow) const = delete;
 
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow) = delete;
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) = delete;
     };
 
     template <>
@@ -199,12 +199,12 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW) const
+        void StartTracking(const PTCPROW) const
         {
             // always on
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             if (MssRcvd == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
@@ -234,14 +234,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_DATA_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsData>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_DATA_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -282,14 +282,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_SND_CONG_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -302,9 +302,14 @@ namespace details {
                     Rod.SndLimTransSnd > 0x10000000 ||
                     Rod.SndLimTransCwnd > 0x10000000)
                 {
+                    WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)localAddr.writeCompleteAddress(local_address);
+                    WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)remoteAddr.writeCompleteAddress(remote_address);
+
                     ++invalidValues;
                     printf(
-                        "Bad TcpConnectionEstatsSndCong (TCP_ESTATS_SND_CONG_ROD_v0): "
+                        "[%ws : %ws] Bad TcpConnectionEstatsSndCong (TCP_ESTATS_SND_CONG_ROD_v0): "
                         "CurCwnd (%lX) "
                         "SndLimBytesRwin (%IX) "
                         "SndLimBytesSnd (%IX) "
@@ -312,6 +317,8 @@ namespace details {
                         "SndLimTransRwin (%lX) "
                         "SndLimTransSnd (%lX) "
                         "SndLimTransCwnd (%lX)\n",
+                        local_address,
+                        remote_address,
                         Rod.CurCwnd,
                         Rod.SndLimBytesRwin,
                         Rod.SndLimBytesSnd,
@@ -377,14 +384,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_PATH_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsPath>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_PATH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -397,9 +404,14 @@ namespace details {
                     (Rod.CongSignals > 0x10000000 && Rod.CongSignals != UninitializedUlong) ||
                     (Rod.CurMss > 0x10000000 && Rod.CurMss != UninitializedUlong))
                 {
+                    WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)localAddr.writeCompleteAddress(local_address);
+                    WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)remoteAddr.writeCompleteAddress(remote_address);
+
                     ++invalidValues;
                     printf(
-                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "[%ws : %ws] Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
                         "CurRto (%lX) "
                         "SmoothedRtt (%lX) "
                         "BytesRetrans (%lX) "
@@ -407,6 +419,8 @@ namespace details {
                         "SacksRcvd (%lX) "
                         "CongSignals (%lX) "
                         "CurMss (%lX)\n",
+                        local_address,
+                        remote_address,
                         Rod.CurRto,
                         Rod.SmoothedRtt,
                         Rod.BytesRetrans,
@@ -473,14 +487,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_REC_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsRec>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -490,12 +504,19 @@ namespace details {
                     (Rod.MaxRwinSent > 0x10000000 && Rod.MaxRwinSent != UninitializedUlong) ||
                     (Rod.MinRwinSent != UninitializedUlong && Rod.MinRwinSent > Rod.MaxRwinSent && Rod.MaxRwinSent > 0))
                 {
+                    WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)localAddr.writeCompleteAddress(local_address);
+                    WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)remoteAddr.writeCompleteAddress(remote_address);
+
                     ++invalidValues;
                     printf(
-                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "[%ws : %ws] Bad TcpConnectionEstatsRec (TCP_ESTATS_REC_ROD_v0): "
                         "CurRwinSent (%lX) "
                         "MinRwinSent (%lX) "
                         "MaxRwinSent (%lX)\n",
+                        local_address,
+                        remote_address,
                         Rod.CurRwinSent,
                         Rod.MinRwinSent,
                         Rod.MaxRwinSent);
@@ -549,14 +570,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_OBS_REC_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -566,12 +587,19 @@ namespace details {
                     (Rod.MaxRwinRcvd > 0x10000000 && Rod.MaxRwinRcvd != UninitializedUlong) ||
                     (Rod.MinRwinRcvd != UninitializedUlong && Rod.MinRwinRcvd > Rod.MaxRwinRcvd && Rod.MaxRwinRcvd > 0))
                 {
+                    WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)localAddr.writeCompleteAddress(local_address);
+                    WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
+                    (void)remoteAddr.writeCompleteAddress(remote_address);
+
                     ++invalidValues;
                     printf(
-                        "Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
+                        "[%ws : %ws] Bad TcpConnectionEstatsObsRec (TCP_ESTATS_OBS_REC_ROD_v0): "
                         "CurRwinRcvd (%lX) "
                         "MinRwinRcvd (%lX) "
                         "MaxRwinRcvd (%lX)\n",
+                        local_address,
+                        remote_address,
                         Rod.CurRwinRcvd,
                         Rod.MinRwinRcvd,
                         Rod.MaxRwinRcvd);
@@ -610,7 +638,7 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_BANDWIDTH_RW_v0 Rw;
             Rw.EnableCollectionInbound = TcpBoolOptEnabled;
@@ -618,7 +646,7 @@ namespace details {
             SetEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -641,14 +669,14 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(_In_ const PTCPROW tcpRow) const
+        void StartTracking(const PTCPROW tcpRow) const
         {
             TCP_ESTATS_FINE_RTT_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(_In_ const PTCPROW tcpRow)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -676,7 +704,7 @@ namespace details {
         {
         }
 
-        explicit EstatsDataPoint(_In_ const PMIB_TCPROW pTcpRow) noexcept :  // NOLINT
+        explicit EstatsDataPoint(const PMIB_TCPROW pTcpRow) noexcept :  // NOLINT
             localAddr(AF_INET),
             remoteAddr(AF_INET)
         {
@@ -693,7 +721,7 @@ namespace details {
                 ctl::ByteOrder::NetworkOrder);
         }
 
-        explicit EstatsDataPoint(_In_ const PMIB_TCP6ROW pTcpRow) noexcept :  // NOLINT
+        explicit EstatsDataPoint(const PMIB_TCP6ROW pTcpRow) noexcept :  // NOLINT
             localAddr(AF_INET6),
             remoteAddr(AF_INET6)
         {
@@ -758,7 +786,7 @@ namespace details {
         void UpdateData(T tcpRow, ULONG currentCounter) const
         {
             latestCounter = currentCounter;
-            data.UpdateData(tcpRow);
+            data.UpdateData(tcpRow, localAddr, remoteAddr);
         }
 
         ctl::ctSockaddr LocalAddr() const noexcept

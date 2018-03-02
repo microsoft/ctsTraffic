@@ -31,7 +31,6 @@ namespace ctl
 	public:
 		_Acquires_lock_(*this->cs)
 		_Post_same_lock_(*_cs, *this->cs)
-
 		explicit ctAutoReleaseCriticalSection(_In_ CRITICAL_SECTION* _cs) NOEXCEPT :
 			cs(_cs)
 		{
@@ -39,7 +38,6 @@ namespace ctl
 		}
 
 		_Releases_lock_(*this->cs)
-
 		~ctAutoReleaseCriticalSection() NOEXCEPT
 		{
 			::LeaveCriticalSection(this->cs);
@@ -80,7 +78,6 @@ namespace ctl
 		// - we want to interrupt the IO path so we can initiate more IO if we need to grow the CQ
 		_Acquires_exclusive_lock_(this->srwlock)
 		_Acquires_lock_(this->cs)
-
 		void priority_lock() NOEXCEPT
 		{
 			::AcquireSRWLockExclusive(&srwlock);
@@ -89,7 +86,6 @@ namespace ctl
 
 		_Releases_lock_(this->cs)
 		_Releases_exclusive_lock_(this->srwlock)
-
 		void priority_release() NOEXCEPT
 		{
 			::LeaveCriticalSection(&cs);
@@ -98,7 +94,6 @@ namespace ctl
 
 		_Acquires_shared_lock_(this->srwlock)
 		_Acquires_lock_(this->cs)
-
 		void default_lock() NOEXCEPT
 		{
 			::AcquireSRWLockShared(&srwlock);
@@ -107,7 +102,6 @@ namespace ctl
 
 		_Releases_lock_(this->cs)
 		_Releases_shared_lock_(this->srwlock)
-
 		void default_release() NOEXCEPT
 		{
 			::LeaveCriticalSection(&cs);
@@ -184,24 +178,24 @@ namespace ctl
 	///  long *
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	inline long long ctMemoryGuardRead(_In_ const long long* _original_value) NOEXCEPT
+	inline long long ctMemoryGuardRead(const long long* _original_value) NOEXCEPT
 	{
-		return ::InterlockedCompareExchange64(const_cast<volatile long long*>(_original_value), 0LL, 0LL);
+		return ::InterlockedCompareExchange64(const_cast<long long*>(_original_value), 0LL, 0LL);
 	}
 
-	inline long ctMemoryGuardRead(_In_ const long* _original_value) NOEXCEPT
+	inline long ctMemoryGuardRead(const long* _original_value) NOEXCEPT
 	{
-		return ::InterlockedCompareExchange(const_cast<volatile long*>(_original_value), 0LL, 0LL);
+		return ::InterlockedCompareExchange(const_cast<long*>(_original_value), 0LL, 0LL);
 	}
 
 	inline long long ctMemoryGuardRead(_In_ long long* _original_value) NOEXCEPT
 	{
-		return ::InterlockedCompareExchange64(const_cast<volatile long long*>(_original_value), 0LL, 0LL);
+		return ::InterlockedCompareExchange64(_original_value, 0LL, 0LL);
 	}
 
 	inline long ctMemoryGuardRead(_In_ long* _original_value) NOEXCEPT
 	{
-		return ::InterlockedCompareExchange(const_cast<volatile long*>(_original_value), 0LL, 0LL);
+		return ::InterlockedCompareExchange(_original_value, 0LL, 0LL);
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////

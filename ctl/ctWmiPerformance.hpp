@@ -94,7 +94,7 @@ namespace ctl {
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         inline
-        ctComVariant ctReadIWbemObjectAccess(_In_ IWbemObjectAccess* _instance, _In_ LPCWSTR _counter_name)
+        ctComVariant ctReadIWbemObjectAccess(IWbemObjectAccess* _instance, LPCWSTR _counter_name)
         {
             LONG property_handle;
             CIMTYPE property_type;
@@ -198,7 +198,7 @@ namespace ctl {
         public:
             typedef typename std::vector<TAccess*>::const_iterator access_iterator;
 
-            ctWmiPerformanceDataAccessor(_In_ ctComPtr<IWbemConfigureRefresher> _config, _In_ LPCWSTR _classname);
+            ctWmiPerformanceDataAccessor(ctComPtr<IWbemConfigureRefresher> _config, LPCWSTR _classname);
 
             ~ctWmiPerformanceDataAccessor() NOEXCEPT
             {
@@ -257,7 +257,7 @@ namespace ctl {
         };
 
         inline
-        ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::ctWmiPerformanceDataAccessor(_In_ ctComPtr<IWbemConfigureRefresher> _config, _In_ LPCWSTR _classname)
+        ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::ctWmiPerformanceDataAccessor(ctComPtr<IWbemConfigureRefresher> _config, LPCWSTR _classname)
         : enumeration_object(),
           accessor_objects(),
           current_iterator(accessor_objects.end())
@@ -278,7 +278,7 @@ namespace ctl {
         }
 
         inline
-        ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::ctWmiPerformanceDataAccessor(_In_ ctComPtr<IWbemConfigureRefresher> _config, _In_ LPCWSTR _classname)
+        ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::ctWmiPerformanceDataAccessor(ctComPtr<IWbemConfigureRefresher> _config, LPCWSTR _classname)
         : enumeration_object(),
           accessor_objects(),
           current_iterator(accessor_objects.end())
@@ -474,8 +474,8 @@ namespace ctl {
         public:
             ctWmiPeformanceCounterData(
                 const ctWmiPerformanceCollectionType _collection_type,
-                _In_ IWbemObjectAccess* _instance,
-                _In_ LPCWSTR _counter)
+                IWbemObjectAccess* _instance,
+                LPCWSTR _counter)
             : collection_type(_collection_type),
               instance_name(ctReadIWbemObjectAccess(_instance, L"Name")->bstrVal),
               counter_name(_counter)
@@ -490,8 +490,8 @@ namespace ctl {
             }
             ctWmiPeformanceCounterData(
                 const ctWmiPerformanceCollectionType _collection_type,
-                _In_ IWbemClassObject* _instance,
-                _In_ LPCWSTR _counter)
+                IWbemClassObject* _instance,
+                LPCWSTR _counter)
             : collection_type(_collection_type),
               counter_name(_counter)
             {
@@ -539,13 +539,13 @@ namespace ctl {
                 return ctString::iordinal_equals(instance_name, _instance_name);
             }
 
-            void add(_In_ IWbemObjectAccess* _instance)
+            void add(IWbemObjectAccess* _instance)
             {
                 T instance_data;
                 ctReadIWbemObjectAccess(_instance, counter_name.c_str()).retrieve(&instance_data);
                 add_data(instance_data);
             }
-            void add(_In_ IWbemClassObject* _instance)
+            void add(IWbemClassObject* _instance)
             {
                 ctComVariant value;
                 const HRESULT hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
@@ -600,7 +600,7 @@ namespace ctl {
         /// WMI passes around 64-bit integers as BSTR's, so must specialize reading those values to do the proper conversion
         ///
         template <>
-        inline void ctWmiPeformanceCounterData<ULONGLONG>::add(_In_ IWbemClassObject* _instance)
+        inline void ctWmiPeformanceCounterData<ULONGLONG>::add(IWbemClassObject* _instance)
         {
             ctComVariant value;
             const auto hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
@@ -625,7 +625,7 @@ namespace ctl {
         }
 
         template <>
-        inline void ctWmiPeformanceCounterData<LONGLONG>::add(_In_ IWbemClassObject* _instance)
+        inline void ctWmiPeformanceCounterData<LONGLONG>::add(IWbemClassObject* _instance)
         {
             ctComVariant value;
             const auto hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
@@ -649,12 +649,12 @@ namespace ctl {
             add_data(::_wcstoi64(value->bstrVal, nullptr, 10));
         }
 
-        inline ctComVariant ctQueryInstanceName(_In_ IWbemObjectAccess* _instance)
+        inline ctComVariant ctQueryInstanceName(IWbemObjectAccess* _instance)
         {
             return ctReadIWbemObjectAccess(_instance, L"Name");
         }
 
-        inline ctComVariant ctQueryInstanceName(_In_ IWbemClassObject* _instance)
+        inline ctComVariant ctQueryInstanceName(IWbemClassObject* _instance)
         {
             ctComVariant value;
             const auto hr = _instance->Get(L"Name", 0, value.get(), nullptr, nullptr);
@@ -729,24 +729,24 @@ namespace ctl {
             /// move c'tor and move assignment
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            iterator(_In_ iterator&& _i) NOEXCEPT
+            iterator(iterator&& _i) NOEXCEPT
             : current(std::move(_i.current)),
               is_empty(std::move(_i.is_empty))
             {
             }
-            iterator& operator =(_In_ iterator&& _i) NOEXCEPT
+            iterator& operator =(iterator&& _i) NOEXCEPT
             {
                 current = std::move(_i.current);
                 is_empty = std::move(_i.is_empty);
                 return *this;
             }
 
-            iterator(_In_ const iterator& _i) NOEXCEPT
+            iterator(const iterator& _i) NOEXCEPT
             : current(_i.current),
               is_empty(_i.is_empty)
             {
             }
-            iterator& operator =(_In_ const iterator& i) NOEXCEPT
+            iterator& operator =(const iterator& i) NOEXCEPT
             {
                 iterator local_copy(i);
                 *this = std::move(local_copy);
@@ -771,14 +771,14 @@ namespace ctl {
             }
             */
 
-            bool operator==(_In_ const iterator& _iter) const NOEXCEPT
+            bool operator==(const iterator& _iter) const NOEXCEPT
             {
                 if (is_empty || _iter.is_empty) {
                     return (is_empty == _iter.is_empty);
                 }
                 return (current == _iter.current);
             }
-            bool operator!=(_In_ const iterator& _iter) const NOEXCEPT
+            bool operator!=(const iterator& _iter) const NOEXCEPT
             {
                 return !(*this == _iter);
             }
@@ -793,7 +793,7 @@ namespace ctl {
                 return *this;
             }
             // postincrement
-            iterator operator++(_In_ int)
+            iterator operator++(int)
             {
                 if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
@@ -803,7 +803,7 @@ namespace ctl {
                 return temp;
             }
             // increment by integer
-            iterator& operator+=(_In_ size_t _inc)
+            iterator& operator+=(size_t _inc)
             {
                 if (is_empty) {
                     throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
@@ -815,7 +815,7 @@ namespace ctl {
             }
         };
 
-        ctWmiPerformanceCounter(_In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        ctWmiPerformanceCounter(LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
         : collection_type(_collection_type),
           counter_name(_counter_name)
         {
@@ -837,7 +837,7 @@ namespace ctl {
         /// *not* thread-safe: caller must guarantee sequential access to add_filter()
         ///
         template <typename V>
-        void add_filter(_In_ LPCWSTR _counter_name, _In_ V _property_value)
+        void add_filter(LPCWSTR _counter_name, V _property_value)
         {
             ctFatalCondition(
                 !data_stopped,
@@ -849,7 +849,7 @@ namespace ctl {
         /// returns a begin/end pair of interator that exposes data for each time-slice
         /// - static classes will have a null instance name
         ///
-        std::pair<iterator, iterator> reference_range(_In_ LPCWSTR _instance_name = nullptr)
+        std::pair<iterator, iterator> reference_range(_In_opt_ LPCWSTR _instance_name = nullptr)
         {
             ctFatalCondition(
                 !data_stopped,
@@ -879,7 +879,7 @@ namespace ctl {
             const std::wstring counter_name;
             const ctComVariant property_value;
 
-            ctWmiPerformanceInstanceFilter(_In_ LPCWSTR _counter_name, _In_ ctComVariant _property_value)
+            ctWmiPerformanceInstanceFilter(LPCWSTR _counter_name, ctComVariant _property_value)
             : counter_name(_counter_name),
               property_value(std::move(_property_value))
             {
@@ -890,16 +890,16 @@ namespace ctl {
             ctWmiPerformanceInstanceFilter(ctWmiPerformanceInstanceFilter&&) = default;
             ctWmiPerformanceInstanceFilter& operator=(ctWmiPerformanceInstanceFilter&&) = default;
 
-            bool operator==(_In_ IWbemObjectAccess* _instance) const
+            bool operator==(IWbemObjectAccess* _instance) const
             {
                 return property_value == details::ctReadIWbemObjectAccess(_instance, counter_name.c_str());
             }
-            bool operator!=(_In_ IWbemObjectAccess* _instance) const
+            bool operator!=(IWbemObjectAccess* _instance) const
             {
                 return !(*this == _instance);
             }
 
-            bool operator==(_In_ IWbemClassObject* _instance) const
+            bool operator==(IWbemClassObject* _instance) const
             {
                 ctComVariant value;
                 const auto hr = _instance->Get(counter_name.c_str(), 0, value.get(), nullptr, nullptr);
@@ -918,7 +918,7 @@ namespace ctl {
 
                 return property_value == value;
             }
-            bool operator!=(_In_ IWbemClassObject* _instance) const
+            bool operator!=(IWbemClassObject* _instance) const
             {
                 return !(*this == _instance);
             }
@@ -983,7 +983,7 @@ namespace ctl {
         // - it's also how to access the data is captured with the TAccess template type
         //
         template <typename TAccess>
-        void add_instance(_In_ TAccess* _instance)
+        void add_instance(TAccess* _instance)
         {
             bool fAddData = instance_filter.empty();
             if (!fAddData) {
@@ -1044,7 +1044,7 @@ namespace ctl {
     template <typename TEnum, typename TAccess, typename TData>
     class ctWmiPerformanceCounterImpl : public ctWmiPerformanceCounter<TData> {
     public:
-        ctWmiPerformanceCounterImpl(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
+        ctWmiPerformanceCounterImpl(LPCWSTR _class_name, LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type)
         : ctWmiPerformanceCounter<TData>(_counter_name, _collection_type),
           accessor(this->access_refresher(), _class_name) // must qualify this name lookup to access access_refresher since it's in the base class
         {
@@ -1267,11 +1267,11 @@ namespace ctl {
         const unsigned long stringFieldNameCount = 0;
         const wchar_t** stringFieldNames = nullptr;
 
-        template <typename T> bool PropertyNameExists(_In_ LPCWSTR name) const NOEXCEPT;
+        template <typename T> bool PropertyNameExists(LPCWSTR name) const NOEXCEPT;
     };
 
     template <> 
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(_In_ LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(LPCWSTR name) const NOEXCEPT
     {
         for (unsigned counter = 0; counter < this->ulongFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->ulongFieldNames[counter])) {
@@ -1282,7 +1282,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(_In_ LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(LPCWSTR name) const NOEXCEPT
     {
         for (unsigned counter = 0; counter < this->ulonglongFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->ulonglongFieldNames[counter])) {
@@ -1293,7 +1293,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(_In_ LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(LPCWSTR name) const NOEXCEPT
     {
         for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->stringFieldNames[counter])) {
@@ -1304,7 +1304,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ctComBstr>(_In_ LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ctComBstr>(LPCWSTR name) const NOEXCEPT
     {
         for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->stringFieldNames[counter])) {
@@ -1742,21 +1742,21 @@ namespace ctl {
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(LPCWSTR _class_name, LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         // 'static' WMI PerfCounters enumerate via IWbemClassObject and accessed/refreshed via IWbemClassObject
         return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(_class_name, _counter_name, _collection_type);
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(_In_ LPCWSTR _class_name, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(LPCWSTR _class_name, LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         // 'instance' WMI perf objects are enumerated through the IWbemHiPerfEnum interface and accessed/refreshed through the IWbemObjectAccess interface
         return std::make_shared<ctWmiPerformanceCounterImpl<IWbemHiPerfEnum, IWbemObjectAccess, T>>(_class_name, _counter_name, _collection_type);
     }
 
     template <typename T>
-    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiClassName& _class, _In_ LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
+    std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiClassName& _class, LPCWSTR _counter_name, const ctWmiPerformanceCollectionType _collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         const ctWmiPerformanceCounterProperties* foundProperty = nullptr;
         for (const auto& counterProperty : ctWmiPerformanceDetails::PerformanceCounterPropertiesArray) {

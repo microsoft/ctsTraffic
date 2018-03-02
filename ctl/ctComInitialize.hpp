@@ -252,7 +252,7 @@ namespace ctl
 		/// A no-throw/no-fail operation
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void set(_In_ const T* _ptr) NOEXCEPT
+		void set(const T* _ptr) NOEXCEPT
 		{
 			release();
 			t = _ptr;
@@ -415,7 +415,7 @@ namespace ctl
 			}
 		}
 
-		ctComBstr(_In_reads_z_(_len) LPCWSTR _string, _In_ size_t _len)
+		ctComBstr(_In_reads_z_(_len) LPCWSTR _string, size_t _len)
 		{
 			if (_string) {
 				bstr = ::SysAllocStringLen(_string, static_cast<UINT>(_len));
@@ -472,7 +472,7 @@ namespace ctl
 			return SysStringLen(bstr);
 		}
 
-		void resize(_In_ size_t string_length)
+		void resize(size_t string_length)
 		{
 			if (bstr) {
 				if (!::SysReAllocStringLen(&bstr, nullptr, static_cast<unsigned int>(string_length))) {
@@ -741,7 +741,7 @@ namespace ctl
 			::VariantInit(&variant);
 		}
 
-		explicit ctComVariant(_In_ const VARIANT* _vt)
+		explicit ctComVariant(const VARIANT* _vt)
 		{
 			::VariantInit(&variant);
 			const auto hr = ::VariantCopy(&variant, _vt);
@@ -798,7 +798,7 @@ namespace ctl
 			::VariantInit(&variant);
 		}
 
-		void set(_In_ const VARIANT* _vt)
+		void set(const VARIANT* _vt)
 		{
 			ctComVariant temp(_vt);
 			this->swap(temp);
@@ -871,7 +871,7 @@ namespace ctl
 		/// comparison operators
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		bool operator ==(_In_ const ctComVariant& _in) const NOEXCEPT
+		bool operator ==(const ctComVariant& _in) const NOEXCEPT
 		{
 			if (variant.vt == VT_NULL) {
 				return _in.variant.vt == VT_NULL;
@@ -988,7 +988,7 @@ namespace ctl
 			return lhs == rhs;
 		}
 
-		bool operator !=(_In_ const ctComVariant& _in) const NOEXCEPT
+		bool operator !=(const ctComVariant& _in) const NOEXCEPT
 		{
 			return !(*this == _in);
 		}
@@ -999,7 +999,7 @@ namespace ctl
 		/// - optional [in] parameter affects how to print if an integer-type
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComBstr write(_In_ bool _int_in_hex = false) const
+		ctComBstr write(bool _int_in_hex = false) const
 		{
 			static const unsigned IntegerLength = 32;
 			ctComBstr bstr;
@@ -1179,7 +1179,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename T>
-		ctComVariant& assign(_In_ ctComPtr<T> _t)
+		ctComVariant& assign(ctComPtr<T> _t)
 		{
 			ctComVariant temp;
 			temp.assign_impl(_t);
@@ -1188,7 +1188,7 @@ namespace ctl
 		}
 
 		template <typename T>
-		ctComVariant& assign(_In_ std::vector<ctComPtr<T>> _t)
+		ctComVariant& assign(std::vector<ctComPtr<T>> _t)
 		{
 			ctComVariant temp;
 			temp.assign_impl(_t);
@@ -1197,7 +1197,7 @@ namespace ctl
 		}
 
 		template <VARTYPE VT>
-		ctComVariant& assign(_In_ typename VarTypeConverter<VT>::assign_type _t)
+		ctComVariant& assign(typename VarTypeConverter<VT>::assign_type _t)
 		{
 			ctComVariant temp;
 			temp.assign_impl(_t);
@@ -1867,7 +1867,7 @@ namespace ctl
 			variant.vt = VT_DATE;
 		}
 
-		void assign_impl(_In_ const std::vector<std::wstring>& _data)
+		void assign_impl(const std::vector<std::wstring>& _data)
 		{
 			SAFEARRAY* temp_safe_array = ::SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(_data.size()));
 			if (!temp_safe_array) {
