@@ -63,6 +63,7 @@ namespace ctsTraffic {
         {
             _rvalue.movedFrom = true;
         }
+        ctsSocketGuard& operator=(ctsSocketGuard&& _rvalue) NOEXCEPT = delete;
 
         SOCKET get() const NOEXCEPT
         {
@@ -76,8 +77,9 @@ namespace ctsTraffic {
         ctsSocketGuard& operator=(const ctsSocketGuard&) = delete;
 
     private:
-        template <typename T>
-        friend ctsSocketGuard<T> ctsGuardSocket(const T&);
+        template <typename G>
+        friend ctsSocketGuard<G> ctsGuardSocket(const G&);
+
         const T& t;
         // tracking moved from by hand, as we cannot modify the const ref
         bool movedFrom;

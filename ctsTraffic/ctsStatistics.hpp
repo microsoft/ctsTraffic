@@ -13,9 +13,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 // cpp headers
-#include <wchar.h>
-#include <string.h>
-#include <memory.h>
+#include <cwchar>
+#include <cstring>
 // os headers
 #include <Windows.h>
 #include <rpc.h>
@@ -99,7 +98,9 @@ namespace ctsTraffic
         {
         }
         // not allowing assignment operator - must be explicit
-        ctStatsTracking& operator=(const ctStatsTracking& _in) = delete;
+        ctStatsTracking& operator=(const ctStatsTracking&) = delete;
+        ctStatsTracking(ctStatsTracking&&) = delete;
+        ctStatsTracking& operator=(ctStatsTracking&&) = delete;
 
         long long get() const NOEXCEPT
         {
@@ -161,8 +162,8 @@ namespace ctsTraffic
         //
         long long snap_value_difference() NOEXCEPT
         {
-            long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
-            long long capture_prior_value = ctl::ctMemoryGuardWrite(&previous_value, capture_current_value);
+            const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
+            const long long capture_prior_value = ctl::ctMemoryGuardWrite(&previous_value, capture_current_value);
             return capture_current_value - capture_prior_value;
         }
         //
@@ -171,19 +172,14 @@ namespace ctsTraffic
         //
         long long read_value_difference() const NOEXCEPT
         {
-            long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
-            long long capture_prior_value = ctl::ctMemoryGuardRead(&previous_value);
+            const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
+            const long long capture_prior_value = ctl::ctMemoryGuardRead(&previous_value);
             return capture_current_value - capture_prior_value;
         }
     };
 
 
     struct ctsConnectionStatistics {
-    private:
-        // not implementing the assignment operator
-        // only implemeting the copy c'tor (due to maintaining memory barriers)
-        ctsConnectionStatistics& operator=(const ctsConnectionStatistics& _in) = delete;
-
     public:
         ctStatsTracking start_time;
         ctStatsTracking end_time;
@@ -201,18 +197,10 @@ namespace ctsTraffic
             protocol_error_count(0LL)
         {
         }
-        //
-        // implementing the copy c'tor with memory barriers in place
-        //
-        ctsConnectionStatistics(const ctsConnectionStatistics& _in) NOEXCEPT :
-            start_time(_in.start_time),
-            end_time(_in.end_time),
-            active_connection_count(_in.active_connection_count),
-            successful_completion_count(_in.successful_completion_count),
-            connection_error_count(_in.connection_error_count),
-            protocol_error_count(_in.protocol_error_count)
-        {
-        }
+        ctsConnectionStatistics(const ctsConnectionStatistics&) = default;
+        // not implementing the assignment operator
+        // only implemeting the copy c'tor (due to maintaining memory barriers)
+        ctsConnectionStatistics& operator=(const ctsConnectionStatistics& _in) = delete;
         //
         // snap_view() will return a statistics object capturing the current values
         // - resetting only the start_time value if the _In_ bool is true
@@ -222,8 +210,8 @@ namespace ctsTraffic
         //
         ctsConnectionStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
-            long long prior_time_read = (_clear_settings) ?
+            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
 
@@ -240,9 +228,6 @@ namespace ctsTraffic
     };
 
     struct ctsUdpStatistics {
-    private:
-        ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
-
     public:
         ctStatsTracking start_time;
         ctStatsTracking end_time;
@@ -252,7 +237,7 @@ namespace ctsTraffic
         ctStatsTracking duplicate_frames;
         ctStatsTracking error_frames;
         // unique connection identifier
-        char connection_identifier[ctsStatistics::ConnectionIdLength];
+        char connection_identifier[ctsStatistics::ConnectionIdLength]{};
 
         explicit ctsUdpStatistics(long long _start_time = 0LL) NOEXCEPT :
             start_time(_start_time),
@@ -282,7 +267,9 @@ namespace ctsTraffic
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
 
-        long long current_bytes() NOEXCEPT
+        ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
+
+        long long current_bytes() const NOEXCEPT
         {
             return this->bits_received.get() / 8;
         }
@@ -292,8 +279,8 @@ namespace ctsTraffic
         //
         ctsUdpStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
-            long long prior_time_read = (_clear_settings) ?
+            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
 
@@ -320,16 +307,13 @@ namespace ctsTraffic
     };
 
     struct ctsTcpStatistics {
-    private:
-        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
-
     public:
         ctStatsTracking start_time;
         ctStatsTracking end_time;
         ctStatsTracking bytes_sent;
         ctStatsTracking bytes_recv;
         // unique connection identifier
-        char connection_identifier[ctsStatistics::ConnectionIdLength];
+        char connection_identifier[ctsStatistics::ConnectionIdLength]{};
 
         explicit ctsTcpStatistics(long long _current_time = 0LL) NOEXCEPT :
             start_time(_current_time),
@@ -356,7 +340,9 @@ namespace ctsTraffic
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
 
-        long long current_bytes() NOEXCEPT
+        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
+
+        long long current_bytes() const NOEXCEPT
         {
             return this->bytes_recv.get() + this->bytes_sent.get();
         }
@@ -367,8 +353,8 @@ namespace ctsTraffic
         //
         ctsTcpStatistics snap_view(bool _clear_settings) NOEXCEPT
         {
-            long long current_time = ctl::ctTimer::snap_qpc_as_msec();
-            long long prior_time_read = (_clear_settings) ?
+            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
 

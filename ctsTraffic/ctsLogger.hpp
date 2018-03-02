@@ -14,7 +14,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <exception>
 #include <memory>
 // os headers
 #include <windows.h>
@@ -121,7 +120,7 @@ namespace ctsTraffic {
                 nullptr,
                 CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL,
-                NULL);
+                nullptr);
             if (INVALID_HANDLE_VALUE == file_handle) {
                 auto gle = ::GetLastError();
                 throw ctl::ctException(
@@ -167,7 +166,7 @@ namespace ctsTraffic {
         }
 
     private:
-        CRITICAL_SECTION file_cs;
+        CRITICAL_SECTION file_cs{};
         HANDLE file_handle = INVALID_HANDLE_VALUE;
 
         void write_impl(LPCWSTR _message) NOEXCEPT

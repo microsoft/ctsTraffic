@@ -58,7 +58,7 @@ namespace ctl
 		}
 
 		ctWmiProperties(ctWmiService _wbemServices, LPCWSTR _className) :
-			wbemServices(std::move(_wbemServices)), wbemClass()
+			wbemServices(std::move(_wbemServices))
 		{
 			const auto hr = this->wbemServices->GetObjectW(
 				ctComBstr(_className).get(),
@@ -181,7 +181,7 @@ namespace ctl
 			////////////////////////////////////////////////////////////////////////////////
 			ctComBstr& operator*()
 			{
-				if (this->dwIndex == ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
+				if (this->dwIndex == END_ITERATOR_INDEX) {
 					throw std::out_of_range("ctWmiProperties::iterator::operator - invalid subscript");
 				}
 				return this->propName;
@@ -189,7 +189,7 @@ namespace ctl
 
 			ctComBstr* operator->()
 			{
-				if (this->dwIndex == ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
+				if (this->dwIndex == END_ITERATOR_INDEX) {
 					throw std::out_of_range("ctWmiProperties::iterator::operator-> - invalid subscript");
 				}
 				return &(this->propName);
@@ -197,7 +197,7 @@ namespace ctl
 
 			CIMTYPE type() const
 			{
-				if (this->dwIndex == ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
+				if (this->dwIndex == END_ITERATOR_INDEX) {
 					throw std::out_of_range("ctWmiProperties::iterator::type - invalid subscript");
 				}
 				return this->propType;
@@ -214,7 +214,7 @@ namespace ctl
 			////////////////////////////////////////////////////////////////////////////////
 			bool operator==(const iterator& _iter) const NOEXCEPT
 			{
-				if (this->dwIndex != ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
+				if (this->dwIndex != END_ITERATOR_INDEX) {
 					return ((this->dwIndex == _iter.dwIndex) &&
 						(this->wbemClassObj == _iter.wbemClassObj));
 				}
@@ -246,7 +246,7 @@ namespace ctl
 			{
 				for (unsigned loop = 0; loop < _inc; ++loop) {
 					this->increment();
-					if (this->dwIndex == ctl::ctWmiProperties::iterator::END_ITERATOR_INDEX) {
+					if (this->dwIndex == END_ITERATOR_INDEX) {
 						throw std::out_of_range("ctWmiProperties::iterator::operator+= - invalid subscript");
 					}
 				}

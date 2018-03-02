@@ -91,7 +91,7 @@ namespace ctsTraffic {
 
         bool is_completed() const NOEXCEPT;
 
-        bool is_current_task_more_io() NOEXCEPT;
+        bool is_current_task_more_io() const NOEXCEPT;
         ctsIOPatternProtocolTask get_next_task() NOEXCEPT;
         void notify_next_task(const ctsIOTask& _next_task) NOEXCEPT;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT;
@@ -112,7 +112,7 @@ namespace ctsTraffic {
         //
         // Guard our internal tracking - all protocol logic assumes these rules
         //
-        auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
+        const auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
         ctl::ctFatalCondition(
             ((already_transferred < this->confirmed_bytes) || (already_transferred < this->inflight_bytes)),
             L"ctsIOPatternState internal overflow (already_transferred = this->current_transfer + this->inflight_bytes)\n"
@@ -152,7 +152,7 @@ namespace ctsTraffic {
         return (InternalPatternState::CompletedTransfer == this->internal_state || InternalPatternState::ErrorIOFailed == this->internal_state);
     }
 
-    inline bool ctsIOPatternState::is_current_task_more_io() NOEXCEPT
+    inline bool ctsIOPatternState::is_current_task_more_io() const NOEXCEPT
     {
         return (this->internal_state == InternalPatternState::MoreIo);
     }
@@ -283,7 +283,8 @@ namespace ctsTraffic {
                 PrintDebugInfo(
                     L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooFewBytes) [transfered %llu, Expected ConnectionID (%u)]\n",
                     static_cast<unsigned long long>(_completed_transfer_bytes),
-                    ctsStatistics::ConnectionIdLength);
+                    ctsStatistics::ConnectionIdLength)
+;
                 this->internal_state = InternalPatternState::ErrorIOFailed;
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
@@ -318,7 +319,7 @@ namespace ctsTraffic {
         //
         // Verify IO Post-condition protocol contracts haven't been violated
         //
-        auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
+        const auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
 
         //
         // Udp just tracks bytes

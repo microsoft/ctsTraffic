@@ -80,8 +80,10 @@ namespace ctsTraffic {
         //
         // copy c'tor and assignment
         //
-        ctsSocketState(const ctsSocketState& _copy) = delete;
-        ctsSocketState& operator=(const ctsSocketState& _copy) = delete;
+        ctsSocketState(const ctsSocketState&) = delete;
+        ctsSocketState& operator=(const ctsSocketState&) = delete;
+        ctsSocketState(ctsSocketState&&) = delete;
+        ctsSocketState& operator=(ctsSocketState&&) = delete;
 
     private:
         //

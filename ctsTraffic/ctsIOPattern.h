@@ -334,6 +334,10 @@ namespace ctsTraffic {
                 case ctsIOPatternProtocolError::SuccessfullyCompleted:
                     this->update_last_error(NO_ERROR);
                     break;
+
+            case ctsIOPatternProtocolError::NoError: break;
+            case ctsIOPatternProtocolError::ErrorIOFailed: break;
+            default: break;
             }
         }
 
@@ -350,12 +354,12 @@ namespace ctsTraffic {
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         _Acquires_lock_(cs)
-        void base_lock() NOEXCEPT
+        void base_lock() const NOEXCEPT
         {
             ::EnterCriticalSection(&this->cs);
         }
         _Releases_lock_(cs)
-        void base_unlock() NOEXCEPT
+        void base_unlock() const NOEXCEPT
         {
             ::LeaveCriticalSection(&this->cs);
         }
@@ -385,9 +389,9 @@ namespace ctsTraffic {
             // guarantee that end_pattern has been called at least once
             ctsIOPatternStatistics<S>::end_stats();
         }
-        ///
-        /// Printing of results is controlled by the applicable statistics type
-        ///
+        //
+        // Printing of results is controlled by the applicable statistics type
+        //
         void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override
         {
             // before printing the final results, make sure the timers are stopped
