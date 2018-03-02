@@ -24,6 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 #include <ctHandle.hpp>
+#include <utility>
 
 // project headers
 #include "ctsMediaStreamServerListeningSocket.h"
@@ -34,15 +35,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(ctl::ctScopedSocket&& _listening_socket, const ctl::ctSockaddr& _listening_addr) :
-        object_guard(),
+    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(ctl::ctScopedSocket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
         thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
-        recv_buffer(),
         socket(std::move(_listening_socket)),
-        listening_addr(_listening_addr),
-        remote_addr(),
-        remote_addr_len(0),
-        recv_flags(0)
+        listening_addr(std::move(_listening_addr))
     {
         ctl::ctFatalCondition(
             !!(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP),
@@ -162,7 +158,7 @@ namespace ctsTraffic {
         // Cannot be holding the object_guard when calling into any pimpl-> methods
         // - will risk deadlocking the server
         // Will store the pimpl call to be made in this std function to be exeucted outside the lock
-        std::function<void(void)> pimpl_operation(nullptr);
+        std::function<void()> pimpl_operation(nullptr);
 
         try {
             // scope to the object lock
@@ -179,7 +175,7 @@ namespace ctsTraffic {
                 if (!::WSAGetOverlappedResult(this->socket.get(), _ov, &bytes_received, FALSE, &this->recv_flags)) {
                     // recvfrom failed
                     try {
-                        auto gle = ::WSAGetLastError();
+                        const auto gle = ::WSAGetLastError();
                         if (WSAECONNRESET == gle) {
                             ctsConfig::PrintErrorInfo(
                                 L"ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%ws) failed with port unreachable",
@@ -198,7 +194,7 @@ namespace ctsTraffic {
                     // - just attempt to post another recv at the end of this function
 
                 } else {
-                    ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
+                    const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(this->recv_buffer.data(), bytes_received));
                     switch (message.action) {
                         case MediaStreamAction::START:
                             PrintDebugInfo(

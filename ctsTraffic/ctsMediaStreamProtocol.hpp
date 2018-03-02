@@ -66,9 +66,12 @@ namespace ctsTraffic {
     class ctsMediaStreamSendRequests
     {
     public:
+        ~ctsMediaStreamSendRequests() = default;
         ctsMediaStreamSendRequests() = delete;
         ctsMediaStreamSendRequests(const ctsMediaStreamSendRequests&) = delete;
         ctsMediaStreamSendRequests& operator=(const ctsMediaStreamSendRequests&) = delete;
+        ctsMediaStreamSendRequests(ctsMediaStreamSendRequests&&) = delete;
+        ctsMediaStreamSendRequests& operator=(ctsMediaStreamSendRequests&&) = delete;
 
 
         static const unsigned long BufferArraySize = 5;
@@ -90,11 +93,11 @@ namespace ctsTraffic {
             typedef std::array<WSABUF, BufferArraySize>*   pointer;
             typedef std::array<WSABUF, BufferArraySize>&   reference;
 
-            /// no default c'tor
-            iterator() = delete;
-
-            iterator(const iterator& _in) = default;
-            iterator& operator=(const iterator& _in) = default;
+            ~iterator() = default;
+            iterator(const iterator&) = default;
+            iterator& operator=(const iterator&) = default;
+            iterator(iterator&&) = default;
+            iterator& operator=(iterator&&) = default;
 
             ///
             /// Dereferencing operators
@@ -187,12 +190,12 @@ namespace ctsTraffic {
                     total_bytes_to_send = this->wsa_buf_array[0].len + this->wsa_buf_array[1].len + this->wsa_buf_array[2].len + this->wsa_buf_array[3].len + this->wsa_buf_array[4].len;
 
                     // must guarantee that after we send this datagram we have enough bytes for the next send if there are bytes left over
-                    ctsSignedLongLong bytes_remaining = this->bytes_to_send - static_cast<long long>(total_bytes_to_send);
+                    const ctsSignedLongLong bytes_remaining = this->bytes_to_send - static_cast<long long>(total_bytes_to_send);
 
                     if (bytes_remaining > 0 && bytes_remaining <= UdpDatagramDataHeaderLength) {
                         // subtract out enough bytes so the next datagram will be large enough for the header and at least one byte of data
                         ctsUnsignedLong new_length = this->wsa_buf_array[4].len;
-                        ctsUnsignedLong delta_to_remove = UdpDatagramDataHeaderLength + 1 - static_cast<unsigned long>(bytes_remaining);
+                        const ctsUnsignedLong delta_to_remove = UdpDatagramDataHeaderLength + 1 - static_cast<unsigned long>(bytes_remaining);
                         new_length -= delta_to_remove;
 
                         this->wsa_buf_array[4].len = new_length;
@@ -246,13 +249,13 @@ namespace ctsTraffic {
 
         iterator begin() NOEXCEPT
         {
-            return iterator(&this->qpc_value, this->bytes_to_send, this->wsabuf);
+            return { &this->qpc_value, this->bytes_to_send, this->wsabuf };
         }
 
-        iterator end() NOEXCEPT
+        iterator end() const NOEXCEPT
         {
             // end == null qpc + 0 byte length
-            return iterator(nullptr, 0, this->wsabuf);
+            return { nullptr, 0, this->wsabuf };
         }
 
 
@@ -327,7 +330,7 @@ namespace ctsTraffic {
 
         static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, const ctsIOTask& _task) NOEXCEPT
         {
-            auto copy_error = ::memcpy_s(
+            const auto copy_error = ::memcpy_s(
                 _connection_id,
                 ctsStatistics::ConnectionIdLength,
                 _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength,
@@ -343,7 +346,7 @@ namespace ctsTraffic {
         static long long GetSequenceNumberFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
-            auto copy_error = ::memcpy_s(
+            const auto copy_error = ::memcpy_s(
                 &return_value,
                 UdpDatagramSequenceNumberLength,
                 _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength,
@@ -360,7 +363,7 @@ namespace ctsTraffic {
         static long long GetQueryPerfCounterFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
-            auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
+            const auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",
@@ -373,7 +376,7 @@ namespace ctsTraffic {
         static long long GetQueryPerfFrequencyFromTask(const ctsIOTask& _task) NOEXCEPT
         {
             long long return_value;
-            auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
+            const auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - target buffer (%p) ctsIOTask (%p) (error : %d)",
