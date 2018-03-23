@@ -839,7 +839,7 @@ namespace ctl {
         /// returns a begin/end pair of interator that exposes data for each time-slice
         /// - static classes will have a null instance name
         ///
-        std::pair<iterator, iterator> reference_range(_In_ LPCWSTR _instance_name = nullptr)
+        std::pair<iterator, iterator> reference_range(_In_opt_ LPCWSTR _instance_name = nullptr)
         {
             ctl::ctFatalCondition(
                 !data_stopped,

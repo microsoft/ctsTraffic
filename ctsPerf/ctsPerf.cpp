@@ -58,7 +58,7 @@ static const WCHAR UsageStatement[] =
     L"  by default *all* interface counters are collected]\n"
     L"  note: the Interface Description can be found from the powershell cmdlet Get-NetAdapter\n"
     L"        or by running ctsPerf.exe and viewing the names from the log file\n"
-    L"  -InterfaceDescription #####\n"
+    L"  -InterfaceDescription:##########\n"
     L"\n"
     L" [optionally one of two process identifiers]\n"
     L"  by default is no process tracking\n"
@@ -242,7 +242,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     try {
         ctsPerf::ctsEstats estats;
         if (trackEstats) {
-            if (estats.Start()) {
+            if (estats.start()) {
                 wprintf(L"Enabling ESTATS\n");
             } else {
                 wprintf(L"ESTATS cannot be started - verify running as Administrator\n");
