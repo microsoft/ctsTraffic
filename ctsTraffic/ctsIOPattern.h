@@ -334,6 +334,10 @@ namespace ctsTraffic {
                 case ctsIOPatternProtocolError::SuccessfullyCompleted:
                     this->update_last_error(NO_ERROR);
                     break;
+
+            case ctsIOPatternProtocolError::NoError: break;
+            case ctsIOPatternProtocolError::ErrorIOFailed: break;
+            default: break;
             }
         }
 
@@ -350,12 +354,12 @@ namespace ctsTraffic {
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         _Acquires_lock_(cs)
-        void base_lock() NOEXCEPT
+        void base_lock() const NOEXCEPT
         {
             ::EnterCriticalSection(&this->cs);
         }
         _Releases_lock_(cs)
-        void base_unlock() NOEXCEPT
+        void base_unlock() const NOEXCEPT
         {
             ::LeaveCriticalSection(&this->cs);
         }
@@ -385,9 +389,9 @@ namespace ctsTraffic {
             // guarantee that end_pattern has been called at least once
             ctsIOPatternStatistics<S>::end_stats();
         }
-        ///
-        /// Printing of results is controlled by the applicable statistics type
-        ///
+        //
+        // Printing of results is controlled by the applicable statistics type
+        //
         void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override
         {
             // before printing the final results, make sure the timers are stopped
@@ -595,17 +599,17 @@ namespace ctsTraffic {
 
     private:
         // private member variables
-        PTP_TIMER renderer_timer;
-        PTP_TIMER start_timer;
+        PTP_TIMER renderer_timer = nullptr;
+        PTP_TIMER start_timer = nullptr;
 
-        long long base_time_milliseconds;
-        const double frame_rate_ms_per_frame;
-        const unsigned long frame_size_bytes;
-        const unsigned long final_frame;
+        long long base_time_milliseconds = 0LL;
+        const double frame_rate_ms_per_frame = 0LL;
+        const unsigned long frame_size_bytes = ctsConfig::GetMediaStream().FrameSizeBytes;
+        const unsigned long final_frame = ctsConfig::GetMediaStream().StreamLengthFrames;
 
-        unsigned long initial_buffer_frames;
-        unsigned long timer_wheel_offset_frames;
-        unsigned long recv_needed;
+        unsigned long initial_buffer_frames = ctsConfig::GetMediaStream().BufferedFrames;
+        unsigned long timer_wheel_offset_frames = 0UL;
+        unsigned long recv_needed = ctsConfig::Settings->PrePostRecvs;
 
         // these must be protected by the base class cs
         // - the base lock is always taken before our virtual functions are called
@@ -622,7 +626,7 @@ namespace ctsTraffic {
         ctsConfig::JitterFrameEntry first_frame;
         ctsConfig::JitterFrameEntry previous_frame;
 
-        bool finished_stream;
+        bool finished_stream = false;
 
         // member functions - all require the base lock
         _Requires_lock_held_(cs)
@@ -632,10 +636,10 @@ namespace ctsTraffic {
         bool received_buffered_frames() NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        bool set_next_timer(bool initial_timer) NOEXCEPT;
+        bool set_next_timer(bool initial_timer) const NOEXCEPT;
 
         _Requires_lock_held_(cs)
-        void set_next_start_timer() NOEXCEPT;
+        void set_next_start_timer() const NOEXCEPT;
 
         _Requires_lock_held_(cs)
         void render_frame() NOEXCEPT;

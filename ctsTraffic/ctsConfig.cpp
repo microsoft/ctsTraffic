@@ -2170,7 +2170,7 @@ namespace ctsTraffic {
             ::fwprintf_s(stdout, L"%ws", usage.c_str());
         }
 
-        bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv)
+        bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
         {
             ctsConfigInitOnce();
 
@@ -2190,7 +2190,7 @@ namespace ctsTraffic {
             auto found_help = find_if(
                 begin(args),
                 end(args),
-                [] (_In_ const wchar_t* _arg) -> bool {
+                [] (const wchar_t* _arg) -> bool {
                 return (ctString::istarts_with(_arg, L"-Help") ||
                         ctString::iordinal_equals(_arg, L"-?"));
             });
@@ -2624,7 +2624,7 @@ namespace ctsTraffic {
                 va_end(argptr);
             }
         }
-        void PrintErrorIfFailed(_In_ LPCWSTR _what, unsigned long _why) NOEXCEPT
+        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) NOEXCEPT
         {
             ctsConfigInitOnce();
 

@@ -26,13 +26,13 @@ namespace ctsTraffic {
     class ctsMediaStreamServerListeningSocket {
     private:
         static const size_t RecvBufferSize = 1024;
-        mutable CRITICAL_SECTION object_guard;
+        mutable CRITICAL_SECTION object_guard{};
 
         /// members must have access protected
         _Guarded_by_(object_guard)
         std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
         _Guarded_by_(object_guard)
-        std::array<char, RecvBufferSize> recv_buffer;
+        std::array<char, RecvBufferSize> recv_buffer{};
         _Guarded_by_(object_guard)
         ctl::ctScopedSocket socket;
         _Guarded_by_(object_guard)
@@ -42,16 +42,16 @@ namespace ctsTraffic {
         _Guarded_by_(object_guard)
         ctl::ctSockaddr remote_addr;
         _Guarded_by_(object_guard)
-        int remote_addr_len;
+        int remote_addr_len = 0;
         _Guarded_by_(object_guard)
-        DWORD recv_flags;
+        DWORD recv_flags = 0;
 
         void recv_completion(OVERLAPPED* _ov) NOEXCEPT;
 
     public:
         ctsMediaStreamServerListeningSocket(
             ctl::ctScopedSocket&& _listening_socket,
-            const ctl::ctSockaddr& _listening_addr);
+            ctl::ctSockaddr _listening_addr);
 
         ~ctsMediaStreamServerListeningSocket() NOEXCEPT;
 
@@ -66,5 +66,7 @@ namespace ctsTraffic {
         // non-copyable
         ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;
         ctsMediaStreamServerListeningSocket& operator=(const ctsMediaStreamServerListeningSocket&) = delete;
+        ctsMediaStreamServerListeningSocket(ctsMediaStreamServerListeningSocket&&) = delete;
+        ctsMediaStreamServerListeningSocket& operator=(ctsMediaStreamServerListeningSocket&&) = delete;
     };
 }

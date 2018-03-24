@@ -88,8 +88,8 @@ namespace ctsTraffic {
                 gle = WSAEINVAL;
             }
         }
-        catch (const ctl::ctException& ex) {
-            gle = ex.why();
+        catch (const std::exception& e) {
+            gle = ctl::ctErrorCode(e);
         }
 
         if (NO_ERROR == gle) {

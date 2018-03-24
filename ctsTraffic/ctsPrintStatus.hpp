@@ -14,7 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
-#include <wchar.h>
+#include <cwchar>
 // os headers
 #include <windows.h>
 // ctl headers
@@ -42,7 +42,7 @@ namespace ctsTraffic {
         // - buffer is expected to be protected by only a single caller at a time
         static const unsigned long OutputBufferSize = 128;
         // one more for the null terminator
-        wchar_t OutputBuffer[OutputBufferSize + 1];
+        wchar_t OutputBuffer[OutputBufferSize + 1]{};
 
         void reset_buffer()
         {
@@ -52,9 +52,7 @@ namespace ctsTraffic {
         }
 
     public:
-        ctsStatusInformation() NOEXCEPT
-        {
-        }
+        ctsStatusInformation() NOEXCEPT = default;
 
         // base class is movable
         ctsStatusInformation(ctsStatusInformation&& _moved_from) NOEXCEPT
@@ -63,9 +61,7 @@ namespace ctsTraffic {
             _moved_from.reset_buffer();
         }
 
-        virtual ~ctsStatusInformation() NOEXCEPT
-        {
-        }
+        virtual ~ctsStatusInformation() NOEXCEPT = default;
 
         LPCWSTR print_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT
         {
@@ -90,9 +86,8 @@ namespace ctsTraffic {
             this->reset_buffer();
             if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint) {
                 return OutputBuffer;
-            } else {
-                return nullptr;
             }
+            return nullptr;
         }
         // 
 
@@ -104,7 +99,7 @@ namespace ctsTraffic {
         virtual LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) NOEXCEPT = 0;
         virtual LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) NOEXCEPT = 0;
 
-        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, _In_ LPCWSTR _value) NOEXCEPT
+        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, LPCWSTR _value) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 0 == _left_justified_offset,
@@ -114,7 +109,7 @@ namespace ctsTraffic {
                 L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _left_justified_offset);
 
-            size_t value_length = ::wcslen(_value);
+            const size_t value_length = ::wcslen(_value);
             ctl::ctFatalCondition(
                 value_length > _max_length,
                 L"ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
@@ -143,7 +138,7 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
-            auto converted = ::_snwprintf_s(
+            const auto converted = ::_snwprintf_s(
                 ConversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
@@ -178,7 +173,7 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length > CoversionBufferLength - 1);
 
-            int converted = ::_snwprintf_s(
+            const int converted = ::_snwprintf_s(
                 ConversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
@@ -219,7 +214,7 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
-            int converted = ::_snwprintf_s(
+            const int converted = ::_snwprintf_s(
                 ConversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
@@ -257,7 +252,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, float _value, bool _add_comma = true) NOEXCEPT
         {
-            auto converted = ::_snwprintf_s(
+            const auto converted = ::_snwprintf_s(
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 _add_comma ? _value_length + 1 : _value_length,
@@ -271,7 +266,7 @@ namespace ctsTraffic {
 
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, unsigned long _value, bool _add_comma = true) NOEXCEPT
         {
-            errno_t error = ::_ui64tow_s(
+            const errno_t error = ::_ui64tow_s(
                 _value,
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
@@ -304,7 +299,7 @@ namespace ctsTraffic {
 
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, long long _value, bool _add_comma = true) NOEXCEPT
         {
-            errno_t error = ::_ui64tow_s(
+            const errno_t error = ::_ui64tow_s(
                 _value,
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
@@ -335,9 +330,9 @@ namespace ctsTraffic {
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, _In_ LPCWSTR _value, bool _add_comma = true) NOEXCEPT
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, LPCWSTR _value, bool _add_comma = true) NOEXCEPT
         {
-            auto converted = ::_snwprintf_s(
+            const auto converted = ::_snwprintf_s(
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 _add_comma ? _value_length + 1 : _value_length,
@@ -364,12 +359,8 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctsUdpStatusInformation : public ctsStatusInformation {
     public:
-        ctsUdpStatusInformation() NOEXCEPT
-        {
-        }
-        ~ctsUdpStatusInformation() NOEXCEPT
-        {
-        }
+        ctsUdpStatusInformation() NOEXCEPT = default;
+        ~ctsUdpStatusInformation() NOEXCEPT = default;
 
         //
         // Pure-Virtual functions required to be defined
@@ -430,7 +421,7 @@ namespace ctsTraffic {
                 // converting milliseconds to seconds before printing
                 characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
+                const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
                 characters_written += this->append_csvoutput(
                     characters_written,
                     BitsPerSecondLength,
@@ -447,7 +438,7 @@ namespace ctsTraffic {
                 // converting milliseconds to seconds before printing
                 this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
+                const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
                 this->right_justify_output(
                     BitsPerSecondOffset,
                     BitsPerSecondLength,
@@ -502,19 +493,15 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ctsTcpStatusInformation : public ctsStatusInformation {
     public:
-        ctsTcpStatusInformation() NOEXCEPT : ctsStatusInformation()
-        {
-        }
-        ~ctsTcpStatusInformation() NOEXCEPT
-        {
-        }
+        ctsTcpStatusInformation() NOEXCEPT = default;
+        ~ctsTcpStatusInformation() NOEXCEPT = default;
 
         PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
             ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
             ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
 
-            long long time_elapsed = tcp_data.end_time.get() - tcp_data.start_time.get();
+            const long long time_elapsed = tcp_data.end_time.get() - tcp_data.start_time.get();
 
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 unsigned long characters_written = 0;
@@ -598,16 +585,15 @@ namespace ctsTraffic {
                 return
                     L"TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError\r\n";
 
-            } else if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+            }
+            if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
                 return
                     L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \n";
                 //    00000000.0..00000000000..00000000000....0000000....0000000...0000000....0000000.        
                 //    1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
                 //            10        20        30        40        50        60        70        80
-            } else {
-                return
-                    L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \r\n";
             }
+            return L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \r\n";
         }
 
     private:

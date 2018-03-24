@@ -400,25 +400,21 @@ namespace ctsTraffic {
         }
 
         std::shared_ptr<ctsAcceptExImpl> s_pimpl;
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static INIT_ONCE s_ctsAcceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
-        static BOOL CALLBACK s_ctsAcceptExImplInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*)
+        static BOOL CALLBACK s_ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
         {
             try { s_pimpl = std::make_shared<ctsAcceptExImpl>(); }
-            catch (const ctl::ctException& e) {
-                ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = e.why();
-                return FALSE;
-            }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = ERROR_OUTOFMEMORY;
+                *reinterpret_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
                 return FALSE;
             }
 
             return TRUE;
         }
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT
+        static void ctsAcceptExIoCompletionCallback(_In_opt_ OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 

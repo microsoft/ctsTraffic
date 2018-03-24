@@ -245,12 +245,12 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             // "recv" the correct bytes
             ::memcpy(test_task.buffer, ctsIOPattern::AccessSharedBuffer() + test_task.expected_pattern_offset, test_task.buffer_length);
-            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
 
             // send server completion
             test_task = test_pattern->initiate_io();
@@ -291,10 +291,10 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
-            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 1));
+            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 1));
             Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
@@ -309,12 +309,12 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             // "recv" the correct bytes
             ::memcpy(test_task.buffer, ctsIOPattern::AccessSharedBuffer() + test_task.expected_pattern_offset, test_task.buffer_length);
-            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
 
             // send server completion
             test_task = test_pattern->initiate_io();
@@ -344,12 +344,12 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             // "recv" the correct bytes
             ::memcpy(test_task.buffer, ctsIOPattern::AccessSharedBuffer() + test_task.expected_pattern_offset, test_task.buffer_length);
-            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
 
             // send server completion
             test_task = test_pattern->initiate_io();
@@ -379,12 +379,12 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             // "recv" the correct bytes
             ::memcpy(test_task.buffer, ctsIOPattern::AccessSharedBuffer() + test_task.expected_pattern_offset, test_task.buffer_length);
-            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
 
             // send server completion
             test_task = test_pattern->initiate_io();
@@ -414,12 +414,12 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             test_task = test_pattern->initiate_io();
-            Assert::AreEqual(this->DefaultTransferSize, test_task.buffer_length);
+            Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             // not returning the correct bytes
             ::ZeroMemory(test_task.buffer, test_task.buffer_length);
-            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, this->DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
             Assert::AreEqual(ctsStatusErrorDataDidNotMatchBitPattern, test_pattern->get_last_error());
         }
 

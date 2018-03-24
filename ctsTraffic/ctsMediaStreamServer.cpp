@@ -70,7 +70,7 @@ namespace ctsTraffic {
         try {
             ctsMediaStreamServerImpl::init_once();
 
-            auto shared_socket(_weak_socket.lock());
+            const auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 // hold a reference on the iopattern
                 auto shared_pattern(shared_socket->io_pattern());
@@ -109,7 +109,7 @@ namespace ctsTraffic {
         try {
             ctsMediaStreamServerImpl::init_once();
 
-            auto shared_socket(_weak_socket.lock());
+            const auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 ctsMediaStreamServerImpl::remove_socket(shared_socket->local_address());
             }
@@ -144,6 +144,7 @@ namespace ctsTraffic {
         /// Singleton values used as the actual implementation for every 'connection'
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static INIT_ONCE InitImpl = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID *)
         {
@@ -166,7 +167,7 @@ namespace ctsTraffic {
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                     ctl::ctScopedSocket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
 
-                    auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+                    const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                     if (error != NO_ERROR) {
                         throw ctl::ctException(error, L"SetPreBindOptions", L"ctsMediaStreamServer", false);
                     }
@@ -176,7 +177,7 @@ namespace ctsTraffic {
                     }
 
                     // capture the socket value before moved into the vector
-                    SOCKET listening_socket_to_print(listening.get());
+                    const SOCKET listening_socket_to_print(listening.get());
                     ctsMediaStreamServerImpl::listening_sockets.emplace_back(
                         new ctsMediaStreamServerListeningSocket(std::move(listening), addr));
 
@@ -206,7 +207,7 @@ namespace ctsTraffic {
             return TRUE;
         }
 
-        void ctsMediaStreamServerImpl::init_once()
+        void init_once()
         {
             if (!::InitOnceExecuteOnce(&InitImpl, InitOnceImpl, nullptr, nullptr)) {
                 throw std::runtime_error("ctsMediaStreamServerListener could not be instantiated");
@@ -218,7 +219,7 @@ namespace ctsTraffic {
         /// Schedule the first IO on the specified ctsSocket
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void ctsMediaStreamServerImpl::schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
+        void schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
         {
             auto shared_socket = _weak_socket.lock();
             if (!shared_socket) {
@@ -231,7 +232,7 @@ namespace ctsTraffic {
                 ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
                 // find the matching connected_socket
-                auto found_socket = std::find_if(
+                const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
                     [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
@@ -261,13 +262,13 @@ namespace ctsTraffic {
         ///   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void ctsMediaStreamServerImpl::accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
+        void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
         {
             auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&ctsMediaStreamServerImpl::awaiting_object_guard);
 
-                if (0 == ctsMediaStreamServerImpl::awaiting_endpoints.size()) {
+                if (ctsMediaStreamServerImpl::awaiting_endpoints.empty()) {
                     // just add it to our accepting sockets vector under the writer lock
                     ctsMediaStreamServerImpl::accepting_sockets.push_back(_weak_socket);
 
@@ -288,7 +289,7 @@ namespace ctsTraffic {
 
                     // now complete the ctsSocket 'Create' request
                     // find the local address
-                    auto found_socket = std::find_if(
+                    const auto found_socket = std::find_if(
                         ctsMediaStreamServerImpl::listening_sockets.begin(),
                         ctsMediaStreamServerImpl::listening_sockets.end(),
                         [&waiting_endpoint] (const std::unique_ptr<ctsMediaStreamServerListeningSocket>& _listener) {
@@ -317,11 +318,11 @@ namespace ctsTraffic {
         /// - remove_socket takes the remote address to find the socket
         /// 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void ctsMediaStreamServerImpl::remove_socket(const ctl::ctSockaddr& _target_addr)
+        void remove_socket(const ctl::ctSockaddr& _target_addr)
         {
             ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
-            auto found_socket = std::find_if(
+            const auto found_socket = std::find_if(
                 std::begin(ctsMediaStreamServerImpl::connected_sockets),
                 std::end(ctsMediaStreamServerImpl::connected_sockets),
                 [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
@@ -340,14 +341,14 @@ namespace ctsTraffic {
         /// - else we'll queue it to awaiting_endpoints
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void ctsMediaStreamServerImpl::start(const ctl::ctScopedSocket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
+        void start(const ctl::ctScopedSocket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
         {
             // before starting a socket, verify there is not already a connected socket with this same socket address
             // scope the lock
             {
                 ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
-                auto found_socket = std::find_if(
+                const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
                     [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
@@ -407,16 +408,16 @@ namespace ctsTraffic {
         }
 
 
-        wsIOResult ctsMediaStreamServerImpl::ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr)
+        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr)
         {
             auto this_socket_lock(ctsGuardSocket(this_ptr));
-            SOCKET socket = this_socket_lock.get();
+            const SOCKET socket = this_socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 return wsIOResult(WSA_OPERATION_ABORTED);
             }
 
             const ctl::ctSockaddr& remote_addr(this_ptr->get_address());
-            ctsIOTask next_task = this_ptr->get_nextTask();
+            const ctsIOTask next_task = this_ptr->get_nextTask();
 
             wsIOResult return_results;
             if (ctsIOTask::BufferType::UdpConnectionId == next_task.buffer_type) {
@@ -425,7 +426,7 @@ namespace ctsTraffic {
                 wsabuf.buf = next_task.buffer;
                 wsabuf.len = next_task.buffer_length;
 
-                auto send_result = ::WSASendTo(
+                const auto send_result = ::WSASendTo(
                     socket,
                     &wsabuf,
                     1,
@@ -437,7 +438,7 @@ namespace ctsTraffic {
                     nullptr);
 
                 if (SOCKET_ERROR == send_result) {
-                    auto error = ::WSAGetLastError();
+                    const auto error = ::WSAGetLastError();
                     try {
                         ctsConfig::PrintErrorInfo(
                             L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
@@ -452,7 +453,7 @@ namespace ctsTraffic {
                 }
 
             } else {
-                auto seq_number = this_ptr->increment_sequence();
+                const auto seq_number = this_ptr->increment_sequence();
 
                 PrintDebugInfo(
                     L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
@@ -467,7 +468,7 @@ namespace ctsTraffic {
                 for (auto& send_request : sending_requests) {
                     // making a synchronous call
                     DWORD bytes_sent;
-                    auto send_result = ::WSASendTo(
+                    const auto send_result = ::WSASendTo(
                         socket,
                         send_request.data(),
                         static_cast<DWORD>(send_request.size()),
@@ -479,7 +480,7 @@ namespace ctsTraffic {
                         nullptr);
 
                     if (SOCKET_ERROR == send_result) {
-                        auto error = ::WSAGetLastError();
+                        const auto error = ::WSAGetLastError();
                         try {
                             if (WSAEMSGSIZE == error) {
                                 unsigned long bytes_requested = 0;

@@ -146,7 +146,7 @@ namespace ctsTraffic {
         // Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
         //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        bool Startup(_In_ int argc, _In_reads_(argc) const wchar_t** argv);
+        bool Startup(int argc, _In_reads_(argc) const wchar_t** argv);
         void Shutdown() NOEXCEPT;
 
         enum class PrintUsageOption
@@ -187,7 +187,7 @@ namespace ctsTraffic {
             }                                                           \
         }
 
-        void PrintErrorIfFailed(_In_ LPCWSTR what, unsigned long why) NOEXCEPT;
+        void PrintErrorIfFailed(LPCWSTR what, unsigned long why) NOEXCEPT;
         void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
         // Override will always print to console regardless of settings (important if can't even start)
         void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR text, ...) NOEXCEPT;
@@ -254,7 +254,7 @@ namespace ctsTraffic {
                     }
                 }
 
-                ctsUnsignedLongLong total_stream_length_frames = StreamLengthSeconds * FramesPerSecond;
+                const ctsUnsignedLongLong total_stream_length_frames = StreamLengthSeconds * FramesPerSecond;
                 if (total_stream_length_frames > MAXULONG32) {
                     throw std::invalid_argument("The total stream length in frame-count exceeds the maximum allowed to be streamed (2^32)");
                 }
@@ -267,7 +267,7 @@ namespace ctsTraffic {
                     total_stream_length_bytes -= total_stream_length_bytes % total_stream_length_frames;
                 }
 
-                ctsUnsignedLongLong total_frame_size_bytes = total_stream_length_bytes / total_stream_length_frames;
+                const ctsUnsignedLongLong total_frame_size_bytes = total_stream_length_bytes / total_stream_length_frames;
                 if (total_frame_size_bytes > MAXULONG32) {
                     throw std::invalid_argument("The frame size in bytes exceeds the maximum allowed to be streamed (2^32)");
                 }
@@ -295,12 +295,14 @@ namespace ctsTraffic {
                 ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
             {
             }
-
+            ~ctsConfigSettings() NOEXCEPT = default;
             // non-copyable
             ctsConfigSettings(const ctsConfigSettings&) = delete;
             ctsConfigSettings& operator=(const ctsConfigSettings&) = delete;
+            ctsConfigSettings(ctsConfigSettings&&) = delete;
+            ctsConfigSettings& operator=(ctsConfigSettings&&) = delete;
 
-            HANDLE CtrlCHandle = NULL;
+            HANDLE CtrlCHandle = nullptr;
             PTP_CALLBACK_ENVIRON PTPEnvironment = nullptr;
 
             ctsSocketFunction CreateFunction = nullptr;

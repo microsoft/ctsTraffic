@@ -23,6 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
 #include <ctVersionConversion.hpp>
+#include <utility>
 // project headers
 #include "ctsMediaStreamServerConnectedSocket.h"
 #include "ctsWinsockLayer.h"
@@ -31,19 +32,15 @@ using namespace ctl;
 
 namespace ctsTraffic {
     ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
-        const std::weak_ptr<ctsSocket>& _weak_socket, 
+        std::weak_ptr<ctsSocket> _weak_socket, 
         SOCKET _sending_socket,
-        const ctSockaddr& _remote_addr,
+        ctSockaddr _remote_addr,
         ctsMediaStreamConnectedSocketIoFunctor _io_functor)
         :
-        object_guard(),
-        task_timer(nullptr),
-        weak_socket(_weak_socket),
+        weak_socket(std::move(_weak_socket)),
         io_functor(std::move(_io_functor)),
         socket(_sending_socket),
-        next_task(),
-        remote_addr(_remote_addr),
-        sequence_number(0LL),
+        remote_addr(std::move(_remote_addr)),
         connect_time(ctTimer::snap_qpc_as_msec())
     {
         if (!::InitializeCriticalSectionEx(&object_guard, 4000, 0)) {
@@ -52,7 +49,7 @@ namespace ctsTraffic {
 
         task_timer = ::CreateThreadpoolTimer(ctsMediaStreamTimerCallback, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == task_timer) {
-            auto gle = ::GetLastError();
+            const auto gle = ::GetLastError();
             ::DeleteCriticalSection(&object_guard);
             throw ctException(gle, L"CreateThreadpoolTimer", L"ctsMediaStreamServer", false);
         }
@@ -103,7 +100,7 @@ namespace ctsTraffic {
     
     void ctsMediaStreamServerConnectedSocket::schedule_task(const ctsIOTask& _task) NOEXCEPT
     {
-        auto shared_socket(this->weak_socket.lock());
+        const auto shared_socket(this->weak_socket.lock());
         if (shared_socket) {
             if (_task.time_offset_milliseconds < 1) {
                 // in this case, immediately schedule the WSASendTo
@@ -121,7 +118,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsMediaStreamServerConnectedSocket::complete_state(unsigned long _error_code) NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::complete_state(unsigned long _error_code) const NOEXCEPT
     {
         std::shared_ptr<ctsSocket> shared_socket(this->weak_socket);
         if (shared_socket) {
@@ -129,12 +126,12 @@ namespace ctsTraffic {
         }
     }
         
-    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER)
+    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER)
     {
         ctsMediaStreamServerConnectedSocket* this_ptr = reinterpret_cast<ctsMediaStreamServerConnectedSocket*>(_context);
 
         // take a lock on the ctsSocket for this 'connection'
-        auto shared_socket = this_ptr->weak_socket.lock();
+        const auto shared_socket = this_ptr->weak_socket.lock();
         if (!shared_socket) {
             return;
         }

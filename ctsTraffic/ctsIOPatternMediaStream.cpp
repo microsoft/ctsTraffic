@@ -57,18 +57,7 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternMediaStreamClient::ctsIOPatternMediaStreamClient() :
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
-        renderer_timer(nullptr),
-        start_timer(nullptr),
-        frame_size_bytes(ctsConfig::GetMediaStream().FrameSizeBytes),
-        final_frame(ctsConfig::GetMediaStream().StreamLengthFrames),
-        initial_buffer_frames(ctsConfig::GetMediaStream().BufferedFrames),
-        timer_wheel_offset_frames(0UL),
-        recv_needed(ctsConfig::Settings->PrePostRecvs),
-        base_time_milliseconds(0LL),
-        frame_rate_ms_per_frame(1000.0 / static_cast<unsigned long>(ctsConfig::GetMediaStream().FramesPerSecond)),
-        frame_entries(),
-        head_entry(),
-        finished_stream(false)
+        frame_rate_ms_per_frame(1000.0 / static_cast<unsigned long>(ctsConfig::GetMediaStream().FramesPerSecond))
     {
         // if the entire session fits in the inital buffer, update accordingly
         if (final_frame < initial_buffer_frames) {
@@ -78,7 +67,7 @@ namespace ctsTraffic {
 
         const static long ExtraBufferDepthFactor = 2;
         // queue_size is intentionally a signed long: will catch overflows
-        ctsSignedLong queue_size = ExtraBufferDepthFactor * initial_buffer_frames;
+        const ctsSignedLong queue_size = ExtraBufferDepthFactor * initial_buffer_frames;
         if (queue_size < ExtraBufferDepthFactor) {
             throw ctException(
                 ERROR_INVALID_DATA,
@@ -102,24 +91,25 @@ namespace ctsTraffic {
 
         // after creating, refer to the timers under the lock
         renderer_timer = ::CreateThreadpoolTimer(TimerCallback, this, nullptr);
-        if (NULL == renderer_timer) {
+        if (!renderer_timer) {
             throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
-        ctlScopeGuard(deleteTimerCallbackOnError, {
-            ::SetThreadpoolTimer(renderer_timer, NULL, 0, 0);
+        ctlScopeGuard(deleteTimerCallbackOnError,
+        {
+            ::SetThreadpoolTimer(renderer_timer, nullptr, 0, 0);
             ::WaitForThreadpoolTimerCallbacks(renderer_timer, FALSE);
             ::CloseThreadpoolTimer(renderer_timer);
         });
 
         start_timer = ::CreateThreadpoolTimer(StartCallback, this, nullptr);
-        if (NULL == start_timer) {
+        if (!start_timer) {
             throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
         // no errors, dismiss the scope guard
         deleteTimerCallbackOnError.dismiss();
     }
     
-    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient()
+    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() NOEXCEPT
     {
         // cleanly shutdown the TP timer
         // - indicate this by setting the TP_TIMER to null under the cs
@@ -148,7 +138,7 @@ namespace ctsTraffic {
             // initiate the timers the first time the object is used
             this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
             this->set_next_start_timer();
-            this->set_next_timer(true);
+            (void)this->set_next_timer(true);
         }
 
         // defaulting to an empty task (do nothing)
@@ -221,7 +211,7 @@ namespace ctsTraffic {
             ctsConfig::Settings->UdpStatusDetails.bits_received.add(_completed_bytes * 8);
             this->stats.bits_received.add(_completed_bytes * 8);
 
-            long long received_seq_number = ctsMediaStreamMessage::GetSequenceNumberFromTask(_task);
+            const long long received_seq_number = ctsMediaStreamMessage::GetSequenceNumberFromTask(_task);
             if (received_seq_number > this->final_frame) {
                 ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
                 this->stats.error_frames.increment();
@@ -238,8 +228,8 @@ namespace ctsTraffic {
                 auto found_slot = this->find_sequence_number(received_seq_number);
                 if (found_slot != this->frame_entries.end()) {
                     if (found_slot->received != this->frame_size_bytes) {
-                        long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
-                        long long buffered_qpf = *reinterpret_cast<long long*>(_task.buffer + 16);
+                        const long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
+                        const long long buffered_qpf = *reinterpret_cast<long long*>(_task.buffer + 16);
 
                         // always overwrite qpc & qpf values with the latest datagram details
                         found_slot->sender_qpc = buffered_qpc;
@@ -305,9 +295,9 @@ namespace ctsTraffic {
     _Requires_lock_held_(cs)
     vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) NOEXCEPT
     {
-        ctsSignedLongLong head_sequence_number = this->head_entry->sequence_number;
-        ctsSignedLongLong tail_sequence_number = head_sequence_number + this->frame_entries.size() - 1;
-        ctsSignedLongLong vector_end_sequence_number = this->frame_entries.rbegin()->sequence_number;
+        const ctsSignedLongLong head_sequence_number = this->head_entry->sequence_number;
+        const ctsSignedLongLong tail_sequence_number = head_sequence_number + this->frame_entries.size() - 1;
+        const ctsSignedLongLong vector_end_sequence_number = this->frame_entries.rbegin()->sequence_number;
 
         if (_seq_number > tail_sequence_number || _seq_number < head_sequence_number) {
             // sequence number was out of range of our circular queue
@@ -317,13 +307,12 @@ namespace ctsTraffic {
 
         if (_seq_number <= vector_end_sequence_number) {
             // offset just from the head since it hasn't wrapped around the end
-            size_t offset = static_cast<size_t>(_seq_number - head_sequence_number);
+            const auto offset = static_cast<size_t>(_seq_number - head_sequence_number);
             return this->head_entry + offset;
-        } else {
-            // offset from the beginning since it wrapped around from the end
-            size_t offset = static_cast<size_t>(_seq_number - vector_end_sequence_number - 1LL);
-            return this->frame_entries.begin() + offset;
         }
+        // offset from the beginning since it wrapped around from the end
+        const auto offset = static_cast<size_t>(_seq_number - vector_end_sequence_number - 1LL);
+        return this->frame_entries.begin() + offset;
     }
 
     _Requires_lock_held_(cs)
@@ -347,7 +336,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) NOEXCEPT
+    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) const NOEXCEPT
     {
         bool timer_scheduled = false;
         // only schedule the next timer instance if the d'tor hasn't indicated it's wanting to exit
@@ -375,7 +364,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_start_timer() NOEXCEPT
+    void ctsIOPatternMediaStreamClient::set_next_start_timer() const NOEXCEPT
     {
         if (this->start_timer != nullptr) {
             // convert to filetime from milliseconds

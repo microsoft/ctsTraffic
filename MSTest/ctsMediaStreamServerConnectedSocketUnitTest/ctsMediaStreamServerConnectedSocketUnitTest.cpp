@@ -121,7 +121,7 @@ namespace ctsTraffic {
         Logger::WriteMessage(L"ctsIOPattern::ctsIOPattern\n");
     }
 
-    ctsIOPattern::~ctsIOPattern()
+    ctsIOPattern::~ctsIOPattern() NOEXCEPT
     {
         Logger::WriteMessage(L"ctsIOPattern::~ctsIOPattern\n");
     }

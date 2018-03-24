@@ -13,7 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <vector>
 // os headers
 #include <Windows.h>
 #include <winsock2.h>
@@ -158,13 +157,9 @@ namespace ctsTraffic {
                             [_weak_socket, next_io](OVERLAPPED* _ov)
                         { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
-                    catch (const ctl::ctException& e) {
-                        ctsConfig::PrintException(e);
-                        io_error = (0 == e.why()) ? WSAENOBUFS : e.why();
-                    }
                     catch (const std::exception& e) {
                         ctsConfig::PrintException(e);
-                        io_error = WSAENOBUFS;
+                        io_error = ctl::ctErrorCode(e);
                     }
                     // if an exception prevented this IO from initiating,
                     if (io_error != NO_ERROR) {

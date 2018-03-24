@@ -44,6 +44,7 @@ namespace ctsTraffic {
         static unsigned long CurrentAllocatedConnectionCount = 0;
         static unsigned long SystemPageSize = 0UL;
 
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static ::INIT_ONCE ConnectionIdInitOnce = INIT_ONCE_STATIC_INIT;
         static char* ConnectionIdBuffer = nullptr;
         static ::std::vector<char*>* ConnectionIdVector = nullptr;
@@ -144,9 +145,9 @@ namespace ctsTraffic {
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
             using ::ctsTraffic::ctsUnsignedLong;
 
-            ctsUnsignedLong original_connections = statics::CurrentAllocatedConnectionCount;
-            ctsUnsignedLong increased_available_connections = statics::CurrentAllocatedConnectionCount + statics::ServerConnectionGrowthRate;
-            ctsUnsignedLongLong commit_size_bytes = increased_available_connections * ConnectionIdLength;
+            const ctsUnsignedLong original_connections = statics::CurrentAllocatedConnectionCount;
+            const ctsUnsignedLong increased_available_connections = statics::CurrentAllocatedConnectionCount + statics::ServerConnectionGrowthRate;
+            const ctsUnsignedLongLong commit_size_bytes = increased_available_connections * ConnectionIdLength;
             if (!::VirtualAlloc(statics::ConnectionIdBuffer, commit_size_bytes, MEM_COMMIT, PAGE_READWRITE)) {
                 return false;
             }
@@ -213,7 +214,7 @@ namespace ctsTraffic {
                 statics::ConnectionIdVector->pop_back();
             }
 
-            auto copy_error = ::memcpy_s(next_buffer, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
+            const auto copy_error = ::memcpy_s(next_buffer, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsIOBuffers::NewConnectionIdBuffer : memcpy_s failed trying to copy the connection ID - buffer (%p) (error : %d)",
@@ -276,7 +277,7 @@ namespace ctsTraffic {
                 io_buffer = _task.buffer;
             }
 
-            auto copy_error = ::memcpy_s(_target_buffer, ctsStatistics::ConnectionIdLength, io_buffer, ctsStatistics::ConnectionIdLength);
+            const auto copy_error = ::memcpy_s(_target_buffer, ctsStatistics::ConnectionIdLength, io_buffer, ctsStatistics::ConnectionIdLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsIOBuffers::SetConnectionId : memcpy_s failed trying to copy the connection ID - target buffer (%p) ctsIOTask (%p) (error : %d)",

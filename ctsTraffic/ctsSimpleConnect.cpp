@@ -44,47 +44,37 @@ namespace ctsTraffic {
         }
 
         int error = NO_ERROR;
-        // scope to the socket lock
-        {
+        try {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const auto socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
-                try {
-                    const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
-                    ctl::ctSockaddr local_addr;
+                const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
+                ctl::ctSockaddr local_addr;
 
-                    error = ctsConfig::SetPreConnectOptions(socket);
-                    if (error != NO_ERROR) {
-                        throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
+                error = ctsConfig::SetPreConnectOptions(socket);
+                if (error != NO_ERROR) {
+                    throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
+                }
+
+                if (0 != ::connect(socket, targetAddress.sockaddr(), targetAddress.length())) {
+                    error = ::WSAGetLastError();
+                    ctsConfig::PrintErrorIfFailed(L"connect", error);
+                } else {
+                    // set the local address
+                    int local_addr_len = local_addr.length();
+                    if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
+                        shared_socket->set_local_address(local_addr);
                     }
+                }
 
-                    if (0 != ::connect(socket, targetAddress.sockaddr(), targetAddress.length())) {
-                        error = ::WSAGetLastError();
-                        ctsConfig::PrintErrorIfFailed(L"connect", error);
-                    } else {
-                        // set the local address
-                        int local_addr_len = local_addr.length();
-                        if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
-                            shared_socket->set_local_address(local_addr);
-                        }
-                    }
-
-                    ctsConfig::PrintNewConnection(local_addr, targetAddress);
-                }
-                catch (const ctl::ctException& e) {
-                    ctsConfig::PrintException(e);
-                    ctl::ctFatalCondition(
-                        (0 == e.why()),
-                        L"ctException (%p) thrown with a zero error code", &e);
-                    error = e.why();
-                }
-                catch (const std::exception& e) {
-                    ctsConfig::PrintException(e);
-                    error = WSAENOBUFS;
-                }
+                ctsConfig::PrintNewConnection(local_addr, targetAddress);
             } else {
                 error = WSAECONNABORTED;
             }
+        }
+        catch (const std::exception& e) {
+            ctsConfig::PrintException(e);
+            error = ctl::ctErrorCode(e);
         }
 
         shared_socket->complete_state(error);

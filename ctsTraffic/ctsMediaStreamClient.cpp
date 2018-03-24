@@ -143,13 +143,13 @@ namespace ctsTraffic {
         // scope to lock
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
                 return;
             }
 
-            auto error = ctsConfig::SetPreConnectOptions(socket);
+            const auto error = ctsConfig::SetPreConnectOptions(socket);
             ctsConfig::PrintErrorIfFailed(L"SetPreConnectOptions", error);
             if (error != NO_ERROR) {
                 shared_socket->complete_state(error);
@@ -157,11 +157,11 @@ namespace ctsTraffic {
             }
         }
 
-        ctl::ctSockaddr targetAddress(shared_socket->target_address());
-        ctsIOTask start_task = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
+        const ctl::ctSockaddr targetAddress(shared_socket->target_address());
+        const ctsIOTask start_task = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
         // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
-        auto response = ctsWSASendTo(
+        const auto response = ctsWSASendTo(
             shared_socket,
             start_task,
             [_weak_socket, targetAddress] (OVERLAPPED* ov) {
@@ -170,7 +170,7 @@ namespace ctsTraffic {
 
         if (NO_ERROR == response.error_code) {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
                 return;
@@ -178,7 +178,7 @@ namespace ctsTraffic {
 
             // set the local and remote addresses on the socket object
             ctl::ctSockaddr local_addr;
-            int local_addr_len = local_addr.length();
+            auto local_addr_len = local_addr.length();
             if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
                 shared_socket->set_local_address(local_addr);
             }
@@ -246,7 +246,7 @@ namespace ctsTraffic {
 
                     // hold a reference on the iopattern
                     auto shared_pattern(_shared_socket->io_pattern());
-                    ctsIOStatus protocol_status = shared_pattern->complete_io(
+                    auto protocol_status = shared_pattern->complete_io(
                         _next_io,
                         result.bytes_transferred,
                         result.error_code);
@@ -318,6 +318,10 @@ namespace ctsTraffic {
                 return_status.continue_io = false;
                 break;
             }
+
+            case IOTaskAction::GracefulShutdown: break;
+            case IOTaskAction::HardShutdown: break;
+            default: break;
         }
 
         return return_status;
@@ -345,7 +349,7 @@ namespace ctsTraffic {
         // scope to the socket lock
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 DWORD flags;
                 if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags)) {
@@ -431,7 +435,7 @@ namespace ctsTraffic {
         // scope to the socket lock
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
             } else {
