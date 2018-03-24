@@ -277,9 +277,9 @@ namespace ctl
 
 				if (0 == this_ptr->callback_objects[iterator_offset].reoccuring_period)
 				{
-					// clear the internal callback structure
-					details::ctThreadpoolTimerCallbackInfo empty;
-					this_ptr->callback_objects[iterator_offset].swap(empty);
+                    this_ptr->callback_objects.erase(this_ptr->callback_objects.begin() + iterator_offset);
+                    ::CloseThreadpoolTimer(*(this_ptr->tp_timers.begin() + iterator_offset));
+                    this_ptr->tp_timers.erase(this_ptr->tp_timers.begin() + iterator_offset);
 				}
 				else
 				{

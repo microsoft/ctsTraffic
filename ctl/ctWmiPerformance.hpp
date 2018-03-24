@@ -824,9 +824,14 @@ namespace ctl {
             if (FAILED(hr)) {
                 throw ctException(hr, L"IWbemRefresher::QueryInterface", L"ctWmiPerformanceCounter", false);
             }
+
+            ::InitializeCriticalSectionEx(&guard_counter_data, 4000, 0);
         }
 
-        virtual ~ctWmiPerformanceCounter() = default;
+        virtual ~ctWmiPerformanceCounter() NOEXCEPT
+        {
+            ::DeleteCriticalSection(&guard_counter_data);
+        }
 
         ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
         ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
@@ -855,6 +860,7 @@ namespace ctl {
                 !data_stopped,
                 L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
 
+            ctAutoReleaseCriticalSection lock(&guard_counter_data);
             auto found_instance = std::find_if(
                 std::begin(counter_data),
                 std::end(counter_data),
@@ -929,6 +935,8 @@ namespace ctl {
         ctComPtr<IWbemRefresher> refresher;
         ctComPtr<IWbemConfigureRefresher> configure_refresher;
         std::vector<ctWmiPerformanceInstanceFilter> instance_filter;
+        // Must lock access to counter_data
+        mutable CRITICAL_SECTION guard_counter_data{};
         std::vector<std::unique_ptr<details::ctWmiPeformanceCounterData<T>>> counter_data;
         bool data_stopped = true;
 
@@ -961,9 +969,11 @@ namespace ctl {
                     ctFatalCondition(
                         !data_stopped,
                         L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
-
-                    for (auto& _counter_data : counter_data) {
-                        _counter_data->clear();
+                    {
+                        ctAutoReleaseCriticalSection lock(&guard_counter_data);
+                        for (auto& _counter_data : counter_data) {
+                            _counter_data->clear();
+                        }
                     }
                     break;
                 }
@@ -998,6 +1008,8 @@ namespace ctl {
             // - matches at least one filter
             if (fAddData) {
                 ctComVariant instance_name = details::ctQueryInstanceName(_instance);
+
+                ctAutoReleaseCriticalSection lock(&guard_counter_data);
 
                 auto tracked_instance = std::find_if(
                     std::begin(counter_data),

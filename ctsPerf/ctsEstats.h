@@ -35,19 +35,23 @@ namespace ctsPerf {
 
 namespace details {
 
+    static const unsigned long InvalidLongEstatsValue = 0xffffffff;
+    static const unsigned long long InvalidLongLongEstatsValue = 0xffffffffffffffff;
+
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG t) noexcept
     {
-        static const unsigned long InvalidLongEstatsValue = 0xffffffff;
-
         if (t == InvalidLongEstatsValue)
         {
             return false;
         }
         if (t & 0xf0000000)
         {
-            name;
-            // wprintf(L"\t** %ws : %lu\n", name, t);
+//#ifdef _TESTING_ESTATS_VALUES
+            wprintf(L"\t** %ws : %lu\n", name, t);
+//#else
+            UNREFERENCED_PARAMETER(name);
+//#endif
             return false;
         }
         return true;
@@ -55,16 +59,17 @@ namespace details {
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG64 t) noexcept
     {
-        static const unsigned long long InvalidLongLongEstatsValue = 0xffffffffffffffff;
-
         if (t == InvalidLongLongEstatsValue)
         {
             return false;
         }
         if (t & 0xf000000000000000)
         {
-            name;
-            // wprintf(L"\t** %ws : %llu\n", name, t);
+//#ifdef _TESTING_ESTATS_VALUES
+            wprintf(L"\t** %ws : %llu\n", name, t);
+//#else
+            UNREFERENCED_PARAMETER(name);
+//#endif
             return false;
         }
         return true;
@@ -311,12 +316,19 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
+#ifdef _TESTING_ESTATS_VALUES
             return L"CongWin(mean),CongWin(stddev),"
                 L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
                 L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited, [xValidValues,xInvalidValues] ";
+#else
+            return L"CongWin(mean),CongWin(stddev),"
+                L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
+                L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited";
+#endif
         }
         std::wstring PrintData() const
         {
+#ifdef _TESTING_ESTATS_VALUES
             return
                 ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
                 ctl::ctString::format_string(
@@ -329,6 +341,18 @@ namespace details {
                     bytesSentInCongestionLimited,
                     validValues,
                     invalidValues);
+#else
+            return
+                ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
+                ctl::ctString::format_string(
+                    L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
+                    transitionsIntoReceiverLimited,
+                    transitionsIntoSenderLimited,
+                    transitionsIntoCongestionLimited,
+                    bytesSentInReceiverLimited,
+                    bytesSentInSenderLimited,
+                    bytesSentInCongestionLimited);
+#endif
         }
 
         template <typename PTCPROW>
@@ -344,9 +368,8 @@ namespace details {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
-                localAddr;
-                remoteAddr;
-                /*
+
+#ifdef _TESTING_ESTATS_VALUES
                 if ((Rod.CurCwnd > 0x10000000 && Rod.CurCwnd != UninitializedUlong) ||
                     Rod.SndLimBytesRwin > 0x10000000 ||
                     Rod.SndLimBytesSnd > 0x10000000 ||
@@ -382,7 +405,10 @@ namespace details {
                 } else {
                     ++validValues;
                 }
-                */
+#else
+                UNREFERENCED_PARAMETER(localAddr);
+                UNREFERENCED_PARAMETER(remoteAddr);
+#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - CurCwnd", Rod.CurCwnd)) {
                     conjestionWindows.push_back(Rod.CurCwnd);
@@ -419,8 +445,10 @@ namespace details {
         ULONG transitionsIntoSenderLimited = 0;
         ULONG transitionsIntoCongestionLimited = 0;
 
+#ifdef _TESTING_ESTATS_VALUES
         ULONG validValues = 0;
         ULONG invalidValues = 0;
+#endif
     };
 
     template <>
@@ -428,12 +456,19 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
+#ifdef _TESTING_ESTATS_VALUES
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
                 L"RetransTimer(mean),RetransTimer(stddev),"
                 L"RTT(mean),Rtt(stddev), [xValidValues,xInvalidValues] ";
+#else
+            return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
+                L"RetransTimer(mean),RetransTimer(stddev),"
+                L"RTT(mean),Rtt(stddev)";
+#endif
         }
         std::wstring PrintData() const
         {
+#ifdef _TESTING_ESTATS_VALUES
             return ctl::ctString::format_string(
                 L",%lu,%lu,%lu,%lu,%lu",
                 bytesRetrans,
@@ -447,6 +482,17 @@ namespace details {
                     L" [%lu,%lu] ",
                     validValues,
                     invalidValues);
+#else
+            return ctl::ctString::format_string(
+                L",%lu,%lu,%lu,%lu,%lu",
+                bytesRetrans,
+                dupAcksRcvd,
+                sacksRcvd,
+                congestionSignals,
+                maxSegmentSize) +
+                ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
+                ctsWriteDetails::PrintMeanStdDev(roundTripTime);
+#endif
         }
 
         template <typename PTCPROW>
@@ -463,9 +509,7 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
 
-                localAddr;
-                remoteAddr;
-                /*
+#ifdef _TESTING_ESTATS_VALUES
                 if ((Rod.CurRto > 0x10000000 && Rod.CurRto != UninitializedUlong) ||
                     (Rod.SmoothedRtt > 0x10000000 && Rod.SmoothedRtt != UninitializedUlong) ||
                     (Rod.BytesRetrans > 0x10000000 && Rod.BytesRetrans != UninitializedUlong) ||
@@ -501,7 +545,10 @@ namespace details {
                 } else {
                     ++validValues;
                 }
-                */
+#else
+                UNREFERENCED_PARAMETER(localAddr);
+                UNREFERENCED_PARAMETER(remoteAddr);
+#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CurRto", Rod.CurRto)) {
                     retransmitTimer.push_back(Rod.CurRto);
@@ -536,8 +583,10 @@ namespace details {
         ULONG congestionSignals = 0;
         ULONG maxSegmentSize = 0;
 
+#ifdef _TESTING_ESTATS_VALUES
         ULONG validValues = 0;
         ULONG invalidValues = 0;
+#endif
     };
 
     template <>
@@ -545,19 +594,58 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
-            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(mean),LocalRecvWin(stddev), [xValidValues,xInvalidValues] ";
+#ifdef _TESTING_ESTATS_VALUES
+            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
+#else
+            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev)";
+#endif
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += (minReceiveWindow == UninitializedUlong) ?
+            formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
                 L"-1," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow);
 
-            formattedString += (maxReceiveWindow == UninitializedUlong) ?
+            formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
                 L"-1" :
-                ctl::ctString::format_string(L"%lu", maxReceiveWindow);
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
 
+            ULONG calculatedMin = InvalidLongEstatsValue;
+            ULONG calculatedMax = InvalidLongEstatsValue;
+            for (const auto& value : receiveWindow)
+            {
+                if (calculatedMin == InvalidLongEstatsValue) {
+                    calculatedMin = value;
+                } else if (value < calculatedMin) {
+                    calculatedMin = value;
+
+                } if (calculatedMax == InvalidLongEstatsValue) {
+                    calculatedMax = value;
+                } else if (value > calculatedMax) {
+                    calculatedMax = value;
+                }
+            }
+
+            if (std::find(receiveWindow.begin(), receiveWindow.end(), 0UL) != receiveWindow.end())
+            {
+                std::wstring errorString(L"--- Bogus CurRwinSent values: ");
+                for (const auto& value : receiveWindow)
+                {
+                    errorString += std::to_wstring(value) + std::wstring(L" ");
+                }
+                wprintf(L"\n%ws\n", errorString.c_str());
+            }
+
+            formattedString += (calculatedMin == InvalidLongEstatsValue) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu,", calculatedMin);
+
+            formattedString += (calculatedMax == InvalidLongEstatsValue) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu", calculatedMax);
+
+#ifdef _TESTING_ESTATS_VALUES
             return
                 formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
@@ -565,6 +653,11 @@ namespace details {
                     L" [%lu,%lu] ",
                     validValues,
                     invalidValues);
+#else
+            return
+                formattedString +
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+#endif
         }
 
         template <typename PTCPROW>
@@ -574,6 +667,7 @@ namespace details {
             Rw.EnableCollection = TRUE;
             SetEstats<TcpConnectionEstatsRec>(tcpRow, &Rw);
         }
+
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
@@ -581,9 +675,7 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
 
-                localAddr;
-                remoteAddr;
-                /*
+#ifdef _TESTING_ESTATS_VALUES
                 if ((Rod.CurRwinSent > 0x10000000 && Rod.CurRwinSent != UninitializedUlong) ||
                     (Rod.MinRwinSent > 0x10000000 && Rod.MinRwinSent != UninitializedUlong) ||
                     (Rod.MaxRwinSent > 0x10000000 && Rod.MaxRwinSent != UninitializedUlong) ||
@@ -608,15 +700,18 @@ namespace details {
                 } else {
                     ++validValues;
                 }
-                */
+#else
+                UNREFERENCED_PARAMETER(localAddr);
+                UNREFERENCED_PARAMETER(remoteAddr);
+#endif
 
-                if (IsRodValueValid(L"TcpConnectionEstatsPath - CurRwinSent", Rod.CurRwinSent)) {
+                if (IsRodValueValid(L"TcpConnectionEstatsRec - CurRwinSent", Rod.CurRwinSent)) {
                     receiveWindow.push_back(Rod.CurRwinSent);
                 }
-                if (IsRodValueValid(L"TcpConnectionEstatsPath - MinRwinSent", Rod.MinRwinSent)) {
+                if (IsRodValueValid(L"TcpConnectionEstatsRec - MinRwinSent", Rod.MinRwinSent)) {
                     minReceiveWindow = Rod.MinRwinSent;
                 }
-                if (IsRodValueValid(L"TcpConnectionEstatsPath - MaxRwinSent", Rod.MaxRwinSent)) {
+                if (IsRodValueValid(L"TcpConnectionEstatsRec - MaxRwinSent", Rod.MaxRwinSent)) {
                     maxReceiveWindow = Rod.MaxRwinSent;
                 }
             }
@@ -627,8 +722,10 @@ namespace details {
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
 
+#ifdef _TESTING_ESTATS_VALUES
         ULONG validValues = 0;
         ULONG invalidValues = 0;
+#endif
     };
 
     template <>
@@ -636,19 +733,58 @@ namespace details {
     public:
         static LPCWSTR PrintHeader()
         {
-            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(mean),RemoteRecvWin(stddev), [xValidValues,xInvalidValues] ";
+#ifdef _TESTING_ESTATS_VALUES
+            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
+#else
+            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev)";
+#endif
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += (minReceiveWindow == UninitializedUlong) ?
+            formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
                 L"-1," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow);
 
-            formattedString += (maxReceiveWindow == UninitializedUlong) ?
-                L"-1" :
-                ctl::ctString::format_string(L"%lu", maxReceiveWindow);
+            formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
 
+            ULONG calculatedMin = InvalidLongEstatsValue;
+            ULONG calculatedMax = InvalidLongEstatsValue;
+            for (const auto& value : receiveWindow)
+            {
+                if (calculatedMin == InvalidLongEstatsValue) {
+                    calculatedMin = value;
+                } else if (value < calculatedMin) {
+                    calculatedMin = value;
+                }
+
+                if (calculatedMax == InvalidLongEstatsValue) {
+                    calculatedMax = value;
+                } else if (value > calculatedMax) {
+                    calculatedMax = value;
+                }
+            }
+            if (std::find(receiveWindow.begin(), receiveWindow.end(), 0UL) != receiveWindow.end())
+            {
+                std::wstring errorString(L"--- Bogus CurRwinRcvd values: ");
+                for (const auto& value : receiveWindow)
+                {
+                    errorString += std::to_wstring(value) + std::wstring(L" ");
+                }
+                wprintf(L"\n%ws\n", errorString.c_str());
+            }
+
+            formattedString += (calculatedMin == InvalidLongEstatsValue) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu,", calculatedMin);
+
+            formattedString += (calculatedMax == InvalidLongEstatsValue) ?
+                L"-1," :
+                ctl::ctString::format_string(L"%lu", calculatedMax);
+
+#ifdef _TESTING_ESTATS_VALUES
             return
                 formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
@@ -656,6 +792,12 @@ namespace details {
                     L" [%lu,%lu] ",
                     validValues,
                     invalidValues);
+#else
+
+            return
+                formattedString + 
+                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+#endif
         }
 
         template <typename PTCPROW>
@@ -671,9 +813,8 @@ namespace details {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
-                localAddr;
-                remoteAddr;
-                /*
+
+#ifdef _TESTING_ESTATS_VALUES
                 if ((Rod.CurRwinRcvd > 0x10000000 && Rod.CurRwinRcvd != UninitializedUlong) ||
                     (Rod.MinRwinRcvd > 0x10000000 && Rod.MinRwinRcvd != UninitializedUlong) ||
                     (Rod.MaxRwinRcvd > 0x10000000 && Rod.MaxRwinRcvd != UninitializedUlong) ||
@@ -699,15 +840,18 @@ namespace details {
                 else {
                     ++validValues;
                 }
-                */
+#else
+                UNREFERENCED_PARAMETER(localAddr);
+                UNREFERENCED_PARAMETER(remoteAddr);
+#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - CurRwinRcvd", Rod.CurRwinRcvd)) {
                     receiveWindow.push_back(Rod.CurRwinRcvd);
                 }
-                if (IsRodValueValid(L"TcpConnectionEstatsPath - MinRwinRcvd", Rod.MinRwinRcvd)) {
+                if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MinRwinRcvd", Rod.MinRwinRcvd)) {
                     minReceiveWindow = Rod.MinRwinRcvd;
                 }
-                if (IsRodValueValid(L"TcpConnectionEstatsPath - MaxRwinRcvd", Rod.MaxRwinRcvd)) {
+                if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MaxRwinRcvd", Rod.MaxRwinRcvd)) {
                     maxReceiveWindow = Rod.MaxRwinRcvd;
                 }
             }
@@ -718,8 +862,10 @@ namespace details {
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
 
+#ifdef _TESTING_ESTATS_VALUES
         ULONG validValues = 0;
         ULONG invalidValues = 0;
+#endif
     };
 
     template <>
