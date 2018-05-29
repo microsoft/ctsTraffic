@@ -296,8 +296,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             perf_object.start_all_counters(1000);
         }
 
-        (void)getchar();
-        // ::WaitForSingleObject(g_hBreak, timeToRunMs);
+        ::WaitForSingleObject(g_hBreak, timeToRunMs);
 
         wprintf(L"Stopping counters ....\n\n");
         for (auto& perf_object : performance_vector) {

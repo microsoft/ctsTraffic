@@ -45,13 +45,13 @@ namespace details {
         {
             return false;
         }
-        if (t & 0xf0000000)
+        if (t > 0x10000000)
         {
-//#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES
             wprintf(L"\t** %ws : %lu\n", name, t);
-//#else
+#else
             UNREFERENCED_PARAMETER(name);
-//#endif
+#endif
             return false;
         }
         return true;
@@ -63,13 +63,13 @@ namespace details {
         {
             return false;
         }
-        if (t & 0xf000000000000000)
+        if (t > 0x1000000000000000)
         {
-//#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES
             wprintf(L"\t** %ws : %llu\n", name, t);
-//#else
+#else
             UNREFERENCED_PARAMETER(name);
-//#endif
+#endif
             return false;
         }
         return true;
@@ -627,16 +627,6 @@ namespace details {
                 }
             }
 
-            if (std::find(receiveWindow.begin(), receiveWindow.end(), 0UL) != receiveWindow.end())
-            {
-                std::wstring errorString(L"--- Bogus CurRwinSent values: ");
-                for (const auto& value : receiveWindow)
-                {
-                    errorString += std::to_wstring(value) + std::wstring(L" ");
-                }
-                wprintf(L"\n%ws\n", errorString.c_str());
-            }
-
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
                 L"-1," :
                 ctl::ctString::format_string(L"%lu,", calculatedMin);
@@ -765,15 +755,6 @@ namespace details {
                 } else if (value > calculatedMax) {
                     calculatedMax = value;
                 }
-            }
-            if (std::find(receiveWindow.begin(), receiveWindow.end(), 0UL) != receiveWindow.end())
-            {
-                std::wstring errorString(L"--- Bogus CurRwinRcvd values: ");
-                for (const auto& value : receiveWindow)
-                {
-                    errorString += std::to_wstring(value) + std::wstring(L" ");
-                }
-                wprintf(L"\n%ws\n", errorString.c_str());
             }
 
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
