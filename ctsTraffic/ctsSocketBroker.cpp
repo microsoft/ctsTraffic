@@ -40,15 +40,13 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
+    // timer to wake up and clean up the socket pool
+    // - delete any closed sockets
+    // - create new sockets
+    unsigned long ctsSocketBroker::s_TimerCallbackTimeoutMs = 333; // millseconds
+
     ctsSocketBroker::ctsSocketBroker() :
-        cs(),
-        done_event(),
-        socket_pool(),
-        wakeup_timer(new ctThreadpoolTimer()),
-        total_connections_remaining(0),
-        pending_limit(0),
-        pending_sockets(0),
-        active_sockets(0)
+        wakeup_timer(new ctThreadpoolTimer())
     {
         if (ctsConfig::Settings->AcceptFunction) {
             // server 'accept' settings
@@ -76,7 +74,7 @@ namespace ctsTraffic {
 
         // create our manual-reset notification event
         done_event.reset(::CreateEvent(nullptr, TRUE, FALSE, nullptr));
-        if (NULL == done_event.get()) {
+        if (nullptr == done_event.get()) {
             throw ctException(::GetLastError(), L"CreateEvent", L"ctsSocketBroker", false);
         }
 
@@ -127,7 +125,7 @@ namespace ctsTraffic {
         wakeup_timer->schedule_reoccuring(
             [this]() { ctsSocketBroker::TimerCallback(this); },
             0LL,
-            TimerCallbackTimeout);
+            s_TimerCallbackTimeoutMs);
     }
     //
     // SocketState is indicating the socket is now 'connected'
@@ -169,7 +167,7 @@ namespace ctsTraffic {
         }
     }
 
-    bool ctsSocketBroker::wait(DWORD _milliseconds) NOEXCEPT
+    bool ctsSocketBroker::wait(DWORD _milliseconds) const NOEXCEPT
     {
         HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
 
@@ -186,7 +184,7 @@ namespace ctsTraffic {
                 fReturn = false;
                 break;
 
-            case WAIT_FAILED:
+            default:
                 ctAlwaysFatalCondition(
                     L"ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
                     arWait, ::GetLastError());

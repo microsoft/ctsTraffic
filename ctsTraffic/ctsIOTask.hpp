@@ -14,7 +14,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // os headers
-#include <mswsock.h>
+// ReSharper disable once CppUnusedIncludeDirective
+#include <WinSock2.h>
+#include <MSWSock.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
 

@@ -38,13 +38,7 @@ namespace ctsTraffic {
     using namespace std;
 
     ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) 
-    : thread_pool_worker(nullptr),
-      state_guard(),
-      broker(move(_broker)),
-      socket(),
-      last_error(0UL),
-      state(InternalState::Creating),
-      initiated_io(false)
+    : broker(move(_broker))
     {
         if (!::InitializeCriticalSectionEx(&state_guard, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketState", false);
@@ -52,7 +46,7 @@ namespace ctsTraffic {
 
         thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == thread_pool_worker) {
-            auto gle = ::GetLastError();
+            const auto gle = ::GetLastError();
             ::DeleteCriticalSection(&state_guard);
             throw ctException(gle, L"CreateThreadpoolWork", L"ctsSocketState", false);
         }

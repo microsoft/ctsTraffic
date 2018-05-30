@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <memory>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
 #include <ctThreadPoolTimer.hpp>
@@ -34,6 +34,11 @@ namespace ctsTraffic {
 
     class ctsSocketBroker : public std::enable_shared_from_this<ctsSocketBroker> {
     public:
+        // timer to wake up and clean up the socket pool
+        // - delete any closed sockets
+        // - create new sockets
+        static unsigned long s_TimerCallbackTimeoutMs;
+
         // only the c'tor can throw
         ctsSocketBroker();
         ~ctsSocketBroker() NOEXCEPT;
@@ -45,34 +50,31 @@ namespace ctsTraffic {
         void closing(bool _was_active) NOEXCEPT;
 
         // method to wait on when all connections are completed
-        bool wait(DWORD _milliseconds) NOEXCEPT;
+        bool wait(DWORD _milliseconds) const NOEXCEPT;
 
         // not copyable
         ctsSocketBroker(const ctsSocketBroker&) = delete;
         ctsSocketBroker& operator=(const ctsSocketBroker&) = delete;
+        ctsSocketBroker(ctsSocketBroker&&) = delete;
+        ctsSocketBroker& operator=(ctsSocketBroker&&) = delete;
 
     private:
-        // timer to wake up and clean up the socket pool
-        // - delete any closed sockets
-        // - create new sockets
-        static const unsigned long TimerCallbackTimeout = 333; // millseconds
-
         // CS to guard access to the vector socket_pool
-        CRITICAL_SECTION cs;
+        CRITICAL_SECTION cs{};
         // notification event when we're done
-        ctl::ctScopedHandle done_event;
+        ctl::ctScopedHandle done_event{};
         // vector of currently active sockets
         // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
         // - and thus there must be at least one refcount on that object to call shared_from_this()
-        std::vector<std::shared_ptr<ctsSocketState>> socket_pool;
+        std::vector<std::shared_ptr<ctsSocketState>> socket_pool{};
         // timer to initiate the savenge routine TimerCallback()
-        std::unique_ptr<ctl::ctThreadpoolTimer> wakeup_timer;
+        std::unique_ptr<ctl::ctThreadpoolTimer> wakeup_timer{};
         // keep a burn-down count as connections are made to know when to be 'done'
-        ULONGLONG total_connections_remaining;
+        ULONGLONG total_connections_remaining = 0ULL;
         // track what's pended and what's active
-        unsigned long pending_limit;
-        unsigned long pending_sockets;
-        unsigned long active_sockets;
+        unsigned long pending_limit = 0UL;
+        unsigned long pending_sockets = 0UL;
+        unsigned long active_sockets = 0UL;
 
         //
         // Callback for the threadpool timer to scavenge closed sockets and recreate new ones

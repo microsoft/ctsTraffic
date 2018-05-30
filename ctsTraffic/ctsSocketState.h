@@ -90,13 +90,13 @@ namespace ctsTraffic {
         // private members of ctsSocketState
         // - CS's are mutable to allow taking a CS in a const function
         //
-        PTP_WORK                       thread_pool_worker;
-        mutable CRITICAL_SECTION       state_guard;
-        std::weak_ptr<ctsSocketBroker> broker;
-        std::shared_ptr<ctsSocket>     socket;
-        unsigned long                  last_error;
-        InternalState                  state;
-        bool                           initiated_io;
+        PTP_WORK                       thread_pool_worker = nullptr;
+        mutable CRITICAL_SECTION       state_guard{};
+        std::weak_ptr<ctsSocketBroker> broker{};
+        std::shared_ptr<ctsSocket>     socket{};
+        unsigned long                  last_error = 0UL;
+        InternalState                  state = InternalState::Creating;
+        bool                           initiated_io = false;
 
         //
         // static threadpool callback function
