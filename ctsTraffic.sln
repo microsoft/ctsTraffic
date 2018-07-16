@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 12.0.30723.0
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctsTraffic", "ctsTraffic\ctsTraffic.vcxproj", "{0857150B-4FC8-4B6D-A48C-903C629D9BB9}"
 EndProject
@@ -150,5 +150,8 @@ Global
 		{94EED6D8-6D55-429B-8E0F-717785DED572} = {F6BA338C-59FD-4354-9F13-1B5511486DC9}
 		{03C06937-FC3B-470E-8ED9-025BA6066381} = {F6BA338C-59FD-4354-9F13-1B5511486DC9}
 		{47AB4470-4617-47FA-9529-3A1D1DA7FAA0} = {F6BA338C-59FD-4354-9F13-1B5511486DC9}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {42F8DAAC-2630-4A77-9E6A-99B56E2AAF01}
 	EndGlobalSection
 EndGlobal

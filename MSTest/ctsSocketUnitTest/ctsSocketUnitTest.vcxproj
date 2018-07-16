@@ -22,7 +22,7 @@
     <ProjectGuid>{FB78B82F-1483-4F85-B43B-7BA62B0C21BE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ctsSocketUnitTest</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
