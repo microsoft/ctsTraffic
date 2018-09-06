@@ -286,11 +286,11 @@ namespace ctl
 		///
 		ctWmiException() NOEXCEPT = default;
 
-		explicit ctWmiException(HRESULT _ulCode) : ctException(_ulCode)
+		explicit ctWmiException(HRESULT _ulCode) NOEXCEPT : ctException(_ulCode)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject) :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject) NOEXCEPT :
 			ctException(_ulCode)
 		{
 			get_className(_classObject);

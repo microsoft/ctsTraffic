@@ -29,7 +29,7 @@ namespace ctsTraffic {
 
     template <typename Protocol>
     struct ctsIOPatternRateLimitPolicy {
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) NOEXCEPT;
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) NOEXCEPT = delete;
     };
 
 
@@ -39,7 +39,7 @@ namespace ctsTraffic {
     template<>
     struct ctsIOPatternRateLimitPolicy < ctsIOPatternRateLimitDontThrottle > {
 
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) NOEXCEPT
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) const NOEXCEPT
         {
             // no-op
         }
@@ -80,7 +80,7 @@ namespace ctsTraffic {
             }
 
             _task.time_offset_milliseconds = 0LL;
-            auto current_time_ms(ctl::ctTimer::snap_qpc_as_msec());
+            const auto current_time_ms(ctl::ctTimer::snap_qpc_as_msec());
 
             if (this->bytes_sent_this_quantum < this->BytesSendingPerQuantum) {
                 if (current_time_ms < this->quantum_start_time_ms + this->QuantumPeriodMs) {
@@ -99,7 +99,7 @@ namespace ctsTraffic {
                 }
             } else {
                 // have already fulfilled the prior quantum
-                auto new_quantum_start_time_ms = this->newQuantumStartTime();
+                const auto new_quantum_start_time_ms = this->newQuantumStartTime();
 
                 if (current_time_ms < new_quantum_start_time_ms) {
                     _task.time_offset_milliseconds = new_quantum_start_time_ms - current_time_ms;
@@ -123,7 +123,7 @@ namespace ctsTraffic {
         }
 
     private:
-        long long newQuantumStartTime()
+        long long newQuantumStartTime() const
         {
             return this->quantum_start_time_ms + (this->bytes_sent_this_quantum / this->BytesSendingPerQuantum * this->QuantumPeriodMs);
         }

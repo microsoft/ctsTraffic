@@ -49,7 +49,7 @@ namespace ctl
 		/// Default d'tor, copy c'tor, and copy assignment operator
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiInstance(ctWmiService _wbemServices) :
+		explicit ctWmiInstance(ctWmiService _wbemServices) NOEXCEPT :
 			wbemServices(std::move(_wbemServices))
 		{
 		}
@@ -135,7 +135,7 @@ namespace ctl
 		/// - Returns a class object for the class represented by this instance
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctWmiClassObject get_class_object() const
+		ctWmiClassObject get_class_object() const NOEXCEPT
 		{
 			return ctWmiClassObject(this->wbemServices, this->instanceObject);
 		}
@@ -805,7 +805,7 @@ namespace ctl
 			}
 		}
 
-		void set(LPCWSTR _propname, const BSTR _vtProp)  // NOLINT
+		void set(LPCWSTR _propname, BSTR const _vtProp)  // NOLINT
 		{
 			ctComVariant local_variant;
 			local_variant.assign<VT_BSTR>(_vtProp);

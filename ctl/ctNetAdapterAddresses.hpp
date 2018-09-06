@@ -174,7 +174,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) :
-			buffer(new std::vector<BYTE>(16384))
+			buffer(std::make_shared<std::vector<BYTE>>(16384))
 		{
 			this->refresh(_family, _gaaFlags);
 		}
@@ -251,7 +251,7 @@ namespace ctl
 	///
 	struct ctNetAdapterMatchingAddrPredicate
 	{
-		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr _addr) :
+		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr _addr) NOEXCEPT :
 			targetAddr(std::move(_addr))
 		{
 		}

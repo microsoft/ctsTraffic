@@ -48,7 +48,7 @@ namespace ctl
 		// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 		static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
 
-		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*)
+		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*) NOEXCEPT
 		{
 			WSADATA wsadata;
 			const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);

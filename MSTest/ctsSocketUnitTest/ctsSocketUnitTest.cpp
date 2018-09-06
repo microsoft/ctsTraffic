@@ -63,7 +63,7 @@ namespace ctsTraffic {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET)
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET) NOEXCEPT
 	{
 		return wsIOResult();
 	}

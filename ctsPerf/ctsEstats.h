@@ -155,7 +155,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -166,7 +166,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -190,7 +190,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos)  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -201,7 +201,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod)  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -216,25 +216,27 @@ namespace details {
     class EstatsDataTracking {
         EstatsDataTracking() = default;
         ~EstatsDataTracking() = default;
+    public:
         EstatsDataTracking(const EstatsDataTracking&) = delete;
         EstatsDataTracking& operator=(const EstatsDataTracking&) = delete;
-    public:
+        EstatsDataTracking(EstatsDataTracking&&) = delete;
+        EstatsDataTracking& operator=(EstatsDataTracking&&) = delete;
 
         static LPCWSTR PrintHeader() = delete;
 
         void PrintData() const = delete;
 
         template <typename PTCPROW>
-        void StartTracking(const PTCPROW tcpRow) const = delete;
+        void StartTracking(PTCPROW tcpRow) const = delete;
 
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) = delete;
+        void UpdateData(PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) = delete;
     };
 
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSynOpts> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
             return L"Mss-Received,Mss-Sent";
         }
@@ -244,7 +246,7 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(const PTCPROW) const
+        void StartTracking(const PTCPROW) const NOEXCEPT
         {
             // always on
         }
@@ -274,7 +276,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsData> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
             return L"Bytes-In,Bytes-Out";
         }
@@ -314,7 +316,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSndCong> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"CongWin(mean),CongWin(stddev),"
@@ -454,7 +456,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsPath> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
@@ -592,7 +594,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsRec> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
@@ -721,7 +723,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsObsRec> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
@@ -852,7 +854,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsBandwidth> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
             return L"";
         }
@@ -883,7 +885,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsFineRtt> {
     public:
-        static LPCWSTR PrintHeader()
+        static LPCWSTR PrintHeader() NOEXCEPT
         {
             return L"";
         }
@@ -1053,7 +1055,7 @@ public:
     ctsEstats(ctsEstats&&) = delete;
     ctsEstats& operator=(ctsEstats&&) = delete;
 
-    ~ctsEstats()
+    ~ctsEstats() noexcept
     {
         timer.stop_all_timers();
 
@@ -1147,7 +1149,7 @@ private:
     std::vector<char> tcpTable;
     ULONG tableCounter = 0;
 
-    bool UpdateEstats()
+    bool UpdateEstats() noexcept
     {
         bool accessDenied = false;
         ++tableCounter;
@@ -1225,7 +1227,7 @@ private:
     void RefreshIPv4Data()
     {
         tcpTable.resize(tcpTable.capacity());
-        DWORD table_size = static_cast<DWORD>(tcpTable.size());
+        auto table_size = static_cast<DWORD>(tcpTable.size());
         ZeroMemory(&tcpTable[0], table_size);
 
         ULONG error = ::GetTcpTable(
@@ -1246,7 +1248,7 @@ private:
     void RefreshIPv6Data()
     {
         tcpTable.resize(tcpTable.capacity());
-        DWORD table_size = static_cast<DWORD>(tcpTable.size());
+        auto table_size = static_cast<DWORD>(tcpTable.size());
         ZeroMemory(&tcpTable[0], table_size);
 
         ULONG error = ::GetTcp6Table(
@@ -1268,7 +1270,7 @@ private:
     template <TCP_ESTATS_TYPE TcpType, typename MIBTYPE>
     void UpdateDataPoints(std::set<details::EstatsDataPoint<TcpType>>& data, MIBTYPE tableEntry)
     {
-        auto emplaceResults = data.emplace(tableEntry);
+        const auto emplaceResults = data.emplace(tableEntry);
         // first == iterator inserted
         // second == bool if inserted
         if (emplaceResults.second)

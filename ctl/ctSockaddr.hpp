@@ -520,7 +520,7 @@ namespace ctl
 		this->swap(tempV6);
 	}
 
-	inline bool ctSockaddr::setAddress(LPCWSTR wszAddr) NOEXCEPT
+	inline bool ctSockaddr::setAddress(_In_ LPCWSTR wszAddr) NOEXCEPT
 	{
 		ADDRINFOW addr_hints;
 		::ZeroMemory(&addr_hints, sizeof(addr_hints));

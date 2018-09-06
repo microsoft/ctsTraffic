@@ -11,8 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#pragma once
-
 // cpp headers
 #include <exception>
 #include <memory>
@@ -48,7 +46,7 @@ namespace ctsTraffic {
         std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
-        SOCKET socket = socket_lock.get();
+        const SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return wsIOResult(WSAECONNABORTED);
         }
@@ -104,15 +102,14 @@ namespace ctsTraffic {
         std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
-        SOCKET socket = socket_lock.get();
+        const SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return wsIOResult(WSAECONNABORTED);
         }
 
         wsIOResult return_result;
         try {
-            const ctl::ctSockaddr& targetAddress = _shared_socket->target_address();
-
+            const auto& targetAddress = _shared_socket->target_address();
             const auto& io_thread_pool = _shared_socket->thread_pool();
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
 
@@ -152,10 +149,10 @@ namespace ctsTraffic {
         return return_result;
     }
 
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket)
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) NOEXCEPT
     {
         wsIOResult return_result;
-        ::linger linger_option;
+        ::linger linger_option{};
         linger_option.l_onoff = 1;
         linger_option.l_linger = 0;
         if (::setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option))) != 0) {

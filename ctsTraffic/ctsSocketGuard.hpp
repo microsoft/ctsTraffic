@@ -39,7 +39,7 @@ namespace ctsTraffic {
     class ctsSocketGuard;
 
     template <typename T>
-    static ctsSocketGuard<T> ctsGuardSocket(const T& _t)
+    static ctsSocketGuard<T> ctsGuardSocket(const T& _t) NOEXCEPT
     {
         return ctsSocketGuard<T>(_t);
     }
@@ -78,7 +78,7 @@ namespace ctsTraffic {
 
     private:
         template <typename G>
-        friend ctsSocketGuard<G> ctsGuardSocket(const G&);
+        friend ctsSocketGuard<G> ctsGuardSocket(const G&) NOEXCEPT;
 
         const T& t;
         // tracking moved from by hand, as we cannot modify the const ref

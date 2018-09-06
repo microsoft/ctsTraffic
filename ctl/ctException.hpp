@@ -643,7 +643,7 @@ namespace ctl
 		///
 		__analysis_noreturn
 		inline
-		void FailFast(_In_ EXCEPTION_RECORD* _exr)
+		void FailFast(_In_ EXCEPTION_RECORD* _exr) NOEXCEPT
 		{
 			RaiseFailFastException(_exr, nullptr, 0);
 		}

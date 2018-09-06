@@ -59,19 +59,19 @@ namespace ctsTraffic {
 
     SOCKET ctsMediaStreamServerListeningSocket::get_socket() const NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         return this->socket.get();
     }
 
     ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         return this->listening_addr;
     }
 
     void ctsMediaStreamServerListeningSocket::reset() NOEXCEPT
     {
-        ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         this->socket.reset();
     }
 
@@ -82,7 +82,7 @@ namespace ctsTraffic {
         unsigned long failure_counter = 0;
         while (error != NO_ERROR) {
             try {
-                ctl::ctAutoReleaseCriticalSection lock_socket(&this->object_guard);
+                const ctl::ctAutoReleaseCriticalSection lock_socket(&this->object_guard);
                 if (this->socket.get() != INVALID_SOCKET) {
                     WSABUF wsabuf;
                     wsabuf.buf = this->recv_buffer.data();
@@ -93,7 +93,7 @@ namespace ctsTraffic {
                     this->remote_addr.reset();
                     this->remote_addr_len = this->remote_addr.length();
                     OVERLAPPED* pov = this->thread_iocp->new_request(
-                        [this] (OVERLAPPED* _ov) {
+                        [this] (OVERLAPPED* _ov) NOEXCEPT {
                         this->recv_completion(_ov); });
 
                     error = ::WSARecvFrom(
@@ -164,7 +164,7 @@ namespace ctsTraffic {
             // scope to the object lock
             {
                 // must take the object lock before touching this->socket
-                ctl::ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const ctl::ctAutoReleaseCriticalSection lock_object(&this->object_guard);
 
                 if (INVALID_SOCKET == this->socket.get()) {
                     // the listening socket was closed - just exit

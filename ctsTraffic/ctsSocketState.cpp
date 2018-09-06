@@ -165,7 +165,7 @@ namespace ctsTraffic {
 
     ctsSocketState::InternalState ctsSocketState::current_state() const NOEXCEPT
     {
-        ctAutoReleaseCriticalSection lock_state(&this->state_guard);
+        const ctAutoReleaseCriticalSection lock_state(&this->state_guard);
         return this->state;
     }
 
@@ -179,7 +179,7 @@ namespace ctsTraffic {
         // - since this could complete inline if it fails, and complete_state
         //   needs to know that we already tried to run the functor for this state
         //
-        ctsSocketState* context = reinterpret_cast<ctsSocketState*>(_context);
+        auto context = static_cast<ctsSocketState*>(_context);
         switch (context->state) {
             case InternalState::Creating: {
                 unsigned long error = 0;

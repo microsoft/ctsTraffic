@@ -85,6 +85,6 @@ namespace ctl
 	};
 
 #define ctlScopeGuard(NAME, BODY)  \
-    auto xx##NAME##xx = [&]() BODY; \
+    auto xx##NAME##xx = [&]() NOEXCEPT BODY; \
     ::ctl::ctScopeGuardT<decltype(xx##NAME##xx)> NAME(xx##NAME##xx)
 } // namespace

@@ -13,7 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 // cpp headers
-#include <cwchar>
 #include <cstring>
 // os headers
 #include <Windows.h>
@@ -49,7 +48,7 @@ namespace ctsTraffic
                 L"UuidToString returned a string not 36 characters long (%Iu)",
                 ::strlen(reinterpret_cast<LPSTR>(connection_id_string)));
 
-            auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
+            const auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"memcpy_s failed trying to copy a UUID string (%d)", copy_error);
@@ -340,7 +339,7 @@ namespace ctsTraffic
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
 
-        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) NOEXCEPT = delete;
+        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) = delete;
 
         long long current_bytes() const NOEXCEPT
         {

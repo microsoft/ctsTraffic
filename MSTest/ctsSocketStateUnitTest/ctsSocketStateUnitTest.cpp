@@ -38,7 +38,7 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET)
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET) NOEXCEPT
 	{
 		return wsIOResult();
 	}

@@ -130,9 +130,11 @@ namespace ctsTraffic {
         //
         void set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> _func);
 
-        // not copyable
+        // not copyable or movable
         ctsSocket(const ctsSocket&) = delete;
         ctsSocket& operator= (const ctsSocket&) = delete;
+        ctsSocket(ctsSocket&&) = delete;
+        ctsSocket& operator= (ctsSocket&&) = delete;
 
     private:
         //
@@ -146,13 +148,13 @@ namespace ctsTraffic {
         _Acquires_lock_(socket_cs) void lock_socket() const NOEXCEPT;
         _Releases_lock_(socket_cs) void unlock_socket() const NOEXCEPT;
 
-        void initiate_isb_notification();
-        void process_isb_notification();
+        void initiate_isb_notification()  NOEXCEPT;
+        void process_isb_notification() NOEXCEPT;
 
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
-        mutable CRITICAL_SECTION socket_cs;
+        mutable CRITICAL_SECTION socket_cs{};
         _Guarded_by_(socket_cs) SOCKET socket = INVALID_SOCKET;
         _Interlocked_ long io_count = 0L;
 

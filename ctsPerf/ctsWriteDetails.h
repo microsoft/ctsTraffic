@@ -24,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctException.hpp"
 #include "ctString.hpp"
-// ReSharper disable once CppUnusedIncludeDirective
 #include "ctMath.hpp"
 
 
@@ -87,7 +86,7 @@ namespace ctsPerf {
         template <typename T>
         static std::wstring PrintMeanStdDev(const std::vector<T>& _data)
         {
-            auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
+            auto std_tuple = ctl::ctSampledStandardDeviation(_data.begin(), _data.end());
             return details::write(std::get<0>(std_tuple), std::get<1>(std_tuple)); // Mean,StdDev
         }
 
@@ -101,8 +100,8 @@ namespace ctsPerf {
             // sort the data for IQR calculations
             sort(_data.begin(), _data.end());
 
-            auto std_tuple = ctSampledStandardDeviation(_data.begin(), _data.end());
-            auto interquartile_tuple = ctInterquartileRange(_data.begin(), _data.end());
+            auto std_tuple = ctl::ctSampledStandardDeviation(_data.begin(), _data.end());
+            auto interquartile_tuple = ctl::ctInterquartileRange(_data.begin(), _data.end());
 
             auto formatted_data = details::write(static_cast<DWORD>(_data.size()));  // SampleCount
             formatted_data += details::write(*_data.begin(), *_data.rbegin()); // Min,Max

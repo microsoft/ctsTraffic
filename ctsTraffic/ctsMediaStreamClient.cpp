@@ -79,7 +79,7 @@ namespace ctsTraffic {
         // always register our ctsIOPattern callback since it's necessary for this IO Pattern
         // this callback can be invoked out-of-band directly from the IO Pattern class
         shared_pattern->register_callback(
-            [_weak_socket] (const ctsIOTask& _task) {
+            [_weak_socket] (const ctsIOTask& _task) NOEXCEPT {
             // attempt to get a reference to the socket
             auto lambda_shared_socket(_weak_socket.lock());
             if (!lambda_shared_socket) {
@@ -101,7 +101,7 @@ namespace ctsTraffic {
             // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
             if (lambda_shared_socket->increment_io() > 1) {
                 // only running this one task in the OOB callback
-                IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
+                const IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
                 // decrement the IO count that we added before calling the Impl
                 // - complete_state if this happened to be the final IO refcount
                 if (lambda_shared_socket->decrement_io() == 0) {
@@ -164,7 +164,7 @@ namespace ctsTraffic {
         const auto response = ctsWSASendTo(
             shared_socket,
             start_task,
-            [_weak_socket, targetAddress] (OVERLAPPED* ov) {
+            [_weak_socket, targetAddress] (OVERLAPPED* ov) NOEXCEPT {
             ctsMediaStreamClientConnectionCompletionCallback(ov, _weak_socket, targetAddress);
         });
 
@@ -216,7 +216,7 @@ namespace ctsTraffic {
             case IOTaskAction::Recv: {
                 // add-ref the IO about to start
                 LONG io_count = _shared_socket->increment_io();
-                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) {
+                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) NOEXCEPT {
                     ctsMediaStreamClientIoCompletionCallback(_ov, weak_reference, _next_io);
                 };
 
@@ -246,7 +246,7 @@ namespace ctsTraffic {
 
                     // hold a reference on the iopattern
                     auto shared_pattern(_shared_socket->io_pattern());
-                    auto protocol_status = shared_pattern->complete_io(
+                    const auto protocol_status = shared_pattern->complete_io(
                         _next_io,
                         result.bytes_transferred,
                         result.error_code);
@@ -365,7 +365,7 @@ namespace ctsTraffic {
         // hold a reference on the iopattern
         auto shared_pattern(shared_socket->io_pattern());
         // see if complete_io requests more IO
-        ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
+        const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
             case ctsIOStatus::ContinueIo: {
                 // more IO is requested from the protocol

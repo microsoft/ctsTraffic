@@ -52,7 +52,7 @@ namespace ctsTraffic {
         // lock the socket just long enough to read the result
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
             } else {
@@ -67,7 +67,7 @@ namespace ctsTraffic {
         if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, gle);
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
-        ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
+        const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
         case ctsIOStatus::ContinueIo:
             // more IO is requested from the protocol
@@ -154,7 +154,7 @@ namespace ctsTraffic {
                         // these are the only calls which can throw in this function
                         io_thread_pool = shared_socket->thread_pool();
                         pov = io_thread_pool->new_request(
-                            [_weak_socket, next_io](OVERLAPPED* _ov)
+                            [_weak_socket, next_io](OVERLAPPED* _ov) NOEXCEPT
                         { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
                     catch (const std::exception& e) {
@@ -197,7 +197,7 @@ namespace ctsTraffic {
                         const wchar_t* Function = (IOTaskAction::Send == next_io.ioAction) ? L"WriteFile" : L"ReadFile";
                         PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, io_error);
 
-                        ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
+                        const ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
                         io_done = (protocol_status != ctsIOStatus::ContinueIo);
                         switch (protocol_status) {
                         case ctsIOStatus::ContinueIo:

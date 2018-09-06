@@ -141,7 +141,7 @@ namespace ctsTraffic {
             //
             void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
             {
-                ctl::ctAutoReleaseCriticalSection lock(&accepting_cs);
+                const ctl::ctAutoReleaseCriticalSection lock(&accepting_cs);
                 accepting_sockets.push_back(_weak_socket);
                 ::SubmitThreadpoolWork(thread_pool_worker);
             }
@@ -149,11 +149,13 @@ namespace ctsTraffic {
             // non-copyable
             ctsSimpleAcceptImpl(const ctsSimpleAcceptImpl&) = delete;
             ctsSimpleAcceptImpl& operator=(const ctsSimpleAcceptImpl&) = delete;
+            ctsSimpleAcceptImpl(ctsSimpleAcceptImpl&&) = delete;
+            ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
 
         private:
             static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
             {
-                ctsSimpleAcceptImpl* pimpl = reinterpret_cast<ctsSimpleAcceptImpl*>(_context);
+                auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(_context);
 
                 // get an accept-socket off the vector (protected with its cs)
                 ::EnterCriticalSection(&pimpl->accepting_cs);
@@ -180,7 +182,7 @@ namespace ctsTraffic {
                     ++listener_counter;
                 }
 
-                SOCKET listener = pimpl->listening_sockets[listener_position];
+                const SOCKET listener = pimpl->listening_sockets[listener_position];
                 if (INVALID_SOCKET == listener) {
                     return;
                 }
@@ -192,7 +194,7 @@ namespace ctsTraffic {
                 ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);
                 ctl::ctSockaddr remote_addr;
                 int remote_addr_len = remote_addr.length();
-                SOCKET new_socket = ::accept(listener, remote_addr.sockaddr(), &remote_addr_len);
+                const SOCKET new_socket = ::accept(listener, remote_addr.sockaddr(), &remote_addr_len);
                 DWORD gle = ::WSAGetLastError();
                 ::InterlockedDecrement(&pimpl->listening_sockets_refcount[listener_position]);
 
@@ -242,7 +244,7 @@ namespace ctsTraffic {
             try { s_pimpl = std::make_shared<ctsSimpleAcceptImpl>(); }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
+                *static_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
                 return FALSE;
             }
 

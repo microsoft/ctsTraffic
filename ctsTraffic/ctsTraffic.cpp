@@ -11,10 +11,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include "targetver.h"
 
 // CRT headers
-#include <stdio.h>
+#include <cstdio>
 #include <exception>
 // os headers
 #include <Windows.h>
@@ -33,7 +34,7 @@ using namespace std;
 // global ptr for easing debugging
 ctsSocketBroker* g_SocketBroker = nullptr;
 
-BOOL WINAPI CtrlBreakHandlerRoutine(DWORD)
+BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) NOEXCEPT
 {
     // handle all exit types - notify config that it's time to shutdown
     ctsConfig::Shutdown();
@@ -44,7 +45,7 @@ int
 __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
-    int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+    const int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
         ::wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
         return wsError;
@@ -128,7 +129,7 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_CANCELLED;
     }
 
-    auto total_time_run = ctTimer::snap_qpc_as_msec() - ctsConfig::Settings->StartTimeMilliseconds;
+    const auto total_time_run = ctTimer::snap_qpc_as_msec() - ctsConfig::Settings->StartTimeMilliseconds;
 
     // write out the final status update
     ctsConfig::PrintStatusUpdate();

@@ -70,7 +70,7 @@ namespace ctsTraffic {
         //
         // Completes the current socket state
         //
-        void complete_state(DWORD) NOEXCEPT;
+        void complete_state(DWORD _error) NOEXCEPT;
 
         //
         // Accessor to current state information

@@ -225,7 +225,7 @@ namespace ctsTraffic {
                 // search our circular queue (starting at the head_entry)
                 // for the seq number we just received, and if found, tag as received
                 //
-                auto found_slot = this->find_sequence_number(received_seq_number);
+                const auto found_slot = this->find_sequence_number(received_seq_number);
                 if (found_slot != this->frame_entries.end()) {
                     if (found_slot->received != this->frame_size_bytes) {
                         const long long buffered_qpc = *reinterpret_cast<long long*>(_task.buffer + 8);
@@ -424,11 +424,11 @@ namespace ctsTraffic {
         }
     }
 
-    VOID CALLBACK ctsIOPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER)
+    VOID CALLBACK ctsIOPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT
     {
         static const char StartBuffer[] = "START";
 
-        ctsIOPatternMediaStreamClient* this_ptr = reinterpret_cast<ctsIOPatternMediaStreamClient*>(_context);
+        ctsIOPatternMediaStreamClient* this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(_context);
         // take the base lock before touching any internal members
         this_ptr->base_lock();
         // guarantee the lock is released on exit
@@ -456,9 +456,9 @@ namespace ctsTraffic {
         // else, don't schedule this timer anymore
     }
 
-    VOID CALLBACK ctsIOPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER)
+    VOID CALLBACK ctsIOPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT
     {
-        ctsIOPatternMediaStreamClient* this_ptr = reinterpret_cast<ctsIOPatternMediaStreamClient*>(_context);
+        auto* this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(_context);
 
         // process frames until the timer is scheduled in the future to process more frames
         bool timer_scheduled = false;

@@ -54,7 +54,7 @@ namespace ctsTraffic {
 
         void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
         {
-            LPCWSTR message = _status_info->print_legend(this->format);
+            LPCWSTR const message = _status_info->print_legend(this->format);
             if (message != nullptr) {
                 log_message_impl(message);
             }
@@ -62,7 +62,7 @@ namespace ctsTraffic {
 
         void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
         {
-            LPCWSTR message = _status_info->print_header(this->format);
+            LPCWSTR const message = _status_info->print_header(this->format);
             if (message != nullptr) {
                 log_message_impl(message);
             }
@@ -70,7 +70,7 @@ namespace ctsTraffic {
 
         void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) NOEXCEPT
         {
-            LPCWSTR message = _status_info->print_status(this->format, _current_time, _clear_status);
+            LPCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
             if (message != nullptr) {
                 log_message_impl(message);
             }
@@ -122,7 +122,7 @@ namespace ctsTraffic {
                 FILE_ATTRIBUTE_NORMAL,
                 nullptr);
             if (INVALID_HANDLE_VALUE == file_handle) {
-                auto gle = ::GetLastError();
+                const auto gle = ::GetLastError();
                 throw ctl::ctException(
                     gle,
                     ctl::ctString::format_string(L"CreateFile(%ws)", _file_name).c_str(),
@@ -141,7 +141,7 @@ namespace ctsTraffic {
                 &BytesWritten,
                 nullptr)) 
             {
-                auto gle = ::GetLastError();
+                const auto gle = ::GetLastError();
                 throw ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false);
             }
 
@@ -165,6 +165,11 @@ namespace ctsTraffic {
             write_impl(_message);
         }
 
+        ctsTextLogger(const ctsTextLogger&) = delete;
+        ctsTextLogger& operator=(const ctsTextLogger&) = delete;
+        ctsTextLogger(ctsTextLogger&&) = delete;
+        ctsTextLogger& operator=(ctsTextLogger&&) = delete;
+
     private:
         CRITICAL_SECTION file_cs{};
         HANDLE file_handle = INVALID_HANDLE_VALUE;
@@ -180,7 +185,7 @@ namespace ctsTraffic {
                 &BytesWritten,
                 nullptr)) 
             {
-                auto gle = ::GetLastError();
+                const auto gle = ::GetLastError();
                 ctsConfig::PrintException(
                     ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false));
             }

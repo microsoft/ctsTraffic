@@ -28,6 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSafeInt.hpp"
 #include "ctsIOPatternState.hpp"
 #include "ctsStatistics.hpp"
+#include <mswsock.h>
 
 namespace ctsTraffic {
 
@@ -52,7 +53,7 @@ namespace ctsTraffic {
 
     class ctsIOPattern {
     public:
-        static bool IsProtocolError(unsigned long _status) NOEXCEPT
+        constexpr static bool IsProtocolError(unsigned long _status) NOEXCEPT
         {
             return (_status >= ctsStatusMinimumValue && _status < ctsStatusIORunning);
         }
@@ -87,7 +88,7 @@ namespace ctsTraffic {
         ///
         /// d'tor must be virtual as this is a base pure virtual class
         ///
-        virtual ~ctsIOPattern();
+        virtual ~ctsIOPattern() NOEXCEPT;
 
         ///
         /// Exposing statistics members publicly to ctsSocket
@@ -98,26 +99,26 @@ namespace ctsTraffic {
         /// Some derived IO types require callbacks to the IO functions
         /// - to request tasks from the normal initiate_io / complete_io pattern
         ///
-        virtual void register_callback(std::function<void(const ctsIOTask&)> _callback)
+        virtual void register_callback(std::function<void(const ctsIOTask&)> _callback) NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection local_cs(&cs);
+            const ctl::ctAutoReleaseCriticalSection local_cs(&cs);
             this->callback = std::move(_callback);
         }
 
         virtual unsigned long get_last_error() const NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             return this->last_error;
         }
 
         ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             return this->pattern_state.get_ideal_send_backlog();
         }
         void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             this->pattern_state.set_ideal_send_backlog(_new_isb);
         }
 
@@ -140,26 +141,29 @@ namespace ctsTraffic {
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
         ctsIOTask initiate_io() NOEXCEPT;
-        ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT;
+        ctsIOStatus complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) NOEXCEPT;
 
         /// no default c'tor
         ctsIOPattern() = delete;
         /// no copy c'tor or copy assignment
         ctsIOPattern(const ctsIOPattern&) = delete;
         ctsIOPattern& operator= (const ctsIOPattern&) = delete;
+        ctsIOPattern(ctsIOPattern&&) = delete;
+        ctsIOPattern& operator= (ctsIOPattern&&) = delete;
 
     private:
         ctsIOStatus current_status() const NOEXCEPT
         {
             if (ctsStatusIORunning == this->last_error) {
                 return ctsIOStatus::ContinueIo;
-
-            } else if (NO_ERROR == this->last_error) {
-                return ctsIOStatus::CompletedIo;
-
-            } else {
-                return ctsIOStatus::FailedIo;
             }
+
+            if (NO_ERROR == this->last_error) {
+                return ctsIOStatus::CompletedIo;
+            }
+
+            // all other values indicate failure
+            return ctsIOStatus::FailedIo;
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -190,7 +194,7 @@ namespace ctsTraffic {
 
         // CS memory guard for data within this object
         // - it's mutable to allow us to take the CS in const methods
-        mutable CRITICAL_SECTION cs;
+        mutable CRITICAL_SECTION cs{};
 
         // recv buffers to return to the caller
         // - tracking sending buffers separate from receiving buffers
@@ -208,17 +212,17 @@ namespace ctsTraffic {
 
         // need to track the current offset into the buffer pattern
         // these are separate as we could have both sends and receive operations on the same connection
-        ctsSizeT send_pattern_offset;
-        ctsSizeT recv_pattern_offset;
+        ctsSizeT send_pattern_offset = 0;
+        ctsSizeT recv_pattern_offset = 0;
 
         // RIO buffer Id
-        RIO_BUFFERID recv_rio_bufferid;
+        RIO_BUFFERID recv_rio_bufferid = RIO_INVALID_BUFFERID;
         // tracking time information for scheduling IO at time offsets
         const ctsSignedLongLong bytes_sending_per_quantum;
-        ctsSignedLongLong bytes_sending_this_quantum;
+        ctsSignedLongLong bytes_sending_this_quantum = 0LL;
         ctsSignedLongLong quantum_start_time_ms;
 
-        unsigned long last_error;
+        unsigned long last_error = ctsStatusIORunning;
 
     protected:
         ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -276,7 +280,7 @@ namespace ctsTraffic {
         /// - they created through untracked_task
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        bool verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) NOEXCEPT;
+        bool verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) const NOEXCEPT;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -301,9 +305,9 @@ namespace ctsTraffic {
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         unsigned long update_last_error(DWORD _error) NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             if (ctsStatusIORunning == this->last_error) {
-                auto status_error = this->pattern_state.update_error(_error);
+                const auto status_error = this->pattern_state.update_error(_error);
                 if (NO_ERROR == _error) {
                     if (status_error != ctsIOPatternProtocolError::ErrorIOFailed) {
                         this->last_error = NO_ERROR;
@@ -456,9 +460,14 @@ namespace ctsTraffic {
         ctsIOPatternPull();
         ~ctsIOPatternPull() NOEXCEPT = default;
 
+        ctsIOPatternPull(const ctsIOPatternPull&) = delete;
+        ctsIOPatternPull& operator=(const ctsIOPatternPull&) = delete;
+        ctsIOPatternPull(ctsIOPatternPull&&) = delete;
+        ctsIOPatternPull& operator=(ctsIOPatternPull&&) = delete;
+
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT override;
 
     private:
         const IOTaskAction io_action;
@@ -479,9 +488,14 @@ namespace ctsTraffic {
         ctsIOPatternPush();
         ~ctsIOPatternPush() NOEXCEPT = default;
 
+        ctsIOPatternPush(const ctsIOPatternPush&) = delete;
+        ctsIOPatternPush& operator=(const ctsIOPatternPush&) = delete;
+        ctsIOPatternPush(ctsIOPatternPush&&) = delete;
+        ctsIOPatternPush& operator=(ctsIOPatternPush&&) = delete;
+
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT override;
 
     private:
         const IOTaskAction io_action;
@@ -502,6 +516,11 @@ namespace ctsTraffic {
     public:
         ctsIOPatternPushPull();
         ~ctsIOPatternPushPull() NOEXCEPT = default;
+
+        ctsIOPatternPushPull(const ctsIOPatternPushPull&) = delete;
+        ctsIOPatternPushPull& operator=(const ctsIOPatternPushPull&) = delete;
+        ctsIOPatternPushPull(ctsIOPatternPushPull&&) = delete;
+        ctsIOPatternPushPull& operator=(ctsIOPatternPushPull&&) = delete;
 
         ctsIOTask next_task() NOEXCEPT override;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
@@ -530,9 +549,14 @@ namespace ctsTraffic {
         ctsIOPatternDuplex();
         ~ctsIOPatternDuplex() NOEXCEPT = default;
 
+        ctsIOPatternDuplex(const ctsIOPatternDuplex&) = delete;
+        ctsIOPatternDuplex& operator=(const ctsIOPatternDuplex&) = delete;
+        ctsIOPatternDuplex(ctsIOPatternDuplex&&) = delete;
+        ctsIOPatternDuplex& operator=(ctsIOPatternDuplex&&) = delete;
+
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT override;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT override;
 
     private:
         // need to know when to stop sending
@@ -555,7 +579,12 @@ namespace ctsTraffic {
     class ctsIOPatternMediaStreamServer : public ctsIOPatternStatistics<ctsUdpStatistics> {
     public:
         ctsIOPatternMediaStreamServer();
-        ~ctsIOPatternMediaStreamServer() NOEXCEPT;
+        ~ctsIOPatternMediaStreamServer() NOEXCEPT = default;
+
+        ctsIOPatternMediaStreamServer(const ctsIOPatternMediaStreamServer&) = delete;
+        ctsIOPatternMediaStreamServer& operator=(const ctsIOPatternMediaStreamServer&) = delete;
+        ctsIOPatternMediaStreamServer(ctsIOPatternMediaStreamServer&&) = delete;
+        ctsIOPatternMediaStreamServer& operator=(ctsIOPatternMediaStreamServer&&) = delete;
 
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
@@ -592,6 +621,11 @@ namespace ctsTraffic {
     public:
         ctsIOPatternMediaStreamClient();
         ~ctsIOPatternMediaStreamClient() NOEXCEPT;
+
+        ctsIOPatternMediaStreamClient(const ctsIOPatternMediaStreamClient&) = delete;
+        ctsIOPatternMediaStreamClient& operator=(const ctsIOPatternMediaStreamClient&) = delete;
+        ctsIOPatternMediaStreamClient(ctsIOPatternMediaStreamClient&&) = delete;
+        ctsIOPatternMediaStreamClient& operator=(ctsIOPatternMediaStreamClient&&) = delete;
 
         // required virtual functions
         ctsIOTask next_task() NOEXCEPT override;
@@ -646,10 +680,10 @@ namespace ctsTraffic {
 
         /// The "Renderer" processes frames at the specified frame rate
         static
-        VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER);
+        VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT;
         /// Callback to track when the server has actually started sending
         static
-        VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER);
+        VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT;
     };
 
 } //namespace

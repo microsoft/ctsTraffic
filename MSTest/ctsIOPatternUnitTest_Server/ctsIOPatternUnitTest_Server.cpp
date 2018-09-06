@@ -194,7 +194,7 @@ namespace ctsUnitTest {
         };
 
         static const unsigned long DefaultTransferSize = 10UL;
-        void SetTestBaseClassDefaults(TestRole _role, TestShutdownMethod _shutdown = Graceful)
+        void SetTestBaseClassDefaults(TestRole _role, TestShutdownMethod _shutdown = Graceful) const
         {
             if (Server == _role && Hard == _shutdown) {
                 Assert::Fail(L"Servers only support the default Graceful shutdown");

@@ -402,7 +402,7 @@ namespace ctl {
 
             void add_data(const T& instance_data)
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 switch (collection_type) {
                     case ctWmiPerformanceCollectionType::Detailed:
                         counter_data.push_back(instance_data);
@@ -457,7 +457,7 @@ namespace ctl {
 
             typename std::vector<T>::const_iterator access_begin() NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 // when accessing data, calculate the mean
                 if (ctWmiPerformanceCollectionType::MeanOnly == collection_type) {
                     counter_data[3] = static_cast<T>(counter_sum / counter_data[0]);
@@ -467,7 +467,7 @@ namespace ctl {
 
             typename std::vector<T>::const_iterator access_end() const NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return counter_data.cend();
             }
 
@@ -565,24 +565,24 @@ namespace ctl {
 
             typename std::vector<T>::const_iterator begin() NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_begin();
             }
             typename std::vector<T>::const_iterator end() const NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_end();
             }
 
             size_t count() NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_end() - access_begin();
             }
 
             void clear() NOEXCEPT
             {
-                ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 counter_data.clear();
                 counter_sum = 0;
             }
@@ -860,7 +860,7 @@ namespace ctl {
                 !data_stopped,
                 L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
 
-            ctAutoReleaseCriticalSection lock(&guard_counter_data);
+            const ctAutoReleaseCriticalSection lock(&guard_counter_data);
             auto found_instance = std::find_if(
                 std::begin(counter_data),
                 std::end(counter_data),
@@ -970,7 +970,7 @@ namespace ctl {
                         !data_stopped,
                         L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
                     {
-                        ctAutoReleaseCriticalSection lock(&guard_counter_data);
+                        const ctAutoReleaseCriticalSection lock(&guard_counter_data);
                         for (auto& _counter_data : counter_data) {
                             _counter_data->clear();
                         }
@@ -1009,12 +1009,12 @@ namespace ctl {
             if (fAddData) {
                 ctComVariant instance_name = details::ctQueryInstanceName(_instance);
 
-                ctAutoReleaseCriticalSection lock(&guard_counter_data);
+                const ctAutoReleaseCriticalSection lock(&guard_counter_data);
 
                 auto tracked_instance = std::find_if(
                     std::begin(counter_data),
                     std::end(counter_data),
-                    [&] (std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _counter_data) {
+                    [&] (std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _counter_data) NOEXCEPT {
                     return _counter_data->match(instance_name->bstrVal);
                 });
 
@@ -1025,7 +1025,7 @@ namespace ctl {
                 if (tracked_instance == std::end(counter_data)) {
                     counter_data.push_back(
                         std::unique_ptr<details::ctWmiPeformanceCounterData<T>>
-                            (new details::ctWmiPeformanceCounterData<T>(collection_type, _instance, counter_name.c_str())));
+                            (std::make_unique<details::ctWmiPeformanceCounterData<T>>(collection_type, _instance, counter_name.c_str())));
                     (*counter_data.rbegin())->add(_instance);
                 } else {
                     (*tracked_instance)->add(_instance);
@@ -1147,7 +1147,7 @@ namespace ctl {
             for (auto& _callback : callbacks) {
                 _callback(details::CallbackAction::Start);
             }
-            timer.reset(new ctThreadpoolTimer);
+            timer = std::make_unique<ctThreadpoolTimer>();
             timer->schedule_singleton(
                 [this, _interval] () { TimerCallback(this, _interval); },
                 _interval);

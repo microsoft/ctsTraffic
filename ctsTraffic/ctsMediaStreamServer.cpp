@@ -179,7 +179,7 @@ namespace ctsTraffic {
                     // capture the socket value before moved into the vector
                     const SOCKET listening_socket_to_print(listening.get());
                     ctsMediaStreamServerImpl::listening_sockets.emplace_back(
-                        new ctsMediaStreamServerListeningSocket(std::move(listening), addr));
+                        std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
 
                     PrintDebugInfo(
                         L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
@@ -229,13 +229,13 @@ namespace ctsTraffic {
             std::shared_ptr<ctsMediaStreamServerConnectedSocket> shared_connected_socket;
             {
                 // must guard connected_sockets since we need to add it
-                ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
+                const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
                 // find the matching connected_socket
                 const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
+                    [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
                         return (shared_socket->target_address() == _connected_socket->get_address());
                     }
                 );
@@ -266,7 +266,7 @@ namespace ctsTraffic {
         {
             auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
-                ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&ctsMediaStreamServerImpl::awaiting_object_guard);
+                const ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&ctsMediaStreamServerImpl::awaiting_object_guard);
 
                 if (ctsMediaStreamServerImpl::awaiting_endpoints.empty()) {
                     // just add it to our accepting sockets vector under the writer lock
@@ -278,7 +278,7 @@ namespace ctsTraffic {
                     // must guard connected_sockets since we need to add it to the vector
                     // - scope to the lock
                     {
-                        ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
+                        const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
                         ctsMediaStreamServerImpl::connected_sockets.emplace_back(
                             std::make_shared<ctsMediaStreamServerConnectedSocket>(
                             _weak_socket, 
@@ -320,12 +320,12 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void remove_socket(const ctl::ctSockaddr& _target_addr)
         {
-            ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
+            const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
             const auto found_socket = std::find_if(
                 std::begin(ctsMediaStreamServerImpl::connected_sockets),
                 std::end(ctsMediaStreamServerImpl::connected_sockets),
-                [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
+                [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
                 return _target_addr == _connected_socket->get_address();
             });
 
@@ -346,12 +346,12 @@ namespace ctsTraffic {
             // before starting a socket, verify there is not already a connected socket with this same socket address
             // scope the lock
             {
-                ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
+                const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
 
                 const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) {
+                    [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
                     return _target_addr == _connected_socket->get_address();
                 });
 
@@ -366,7 +366,7 @@ namespace ctsTraffic {
             }
 
             // find a ctsSocket waiting to 'accept' a connection and complete it
-            ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&ctsMediaStreamServerImpl::awaiting_object_guard);
+            const ctl::ctAutoReleaseCriticalSection lock_awaiting_object(&ctsMediaStreamServerImpl::awaiting_object_guard);
 
             // walk through the list to find a socket that is still alive to take this connection
             bool added_connection = false;
@@ -377,7 +377,7 @@ namespace ctsTraffic {
                     // 'move' the accepting socket to connected
                     // - scope the lock
                     {
-                        ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
+                        const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
                         ctsMediaStreamServerImpl::connected_sockets.emplace_back(
                             std::make_shared<ctsMediaStreamServerConnectedSocket>(
                             weak_instance,

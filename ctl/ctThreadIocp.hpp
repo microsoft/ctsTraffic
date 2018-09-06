@@ -219,7 +219,7 @@ namespace ctl
 			// we're working really hard to break and never let TP swalling SEH exceptions
 			EXCEPTION_POINTERS* exr = nullptr;
 			__try {
-				ctThreadIocpCallbackInfo* _request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_overlapped);
+				auto* _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
 				_request->callback(static_cast<OVERLAPPED*>(_overlapped));
 				delete _request;
 			}

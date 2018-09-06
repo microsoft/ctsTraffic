@@ -44,7 +44,7 @@ namespace ctsTraffic {
         // one more for the null terminator
         wchar_t OutputBuffer[OutputBufferSize + 1]{};
 
-        void reset_buffer()
+        void reset_buffer() NOEXCEPT
         {
             // fill the output buffer with spaces and null terminate
             ::wmemset(OutputBuffer, L' ', OutputBufferSize);
@@ -413,8 +413,8 @@ namespace ctsTraffic {
 
         PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
-            ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
-            ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
+            const ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
+            const ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
 
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 unsigned long characters_written = 0;
@@ -495,11 +495,15 @@ namespace ctsTraffic {
     public:
         ctsTcpStatusInformation() NOEXCEPT = default;
         ~ctsTcpStatusInformation() NOEXCEPT = default;
+        ctsTcpStatusInformation(const ctsTcpStatusInformation&) = delete;
+        ctsTcpStatusInformation& operator=(const ctsTcpStatusInformation&) = delete;
+        ctsTcpStatusInformation(ctsTcpStatusInformation&&) = delete;
+        ctsTcpStatusInformation& operator=(ctsTcpStatusInformation&&) = delete;
 
         PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) NOEXCEPT override
         {
-            ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
-            ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
+            const ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
+            const ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
 
             const long long time_elapsed = tcp_data.end_time.get() - tcp_data.start_time.get();
 

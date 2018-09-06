@@ -159,7 +159,7 @@ namespace ctl
 					_period));
 		}
 
-		void stop_all_timers()
+		void stop_all_timers() NOEXCEPT
 		{
 			::EnterCriticalSection(&timer_lock);
 			for (const auto& timer : tp_timers) {
@@ -196,7 +196,7 @@ namespace ctl
 		//
 		void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& _new_request)
 		{
-			ctAutoReleaseCriticalSection lock_timer(&this->timer_lock);
+            const ctAutoReleaseCriticalSection lock_timer(&this->timer_lock);
 
 			if (exiting) {
 				return;
@@ -206,7 +206,7 @@ namespace ctl
 			auto unused_callback = std::find_if(
 				std::begin(this->callback_objects),
 				std::end(this->callback_objects),
-				[](const details::ctThreadpoolTimerCallbackInfo& _info) {
+				[](const details::ctThreadpoolTimerCallbackInfo& _info) NOEXCEPT {
 					// returns if a null callback (not being used)
 					return !static_cast<bool>(_info.callback);
 				});
@@ -249,20 +249,20 @@ namespace ctl
 		static void CALLBACK ctThreadPoolTimerCallback(
 			PTP_CALLBACK_INSTANCE /*_instance*/,
 			PVOID _context,
-			PTP_TIMER _timer)
+			PTP_TIMER _timer) NOEXCEPT
 		{
-			ctThreadpoolTimer* this_ptr = reinterpret_cast<ctThreadpoolTimer*>(_context);
+			auto this_ptr = static_cast<ctThreadpoolTimer*>(_context);
 			// save off the functor to invoke outside the lock
 			std::function<void()> functor;
 
 			// scope for the CS lock
 			{
-				ctAutoReleaseCriticalSection lock_timer(&this_ptr->timer_lock);
+                const ctAutoReleaseCriticalSection lock_timer(&this_ptr->timer_lock);
 				// find the timer that was fired to run its callback
 				const auto found_timer = std::find_if(
 					std::begin(this_ptr->tp_timers),
 					std::end(this_ptr->tp_timers),
-					[_timer](PTP_TIMER _callback_timer)
+					[_timer](PTP_TIMER _callback_timer) NOEXCEPT
 					{
 						// returns if a null callback (not being used)
 						return (_timer == _callback_timer);

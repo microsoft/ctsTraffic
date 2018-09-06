@@ -184,7 +184,7 @@ namespace ctsUnitTest {
         // Private members to implement building out a ctsIOTask for each task
         //
 
-        ctsIOTask RequestConnectionId( )
+        ctsIOTask RequestConnectionId( ) const
         {
             auto task = this->ioPatternState->get_next_task();
             if (s_Listening) {
@@ -208,7 +208,7 @@ namespace ctsUnitTest {
             return test_task;
         }
 
-        ctsIOTask RequestMoreIo(unsigned long _buffer_length)
+        ctsIOTask RequestMoreIo(unsigned long _buffer_length) const
         {
             auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::MoreIo, task);
@@ -331,7 +331,7 @@ namespace ctsUnitTest {
             return test_task;
         }
 
-        void VerifyNoMoreIo()
+        void VerifyNoMoreIo() const
         {
             auto no_io_task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, no_io_task);

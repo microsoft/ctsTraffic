@@ -63,7 +63,7 @@ namespace ctsTraffic {
         // scoping the socket lock
         {
             auto socketlock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socketlock.get();
+            const SOCKET socket = socketlock.get();
             // if we no longer have a valid socket or the pattern was destroyed, return early
             if (!shared_pattern || INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
@@ -79,7 +79,7 @@ namespace ctsTraffic {
         const wchar_t* function = (IOTaskAction::Send == _io_task.ioAction) ? L"WSASend" : L"WSARecv";
         if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsSendRecvIocp]\n", function, gle);
         // see if complete_io requests more IO
-        ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
+        const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
         switch (protocol_status) {
         case ctsIOStatus::ContinueIo:
             // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
@@ -149,7 +149,7 @@ namespace ctsTraffic {
                 // attempt to allocate an IO thread-pool object
                 const std::shared_ptr<ctl::ctThreadIocp>& io_thread_pool(_shared_socket->thread_pool());
                 pov = io_thread_pool->new_request(
-                    [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), next_io](OVERLAPPED* _ov)
+                    [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), next_io](OVERLAPPED* _ov) NOEXCEPT
                 { ctsIoCompletionCallback(_ov, weak_reference, next_io); });
 
                 WSABUF wsabuf;
@@ -194,7 +194,7 @@ namespace ctsTraffic {
                     // must cancel the IOCP TP since IO is not pended
                     io_thread_pool->cancel_request(pov);
                     // call back to the socket to see if wants more IO
-                    ctsIOStatus protocol_status = _shared_pattern->complete_io(next_io, bytes_transferred, return_status.io_errorcode);
+                    const ctsIOStatus protocol_status = _shared_pattern->complete_io(next_io, bytes_transferred, return_status.io_errorcode);
                     switch (protocol_status) {
                     case ctsIOStatus::ContinueIo:
                         // The protocol layer wants to transfer more data
@@ -253,7 +253,7 @@ namespace ctsTraffic {
         shared_socket->increment_io();
 
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
-        ctsSendRecvStatus status = ctsProcessIOTask(socketlock.get(), shared_socket, shared_socket->io_pattern(), next_io);
+        const ctsSendRecvStatus status = ctsProcessIOTask(socketlock.get(), shared_socket, shared_socket->io_pattern(), next_io);
         // if no IO was started, decrement the IO counter
         if (!status.io_started) {
             if (0 == shared_socket->decrement_io()) {
@@ -300,7 +300,7 @@ namespace ctsTraffic {
 
         ctsSendRecvStatus status;
         while (!status.io_done) {
-            ctsIOTask next_io = shared_pattern->initiate_io();
+            const ctsIOTask next_io = shared_pattern->initiate_io();
             if (IOTaskAction::None == next_io.ioAction) {
                 // nothing failed, just no more IO right now
                 break;

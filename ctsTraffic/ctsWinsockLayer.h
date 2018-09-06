@@ -68,5 +68,5 @@ namespace ctsTraffic {
     //
     // Set LINGER options to force a RST when the socket is closed
     //
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket);
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) NOEXCEPT;
 }

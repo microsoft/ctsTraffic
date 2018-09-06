@@ -387,7 +387,7 @@ namespace ctsTraffic {
             return return_value;
         }
 
-        static ctsIOTask MakeConnectionIdTask(const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id) NOEXCEPT
+        static ctsIOTask MakeConnectionIdTask(const ctsIOTask& _raw_task, _In_reads_(ctsStatistics::ConnectionIdLength) char* const _connection_id) NOEXCEPT
         {
             ctl::ctFatalCondition(
                 _raw_task.buffer_length != ctsStatistics::ConnectionIdLength + UdpDatagramProtocolHeaderFlagLength,

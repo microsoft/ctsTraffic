@@ -31,7 +31,7 @@ namespace ctl
 	template <typename BidirectionalIterator>
 	std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
 	{
-		auto size = _end - _begin;
+		const auto size = _end - _begin;
 		if (size == 0) {
 			return std::make_tuple(
 				static_cast<double>(0),
@@ -72,7 +72,7 @@ namespace ctl
 	template <typename BidirectionalIterator>
 	std::tuple<double, double, double> ctInterquartileRange(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
 	{
-		auto size = _end - _begin;
+		const auto size = _end - _begin;
 		if (size < 3) {
 			return std::make_tuple(
 				static_cast<double>(0),
@@ -89,7 +89,7 @@ namespace ctl
 
 		auto split_section = [](const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end)
 		                       -> std::tuple<BidirectionalIterator, BidirectionalIterator> {
-			size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
+			const size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
 			// if begin and end are already right next to each other, immediately return the same values
 			if (numeric_count < 3) {
@@ -128,7 +128,7 @@ namespace ctl
 					// must guard against overflow
 					auto lhs_value = *lhs;
 					auto rhs_value = *rhs;
-					double sum = static_cast<double>(lhs_value) + static_cast<double>(rhs_value);
+					const double sum = static_cast<double>(lhs_value) + static_cast<double>(rhs_value);
 					if (sum < lhs_value || sum < rhs_value) {
 						// overflow - divide first, then add
 						median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
@@ -154,10 +154,10 @@ namespace ctl
 		auto median_split = split_section(_begin, _end);
 		double median = find_median(median_split);
 
-		auto lhs_split = split_section(_begin, std::get<0>(median_split) + 1);
+		const auto lhs_split = split_section(_begin, std::get<0>(median_split) + 1);
 		double lower_quartile = find_median(lhs_split);
 
-		auto rhs_split = split_section(std::get<1>(median_split), _end);
+		const auto rhs_split = split_section(std::get<1>(median_split), _end);
 		double higher_quartile = find_median(rhs_split);
 
 		return std::make_tuple(

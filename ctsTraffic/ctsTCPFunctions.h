@@ -15,8 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// os headers
-#include <windows.h>
 // ctl headers
 #include <ctVersionConversion.hpp>
 // project headers

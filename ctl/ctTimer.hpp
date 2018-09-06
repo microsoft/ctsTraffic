@@ -39,7 +39,7 @@ namespace ctl
 		/// : converting milliseconds to one-hundred-nano-seconds
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
-		inline
+		constexpr
 		long long convert_msec_hundredNs(long long _milliseconds) NOEXCEPT
 		{
 			return static_cast<long long>(_milliseconds * 10000LL);
@@ -50,7 +50,7 @@ namespace ctl
 		/// : converting one-hundred-nano-seconds to milliseconds
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
-		inline
+		constexpr
 		long long convert_hundredNs_msec(long long _hundred_nanoseconds) NOEXCEPT
 		{
 			return static_cast<long long>(_hundred_nanoseconds / 10000LL);
@@ -146,7 +146,7 @@ namespace ctl
 			static INIT_ONCE s_QpfInitOnce = INIT_ONCE_STATIC_INIT;
 			static LARGE_INTEGER s_Qpf;
 
-			static BOOL CALLBACK s_QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*)
+			static BOOL CALLBACK s_QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) NOEXCEPT
 			{
 				::QueryPerformanceFrequency(&s_Qpf);
 				return TRUE;
@@ -171,7 +171,7 @@ namespace ctl
 		inline
 		long long snap_qpc_as_msec() NOEXCEPT
 		{
-			(void)InitOnceExecuteOnce(&details::s_QpfInitOnce, details::s_QpfInitOnceCallback, nullptr, nullptr);
+			(void)::InitOnceExecuteOnce(&details::s_QpfInitOnce, details::s_QpfInitOnceCallback, nullptr, nullptr);
 			LARGE_INTEGER qpc;
 			::QueryPerformanceCounter(&qpc);
 			// multiplying by 1000 as (qpc / qpf) == seconds

@@ -46,7 +46,7 @@ namespace ctl
 		/// with an appropriately random seed
 		///
 		/// This allocates a large (5kb) chunk of heap memory and may throw std::bad_alloc
-		explicit ctRandomTwister(unsigned long _seed);
+		explicit ctRandomTwister(unsigned long seed);
 
 		/// Seeds itself randomly with std::random_device
 		///
@@ -59,7 +59,7 @@ namespace ctl
 		/// It's usually best to explicitly specify the template argument to this function - the compiler
 		/// can surprise you if you let it choose what type to output.
 		template <class IntegerT>
-		IntegerT uniform_int(IntegerT _lowerInclusiveBound, IntegerT _upperInclusiveBound);
+        IntegerT uniform_int(IntegerT lowerInclusiveBound, IntegerT upperInclusiveBound);
 
 		/// Generates a new random floating-point number in the range [lowerInclusiveBound, upperInclusiveBound].
 		///
@@ -68,22 +68,22 @@ namespace ctl
 		/// more distinct values in the range [0.0, 1.0] than it can in the range [99.0, 100.0], uniform_real(0.0, 100.0)
 		/// will return a number in those two ranges equally often.
 		template <class RealT>
-		RealT uniform_real(RealT _lowerInclusiveBound, RealT _upperInclusiveBound);
+		RealT uniform_real(RealT lowerInclusiveBound, RealT upperInclusiveBound);
 
 		/// Generates a new random floating-point number chosen uniformly at random from the range [0.0, 1.0].
 		double uniform_probability() const;
 
 		/// Generates a new random double chosen randomly from a normal distribution with the characteristics
 		/// given by the two parameters (by default, a standard normal distribution).
-		double normal_real(double _distributionMean = 0.0, double _distributionSigma = 1.0) const;
+		double normal_real(double distributionMean = 0.0, double distributionSigma = 1.0) const;
 
 		/// Seeds the generator manually.
 		void seed(unsigned long _seed) const;
 
 		// Enabling move, move assign, and swap
-		ctRandomTwister(ctRandomTwister&& _other) NOEXCEPT;
-		ctRandomTwister& operator=(ctRandomTwister&& _other) NOEXCEPT;
-		void swap(ctRandomTwister& _other) NOEXCEPT;
+		ctRandomTwister(ctRandomTwister&& other) NOEXCEPT;
+		ctRandomTwister& operator=(ctRandomTwister&& other) NOEXCEPT;
+		void swap(ctRandomTwister& other) NOEXCEPT;
 
 		~ctRandomTwister() = default;
 
@@ -107,12 +107,12 @@ namespace ctl
 	// Implementation
 
 	inline ctRandomTwister::ctRandomTwister(unsigned long seed) :
-		engine(new engine_type(seed))
+		engine(std::make_unique<engine_type>(seed))
 	{
 	}
 
 	inline ctRandomTwister::ctRandomTwister() :
-		engine(new engine_type(std::random_device()()))
+		engine(std::make_unique<engine_type>(std::random_device()()))
 	{
 	}
 

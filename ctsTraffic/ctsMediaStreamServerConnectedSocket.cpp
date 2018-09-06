@@ -89,7 +89,7 @@ namespace ctsTraffic {
 
     ctsIOTask ctsMediaStreamServerConnectedSocket::get_nextTask() const NOEXCEPT
     {
-        ctAutoReleaseCriticalSection object_lock(&object_guard);
+        const ctAutoReleaseCriticalSection object_lock(&object_guard);
         return next_task;
     }
 
@@ -104,14 +104,14 @@ namespace ctsTraffic {
         if (shared_socket) {
             if (_task.time_offset_milliseconds < 1) {
                 // in this case, immediately schedule the WSASendTo
-                ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const ctAutoReleaseCriticalSection lock_object(&this->object_guard);
                 this->next_task = _task;
                 ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(nullptr, this, nullptr);
 
             } else {
                 FILETIME ftDueTime(ctTimer::convert_msec_relative_filetime(_task.time_offset_milliseconds));
                 // assign the next task *and* schedule the timer while in *this object lock
-                ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const ctAutoReleaseCriticalSection lock_object(&this->object_guard);
                 this->next_task = _task;
                 ::SetThreadpoolTimer(this->task_timer, &ftDueTime, 0, 0);
             }
@@ -126,9 +126,9 @@ namespace ctsTraffic {
         }
     }
         
-    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER)
+    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) NOEXCEPT
     {
-        ctsMediaStreamServerConnectedSocket* this_ptr = reinterpret_cast<ctsMediaStreamServerConnectedSocket*>(_context);
+        auto this_ptr = static_cast<ctsMediaStreamServerConnectedSocket*>(_context);
 
         // take a lock on the ctsSocket for this 'connection'
         const auto shared_socket = this_ptr->weak_socket.lock();
@@ -138,7 +138,7 @@ namespace ctsTraffic {
         // hold a reference on the iopattern
         auto shared_pattern(shared_socket->io_pattern());
 
-        ctAutoReleaseCriticalSection object_lock(&this_ptr->object_guard);
+        const ctAutoReleaseCriticalSection object_lock(&this_ptr->object_guard);
         ctsIOTask current_task = this_ptr->get_nextTask();
 
         // post the queued IO, then loop sending/scheduling as necessary

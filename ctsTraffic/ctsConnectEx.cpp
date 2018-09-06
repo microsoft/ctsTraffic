@@ -43,7 +43,7 @@ namespace ctsTraffic {
         // scope to the socket lock
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (socket == INVALID_SOCKET) {
                 gle = WSAECONNABORTED;
 
@@ -57,7 +57,7 @@ namespace ctsTraffic {
                 }
                 // update the socket context if completed successfully - necessary with ConnectEx
                 if (NO_ERROR == gle) {
-                    int err = ::setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
+                    const int err = ::setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
                     ctl::ctFatalCondition(
                         (err != 0),
                         L"setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
@@ -94,7 +94,7 @@ namespace ctsTraffic {
         try
         {
             auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET socket = socket_lock.get();
+            const SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
                 error = ctsConfig::SetPreConnectOptions(socket);
@@ -105,7 +105,7 @@ namespace ctsTraffic {
                 // get a new IO request from the socket's TP
                 const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
                 OVERLAPPED* pov = connect_iocp->new_request(
-                    [_weak_socket, targetAddress](OVERLAPPED* _ov)
+                    [_weak_socket, targetAddress](OVERLAPPED* _ov) NOEXCEPT
                 { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                 if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {

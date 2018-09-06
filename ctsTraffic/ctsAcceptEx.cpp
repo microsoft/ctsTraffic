@@ -13,6 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
+#include <utility>
 #include <vector>
 #include <queue>
 // os headers
@@ -93,8 +94,13 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         struct ctsListenSocketInfo {
             // c'tor throws a ctException or bad_alloc on failure
-            explicit ctsListenSocketInfo(const ctl::ctSockaddr& _listening_addr);
+            explicit ctsListenSocketInfo(ctl::ctSockaddr _addr);
             ~ctsListenSocketInfo() = default;
+
+            ctsListenSocketInfo(const ctsListenSocketInfo&) = delete;
+            ctsListenSocketInfo& operator=(const ctsListenSocketInfo&) = delete;
+            ctsListenSocketInfo(ctsListenSocketInfo&&) = delete;
+            ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
             ctl::ctScopedSocket socket;
             ctl::ctSockaddr addr;
@@ -112,7 +118,7 @@ namespace ctsTraffic {
         class ctsAcceptSocketInfo {
         public:
             // c'tor throws ctException on failure
-            explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket);
+            explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket);
             ~ctsAcceptSocketInfo() NOEXCEPT;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
@@ -125,19 +131,21 @@ namespace ctsTraffic {
             // non-copyable
             ctsAcceptSocketInfo(const ctsAcceptSocketInfo&) = delete;
             ctsAcceptSocketInfo& operator=(const ctsAcceptSocketInfo&) = delete;
+            ctsAcceptSocketInfo(ctsAcceptSocketInfo&&) = delete;
+            ctsAcceptSocketInfo& operator=(ctsAcceptSocketInfo&&) = delete;
 
         private:
             static const size_t SingleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
 
             // the lock to guard access to the SOCKET
-            CRITICAL_SECTION cs;
+            CRITICAL_SECTION cs{};
             ctl::ctScopedSocket socket;
             // the OVERLAPPED* for the AcceptEx request
             OVERLAPPED* pov = nullptr;
             // the listening socket handle - needed for AcceptEx
             const std::shared_ptr<ctsListenSocketInfo> listening_socket_info;
             // the buffer to supply to AcceptEx to capture the address information
-            char OutputBuffer[SingleOutputBufferSize * 2];
+            char OutputBuffer[SingleOutputBufferSize * 2]{};
         };
 
         //
@@ -146,7 +154,7 @@ namespace ctsTraffic {
         //
         struct ctsAcceptExImpl : public std::enable_shared_from_this<ctsAcceptExImpl> {
             // must guard access to internal containers
-            CRITICAL_SECTION cs;
+            CRITICAL_SECTION cs{};
             std::vector<std::shared_ptr<ctsListenSocketInfo>> listeners;
             std::queue<std::weak_ptr<ctsSocket>> pended_accept_requests;
             std::queue<ctsAcceptedConnection> accepted_connections;
@@ -218,6 +226,8 @@ namespace ctsTraffic {
             // non-copyable
             ctsAcceptExImpl(const ctsAcceptExImpl&) = delete;
             ctsAcceptExImpl& operator=(const ctsAcceptExImpl&) = delete;
+            ctsAcceptExImpl(ctsAcceptExImpl&&) = delete;
+            ctsAcceptExImpl& operator=(ctsAcceptExImpl&&) = delete;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -227,12 +237,12 @@ namespace ctsTraffic {
         ///
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsListenSocketInfo::ctsListenSocketInfo(const ctl::ctSockaddr& _addr) : addr(_addr)
+        ctsListenSocketInfo::ctsListenSocketInfo(ctl::ctSockaddr _addr) : addr(std::move(_addr))
         {
             ctl::ctScopedSocket tempsocket (
                 ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags));
 
-            auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
+            const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
             if (error != 0) {
                 throw ctl::ctException(error, L"ctsConfig::SetPreBindOptions", L"ctsAcceptEx", false);
             }
@@ -258,8 +268,8 @@ namespace ctsTraffic {
         ///
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsAcceptSocketInfo::ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket)
-        : listening_socket_info(_listen_socket)
+        ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket)
+            : listening_socket_info(std::move(_listen_socket))
         {
             if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
@@ -273,7 +283,7 @@ namespace ctsTraffic {
 
         void ctsAcceptSocketInfo::InitatiateAcceptEx()
         {
-            ctl::ctAutoReleaseCriticalSection lock(&cs);
+            const ctl::ctAutoReleaseCriticalSection lock(&cs);
 
             if (this->socket.get() != INVALID_SOCKET) {
                 // no need to post another AcceptEx
@@ -299,7 +309,7 @@ namespace ctsTraffic {
             }
 
             this->pov = this->listening_socket_info->iocp->new_request(
-                [this](OVERLAPPED* _ov)
+                [this](OVERLAPPED* _ov) NOEXCEPT
             { ctsAcceptExIoCompletionCallback(_ov, this); });
 
             ::ZeroMemory(this->OutputBuffer, SingleOutputBufferSize * 2);
@@ -335,7 +345,7 @@ namespace ctsTraffic {
 
         ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             SOCKET listening_socket = listening_socket_info->socket.get();
             ctsAcceptedConnection return_details;
 
@@ -362,7 +372,7 @@ namespace ctsTraffic {
 
             // if successful, update the socket context
             // this should never fail - break if it does to debug it
-            int err = ::setsockopt(
+            const auto err = ::setsockopt(
                 socket.get(),
                 SOL_SOCKET,
                 SO_UPDATE_ACCEPT_CONTEXT,
@@ -376,9 +386,9 @@ namespace ctsTraffic {
                 static_cast<long long>(listening_socket));
 
             SOCKADDR_INET* local_addr;
-            int local_addr_len = static_cast<int>(sizeof SOCKADDR_INET);
+            auto local_addr_len = static_cast<int>(sizeof SOCKADDR_INET);
             SOCKADDR_INET* remote_addr;
-            int remote_addr_len = static_cast<int>(sizeof SOCKADDR_INET);
+            auto remote_addr_len = static_cast<int>(sizeof SOCKADDR_INET);
 
             ctl::ctGetAcceptExSockaddrs(
                 OutputBuffer,
@@ -407,7 +417,7 @@ namespace ctsTraffic {
             try { s_pimpl = std::make_shared<ctsAcceptExImpl>(); }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);
-                *reinterpret_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
+                *static_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
                 return FALSE;
             }
 
@@ -418,8 +428,8 @@ namespace ctsTraffic {
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
-            ctl::ctAutoReleaseCriticalSection auto_lock(&s_pimpl->cs);
-            if (s_pimpl->pended_accept_requests.size() > 0) {
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&s_pimpl->cs);
+            if (!s_pimpl->pended_accept_requests.empty()) {
                 //
                 // we have unfulfilled requests for more connections
                 // return a previously accepted socket
@@ -499,7 +509,7 @@ namespace ctsTraffic {
 
         // scoped to the auto-release CS object
         {
-            ctl::ctAutoReleaseCriticalSection csLock(&details::s_pimpl->cs);
+            const ctl::ctAutoReleaseCriticalSection csLock(&details::s_pimpl->cs);
             // guard access to internal queues
             if (details::s_pimpl->accepted_connections.empty()) {
                 // no accepted connections yet -- save the weak_ptr, *not* the shared_ptr

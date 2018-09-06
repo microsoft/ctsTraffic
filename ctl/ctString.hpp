@@ -279,42 +279,42 @@ namespace ctl
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
 #pragma endregion
 
-			inline _Ret_z_ const wchar_t* convert_to_ptr(const std::wstring& source)
+			inline _Ret_z_ const wchar_t* convert_to_ptr(const std::wstring& source) NOEXCEPT
 			{
 				return source.c_str();
 			}
 
-			inline size_t get_string_length(const std::wstring& source)
+			inline size_t get_string_length(const std::wstring& source) NOEXCEPT
 			{
 				return source.length();
 			}
 
-			inline _Ret_z_ const wchar_t* convert_to_ptr(_In_z_ const wchar_t* source)
+			inline _Ret_z_ const wchar_t* convert_to_ptr(_In_z_ const wchar_t* source) NOEXCEPT
 			{
 				return source;
 			}
 
-			inline size_t get_string_length(_In_z_ const wchar_t* source)
+			inline size_t get_string_length(_In_z_ const wchar_t* source) NOEXCEPT
 			{
 				return wcslen(source);
 			}
 
-			inline _Ret_z_ const char* convert_to_ptr(const std::string& source)
+			inline _Ret_z_ const char* convert_to_ptr(const std::string& source) NOEXCEPT
 			{
 				return source.c_str();
 			}
 
-			inline size_t get_string_length(const std::string& source)
+			inline size_t get_string_length(const std::string& source) NOEXCEPT
 			{
 				return source.length();
 			}
 
-			inline _Ret_z_ const char* convert_to_ptr(_In_z_ const char* source)
+			inline _Ret_z_ const char* convert_to_ptr(_In_z_ const char* source) NOEXCEPT
 			{
 				return source;
 			}
 
-			inline size_t get_string_length(_In_z_ const char* source)
+			inline size_t get_string_length(_In_z_ const char* source) NOEXCEPT
 			{
 				return strlen(source);
 			}

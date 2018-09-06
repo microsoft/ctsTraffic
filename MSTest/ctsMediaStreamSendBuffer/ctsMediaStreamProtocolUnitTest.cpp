@@ -170,14 +170,14 @@ namespace ctsUnitTest
         }
 
     private:
-        void verify_protocol_header(ctsMediaStreamSendRequests& _testbuffer)
+        void verify_protocol_header(ctsMediaStreamSendRequests& _testbuffer) const
         {
             for (auto& buffer_array : _testbuffer) {
                 Assert::AreEqual(UdpDatagramProtocolHeaderFlagLength, buffer_array[0].len);
                 Assert::AreEqual(UdpDatagramProtocolHeaderFlagData, *reinterpret_cast<unsigned short*>(buffer_array[0].buf));
             }
         }
-        unsigned long verify_byte_count(ctsMediaStreamSendRequests& _testbuffer, unsigned long _buffer_size)
+        unsigned long verify_byte_count(ctsMediaStreamSendRequests& _testbuffer, unsigned long _buffer_size) const
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"Buffer size %u\n", _buffer_size).c_str());

@@ -68,7 +68,7 @@ namespace ctsTraffic {
 
     void ctsSocket::set_socket(SOCKET _socket) NOEXCEPT
     {
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
+        const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
         ctl::ctFatalCondition(
             (this->socket != INVALID_SOCKET),
@@ -81,12 +81,12 @@ namespace ctsTraffic {
     int ctsSocket::close_socket(int _error_code) NOEXCEPT
     {
         int error = 0;
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
+        const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
         if (this->socket != INVALID_SOCKET) {
             if (_error_code != 0) {
                 // always try to RST if we are closing due to an error
                 // to best-effort notify the opposite endpoint
-                wsIOResult result = ctsSetLingertoRSTSocket(this->socket);
+                const wsIOResult result = ctsSetLingertoRSTSocket(this->socket);
                 error = result.error_code;
             }
             ::closesocket(this->socket);
@@ -98,7 +98,7 @@ namespace ctsTraffic {
     const shared_ptr<ctThreadIocp>& ctsSocket::thread_pool()
     {
         // use the SOCKET cs to also guard creation of this TP object
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
+        const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
         // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
         if ((this->socket != INVALID_SOCKET) && (!this->tp_iocp)) {
@@ -126,7 +126,7 @@ namespace ctsTraffic {
 
     void ctsSocket::complete_state(DWORD _error_code) NOEXCEPT
     {
-        auto current_io_count = ctMemoryGuardRead(&this->io_count);
+        const auto current_io_count = ctMemoryGuardRead(&this->io_count);
         ctFatalCondition(
             (current_io_count != 0),
             L"ctsSocket::complete_state is called with outstanding IO (%d)", current_io_count);
@@ -180,19 +180,19 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSocket::process_isb_notification()
+    void ctsSocket::process_isb_notification() NOEXCEPT
     {
         // lock the socket
-        auto shared_this = shared_from_this();
+        const auto shared_this = shared_from_this();
         auto socket_lock(ctsGuardSocket(shared_this));
-        SOCKET local_socket = socket_lock.get();
+        const auto local_socket = socket_lock.get();
         if (local_socket != INVALID_SOCKET) {
             ULONG isb;
             if (0 == ::idealsendbacklogquery(local_socket, &isb)) {
                 PrintDebugInfo(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
                 this->pattern->set_ideal_send_backlog(isb);
             } else {
-                int gle = ::WSAGetLastError();
+                const auto gle = ::WSAGetLastError();
                 if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR) {
                     ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
                 }
@@ -200,11 +200,11 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSocket::initiate_isb_notification()
+    void ctsSocket::initiate_isb_notification() NOEXCEPT
     {
         try {
             auto& shared_iocp = thread_pool();
-            LPOVERLAPPED ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(this->shared_from_this())](OVERLAPPED* ov) {
+            OVERLAPPED* ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(this->shared_from_this())](OVERLAPPED* ov) NOEXCEPT {
                 DWORD gle = NO_ERROR;
 
                 auto shared_this_ptr = weak_this_ptr.lock();
@@ -213,7 +213,7 @@ namespace ctsTraffic {
                 }
 
                 auto socket_lock(ctsGuardSocket(shared_this_ptr));
-                SOCKET local_socket = socket_lock.get();
+                const auto local_socket = socket_lock.get();
                 if (local_socket != INVALID_SOCKET) {
                     DWORD transferred, flags; // unneeded
                     if (!::WSAGetOverlappedResult(local_socket, ov, &transferred, FALSE, &flags)) {
@@ -234,13 +234,13 @@ namespace ctsTraffic {
                 }
             }); // lambda for new_request
 
-            auto shared_this = this->shared_from_this();
+            const auto shared_this = this->shared_from_this();
             auto socket_lock(ctsGuardSocket(shared_this));
-            SOCKET local_socket = socket_lock.get();
+            const auto local_socket = socket_lock.get();
             if (local_socket != INVALID_SOCKET) {
-                int error = ::idealsendbacklognotify(local_socket, ov, nullptr);
+                const auto error = ::idealsendbacklognotify(local_socket, ov, nullptr);
                 if (SOCKET_ERROR == error) {
-                    int gle = ::WSAGetLastError();
+                    const auto gle = ::WSAGetLastError();
                     // expect this to be pending
                     if (gle != WSA_IO_PENDING)
                     {
@@ -268,7 +268,7 @@ namespace ctsTraffic {
 
     long ctsSocket::decrement_io() NOEXCEPT
     {
-        auto io_value = ctMemoryGuardDecrement(&this->io_count);
+        const auto io_value = ctMemoryGuardDecrement(&this->io_count);
         ctl::ctFatalCondition(
             (io_value < 0),
             L"ctsSocket: io count fell below zero (%d)\n", io_value);
@@ -301,7 +301,7 @@ namespace ctsTraffic {
     ///
     void ctsSocket::set_timer(const ctsIOTask& _task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> _func)
     {
-        ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
+        const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
         if (!this->tp_timer) {
             this->tp_timer = make_shared<ctl::ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
         }

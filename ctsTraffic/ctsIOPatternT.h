@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
@@ -39,9 +38,7 @@ namespace ctsTraffic {
     class ctsIOPattern
     {
     public:
-        virtual ~ctsIOPattern()
-        {
-        }
+        virtual ~ctsIOPattern() = default;
 
         ///
         /// none of these *_io functions can throw
@@ -61,7 +58,7 @@ namespace ctsTraffic {
         ///   _bytes_transferred : the number of bytes successfully transferred from the task
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
-        virtual ctsIOTask initiate_io() NOEXCEPT = 0;
+        ctsIOTask initiate_io() NOEXCEPT;
         virtual ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT = 0;
 
         ///
@@ -95,7 +92,7 @@ namespace ctsTraffic {
             }
         }
 
-        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override final
+        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override final
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
@@ -109,15 +106,15 @@ namespace ctsTraffic {
                 stats);
         }
 
-        virtual void register_callback(std::function<void(const ctsIOTask&)> _callback) override final
+        void register_callback(std::function<void(const ctsIOTask&)> _callback) override final
         {
-            ctl::ctAutoReleaseCriticalSection take_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection take_lock(&this->cs);
             this->callback = std::move(_callback);
         }
 
-        virtual unsigned long get_last_error() const NOEXCEPT override final
+        unsigned long get_last_error() const NOEXCEPT override final
         {
-            ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             return this->protocol_policy.get_last_error();
         }
 

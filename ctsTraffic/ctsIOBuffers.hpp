@@ -51,7 +51,7 @@ namespace ctsTraffic {
         static ::RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
         static ::CRITICAL_SECTION ConnectionIdLock;
 
-        inline static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
+        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
         {
             using ::ctsTraffic::ctsConfig::Settings;
             using ::ctsTraffic::ctsConfig::IsListening;
@@ -66,7 +66,7 @@ namespace ctsTraffic {
             statics::SystemPageSize = sysInfo.dwPageSize;
 
             if (!IsListening()) {
-                statics::ConnectionIdBuffer = reinterpret_cast<char*>(::VirtualAlloc(
+                statics::ConnectionIdBuffer = static_cast<char*>(::VirtualAlloc(
                     nullptr,
                     ConnectionIdLength * Settings->ConnectionLimit,
                     MEM_RESERVE | MEM_COMMIT,
@@ -100,7 +100,7 @@ namespace ctsTraffic {
                 // Then we'll commit chunks of that memory range as we need them
                 // This greatly simplifies tracking of individual buffers, as these are guaranteed contiguous
                 //
-                statics::ConnectionIdBuffer = reinterpret_cast<char*>(::VirtualAlloc(
+                statics::ConnectionIdBuffer = static_cast<char*>(::VirtualAlloc(
                     nullptr,
                     ConnectionIdLength * statics::ServerMaxConnections,
                     MEM_RESERVE,
@@ -197,7 +197,7 @@ namespace ctsTraffic {
             ::ctsTraffic::ctsIOTask return_task;
             char* next_buffer = nullptr;
             {
-                ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
+                const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
                 if (statics::ConnectionIdVector->empty()) {
                     ::ctl::ctFatalCondition(
                         !::ctsTraffic::ctsConfig::IsListening(),
@@ -243,7 +243,7 @@ namespace ctsTraffic {
 
         inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) NOEXCEPT
         {
-            ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
+            const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
             try {
                 // the vector was initially reserved to be large enough to hold all possible buffers
                 // - push-back() is no-throw in these cases

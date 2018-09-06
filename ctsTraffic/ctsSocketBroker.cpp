@@ -46,7 +46,7 @@ namespace ctsTraffic {
     unsigned long ctsSocketBroker::s_TimerCallbackTimeoutMs = 333; // millseconds
 
     ctsSocketBroker::ctsSocketBroker() :
-        wakeup_timer(new ctThreadpoolTimer())
+        wakeup_timer(std::make_unique<ctThreadpoolTimer>())
     {
         if (ctsConfig::Settings->AcceptFunction) {
             // server 'accept' settings
@@ -103,7 +103,7 @@ namespace ctsTraffic {
             total_connections_remaining, pending_limit);
 
         // must always guard access to the vector
-        ctAutoReleaseCriticalSection csLock(&cs);
+        const ctAutoReleaseCriticalSection csLock(&cs);
 
         // only loop to pending_limit
         while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
@@ -123,7 +123,7 @@ namespace ctsTraffic {
 
         // intiate the threadpool timer
         wakeup_timer->schedule_reoccuring(
-            [this]() { ctsSocketBroker::TimerCallback(this); },
+            [this]() NOEXCEPT { ctsSocketBroker::TimerCallback(this); },
             0LL,
             s_TimerCallbackTimeoutMs);
     }
@@ -134,7 +134,7 @@ namespace ctsTraffic {
     //
     void ctsSocketBroker::initiating_io() NOEXCEPT
     {
-        ctAutoReleaseCriticalSection lock_broker(&this->cs);
+        const ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
         ctFatalCondition(
             (this->pending_sockets == 0),
@@ -150,7 +150,7 @@ namespace ctsTraffic {
     //
     void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
     {
-        ctAutoReleaseCriticalSection lock_broker(&this->cs);
+        const ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
         if (_was_active) {
             ctFatalCondition(

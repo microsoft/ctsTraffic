@@ -1179,7 +1179,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename T>
-		ctComVariant& assign(ctComPtr<T> _t)
+		ctComVariant& assign(ctComPtr<T> _t) NOEXCEPT
 		{
 			ctComVariant temp;
 			temp.assign_impl(_t);
@@ -2059,12 +2059,12 @@ namespace ctl
 	{
 		namespace _detail
 		{
-			inline _Ret_z_ const wchar_t* convert_to_ptr(const ctComBstr& source)
+			inline _Ret_z_ const wchar_t* convert_to_ptr(const ctComBstr& source)  NOEXCEPT
 			{
 				return source.c_str();
 			}
 
-			inline size_t get_string_length(const ctComBstr& source)
+			inline size_t get_string_length(const ctComBstr& source)  NOEXCEPT
 			{
 				return source.size();
 			}

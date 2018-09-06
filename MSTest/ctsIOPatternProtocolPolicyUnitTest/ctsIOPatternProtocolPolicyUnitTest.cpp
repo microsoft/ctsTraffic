@@ -148,7 +148,7 @@ namespace ctsUnitTest {
         unsigned long ZERO = 0UL;
         unsigned long TEST_ERROR = 1UL;
 
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientGracefulShutdownTest(unsigned long long _test_transfer_size)
+        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientGracefulShutdownTest(unsigned long long _test_transfer_size) const
         {
             ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
             s_Listening = false;
@@ -160,7 +160,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
             return return_pattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>> InitServerGracefulShutdownTest(unsigned long long _test_transfer_size)
+        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>> InitServerGracefulShutdownTest(unsigned long long _test_transfer_size) const
         {
             ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
             s_Listening = true;
@@ -172,7 +172,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
             return return_pattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientHardShutdownTest(unsigned long long _test_transfer_size)
+        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientHardShutdownTest(unsigned long long _test_transfer_size) const
         {
             ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
             s_Listening = false; // client-only
@@ -184,7 +184,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
             return return_pattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpClientTest(unsigned long long _test_transfer_size)
+        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpClientTest(unsigned long long _test_transfer_size) const
         {
             s_Listening = false;
             s_TransferSize = _test_transfer_size;
@@ -195,7 +195,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
             return return_pattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpServerTest(unsigned long long _test_transfer_size)
+        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpServerTest(unsigned long long _test_transfer_size) const
         {
             s_Listening = true;
             s_TransferSize = _test_transfer_size;

@@ -51,7 +51,7 @@ namespace ctl
 		class property_iterator;
 		class method_iterator;
 
-		ctWmiClassObject(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _wbemClass) :
+		ctWmiClassObject(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _wbemClass) NOEXCEPT :
 			wbemServices(std::move(_wbemServices)),
 			wbemClass(std::move(_wbemClass))
 		{

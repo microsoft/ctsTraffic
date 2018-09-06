@@ -39,7 +39,7 @@ namespace ctsTraffic {
 
         USHORT next_port = 0;
         if (ctsConfig::Settings->LocalPortHigh != 0 && ctsConfig::Settings->LocalPortLow != 0) {
-            auto port_counter = ctl::ctMemoryGuardIncrement(&s_PortCounter);
+            const auto port_counter = ctl::ctMemoryGuardIncrement(&s_PortCounter);
             next_port = static_cast<USHORT>((port_counter % (ctsConfig::Settings->LocalPortHigh - ctsConfig::Settings->LocalPortLow + 1)) + ctsConfig::Settings->LocalPortLow);
         } else {
             next_port = ctsConfig::Settings->LocalPortLow;
@@ -48,7 +48,7 @@ namespace ctsTraffic {
         //
         // Find a bind and target address by moving to the next address in the respective vectors
         //
-        auto bind_size = ctsConfig::Settings->BindAddresses.size();
+        const auto bind_size = ctsConfig::Settings->BindAddresses.size();
         auto socket_counter = ctl::ctMemoryGuardIncrement(&s_BindCounter);
         ctl::ctSockaddr local_addr(ctsConfig::Settings->BindAddresses[socket_counter % bind_size]);
         local_addr.setPort(next_port);
@@ -59,7 +59,7 @@ namespace ctsTraffic {
             // the target address family must match the bind address family
             // - ctsConfig guarantees that at least address families will match with at least one address in bind and target vectors
             //
-            auto target_size = ctsConfig::Settings->TargetAddresses.size();
+            const auto target_size = ctsConfig::Settings->TargetAddresses.size();
             socket_counter = ctl::ctMemoryGuardIncrement(&s_TargetCounter);
             target_addr = ctsConfig::Settings->TargetAddresses[socket_counter % target_size];
             while (target_addr.family() != local_addr.family()) {
