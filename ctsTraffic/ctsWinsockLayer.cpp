@@ -43,7 +43,7 @@ namespace ctsTraffic {
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         const SOCKET socket = socket_lock.get();
@@ -53,7 +53,11 @@ namespace ctsTraffic {
 
         wsIOResult return_result;
         try {
-            const auto& io_thread_pool = _shared_socket->thread_pool();
+            const auto& io_thread_pool = _shared_socket->iocp_threadpool();
+            if (!io_thread_pool)
+            {
+                throw ctl::ctException(WSAECONNABORTED, L"ctsSocket::iocp_threadpool", false);
+            }
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
 
             WSABUF wsabuf;
@@ -87,7 +91,7 @@ namespace ctsTraffic {
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            return wsIOResult(WSAENOBUFS);
+            return wsIOResult(ctl::ctErrorCode(e));
         }
 
         return return_result;
@@ -99,7 +103,7 @@ namespace ctsTraffic {
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept
     {
         auto socket_lock(ctsGuardSocket(_shared_socket));
         const SOCKET socket = socket_lock.get();
@@ -110,7 +114,11 @@ namespace ctsTraffic {
         wsIOResult return_result;
         try {
             const auto& targetAddress = _shared_socket->target_address();
-            const auto& io_thread_pool = _shared_socket->thread_pool();
+            const auto& io_thread_pool = _shared_socket->iocp_threadpool();
+            if (!io_thread_pool)
+            {
+                throw ctl::ctException(WSAECONNABORTED, L"ctsSocket::iocp_threadpool", false);
+            }
             OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
 
             WSABUF wsabuf;
@@ -143,13 +151,13 @@ namespace ctsTraffic {
         }
         catch (const std::exception& e) {
             ctsConfig::PrintException(e);
-            return wsIOResult(WSAENOBUFS);
+            return wsIOResult(ctl::ctErrorCode(e));
         }
 
         return return_result;
     }
 
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) NOEXCEPT
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept
     {
         wsIOResult return_result;
         ::linger linger_option{};

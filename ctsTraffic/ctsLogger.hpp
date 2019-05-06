@@ -44,15 +44,15 @@ namespace ctsTraffic {
 
     class ctsLogger {
     public:
-        explicit ctsLogger(ctsConfig::StatusFormatting _format) NOEXCEPT :
+        explicit ctsLogger(ctsConfig::StatusFormatting _format) noexcept :
             format(_format)
         {
         }
-        virtual ~ctsLogger() NOEXCEPT
+        virtual ~ctsLogger() noexcept
         {
         }
 
-        void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
+        void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
             LPCWSTR const message = _status_info->print_legend(this->format);
             if (message != nullptr) {
@@ -60,7 +60,7 @@ namespace ctsTraffic {
             }
         }
 
-        void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) NOEXCEPT
+        void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
             LPCWSTR const message = _status_info->print_header(this->format);
             if (message != nullptr) {
@@ -68,7 +68,7 @@ namespace ctsTraffic {
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) NOEXCEPT
+        void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
         {
             LPCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
             if (message != nullptr) {
@@ -76,17 +76,17 @@ namespace ctsTraffic {
             }
         }
 
-        void LogMessage(LPCWSTR _message) NOEXCEPT
+        void LogMessage(LPCWSTR _message) noexcept
         {
             log_message_impl(_message);
         }
 
-        void LogError(LPCWSTR _message) NOEXCEPT
+        void LogError(LPCWSTR _message) noexcept
         {
             log_error_impl(_message);
         }
 
-        bool IsCsvFormat() const NOEXCEPT
+        bool IsCsvFormat() const noexcept
         {
             return ctsConfig::StatusFormatting::Csv == this->format;
         }
@@ -99,8 +99,8 @@ namespace ctsTraffic {
         ctsConfig::StatusFormatting format;
 
         /// pure virtual methods concrete classes must implement
-        virtual void log_message_impl(LPCWSTR _message) NOEXCEPT = 0;
-        virtual void log_error_impl(LPCWSTR _message) NOEXCEPT = 0;
+        virtual void log_message_impl(LPCWSTR _message) noexcept = 0;
+        virtual void log_error_impl(LPCWSTR _message) noexcept = 0;
     };
 
     class ctsTextLogger : public ctsLogger {
@@ -149,18 +149,18 @@ namespace ctsTraffic {
             closeHandleOnError.dismiss();
             deleteCSOnError.dismiss();
         }
-        ~ctsTextLogger() NOEXCEPT
+        ~ctsTextLogger() noexcept
         {
             ::CloseHandle(file_handle);
             ::DeleteCriticalSection(&file_cs);
         }
 
-        void log_message_impl(LPCWSTR _message) NOEXCEPT override
+        void log_message_impl(LPCWSTR _message) noexcept override
         {
             write_impl(_message);
         }
 
-        void log_error_impl(LPCWSTR _message) NOEXCEPT override
+        void log_error_impl(LPCWSTR _message) noexcept override
         {
             write_impl(_message);
         }
@@ -174,7 +174,7 @@ namespace ctsTraffic {
         CRITICAL_SECTION file_cs{};
         HANDLE file_handle = INVALID_HANDLE_VALUE;
 
-        void write_impl(LPCWSTR _message) NOEXCEPT
+        void write_impl(LPCWSTR _message) noexcept
         {
             ::EnterCriticalSection(&file_cs);
             DWORD BytesWritten;

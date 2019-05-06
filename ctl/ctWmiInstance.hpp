@@ -29,7 +29,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctWmiService.hpp"
 #include "ctWmiClassObject.hpp"
 #include "ctWmiException.hpp"
-#include "ctVersionConversion.hpp"
 
 
 namespace ctl
@@ -49,7 +48,7 @@ namespace ctl
 		/// Default d'tor, copy c'tor, and copy assignment operator
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiInstance(ctWmiService _wbemServices) NOEXCEPT :
+		explicit ctWmiInstance(ctWmiService _wbemServices) noexcept :
 			wbemServices(std::move(_wbemServices))
 		{
 		}
@@ -60,7 +59,7 @@ namespace ctl
 			create_instance(_className);
 		}
 
-		ctWmiInstance(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _instance) NOEXCEPT :
+		ctWmiInstance(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _instance) noexcept :
 			wbemServices(std::move(_wbemServices)),
 			instanceObject(std::move(_instance))
 		{
@@ -71,13 +70,13 @@ namespace ctl
 		/// comparison operators
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		bool operator ==(const ctWmiInstance& _obj) const NOEXCEPT
+		bool operator ==(const ctWmiInstance& _obj) const noexcept
 		{
 			return ((this->wbemServices == _obj.wbemServices) &&
 				    (this->instanceObject == _obj.instanceObject));
 		}
 
-		bool operator !=(const ctWmiInstance& _obj) const NOEXCEPT
+		bool operator !=(const ctWmiInstance& _obj) const noexcept
 		{
 			return !(*this == _obj);
 		}
@@ -89,7 +88,7 @@ namespace ctl
 		/// - returns the IWbemClassObject holding the instantiated class instance
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComPtr<IWbemClassObject> get_instance() const NOEXCEPT
+		ctComPtr<IWbemClassObject> get_instance() const noexcept
 		{
 			return this->instanceObject;
 		}
@@ -107,7 +106,7 @@ namespace ctl
 			return object_path_bstr;
 		}
 
-		ctWmiService get_service() const NOEXCEPT
+		ctWmiService get_service() const noexcept
 		{
 			return this->wbemServices;
 		}
@@ -135,7 +134,7 @@ namespace ctl
 		/// - Returns a class object for the class represented by this instance
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctWmiClassObject get_class_object() const NOEXCEPT
+		ctWmiClassObject get_class_object() const noexcept
 		{
 			return ctWmiClassObject(this->wbemServices, this->instanceObject);
 		}

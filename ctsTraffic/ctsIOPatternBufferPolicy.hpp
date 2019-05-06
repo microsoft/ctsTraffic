@@ -30,8 +30,8 @@ namespace ctsTraffic {
     class ctsIOPatternBufferPolicy
     {
     public:
-        char* get_buffer(size_t _size) NOEXCEPT;
-        bool  verify_buffer(const char* _buffer) NOEXCEPT;
+        char* get_buffer(size_t _size) noexcept;
+        bool  verify_buffer(const char* _buffer) noexcept;
     };
 
 

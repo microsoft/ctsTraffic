@@ -113,7 +113,7 @@ namespace ctsUnitTest
         {
             struct TestStruct {
                 int counter;
-                TestStruct() NOEXCEPT :
+                TestStruct() noexcept :
                     counter(0)
                 {
                 }

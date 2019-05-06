@@ -30,7 +30,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 
     /// forward delcaration
-    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ///
     /// IO Threadpool completion callback 
@@ -38,7 +38,7 @@ namespace ctsTraffic {
     static void ctsReadWriteIocpIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctsIOTask& _io_task) NOEXCEPT
+        const ctsIOTask& _io_task) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -102,7 +102,7 @@ namespace ctsTraffic {
     ///
     /// The registered function with ctsConfig
     ///
-    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // must get a reference to the socket and the IO pattern
         auto shared_socket(_weak_socket.lock());
@@ -152,9 +152,13 @@ namespace ctsTraffic {
                     OVERLAPPED* pov = nullptr;
                     try {
                         // these are the only calls which can throw in this function
-                        io_thread_pool = shared_socket->thread_pool();
+                        io_thread_pool = shared_socket->iocp_threadpool();
+                        if (!io_thread_pool)
+                        {
+                            throw ctl::ctException(WSAECONNABORTED, L"ctsSocket::iocp_threadpool", false);
+                        }
                         pov = io_thread_pool->new_request(
-                            [_weak_socket, next_io](OVERLAPPED* _ov) NOEXCEPT
+                            [_weak_socket, next_io](OVERLAPPED* _ov) noexcept
                         { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
                     catch (const std::exception& e) {

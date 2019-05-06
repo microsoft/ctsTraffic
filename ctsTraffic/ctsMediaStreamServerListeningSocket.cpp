@@ -49,7 +49,7 @@ namespace ctsTraffic {
         }
     }
 
-    ctsMediaStreamServerListeningSocket::~ctsMediaStreamServerListeningSocket() NOEXCEPT
+    ctsMediaStreamServerListeningSocket::~ctsMediaStreamServerListeningSocket() noexcept
     {
         // close the socket, then end the TP
         this->reset();
@@ -57,25 +57,25 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&object_guard);
     }
 
-    SOCKET ctsMediaStreamServerListeningSocket::get_socket() const NOEXCEPT
+    SOCKET ctsMediaStreamServerListeningSocket::get_socket() const noexcept
     {
         const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         return this->socket.get();
     }
 
-    ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const NOEXCEPT
+    ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const noexcept
     {
         const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         return this->listening_addr;
     }
 
-    void ctsMediaStreamServerListeningSocket::reset() NOEXCEPT
+    void ctsMediaStreamServerListeningSocket::reset() noexcept
     {
         const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
         this->socket.reset();
     }
 
-    void ctsMediaStreamServerListeningSocket::initiate_recv() NOEXCEPT
+    void ctsMediaStreamServerListeningSocket::initiate_recv() noexcept
     {
         // continue to try to post a recv if the call fails
         int error = SOCKET_ERROR;
@@ -93,7 +93,7 @@ namespace ctsTraffic {
                     this->remote_addr.reset();
                     this->remote_addr_len = this->remote_addr.length();
                     OVERLAPPED* pov = this->thread_iocp->new_request(
-                        [this] (OVERLAPPED* _ov) NOEXCEPT {
+                        [this] (OVERLAPPED* _ov) noexcept {
                         this->recv_completion(_ov); });
 
                     error = ::WSARecvFrom(
@@ -153,7 +153,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsMediaStreamServerListeningSocket::recv_completion(OVERLAPPED* _ov) NOEXCEPT
+    void ctsMediaStreamServerListeningSocket::recv_completion(OVERLAPPED* _ov) noexcept
     {
         // Cannot be holding the object_guard when calling into any pimpl-> methods
         // - will risk deadlocking the server

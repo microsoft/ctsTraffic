@@ -38,7 +38,7 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET) NOEXCEPT
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET) noexcept
 	{
 		return wsIOResult();
 	}
@@ -46,7 +46,7 @@ namespace ctsTraffic {
 	namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(LPCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
@@ -56,48 +56,48 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) NOEXCEPT
+        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
                 ctl::ctString::format_exception(e).c_str()).c_str());
         }
-        bool IsListening() NOEXCEPT
+        bool IsListening() noexcept
         {
             return false;
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }
     }
 
     /// ctsSocketBroker stubs - when ctsSocketState calls out to update the broker
-    void ctsSocketBroker::initiating_io() NOEXCEPT
+    void ctsSocketBroker::initiating_io() noexcept
     {
     }
-    void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
+    void ctsSocketBroker::closing(bool _was_active) noexcept
     {
     }
 }
@@ -122,7 +122,7 @@ void ResetStatics(DWORD _create = s_ShouldNeverHitErrorCode, DWORD _connect = s_
     s_IOReturnCode = _io;
 }
 
-void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
+void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) noexcept
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());
@@ -135,7 +135,7 @@ void CreateFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
     }
 }
 
-void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
+void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) noexcept
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());
@@ -152,7 +152,7 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
     }
 }
 
-void IoFunctionHook(std::weak_ptr<ctsSocket> _socket) NOEXCEPT
+void IoFunctionHook(std::weak_ptr<ctsSocket> _socket) noexcept
 {
     auto shared_socket(_socket.lock());
     Assert::IsNotNull(shared_socket.get());

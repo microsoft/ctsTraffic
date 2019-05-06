@@ -25,7 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctComInitialize.hpp"
 #include "ctWmiException.hpp"
 #include "ctWmiService.hpp"
-#include "ctVersionConversion.hpp"
+
 
 namespace ctl
 {
@@ -51,7 +51,7 @@ namespace ctl
 		class property_iterator;
 		class method_iterator;
 
-		ctWmiClassObject(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _wbemClass) NOEXCEPT :
+		ctWmiClassObject(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _wbemClass) noexcept :
 			wbemServices(std::move(_wbemServices)),
 			wbemClass(std::move(_wbemClass))
 		{
@@ -92,7 +92,7 @@ namespace ctl
 		/// - returns the IWbemClassObject holding the class instance
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComPtr<IWbemClassObject> get_class_object() const NOEXCEPT
+		ctComPtr<IWbemClassObject> get_class_object() const noexcept
 		{
 			return this->wbemClass;
 		}
@@ -117,7 +117,7 @@ namespace ctl
 			return property_iterator(this->wbemClass, _fNonSystemPropertiesOnly);
 		}
 
-		property_iterator property_end() const NOEXCEPT
+		property_iterator property_end() const noexcept
 		{
 			return property_iterator();
 		}
@@ -129,7 +129,7 @@ namespace ctl
 		/// {
 		///     return method_iterator(this->wbemClass, _fLocalMethodsOnly);
 		/// }
-		/// method_iterator method_end() NOEXCEPT
+		/// method_iterator method_end() noexcept
 		/// {
 		///     return method_iterator();
 		/// }
@@ -155,7 +155,7 @@ namespace ctl
 			DWORD dwIndex = END_ITERATOR_INDEX;
 
 		public:
-			property_iterator() NOEXCEPT = default;
+			property_iterator() noexcept = default;
 
 			property_iterator(ctComPtr<IWbemClassObject> _classObj, bool _fNonSystemPropertiesOnly) :
 				wbemClassObj(std::move(_classObj)),
@@ -169,15 +169,15 @@ namespace ctl
 				increment();
 			}
 
-			~property_iterator() NOEXCEPT = default;
+			~property_iterator() noexcept = default;
 			// copy c'tors can throw since it will try to copy the BSTR
 			property_iterator(const property_iterator&) = default;
 			property_iterator& operator =(const property_iterator&) = default;
 			// move c'tors are no-throw
-			property_iterator(property_iterator&&) NOEXCEPT = default;
-			property_iterator& operator=(property_iterator&&) NOEXCEPT = default;
+			property_iterator(property_iterator&&) noexcept = default;
+			property_iterator& operator=(property_iterator&&) noexcept = default;
 
-			void swap(property_iterator& _i) NOEXCEPT
+			void swap(property_iterator& _i) noexcept
 			{
 				using std::swap;
 				swap(this->dwIndex, _i.dwIndex);
@@ -242,7 +242,7 @@ namespace ctl
 			/// - throwing a ctWmiException object capturing the WMI failures
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(const property_iterator& _iter) const NOEXCEPT
+			bool operator==(const property_iterator& _iter) const noexcept
 			{
 				if (this->dwIndex != END_ITERATOR_INDEX) {
 					return ((this->dwIndex == _iter.dwIndex) &&
@@ -251,7 +251,7 @@ namespace ctl
 				return (this->dwIndex == _iter.dwIndex);
 			}
 
-			bool operator!=(const property_iterator& _iter) const NOEXCEPT
+			bool operator!=(const property_iterator& _iter) const noexcept
 			{
 				return !(*this == _iter);
 			}

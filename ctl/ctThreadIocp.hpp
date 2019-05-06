@@ -21,15 +21,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // ct headers
-#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 
 
 namespace ctl
 {
-	//
-	// not using an unnamed namespace as debugging this is unnecessarily difficult with Windows debuggers
-	//
 	//
 	// typedef used for the std::function to be given to ctThreadIocpCallbackInfo
 	// - constructed by ctThreadIocp
@@ -53,7 +49,7 @@ namespace ctl
 		{
 			::ZeroMemory(&ov, sizeof ov);
 		}
-		~ctThreadIocpCallbackInfo() NOEXCEPT = default;
+		~ctThreadIocpCallbackInfo() noexcept = default;
 		// non-copyable
 		ctThreadIocpCallbackInfo(const ctThreadIocpCallbackInfo&) = delete;
 		ctThreadIocpCallbackInfo& operator=(const ctThreadIocpCallbackInfo&) = delete;
@@ -120,7 +116,7 @@ namespace ctl
 			}
 		}
 
-		~ctThreadIocp()
+		~ctThreadIocp() noexcept
 		{
 			// could have been moved out of
 			if (ptp_io) {
@@ -130,13 +126,13 @@ namespace ctl
 			}
 		}
 
-		ctThreadIocp(ctThreadIocp&& rhs) NOEXCEPT
+		ctThreadIocp(ctThreadIocp&& rhs) noexcept
 		: ptp_io(rhs.ptp_io)
 		{
 			// null out the moved-from object's TP ptr since this object now has ownership
 			rhs.ptp_io = nullptr;
 		}
-		ctThreadIocp& operator=(ctThreadIocp&& rhs) NOEXCEPT
+		ctThreadIocp& operator=(ctThreadIocp&& rhs) noexcept
 		{
 			ptp_io = rhs.ptp_io;
 			// null out the moved-from object's TP ptr since this object now has ownership
@@ -186,7 +182,7 @@ namespace ctl
 		// This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
 		// - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
 		//
-		void cancel_request(OVERLAPPED* _pov) const NOEXCEPT
+		void cancel_request(OVERLAPPED* _pov) const noexcept
 		{
 			::CancelThreadpoolIo(ptp_io);
 			const auto old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);
@@ -210,7 +206,7 @@ namespace ctl
 			PVOID _overlapped,
 			ULONG /*_ioresult*/,
 			ULONG_PTR /*_numberofbytestransferred*/,
-			PTP_IO /*_io*/)
+			PTP_IO /*_io*/) noexcept
 		{
 			// this code may look really odd 
 			// the Win32 TP APIs eat stack overflow exceptions and reuses the thread for the next TP request
@@ -218,7 +214,8 @@ namespace ctl
 			// since we *do* hit this in stress, and we face ugly lock-related breaks since an SEH was swallowed while a callback held a lock, 
 			// we're working really hard to break and never let TP swalling SEH exceptions
 			EXCEPTION_POINTERS* exr = nullptr;
-			__try {
+			__try
+            {
 				auto* _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
 				_request->callback(static_cast<OVERLAPPED*>(_overlapped));
 				delete _request;
@@ -226,7 +223,8 @@ namespace ctl
 				// ReSharper disable once CppAssignedValueIsNeverUsed (exr is used in the except handler)
 			__except ((exr = GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
 			{
-				__try {
+				__try
+                {
 					::RaiseFailFastException(exr->ExceptionRecord, exr->ContextRecord, 0);
 				}
 #pragma warning(suppress: 6320) // not hiding exceptions: RaiseFailFastException is fatal - this creates a break to help debugging in some scenarios

@@ -22,6 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctVersionConversion.hpp>
 #include <ctTimer.hpp>
 #include <ctSockaddr.hpp>
+#include <ctString.hpp>
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
 // - with the below exceptions : these do not include any cts* headers
@@ -102,41 +103,41 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // OR
-        inline OptionType operator| (OptionType& lhs, OptionType rhs) NOEXCEPT
+        inline OptionType operator| (OptionType& lhs, OptionType rhs) noexcept
         {
             return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
         inline
-        OptionType& operator|= (OptionType& lhs, OptionType rhs) NOEXCEPT
+        OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
         {
             lhs = lhs | rhs;
             return lhs;
         }
 
         // AND
-        inline OptionType operator& (OptionType lhs, OptionType rhs) NOEXCEPT
+        inline OptionType operator& (OptionType lhs, OptionType rhs) noexcept
         {
             return OptionType(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
         }
-        inline OptionType& operator&= (OptionType& lhs, OptionType rhs) NOEXCEPT
+        inline OptionType& operator&= (OptionType& lhs, OptionType rhs) noexcept
         {
             lhs = lhs & rhs;
             return lhs;
         }
 
         // XOR
-        inline OptionType operator^ (OptionType lhs, OptionType rhs) NOEXCEPT
+        inline OptionType operator^ (OptionType lhs, OptionType rhs) noexcept
         {
             return OptionType(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
         }
-        inline OptionType& operator^= (OptionType& lhs, OptionType rhs) NOEXCEPT
+        inline OptionType& operator^= (OptionType& lhs, OptionType rhs) noexcept
         {
             lhs = lhs ^ rhs;
             return lhs;
         }
 
         // NOT
-        inline OptionType operator~ (OptionType lhs) NOEXCEPT
+        inline OptionType operator~ (OptionType lhs) noexcept
         {
             return OptionType(~static_cast<unsigned long>(lhs));
         }
@@ -147,7 +148,7 @@ namespace ctsTraffic {
         //
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         bool Startup(int argc, _In_reads_(argc) const wchar_t** argv);
-        void Shutdown() NOEXCEPT;
+        void Shutdown() noexcept;
 
         enum class PrintUsageOption
         {
@@ -160,7 +161,7 @@ namespace ctsTraffic {
         void PrintUsage(PrintUsageOption option = PrintUsageOption::Default);
         void PrintSettings();
 
-        void PrintLegend() NOEXCEPT;
+        void PrintLegend() noexcept;
 
         struct JitterFrameEntry {
             long long sequence_number = 0LL;
@@ -170,10 +171,10 @@ namespace ctsTraffic {
             long long receiver_qpf = 0LL;
             unsigned long received = 0UL;
         };
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) NOEXCEPT;
+        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept;
 
-        void PrintStatusUpdate() NOEXCEPT;
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintStatusUpdate() noexcept;
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
 #define PrintDebugInfo(fmt, ...)                                        \
@@ -187,34 +188,34 @@ namespace ctsTraffic {
             }                                                           \
         }
 
-        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) NOEXCEPT;
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) noexcept;
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT;
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
 
-        void PrintException(const std::exception& e) NOEXCEPT;
+        void PrintException(const std::exception& e) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void PrintExceptionOverride(const std::exception& e) NOEXCEPT;
+        void PrintExceptionOverride(const std::exception& e) noexcept;
 
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT;
+        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept;
 
         // Get* functions
-        ctsSignedLongLong   GetTcpBytesPerSecond() NOEXCEPT;
-        ctsUnsignedLong     GetMaxBufferSize() NOEXCEPT;
-        ctsUnsignedLong     GetBufferSize() NOEXCEPT;
-        ctsUnsignedLongLong GetTransferSize() NOEXCEPT;
+        ctsSignedLongLong   GetTcpBytesPerSecond() noexcept;
+        ctsUnsignedLong     GetMaxBufferSize() noexcept;
+        ctsUnsignedLong     GetBufferSize() noexcept;
+        ctsUnsignedLongLong GetTransferSize() noexcept;
 
-        float GetStatusTimeStamp() NOEXCEPT;
+        float GetStatusTimeStamp() noexcept;
 
-        int  GetListenBacklog() NOEXCEPT;
-        bool IsListening() NOEXCEPT;
+        int  GetListenBacklog() noexcept;
+        bool IsListening() noexcept;
 
         // Set* functions
-        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address) NOEXCEPT;
-        int SetPreConnectOptions(SOCKET _s) NOEXCEPT;
+        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address) noexcept;
+        int SetPreConnectOptions(SOCKET _s) noexcept;
 
         // for the MediaStream pattern
         struct MediaStreamSettings {
@@ -254,9 +255,13 @@ namespace ctsTraffic {
                     }
                 }
 
-                const ctsUnsignedLongLong total_stream_length_frames = StreamLengthSeconds * FramesPerSecond;
+				ctsUnsignedLongLong total_stream_length_frames = ctsUnsignedLongLong(StreamLengthSeconds) * ctsUnsignedLongLong(FramesPerSecond);
                 if (total_stream_length_frames > MAXULONG32) {
-                    throw std::invalid_argument("The total stream length in frame-count exceeds the maximum allowed to be streamed (2^32)");
+					auto maxStreamLength = MAXULONG32 / FramesPerSecond;
+					throw std::invalid_argument(
+						ctl::ctString::convert_to_string(
+							ctl::ctString::format_string(L"The total frame-count exceeds the maximum allowed: StreamLength * FramesPerSecond must be less than MAXULONG, the max stream length is %u (0x%x)",
+								static_cast<unsigned long>(maxStreamLength), static_cast<unsigned long>(maxStreamLength))).c_str());
                 }
 
                 // convert rate to bytes / second -> calculate the total # of bytes
@@ -287,15 +292,15 @@ namespace ctsTraffic {
                 return total_stream_length_bytes;
             }
         };
-        const MediaStreamSettings& GetMediaStream() NOEXCEPT;
+        const MediaStreamSettings& GetMediaStream() noexcept;
 
         struct ctsConfigSettings {
-            ctsConfigSettings() NOEXCEPT :
+            ctsConfigSettings() noexcept :
                 // dynamically initialize status details with current qpc
                 ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
             {
             }
-            ~ctsConfigSettings() NOEXCEPT = default;
+            ~ctsConfigSettings() noexcept = default;
             // non-copyable
             ctsConfigSettings(const ctsConfigSettings&) = delete;
             ctsConfigSettings& operator=(const ctsConfigSettings&) = delete;
@@ -366,7 +371,7 @@ namespace ctsTraffic {
         extern ctsConfigSettings* Settings;
 
         SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);
-        bool ShutdownCalled() NOEXCEPT;
-        unsigned long ConsoleVerbosity() NOEXCEPT;
+        bool ShutdownCalled() noexcept;
+        unsigned long ConsoleVerbosity() noexcept;
     } // namespace ctsConfig
 } // namespace ctsTraffic

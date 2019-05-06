@@ -72,7 +72,7 @@ namespace ctsTraffic {
         struct ctsAcceptExImpl;
         class ctsAcceptSocketInfo;
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT;
+        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept;
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -119,14 +119,14 @@ namespace ctsTraffic {
         public:
             // c'tor throws ctException on failure
             explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket);
-            ~ctsAcceptSocketInfo() NOEXCEPT;
+            ~ctsAcceptSocketInfo() noexcept;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
             void InitatiateAcceptEx();
 
             // returns a ctsAcceptedConnection struct describing the result of an AcceptEx call
             // - must be called only after the previous AcceptEx call has completed its OVERLAPPED call
-            ctsAcceptedConnection GetAcceptedSocket() NOEXCEPT;
+            ctsAcceptedConnection GetAcceptedSocket() noexcept;
 
             // non-copyable
             ctsAcceptSocketInfo(const ctsAcceptSocketInfo&) = delete;
@@ -202,7 +202,7 @@ namespace ctsTraffic {
                 listeners.swap(temp_listeners);
             }
 
-            ~ctsAcceptExImpl() NOEXCEPT
+            ~ctsAcceptExImpl() noexcept
             {
                 // close out all caller requests for new accepted sockets 
                 while (!pended_accept_requests.empty()) {
@@ -276,7 +276,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
+        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() noexcept
         {
             ::DeleteCriticalSection(&cs);
         }
@@ -309,7 +309,7 @@ namespace ctsTraffic {
             }
 
             this->pov = this->listening_socket_info->iocp->new_request(
-                [this](OVERLAPPED* _ov) NOEXCEPT
+                [this](OVERLAPPED* _ov) noexcept
             { ctsAcceptExIoCompletionCallback(_ov, this); });
 
             ::ZeroMemory(this->OutputBuffer, SingleOutputBufferSize * 2);
@@ -343,7 +343,7 @@ namespace ctsTraffic {
             this->socket = std::move(new_socket);
         }
 
-        ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
+        ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() noexcept
         {
             const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             SOCKET listening_socket = listening_socket_info->socket.get();
@@ -424,7 +424,7 @@ namespace ctsTraffic {
             return TRUE;
         }
 
-        static void ctsAcceptExIoCompletionCallback(_In_opt_ OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT
+        static void ctsAcceptExIoCompletionCallback(_In_opt_ OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
@@ -489,7 +489,7 @@ namespace ctsTraffic {
     // - else store the weak_ptr<ctsSocket> to be fulfilled later
     //
     //
-    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
         if (!::InitOnceExecuteOnce(&details::s_ctsAcceptExImplInitOnce, details::s_ctsAcceptExImplInitFn, &error, nullptr)) {

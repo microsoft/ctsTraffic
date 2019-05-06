@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0857150B-4FC8-4B6D-A48C-903C629D9BB9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -270,6 +270,7 @@
     <ClCompile Include="ctsMediaStreamServerConnectedSocket.cpp" />
     <ClCompile Include="ctsWinsockLayer.cpp" />
     <ClCompile Include="ctsWSASocket.cpp" />
+    <ClCompile Include="ctWSAPollEventThreadpool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -319,6 +320,7 @@
     <ClInclude Include="ctsSocketState.h" />
     <ClInclude Include="ctsStatistics.hpp" />
     <ClInclude Include="ctsWinsockLayer.h" />
+    <ClInclude Include="ctThreadWait.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ctsMediaStreamClient.h" />
     <ClInclude Include="ctsMediaStreamServerListeningSocket.h" />

@@ -95,13 +95,14 @@ namespace ctsTraffic {
         return error;
     }
 
-    const shared_ptr<ctThreadIocp>& ctsSocket::thread_pool()
+    const shared_ptr<ctThreadIocp>& ctsSocket::iocp_threadpool()
     {
         // use the SOCKET cs to also guard creation of this TP object
         const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
         // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
-        if ((this->socket != INVALID_SOCKET) && (!this->tp_iocp)) {
+        if ((this->socket != INVALID_SOCKET) && (!this->tp_iocp))
+        {
             this->tp_iocp = make_shared<ctThreadIocp>(this->socket, ctsConfig::Settings->PTPEnvironment); // can throw
         }
 

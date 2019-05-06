@@ -58,24 +58,24 @@ namespace ctsTraffic {
         //
         explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
 
-        ~ctsSocketState() NOEXCEPT;
+        ~ctsSocketState() noexcept;
 
         //
         // explicit method to 'start' the state machine
         // - this is required to ensure the object is fully instatiated before
         //   it is passed to the threadpool thread
         //
-        void start() NOEXCEPT;
+        void start() noexcept;
 
         //
         // Completes the current socket state
         //
-        void complete_state(DWORD _error) NOEXCEPT;
+        void complete_state(DWORD _error) noexcept;
 
         //
         // Accessor to current state information
         //
-        InternalState current_state() const NOEXCEPT;
+        InternalState current_state() const noexcept;
 
         //
         // copy c'tor and assignment
@@ -102,7 +102,7 @@ namespace ctsTraffic {
         // static threadpool callback function
         //
         static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) NOEXCEPT;
+        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) noexcept;
     };
 
 } // namespace

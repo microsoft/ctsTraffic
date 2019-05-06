@@ -25,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctComInitialize.hpp"
 #include "ctWmiException.hpp"
 #include "ctWmiService.hpp"
-#include "ctVersionConversion.hpp"
 
 
 namespace ctl
@@ -107,7 +106,7 @@ namespace ctl
 			return iterator(this->wbemClass, _fNonSystemPropertiesOnly);
 		}
 
-		iterator end() const NOEXCEPT
+		iterator end() const noexcept
 		{
 			return iterator();
 		}
@@ -140,7 +139,7 @@ namespace ctl
 			/// - traversal requires the callers IWbemServices interface and class name
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			iterator() NOEXCEPT = default;
+			iterator() noexcept = default;
 
 			iterator(ctComPtr<IWbemClassObject> _classObj, bool _fNonSystemPropertiesOnly) :
 				wbemClassObj(std::move(_classObj)), dwIndex(0)
@@ -155,15 +154,15 @@ namespace ctl
 				increment();
 			}
 
-			~iterator() NOEXCEPT = default;
+			~iterator() noexcept = default;
 
-			iterator(const iterator&) NOEXCEPT = default;
-			iterator& operator =(const iterator&) NOEXCEPT = default;
-			iterator(iterator&&) NOEXCEPT = default;
-			iterator& operator =(iterator&&) NOEXCEPT = default;
+			iterator(const iterator&) noexcept = default;
+			iterator& operator =(const iterator&) noexcept = default;
+			iterator(iterator&&) noexcept = default;
+			iterator& operator =(iterator&&) noexcept = default;
 
 
-			void swap(_Inout_ iterator& _i) NOEXCEPT
+			void swap(_Inout_ iterator& _i) noexcept
 			{
 				using std::swap;
 				swap(this->dwIndex, _i.dwIndex);
@@ -212,7 +211,7 @@ namespace ctl
 			/// - throwing a ctWmiException object capturing the WMI failures
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(const iterator& _iter) const NOEXCEPT
+			bool operator==(const iterator& _iter) const noexcept
 			{
 				if (this->dwIndex != END_ITERATOR_INDEX) {
 					return ((this->dwIndex == _iter.dwIndex) &&
@@ -221,7 +220,7 @@ namespace ctl
 				return (this->dwIndex == _iter.dwIndex);
 			}
 
-			bool operator!=(const iterator& _iter) const NOEXCEPT
+			bool operator!=(const iterator& _iter) const noexcept
 			{
 				return !(*this == _iter);
 			}

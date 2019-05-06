@@ -35,7 +35,7 @@ namespace ctsTraffic {
 
     namespace statics {
         // forward-declarations
-        inline static bool GrowConnectionIdBuffer() NOEXCEPT;
+        inline static bool GrowConnectionIdBuffer() noexcept;
 
         // pre-reserving for up to 1 million concurrent connections
         static const unsigned long ServerMaxConnections = 1000000UL;
@@ -51,7 +51,7 @@ namespace ctsTraffic {
         static ::RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
         static ::CRITICAL_SECTION ConnectionIdLock;
 
-        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
+        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
         {
             using ::ctsTraffic::ctsConfig::Settings;
             using ::ctsTraffic::ctsConfig::IsListening;
@@ -140,7 +140,7 @@ namespace ctsTraffic {
         // - to handle more incoming connections
         //
         //////////////////////////////////////////////////////////////////////////
-        inline static bool GrowConnectionIdBuffer() NOEXCEPT
+        inline static bool GrowConnectionIdBuffer() noexcept
         {
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
             using ::ctsTraffic::ctsUnsignedLong;
@@ -241,7 +241,7 @@ namespace ctsTraffic {
             return return_task;
         }
 
-        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) NOEXCEPT
+        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) noexcept
         {
             const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
             try {
@@ -259,7 +259,7 @@ namespace ctsTraffic {
             }
         }
 
-        inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+        inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) noexcept
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
                 PrintDebugInfo(

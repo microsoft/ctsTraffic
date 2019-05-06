@@ -52,7 +52,7 @@ ctsTraffic::ctsSignedLongLong s_TcpBytesPerSecond = 0LL;
 ///
 namespace ctl {
     namespace ctTimer {
-        long long snap_qpc_as_msec() NOEXCEPT
+        long long snap_qpc_as_msec() noexcept
         {
             return s_QpcTime;
         }
@@ -62,46 +62,46 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
             va_list va_args;
             va_start(va_args, _text);
             Logger::WriteMessage(ctl::ctString::format_string_va(_text, va_args).c_str());
             va_end(va_args);
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
 
-        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
+        ctsUnsignedLongLong GetTransferSize() noexcept
         {
             return s_TransferSize;
         }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() NOEXCEPT
+        ctsSignedLongLong GetTcpBytesPerSecond() noexcept
         {
             return s_TcpBytesPerSecond;
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }

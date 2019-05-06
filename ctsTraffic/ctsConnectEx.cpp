@@ -31,7 +31,7 @@ namespace ctsTraffic {
     static void ctsConnectExIoCompletionCallback(
         OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctl::ctSockaddr& _targetAddress) NOEXCEPT
+        const ctl::ctSockaddr& _targetAddress) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -83,7 +83,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -103,9 +103,13 @@ namespace ctsTraffic {
                 }
 
                 // get a new IO request from the socket's TP
-                const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
+                const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->iocp_threadpool();
+                if (!connect_iocp)
+                {
+                    throw ctl::ctException(WSAECONNABORTED, L"ctsSocket::iocp_threadpool", false);
+                }
                 OVERLAPPED* pov = connect_iocp->new_request(
-                    [_weak_socket, targetAddress](OVERLAPPED* _ov) NOEXCEPT
+                    [_weak_socket, targetAddress](OVERLAPPED* _ov) noexcept
                 { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                 if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov)) {

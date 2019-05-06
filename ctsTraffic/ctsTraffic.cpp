@@ -34,7 +34,7 @@ using namespace std;
 // global ptr for easing debugging
 ctsSocketBroker* g_SocketBroker = nullptr;
 
-BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) NOEXCEPT
+BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
     // handle all exit types - notify config that it's time to shutdown
     ctsConfig::Shutdown();

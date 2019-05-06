@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // project headers
-#include "ctVersionConversion.hpp"
 #include "ctscopedt.hpp"
 
 
@@ -32,7 +31,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -53,7 +52,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctHKeyDeleter
 	{
-		void operator()(const HKEY h) const NOEXCEPT  // NOLINT
+		void operator()(const HKEY h) const noexcept  // NOLINT
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if ((h != NULL) &&
@@ -81,7 +80,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctFindHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -102,7 +101,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctEventLogHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
@@ -123,7 +122,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctLibraryHandleDeleter
 	{
-		void operator()(const HMODULE h) const NOEXCEPT
+		void operator()(const HMODULE h) const noexcept
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if (h != NULL) {
@@ -144,7 +143,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctServiceHandleDeleter
 	{
-		void operator()(const SC_HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const SC_HANDLE h) const noexcept  // NOLINT
 		{
 			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 			if (h != NULL) {
@@ -166,7 +165,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctSocketHandleDeleter
 	{
-		void operator()(const SOCKET s) const NOEXCEPT
+		void operator()(const SOCKET s) const noexcept
 		{
 			if (s != INVALID_SOCKET) {
 				::closesocket(s);

@@ -96,6 +96,9 @@
     <ClCompile Include="ctsRioIocp.cpp">
       <Filter>TCPFunctions</Filter>
     </ClCompile>
+    <ClCompile Include="ctWSAPollEventThreadpool.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
@@ -255,6 +258,9 @@
     </ClInclude>
     <ClInclude Include="ctsTCPFunctions.h">
       <Filter>TCPFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="ctThreadWait.hpp">
+      <Filter>ctl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

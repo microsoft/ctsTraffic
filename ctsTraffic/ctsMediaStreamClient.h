@@ -29,7 +29,7 @@ namespace ctsTraffic {
     /// - with the specified ctsSocket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -37,6 +37,6 @@ namespace ctsTraffic {
     /// using IO Completion Ports
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
 } // namespace

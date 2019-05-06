@@ -29,7 +29,7 @@ namespace ctsTraffic {
 
     template <typename Protocol>
     struct ctsIOPatternRateLimitPolicy {
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) NOEXCEPT = delete;
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) noexcept = delete;
     };
 
 
@@ -39,7 +39,7 @@ namespace ctsTraffic {
     template<>
     struct ctsIOPatternRateLimitPolicy < ctsIOPatternRateLimitDontThrottle > {
 
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) const NOEXCEPT
+        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) const noexcept
         {
             // no-op
         }
@@ -59,7 +59,7 @@ namespace ctsTraffic {
         ctsUnsignedLongLong quantum_start_time_ms;
 
     public:
-        ctsIOPatternRateLimitPolicy() NOEXCEPT
+        ctsIOPatternRateLimitPolicy() noexcept
         : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
           QuantumPeriodMs(ctsConfig::Settings->TcpBytesPerSecondPeriod),
           bytes_sent_this_quantum(0ULL),
@@ -73,7 +73,7 @@ namespace ctsTraffic {
 #endif
         }
 
-        void update_time_offset(ctsIOTask& _task, const ctsUnsignedLongLong& _buffer_size) NOEXCEPT
+        void update_time_offset(ctsIOTask& _task, const ctsUnsignedLongLong& _buffer_size) noexcept
         {
             if (_task.ioAction != IOTaskAction::Send) {
                 return;

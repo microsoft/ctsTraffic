@@ -82,7 +82,7 @@ namespace ctsTraffic {
         deleteCsOnExit.dismiss();
     }
 
-    ctsSocketBroker::~ctsSocketBroker() NOEXCEPT
+    ctsSocketBroker::~ctsSocketBroker() noexcept
     {
         // first, turn off the timer to stop creating/tearing down the socket pool
         wakeup_timer.reset();
@@ -123,7 +123,7 @@ namespace ctsTraffic {
 
         // intiate the threadpool timer
         wakeup_timer->schedule_reoccuring(
-            [this]() NOEXCEPT { ctsSocketBroker::TimerCallback(this); },
+            [this]() noexcept { ctsSocketBroker::TimerCallback(this); },
             0LL,
             s_TimerCallbackTimeoutMs);
     }
@@ -132,7 +132,7 @@ namespace ctsTraffic {
     // - and will be pumping IO
     // Update pending and active counts under guard
     //
-    void ctsSocketBroker::initiating_io() NOEXCEPT
+    void ctsSocketBroker::initiating_io() noexcept
     {
         const ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
@@ -148,7 +148,7 @@ namespace ctsTraffic {
     // SocketState is indicating the socket is now 'closed'
     // Update pending or active counts (depending on prior state) under guard
     //
-    void ctsSocketBroker::closing(bool _was_active) NOEXCEPT
+    void ctsSocketBroker::closing(bool _was_active) noexcept
     {
         const ctAutoReleaseCriticalSection lock_broker(&this->cs);
 
@@ -167,7 +167,7 @@ namespace ctsTraffic {
         }
     }
 
-    bool ctsSocketBroker::wait(DWORD _milliseconds) const NOEXCEPT
+    bool ctsSocketBroker::wait(DWORD _milliseconds) const noexcept
     {
         HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
 
@@ -196,7 +196,7 @@ namespace ctsTraffic {
     // Timer callback to scavenge any closed sockets
     // Then refresh sockets that should be created anew
     //
-    void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* _broker) NOEXCEPT
+    void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* _broker) noexcept
     {
         // removed_objects will delete the closed objects outside of the broker lock
         vector<shared_ptr<ctsSocketState>> removed_objects;

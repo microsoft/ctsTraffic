@@ -122,14 +122,14 @@ namespace ctsPerf {
         ctsWriteDetails(const ctsWriteDetails&) = delete;
         ctsWriteDetails& operator=(const ctsWriteDetails&) = delete;
 
-        ctsWriteDetails(ctsWriteDetails&& rhs) NOEXCEPT
+        ctsWriteDetails(ctsWriteDetails&& rhs) noexcept
         : file_name(std::move(rhs.file_name)),
           file_handle(rhs.file_handle)
         {
             // don't let the moved-from object close the handle
             rhs.file_handle = INVALID_HANDLE_VALUE;
         }
-        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) NOEXCEPT
+        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) noexcept
         {
             if (file_handle != INVALID_HANDLE_VALUE) {
                 ::CloseHandle(file_handle);

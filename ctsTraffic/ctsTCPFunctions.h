@@ -22,15 +22,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
-    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
-    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
+    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
     
-    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
-    void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
+    void ctsConnectEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
-    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
-    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
-    void ctsRioIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
+    void ctsRioIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 }

@@ -52,7 +52,7 @@ namespace ctsTraffic {
         }
     }
 
-    ctsSocketState::~ctsSocketState() NOEXCEPT
+    ctsSocketState::~ctsSocketState() noexcept
     {
         //
         // In order for a graceful shutdown without risking socket extension:
@@ -72,7 +72,7 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&state_guard);
     }
 
-    void ctsSocketState::start() NOEXCEPT
+    void ctsSocketState::start() noexcept
     {
         ctFatalCondition(
             state != InternalState::Creating,
@@ -80,7 +80,7 @@ namespace ctsTraffic {
         ::SubmitThreadpoolWork(this->thread_pool_worker);
     }
 
-    void ctsSocketState::complete_state(DWORD _error) NOEXCEPT
+    void ctsSocketState::complete_state(DWORD _error) noexcept
     {
         bool initiating_io = false;
         //
@@ -163,13 +163,13 @@ namespace ctsTraffic {
         ::SubmitThreadpoolWork(this->thread_pool_worker);
     }
 
-    ctsSocketState::InternalState ctsSocketState::current_state() const NOEXCEPT
+    ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
     {
         const ctAutoReleaseCriticalSection lock_state(&this->state_guard);
         return this->state;
     }
 
-    VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
+    VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) noexcept
     {
         //
         // invoke the corresponding function object

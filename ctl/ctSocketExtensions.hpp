@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <mswsock.h>
 #include <rpc.h> // for GUID
 // ctl headers
-#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
 
@@ -48,7 +47,7 @@ namespace ctl
 		// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
 		static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
 
-		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*) NOEXCEPT
+		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*) noexcept
 		{
 			WSADATA wsadata;
 			const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);

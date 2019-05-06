@@ -57,52 +57,52 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
 
-        bool IsListening() NOEXCEPT
+        bool IsListening() noexcept
         {
             return s_Listening;
         }
 
-        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
+        ctsUnsignedLongLong GetTransferSize() noexcept
         {
             return s_TransferSize;
         }
 
-        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
+        ctsUnsignedLong GetMaxBufferSize() noexcept
         {
             return s_TransferSize;
         }
 
-        float GetStatusTimeStamp() NOEXCEPT
+        float GetStatusTimeStamp() noexcept
         {
             return 0.0f;
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }
@@ -121,12 +121,12 @@ namespace ctsTraffic {
         Logger::WriteMessage(L"ctsIOPattern::ctsIOPattern\n");
     }
 
-    ctsIOPattern::~ctsIOPattern() NOEXCEPT
+    ctsIOPattern::~ctsIOPattern() noexcept
     {
         Logger::WriteMessage(L"ctsIOPattern::~ctsIOPattern\n");
     }
 
-    ctsIOTask ctsIOPattern::initiate_io() NOEXCEPT
+    ctsIOTask ctsIOPattern::initiate_io() noexcept
     {
         Logger::WriteMessage(L"ctsIOPattern::initiate_io\n");
 
@@ -145,7 +145,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) noexcept
     {
         Assert::AreEqual(s_IOStatusCode, _status_code);
         Logger::WriteMessage(L"ctsIOPattern::complete_io\n");
@@ -166,7 +166,7 @@ namespace ctsTraffic {
         }
 
         // none of these are called - required to be defined
-        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT
+        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
             Assert::IsFalse(true);
@@ -177,23 +177,23 @@ namespace ctsTraffic {
             Assert::IsFalse(true);
             return ctsIOTask();
         }
-        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long _current_transfer) NOEXCEPT
+        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long _current_transfer) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::completed_task\n");
             Assert::IsFalse(true);
             return ctsIOPatternProtocolError::NoError;
         }
-        virtual void start_stats() NOEXCEPT
+        virtual void start_stats() noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::start_stats\n");
             Assert::IsFalse(true);
         }
-        virtual void end_stats() NOEXCEPT
+        virtual void end_stats() noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::end_stats\n");
             Assert::IsFalse(true);
         }
-        virtual char* connection_id() NOEXCEPT
+        virtual char* connection_id() noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::connection_id\n");
             Assert::IsFalse(true);
@@ -218,22 +218,22 @@ namespace ctsTraffic {
     {
 
     }
-    void ctsSocket::set_socket(SOCKET _s) NOEXCEPT
+    void ctsSocket::set_socket(SOCKET _s) noexcept
     {
         this->socket = _s;
     }
-    void ctsSocket::lock_socket() const NOEXCEPT
+    void ctsSocket::lock_socket() const noexcept
     {
     }
-    void ctsSocket::unlock_socket() const NOEXCEPT
+    void ctsSocket::unlock_socket() const noexcept
     {
     }
-    void ctsSocket::complete_state(unsigned long) NOEXCEPT
+    void ctsSocket::complete_state(unsigned long) noexcept
     {
         ::SetEvent(s_RemovedSocketEvent);
     }
 
-    std::shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const NOEXCEPT
+    std::shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const noexcept
     {
         return this->pattern;
     }

@@ -62,8 +62,8 @@ namespace ctsTraffic {
         const long long connect_time = 0LL;
 
         // called by ctsSocketGuard
-        _Acquires_lock_(object_guard) void lock_socket() const NOEXCEPT;
-        _Releases_lock_(object_guard) void unlock_socket() const NOEXCEPT;
+        _Acquires_lock_(object_guard) void lock_socket() const noexcept;
+        _Releases_lock_(object_guard) void unlock_socket() const noexcept;
 
     public:
         ctsMediaStreamServerConnectedSocket(
@@ -72,19 +72,19 @@ namespace ctsTraffic {
             ctl::ctSockaddr _remote_addr, 
             ctsMediaStreamConnectedSocketIoFunctor _io_functor);
 
-        ~ctsMediaStreamServerConnectedSocket() NOEXCEPT;
+        ~ctsMediaStreamServerConnectedSocket() noexcept;
 
-        const ctl::ctSockaddr& get_address() const NOEXCEPT;
+        const ctl::ctSockaddr& get_address() const noexcept;
 
-        long long get_startTime() const NOEXCEPT;
+        long long get_startTime() const noexcept;
 
-        ctsIOTask get_nextTask() const NOEXCEPT;
+        ctsIOTask get_nextTask() const noexcept;
 
-        long long increment_sequence() NOEXCEPT;
+        long long increment_sequence() noexcept;
 
-        void schedule_task(const ctsIOTask& _task) NOEXCEPT;
+        void schedule_task(const ctsIOTask& _task) noexcept;
 
-        void complete_state(unsigned long _error_code) const NOEXCEPT;
+        void complete_state(unsigned long _error_code) const noexcept;
 
         // non-copyable
         ctsMediaStreamServerConnectedSocket(const ctsMediaStreamServerConnectedSocket&) = delete;
@@ -93,6 +93,6 @@ namespace ctsTraffic {
         ctsMediaStreamServerConnectedSocket& operator=(ctsMediaStreamServerConnectedSocket&&) = delete;
 
     private:
-        static VOID CALLBACK ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) NOEXCEPT;
+        static VOID CALLBACK ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) noexcept;
     };
 }

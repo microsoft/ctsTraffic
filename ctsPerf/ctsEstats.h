@@ -155,7 +155,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) noexcept  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -166,7 +166,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) noexcept  // NOLINT
     {
         return ::GetPerTcpConnectionEStats(
             tcpRow,
@@ -190,7 +190,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
+    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) noexcept  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -201,7 +201,7 @@ namespace details {
     }
 
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
+    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) noexcept  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
@@ -236,7 +236,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSynOpts> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"Mss-Received,Mss-Sent";
         }
@@ -246,7 +246,7 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(const PTCPROW) const NOEXCEPT
+        void StartTracking(const PTCPROW) const noexcept
         {
             // always on
         }
@@ -276,7 +276,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsData> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"Bytes-In,Bytes-Out";
         }
@@ -316,7 +316,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSndCong> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"CongWin(mean),CongWin(stddev),"
@@ -456,7 +456,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsPath> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
@@ -594,7 +594,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsRec> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
@@ -723,7 +723,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsObsRec> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
 #ifdef _TESTING_ESTATS_VALUES
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
@@ -854,7 +854,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsBandwidth> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"";
         }
@@ -885,7 +885,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsFineRtt> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"";
         }

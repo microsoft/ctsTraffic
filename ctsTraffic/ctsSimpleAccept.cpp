@@ -153,7 +153,7 @@ namespace ctsTraffic {
             ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
 
         private:
-            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
+            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) noexcept
             {
                 auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(_context);
 
@@ -252,7 +252,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
         if (!::InitOnceExecuteOnce(&details::s_ctsSimpleAcceptImplInitOnce, details::s_ctsSimpleAcceptImplInitFn, &error, nullptr)) {

@@ -30,7 +30,7 @@ namespace ctsTraffic {
     static long long s_TargetCounter = 0LL;
     static long long s_PortCounter = 0LL;
 
-    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {

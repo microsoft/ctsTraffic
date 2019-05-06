@@ -58,12 +58,12 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-    void ctsSocketState::complete_state(DWORD) NOEXCEPT
+    void ctsSocketState::complete_state(DWORD) noexcept
     {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET) NOEXCEPT
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET) noexcept
 	{
 		return wsIOResult();
 	}
@@ -71,7 +71,7 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(LPCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
@@ -81,34 +81,34 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) NOEXCEPT
+        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
                     ctl::ctString::format_exception(e).c_str()).c_str());
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }
@@ -228,12 +228,12 @@ namespace ctsUnitTest
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // when the socket is INVALID_SOCKET, should return a nullptr
-            auto tp1 (test->thread_pool());
+            auto tp1 (test->iocp_threadpool());
             Assert::AreEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp1);
 
             // once given a real socket, should return a valid TP handle
             test->set_socket(socket_value);
-            auto tp2(test->thread_pool());
+            auto tp2(test->iocp_threadpool());
             Assert::AreNotEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp2);
         }
 
