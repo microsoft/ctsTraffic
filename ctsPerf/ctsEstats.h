@@ -35,43 +35,54 @@ namespace ctsPerf {
 
 namespace details {
 
+#ifdef _TESTING_ESTATS_VALUES
+    static const unsigned char InvalidCharEstatsValue = 0xc0;
+    static const unsigned long InvalidLongEstatsValue = 0xc0c0c0c0;
+    static const unsigned long long InvalidLongLongEstatsValue = 0xc0c0c0c0c0c0c0c0;
+#else
+    static const unsigned char InvalidCharEstatsValue = 0xff;
     static const unsigned long InvalidLongEstatsValue = 0xffffffff;
     static const unsigned long long InvalidLongLongEstatsValue = 0xffffffffffffffff;
+#endif
 
+    inline
+    bool IsRodValueValid(_In_ LPCWSTR name, BOOLEAN t) noexcept
+    {
+#ifdef _TESTING_ESTATS_VALUES
+        if (t == InvalidCharEstatsValue)
+        {
+            wprintf(L"\t** %ws : %lu (0x%x)\n", name, t, t);
+            return false;
+        }
+#endif
+        UNREFERENCED_PARAMETER(name);
+        return true;
+    }
+    
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG t) noexcept
     {
+#ifdef _TESTING_ESTATS_VALUES
         if (t == InvalidLongEstatsValue)
         {
+            wprintf(L"\t** %ws : %lu (0x%I32x)\n", name, t, t);
             return false;
         }
-        if (t > 0x10000000)
-        {
-#ifdef _TESTING_ESTATS_VALUES
-            wprintf(L"\t** %ws : %lu\n", name, t);
-#else
-            UNREFERENCED_PARAMETER(name);
 #endif
-            return false;
-        }
+        UNREFERENCED_PARAMETER(name);
         return true;
     }
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG64 t) noexcept
     {
+#ifdef _TESTING_ESTATS_VALUES
         if (t == InvalidLongLongEstatsValue)
         {
+            wprintf(L"\t** %ws : %llu (0x%I64x)\n", name, t, t);
             return false;
         }
-        if (t > 0x1000000000000000)
-        {
-#ifdef _TESTING_ESTATS_VALUES
-            wprintf(L"\t** %ws : %llu\n", name, t);
-#else
-            UNREFERENCED_PARAMETER(name);
 #endif
-            return false;
-        }
+        UNREFERENCED_PARAMETER(name);
         return true;
     }
 
@@ -305,6 +316,23 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsData - DataBytesOut", Rod.DataBytesOut)) {
                     DataBytesOut = Rod.DataBytesOut;
                 }
+
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsData - DataBytesOut", Rod.DataBytesOut);
+                IsRodValueValid(L"TcpConnectionEstatsData - DataSegsOut", Rod.DataSegsOut);
+                IsRodValueValid(L"TcpConnectionEstatsData - DataBytesIn", Rod.DataBytesIn);
+                IsRodValueValid(L"TcpConnectionEstatsData - DataSegsIn", Rod.DataSegsIn);
+                IsRodValueValid(L"TcpConnectionEstatsData - SegsOut", Rod.SegsOut);
+                IsRodValueValid(L"TcpConnectionEstatsData - SegsIn", Rod.SegsIn);
+                IsRodValueValid(L"TcpConnectionEstatsData - SoftErrors", Rod.SoftErrors);
+                IsRodValueValid(L"TcpConnectionEstatsData - SoftErrorReason", Rod.SoftErrorReason);
+                IsRodValueValid(L"TcpConnectionEstatsData - SndUna", Rod.SndUna);
+                IsRodValueValid(L"TcpConnectionEstatsData - SndNxt", Rod.SndNxt);
+                IsRodValueValid(L"TcpConnectionEstatsData - SndMax", Rod.SndMax);
+                IsRodValueValid(L"TcpConnectionEstatsData - ThruBytesAcked", Rod.ThruBytesAcked);
+                IsRodValueValid(L"TcpConnectionEstatsData - RcvNxt", Rod.RcvNxt);
+                IsRodValueValid(L"TcpConnectionEstatsData - ThruBytesReceived", Rod.ThruBytesReceived);
+#endif
             }
         }
 
@@ -318,7 +346,7 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() NOEXCEPT
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return L"CongWin(mean),CongWin(stddev),"
                 L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
                 L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited, [xValidValues,xInvalidValues] ";
@@ -330,7 +358,7 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return
                 ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
                 ctl::ctString::format_string(
@@ -371,8 +399,8 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
 
-#ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurCwnd > 0x10000000 && Rod.CurCwnd != UninitializedUlong) ||
+#ifdef _TESTING_ESTATS_VALUES_x
+                if ((Rod.CurCwnd > 0x10000000 && Rod.CurCwnd != InvalidLongEstatsValue) ||
                     Rod.SndLimBytesRwin > 0x10000000 ||
                     Rod.SndLimBytesSnd > 0x10000000 ||
                     Rod.SndLimBytesCwnd > 0x10000000 ||
@@ -433,6 +461,27 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransCwnd", Rod.SndLimTransCwnd)) {
                     transitionsIntoCongestionLimited = Rod.SndLimTransCwnd;
                 }
+
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransRwin", Rod.SndLimTransRwin);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTimeRwin", Rod.SndLimTimeRwin);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesRwin", Rod.SndLimBytesRwin);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransCwnd", Rod.SndLimTransCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTimeCwnd", Rod.SndLimTimeCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesCwnd", Rod.SndLimBytesCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransSnd", Rod.SndLimTransSnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTimeSnd", Rod.SndLimTimeSnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesSnd", Rod.SndLimBytesSnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - SlowStart", Rod.SlowStart);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - CongAvoid", Rod.CongAvoid);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - OtherReductions", Rod.OtherReductions);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - CurCwnd", Rod.CurCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - MaxSsCwnd", Rod.MaxSsCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - MaxCaCwnd", Rod.MaxCaCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - CurSsthresh", Rod.CurSsthresh);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - MaxSsthresh", Rod.MaxSsthresh);
+                IsRodValueValid(L"TcpConnectionEstatsSndCong - MinSsthresh", Rod.MinSsthresh);
+#endif
             }
         }
 
@@ -458,7 +507,7 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() NOEXCEPT
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
                 L"RetransTimer(mean),RetransTimer(stddev),"
                 L"RTT(mean),Rtt(stddev), [xValidValues,xInvalidValues] ";
@@ -470,7 +519,7 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return ctl::ctString::format_string(
                 L",%lu,%lu,%lu,%lu,%lu",
                 bytesRetrans,
@@ -511,14 +560,14 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
 
-#ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRto > 0x10000000 && Rod.CurRto != UninitializedUlong) ||
-                    (Rod.SmoothedRtt > 0x10000000 && Rod.SmoothedRtt != UninitializedUlong) ||
-                    (Rod.BytesRetrans > 0x10000000 && Rod.BytesRetrans != UninitializedUlong) ||
-                    (Rod.DupAcksIn > 0x10000000 && Rod.DupAcksIn != UninitializedUlong) ||
-                    (Rod.SacksRcvd > 0x10000000 && Rod.SacksRcvd != UninitializedUlong) ||
-                    (Rod.CongSignals > 0x10000000 && Rod.CongSignals != UninitializedUlong) ||
-                    (Rod.CurMss > 0x10000000 && Rod.CurMss != UninitializedUlong))
+#ifdef _TESTING_ESTATS_VALUES_x
+                if ((Rod.CurRto == InvalidLongEstatsValue) ||
+                    (Rod.SmoothedRtt == InvalidLongEstatsValue) ||
+                    (Rod.BytesRetrans == InvalidLongEstatsValue) ||
+                    (Rod.DupAcksIn == InvalidLongEstatsValue) ||
+                    (Rod.SacksRcvd == InvalidLongEstatsValue) ||
+                    (Rod.CongSignals == InvalidLongEstatsValue) ||
+                    (Rod.CurMss == InvalidLongEstatsValue))
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
@@ -573,6 +622,51 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CurMss", Rod.CurMss)) {
                     maxSegmentSize = Rod.CurMss;
                 }
+
+#ifdef _TESTING_ESTATS_VALUES
+
+                IsRodValueValid(L"TcpConnectionEstatsPath - FastRetran", Rod.FastRetran);
+                IsRodValueValid(L"TcpConnectionEstatsPath - Timeouts", Rod.Timeouts);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SubsequentTimeouts", Rod.SubsequentTimeouts);
+                IsRodValueValid(L"TcpConnectionEstatsPath - CurTimeoutCount", Rod.CurTimeoutCount);
+                IsRodValueValid(L"TcpConnectionEstatsPath - AbruptTimeouts", Rod.AbruptTimeouts);
+                IsRodValueValid(L"TcpConnectionEstatsPath - PktsRetrans", Rod.PktsRetrans);
+                IsRodValueValid(L"TcpConnectionEstatsPath - BytesRetrans", Rod.BytesRetrans);
+                IsRodValueValid(L"TcpConnectionEstatsPath - DupAcksIn", Rod.DupAcksIn);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SacksRcvd", Rod.SacksRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SackBlocksRcvd", Rod.SackBlocksRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsPath - CongSignals", Rod.CongSignals);
+                IsRodValueValid(L"TcpConnectionEstatsPath - PreCongSumCwnd", Rod.PreCongSumCwnd);
+                IsRodValueValid(L"TcpConnectionEstatsPath - PreCongSumRtt", Rod.PreCongSumRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - PostCongSumRtt", Rod.PostCongSumRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - PostCongCountRtt", Rod.PostCongCountRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - EcnSignals", Rod.EcnSignals);
+                IsRodValueValid(L"TcpConnectionEstatsPath - EceRcvd", Rod.EceRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SendStall", Rod.SendStall);
+                IsRodValueValid(L"TcpConnectionEstatsPath - QuenchRcvd", Rod.QuenchRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsPath - RetranThresh", Rod.RetranThresh);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SndDupAckEpisodes", Rod.SndDupAckEpisodes);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SumBytesReordered", Rod.SumBytesReordered);
+                IsRodValueValid(L"TcpConnectionEstatsPath - NonRecovDa", Rod.NonRecovDa);
+                IsRodValueValid(L"TcpConnectionEstatsPath - NonRecovDaEpisodes", Rod.NonRecovDaEpisodes);
+                IsRodValueValid(L"TcpConnectionEstatsPath - AckAfterFr", Rod.AckAfterFr);
+                IsRodValueValid(L"TcpConnectionEstatsPath - DsackDups", Rod.DsackDups);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SampleRtt", Rod.SampleRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SmoothedRtt", Rod.SmoothedRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - RttVar", Rod.RttVar);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MaxRtt", Rod.MaxRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MinRtt", Rod.MinRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SumRtt", Rod.SumRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - CountRtt", Rod.CountRtt);
+                IsRodValueValid(L"TcpConnectionEstatsPath - CurRto", Rod.CurRto);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MaxRto", Rod.MaxRto);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MinRto", Rod.MinRto);
+                IsRodValueValid(L"TcpConnectionEstatsPath - CurMss", Rod.CurMss);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MaxMss", Rod.MaxMss);
+                IsRodValueValid(L"TcpConnectionEstatsPath - MinMss", Rod.MinMss);
+                IsRodValueValid(L"TcpConnectionEstatsPath - SpuriousRtoDetections", Rod.SpuriousRtoDetections);
+#endif
+
             }
         }
 
@@ -596,7 +690,7 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() NOEXCEPT
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
 #else
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev)";
@@ -637,7 +731,7 @@ namespace details {
                 L"-1," :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
 
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return
                 formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
@@ -667,11 +761,12 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
 
-#ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRwinSent > 0x10000000 && Rod.CurRwinSent != UninitializedUlong) ||
-                    (Rod.MinRwinSent > 0x10000000 && Rod.MinRwinSent != UninitializedUlong) ||
-                    (Rod.MaxRwinSent > 0x10000000 && Rod.MaxRwinSent != UninitializedUlong) ||
-                    (Rod.MinRwinSent != UninitializedUlong && Rod.MinRwinSent > Rod.MaxRwinSent && Rod.MaxRwinSent > 0))
+#ifdef _TESTING_ESTATS_VALUES_x
+                if ((Rod.CurRwinSent == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinSent == InvalidLongEstatsValue) ||
+                    (Rod.MaxRwinSent == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinSent == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinSent > Rod.MaxRwinSent))
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
@@ -706,6 +801,23 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - MaxRwinSent", Rod.MaxRwinSent)) {
                     maxReceiveWindow = Rod.MaxRwinSent;
                 }
+
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsRec - CeRcvd", Rod.CeRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsRec - CurAppRQueue", Rod.CurAppRQueue);
+                IsRodValueValid(L"TcpConnectionEstatsRec - CurReasmQueue", Rod.CurReasmQueue);
+                IsRodValueValid(L"TcpConnectionEstatsRec - CurRwinSent", Rod.CurRwinSent);
+                IsRodValueValid(L"TcpConnectionEstatsRec - DupAckEpisodes", Rod.DupAckEpisodes);
+                IsRodValueValid(L"TcpConnectionEstatsRec - DupAcksOut", Rod.DupAcksOut);
+                IsRodValueValid(L"TcpConnectionEstatsRec - EcnNoncesRcvd", Rod.EcnNoncesRcvd);
+                IsRodValueValid(L"TcpConnectionEstatsRec - EcnSent", Rod.EcnSent);
+                IsRodValueValid(L"TcpConnectionEstatsRec - LimRwin", Rod.LimRwin);
+                IsRodValueValid(L"TcpConnectionEstatsRec - MaxAppRQueue", Rod.MaxAppRQueue);
+                IsRodValueValid(L"TcpConnectionEstatsRec - MaxRwinSent", Rod.MaxRwinSent);
+                IsRodValueValid(L"TcpConnectionEstatsRec - MaxReasmQueue", Rod.MaxReasmQueue);
+                IsRodValueValid(L"TcpConnectionEstatsRec - MinRwinSent", Rod.MinRwinSent);
+                IsRodValueValid(L"TcpConnectionEstatsRec - WinScaleSent", Rod.WinScaleSent);
+#endif
             }
         }
 
@@ -725,7 +837,7 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() NOEXCEPT
         {
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
 #else
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev)";
@@ -767,7 +879,7 @@ namespace details {
                 L"-1," :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
 
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
             return
                 formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
@@ -797,11 +909,12 @@ namespace details {
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
 
-#ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRwinRcvd > 0x10000000 && Rod.CurRwinRcvd != UninitializedUlong) ||
-                    (Rod.MinRwinRcvd > 0x10000000 && Rod.MinRwinRcvd != UninitializedUlong) ||
-                    (Rod.MaxRwinRcvd > 0x10000000 && Rod.MaxRwinRcvd != UninitializedUlong) ||
-                    (Rod.MinRwinRcvd != UninitializedUlong && Rod.MinRwinRcvd > Rod.MaxRwinRcvd && Rod.MaxRwinRcvd > 0))
+#ifdef _TESTING_ESTATS_VALUES_x
+                if ((Rod.CurRwinRcvd == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinRcvd == InvalidLongEstatsValue) ||
+                    (Rod.MaxRwinRcvd == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinRcvd == InvalidLongEstatsValue) ||
+                    (Rod.MinRwinRcvd > Rod.MaxRwinRcvd))
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
@@ -837,6 +950,9 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MaxRwinRcvd", Rod.MaxRwinRcvd)) {
                     maxReceiveWindow = Rod.MaxRwinRcvd;
                 }
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsObsRec - WinScaleRcvd", Rod.WinScaleRcvd);
+#endif
             }
         }
 
@@ -845,7 +961,7 @@ namespace details {
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
 
-#ifdef _TESTING_ESTATS_VALUES
+#ifdef _TESTING_ESTATS_VALUES_x
         ULONG validValues = 0;
         ULONG invalidValues = 0;
 #endif
@@ -877,6 +993,14 @@ namespace details {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundBandwidth", Rod.InboundBandwidth);
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundBandwidthPeaked", Rod.InboundBandwidthPeaked);
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundInstability", Rod.InboundInstability);
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundBandwidth", Rod.OutboundBandwidth);
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundBandwidthPeaked", Rod.OutboundBandwidthPeaked);
+                IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundInstability", Rod.OutboundInstability);
+#endif
                 // store data from this instance
             }
         }
@@ -907,6 +1031,12 @@ namespace details {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rod)) {
+#ifdef _TESTING_ESTATS_VALUES
+                IsRodValueValid(L"TcpConnectionEstatsFineRtt - MaxRtt", Rod.MaxRtt);
+                IsRodValueValid(L"TcpConnectionEstatsFineRtt - MinRtt", Rod.MinRtt);
+                IsRodValueValid(L"TcpConnectionEstatsFineRtt - RttVar", Rod.RttVar);
+                IsRodValueValid(L"TcpConnectionEstatsFineRtt - SumRtt", Rod.SumRtt);
+#endif
                 // store data from this instance
             }
         }
