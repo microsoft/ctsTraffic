@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 
 #include <ctString.hpp>
-#include <ctVersionConversion.hpp>
 
 #include "ctsIOPatternState.hpp"
 

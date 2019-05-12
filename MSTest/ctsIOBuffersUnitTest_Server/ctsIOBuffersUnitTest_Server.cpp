@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <algorithm>
 
-#include <ctVersionConversion.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctString.hpp>
 

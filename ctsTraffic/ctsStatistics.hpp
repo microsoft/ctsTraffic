@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <rpc.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
 #include <ctException.hpp>

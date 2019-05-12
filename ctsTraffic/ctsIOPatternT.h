@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <functional>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctLocks.hpp>
 // project headers

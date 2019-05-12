@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctException.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"

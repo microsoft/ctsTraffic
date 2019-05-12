@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 #include <utility>
 // project headers
 #include "ctsMediaStreamServerConnectedSocket.h"

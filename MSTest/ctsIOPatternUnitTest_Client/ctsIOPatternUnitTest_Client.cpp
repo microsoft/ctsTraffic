@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 // ctl headers
 #include <ctTimer.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"

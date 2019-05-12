@@ -16,8 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <memory>
 
-#include <ctVersionConversion.hpp>
-
 #include "ctsIOPatternState.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

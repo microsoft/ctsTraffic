@@ -20,7 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <ctString.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"

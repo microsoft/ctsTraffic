@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 
 #include <ctScopeGuard.hpp>
-#include <ctVersionConversion.hpp>
 
 #include "ctsIOBuffers.hpp"
 

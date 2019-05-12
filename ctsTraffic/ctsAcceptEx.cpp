@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 #include <mswsock.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>

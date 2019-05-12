@@ -17,8 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable once CppUnusedIncludeDirective
 #include <WinSock2.h>
 #include <MSWSock.h>
-// ctl headers
-#include <ctVersionConversion.hpp>
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 

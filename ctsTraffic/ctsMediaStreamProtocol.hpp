@@ -20,7 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <WinSock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>
 #include <ctException.hpp>

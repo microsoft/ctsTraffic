@@ -20,7 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctTimer.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsStatistics.hpp"

@@ -139,7 +139,7 @@
       </PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /permissive-</AdditionalOptions>
+      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /permissive- /D_TESTING_ESTATS_VALUES</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <CallingConvention>StdCall</CallingConvention>
       <OmitFramePointers>false</OmitFramePointers>

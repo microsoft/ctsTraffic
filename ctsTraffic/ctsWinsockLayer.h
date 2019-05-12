@@ -20,9 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 
-// ctl headers
-#include <ctVersionConversion.hpp>
-
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"

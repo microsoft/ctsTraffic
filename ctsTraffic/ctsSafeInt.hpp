@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <safeint.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 
 

@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 // ctl header
-#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 #include <ctString.hpp>
 // project headers
