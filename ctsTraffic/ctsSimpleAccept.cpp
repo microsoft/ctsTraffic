@@ -19,14 +19,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-
 
 namespace ctsTraffic {
     //
@@ -153,7 +151,7 @@ namespace ctsTraffic {
             ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
 
         private:
-            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) NOEXCEPT
+            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) noexcept
             {
                 auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(_context);
 
@@ -161,7 +159,7 @@ namespace ctsTraffic {
                 ::EnterCriticalSection(&pimpl->accepting_cs);
                 ctlScopeGuard(leaveCriticalSectionOnExit, { ::LeaveCriticalSection(&pimpl->accepting_cs); });
 
-                std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
+                const std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
                 pimpl->accepting_sockets.pop_back();
 
                 auto accept_socket(weak_socket.lock());
@@ -192,7 +190,7 @@ namespace ctsTraffic {
 
                 // increment the listening socket before calling accept on the blocking socket
                 ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);
-                ctl::ctSockaddr remote_addr;
+                const ctl::ctSockaddr remote_addr;
                 int remote_addr_len = remote_addr.length();
                 const SOCKET new_socket = ::accept(listener, remote_addr.sockaddr(), &remote_addr_len);
                 DWORD gle = ::WSAGetLastError();
@@ -209,7 +207,7 @@ namespace ctsTraffic {
                 accept_socket->set_socket(new_socket);
                 accept_socket->set_target_address(remote_addr);
 
-                ctl::ctSockaddr local_addr;
+                const ctl::ctSockaddr local_addr;
                 int local_addr_len = local_addr.length();
                 if (0 == ::getsockname(new_socket, local_addr.sockaddr(), &local_addr_len)) {
                     accept_socket->set_local_address(local_addr);
@@ -252,7 +250,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
         if (!::InitOnceExecuteOnce(&details::s_ctsSimpleAcceptImplInitOnce, details::s_ctsSimpleAcceptImplInitFn, &error, nullptr)) {

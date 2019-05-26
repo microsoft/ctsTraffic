@@ -14,6 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
+#include <stdexcept>
 #include <exception>
 #include <utility>
 #include <vector>
@@ -25,7 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ws2ipdef.h>
 #include <Iphlpapi.h>
 // ctl headers
-#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctSockaddr.hpp"
 
@@ -47,7 +47,7 @@ namespace ctl
 			////////////////////////////////////////////////////////////////////////////////
 			iterator() = default;
 
-			explicit iterator(std::shared_ptr<std::vector<BYTE>> _ipAdapter) NOEXCEPT
+			explicit iterator(std::shared_ptr<std::vector<BYTE>> _ipAdapter) noexcept
 			: buffer(std::move(_ipAdapter))
 			{
 				if (buffer && !buffer->empty()) {
@@ -60,7 +60,7 @@ namespace ctl
 			/// member swap method
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			void swap(_Inout_ iterator& _in) NOEXCEPT
+			void swap(_Inout_ iterator& _in) noexcept
 			{
 				using std::swap;
 				swap(this->buffer, _in.buffer);
@@ -97,7 +97,7 @@ namespace ctl
 			/// arithmatic operators can fail 
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(const iterator& _iter) const NOEXCEPT
+			bool operator==(const iterator& _iter) const noexcept
 			{
 				// for comparison of 'end' iterators, just look at current
 				if (!this->current) {
@@ -108,7 +108,7 @@ namespace ctl
 					    (this->current == _iter.current));
 			}
 
-			bool operator!=(const iterator& _iter) const NOEXCEPT
+			bool operator!=(const iterator& _iter) const noexcept
 			{
 				return !(*this == _iter);
 			}
@@ -158,7 +158,7 @@ namespace ctl
 			typedef IP_ADAPTER_ADDRESSES&       reference;
 
 		private:
-			std::shared_ptr<std::vector<BYTE>> buffer = nullptr;
+			std::shared_ptr<std::vector<BYTE>> buffer;
 			PIP_ADAPTER_ADDRESSES current = nullptr;
 		};
 
@@ -226,12 +226,12 @@ namespace ctl
 		/// - constructs ctNetAdapterAddresses::iterators
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		iterator begin() const NOEXCEPT
+		iterator begin() const noexcept
 		{
 			return iterator(this->buffer);
 		}
 
-		iterator end() const NOEXCEPT
+		iterator end() const noexcept
 		{
 			return iterator();
 		}
@@ -251,12 +251,12 @@ namespace ctl
 	///
 	struct ctNetAdapterMatchingAddrPredicate
 	{
-		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr _addr) NOEXCEPT :
+		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr _addr) noexcept :
 			targetAddr(std::move(_addr))
 		{
 		}
 
-		bool operator ()(const IP_ADAPTER_ADDRESSES& _ipAddress) const NOEXCEPT
+		bool operator ()(const IP_ADAPTER_ADDRESSES& _ipAddress) const noexcept
 		{
 			for (auto unicastAddress = _ipAddress.FirstUnicastAddress;
 			     unicastAddress != nullptr;

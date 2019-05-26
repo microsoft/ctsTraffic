@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 #include <mswsock.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
@@ -29,7 +28,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctHandle.hpp>
 // project headers
 #include "ctsSocket.h"
-
 
 namespace ctsTraffic {
     //
@@ -72,7 +70,7 @@ namespace ctsTraffic {
         struct ctsAcceptExImpl;
         class ctsAcceptSocketInfo;
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT;
+        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept;
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -119,14 +117,14 @@ namespace ctsTraffic {
         public:
             // c'tor throws ctException on failure
             explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket);
-            ~ctsAcceptSocketInfo() NOEXCEPT;
+            ~ctsAcceptSocketInfo() noexcept;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
             void InitatiateAcceptEx();
 
             // returns a ctsAcceptedConnection struct describing the result of an AcceptEx call
             // - must be called only after the previous AcceptEx call has completed its OVERLAPPED call
-            ctsAcceptedConnection GetAcceptedSocket() NOEXCEPT;
+            ctsAcceptedConnection GetAcceptedSocket() noexcept;
 
             // non-copyable
             ctsAcceptSocketInfo(const ctsAcceptSocketInfo&) = delete;
@@ -202,7 +200,7 @@ namespace ctsTraffic {
                 listeners.swap(temp_listeners);
             }
 
-            ~ctsAcceptExImpl() NOEXCEPT
+            ~ctsAcceptExImpl() noexcept
             {
                 // close out all caller requests for new accepted sockets 
                 while (!pended_accept_requests.empty()) {
@@ -276,7 +274,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() NOEXCEPT
+        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() noexcept
         {
             ::DeleteCriticalSection(&cs);
         }
@@ -309,7 +307,7 @@ namespace ctsTraffic {
             }
 
             this->pov = this->listening_socket_info->iocp->new_request(
-                [this](OVERLAPPED* _ov) NOEXCEPT
+                [this](OVERLAPPED* _ov) noexcept
             { ctsAcceptExIoCompletionCallback(_ov, this); });
 
             ::ZeroMemory(this->OutputBuffer, SingleOutputBufferSize * 2);
@@ -343,7 +341,7 @@ namespace ctsTraffic {
             this->socket = std::move(new_socket);
         }
 
-        ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() NOEXCEPT
+        ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() noexcept
         {
             const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             SOCKET listening_socket = listening_socket_info->socket.get();
@@ -424,7 +422,7 @@ namespace ctsTraffic {
             return TRUE;
         }
 
-        static void ctsAcceptExIoCompletionCallback(_In_opt_ OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) NOEXCEPT
+        static void ctsAcceptExIoCompletionCallback(_In_opt_ OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
@@ -434,7 +432,7 @@ namespace ctsTraffic {
                 // we have unfulfilled requests for more connections
                 // return a previously accepted socket
                 //
-                auto weak_socket = s_pimpl->pended_accept_requests.front();
+                const auto weak_socket = s_pimpl->pended_accept_requests.front();
                 s_pimpl->pended_accept_requests.pop();
 
                 auto shared_socket(weak_socket.lock());
@@ -443,7 +441,7 @@ namespace ctsTraffic {
 
                     if (0 == accepted_socket.gle) {
                         // set the local addr
-                        ctl::ctSockaddr local_addr;
+                        const ctl::ctSockaddr local_addr;
                         int local_addr_len = local_addr.length();
                         if (0 == ::getsockname(accepted_socket.accept_socket.get(), local_addr.sockaddr(), &local_addr_len)) {
                             shared_socket->set_local_address(local_addr);
@@ -489,7 +487,7 @@ namespace ctsTraffic {
     // - else store the weak_ptr<ctsSocket> to be fulfilled later
     //
     //
-    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
         if (!::InitOnceExecuteOnce(&details::s_ctsAcceptExImplInitOnce, details::s_ctsAcceptExImplInitFn, &error, nullptr)) {
@@ -542,7 +540,7 @@ namespace ctsTraffic {
         //
         if (accepted_connection.accept_socket.get() != INVALID_SOCKET) {
             // set the local addr
-            ctl::ctSockaddr local_addr;
+            const ctl::ctSockaddr local_addr;
             int local_addr_len = local_addr.length();
             if (0 == ::getsockname(accepted_connection.accept_socket.get(), local_addr.sockaddr(), &local_addr_len)) {
                 shared_socket->set_local_address(local_addr);

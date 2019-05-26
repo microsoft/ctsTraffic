@@ -38,7 +38,7 @@ using namespace ctl;
 static HANDLE g_hBreak = nullptr;
 static ctWmiService* g_wmi = nullptr;
 
-BOOL WINAPI BreakHandlerRoutine(DWORD) NOEXCEPT
+BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 {
     // regardless of the break type, signal to exit
     ::SetEvent(g_hBreak);
@@ -90,14 +90,14 @@ ctWmiPerformance InstantiateUDPCounters();
 ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackProcess);
 ctWmiPerformance InstantiatePerProcessByPIDCounters(DWORD processId);
 
-void DeleteProcessorCounters() NOEXCEPT;
-void DeleteMemoryCounters() NOEXCEPT;
-void DeleteNetworkAdapterCounters() NOEXCEPT;
-void DeleteNetworkInterfaceCounters() NOEXCEPT;
-void DeleteIPCounters() NOEXCEPT;
-void DeleteTCPCounters() NOEXCEPT;
-void DeleteUDPCounters() NOEXCEPT;
-void DeletePerProcessCounters() NOEXCEPT;
+void DeleteProcessorCounters() noexcept;
+void DeleteMemoryCounters() noexcept;
+void DeleteNetworkAdapterCounters() noexcept;
+void DeleteNetworkInterfaceCounters() noexcept;
+void DeleteIPCounters() noexcept;
+void DeleteTCPCounters() noexcept;
+void DeleteUDPCounters() noexcept;
+void DeletePerProcessCounters() noexcept;
 
 void DeleteAllCounters()
 {
@@ -388,7 +388,7 @@ ctWmiPerformance InstantiateProcessorCounters()
 
     return performance_counter;
 }
-void DeleteProcessorCounters() NOEXCEPT
+void DeleteProcessorCounters() noexcept
 {
     processor_time.reset();
     processor_percent_of_max.reset();
@@ -548,7 +548,7 @@ ctWmiPerformance InstantiateMemoryCounters()
     
     return performance_counter;
 }
-void DeleteMemoryCounters() NOEXCEPT
+void DeleteMemoryCounters() noexcept
 {
     paged_pool_bytes.reset();
     non_paged_pool_bytes.reset();
@@ -683,7 +683,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
 
     return performance_counter;
 }
-void DeleteNetworkAdapterCounters() NOEXCEPT
+void DeleteNetworkAdapterCounters() noexcept
 {
     network_adapter_total_bytes.reset();
     network_adapter_offloaded_connections.reset();
@@ -880,7 +880,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
 
     return performance_counter;
 }
-void DeleteNetworkInterfaceCounters() NOEXCEPT
+void DeleteNetworkInterfaceCounters() noexcept
 {
     network_interface_total_bytes.reset();
     network_interface_packets_outbound_discarded.reset();
@@ -1113,7 +1113,7 @@ ctWmiPerformance InstantiateIPCounters()
 
     return performance_counter;
 }
-void DeleteIPCounters() NOEXCEPT
+void DeleteIPCounters() noexcept
 {
     tcpip_ipv4_outbound_discarded.reset();
     tcpip_ipv4_outbound_no_route.reset();
@@ -1329,7 +1329,7 @@ ctWmiPerformance InstantiateTCPCounters()
 
     return performance_counter;
 }
-void DeleteTCPCounters() NOEXCEPT
+void DeleteTCPCounters() noexcept
 {
     tcpip_tcpv4_connections_established.reset();
     tcpip_tcpv6_connections_established.reset();
@@ -1501,7 +1501,7 @@ ctWmiPerformance InstantiateUDPCounters()
 
     return performance_counter;
 }
-void DeleteUDPCounters() NOEXCEPT
+void DeleteUDPCounters() noexcept
 {
     tcpip_udpv4_noport_per_sec.reset();
     tcpip_udpv4_received_errors.reset();
@@ -1735,7 +1735,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
 
     return performance_counter;
 }
-void DeletePerProcessCounters() NOEXCEPT
+void DeletePerProcessCounters() noexcept
 {
     per_process_privileged_time.reset();
     per_process_processor_time.reset();

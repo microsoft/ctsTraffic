@@ -17,8 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable once CppUnusedIncludeDirective
 #include <WinSock2.h>
 #include <MSWSock.h>
-// ctl headers
-#include <ctVersionConversion.hpp>
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 
@@ -64,7 +62,7 @@ namespace ctsTraffic {
         // (internal) flag if this IO request is tracked and verified
         bool track_io = false;
 
-        static LPCWSTR PrintIOAction(const IOTaskAction& _action) NOEXCEPT
+        static LPCWSTR PrintIOAction(const IOTaskAction& _action) noexcept
         {
             switch (_action) {
                 case IOTaskAction::None: return L"None";

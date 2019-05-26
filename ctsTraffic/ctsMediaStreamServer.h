@@ -16,13 +16,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctHandle.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
-
 
 ///
 /// We register both of these functions with ctsConfig:
@@ -34,7 +32,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 ///   - it queues up IO to a central prioritized queue of work
 ///     since all IO is triggered to occur at a future point, the queue is sorted by work that comes soonest
 ///
-
 
 namespace ctsTraffic {
     namespace ctsMediaStreamServerImpl {
@@ -80,19 +77,19 @@ namespace ctsTraffic {
     /// Called to 'accept' incoming connections
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Called initiate IO on a datagram socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Called to remove that socket from the tracked vector of connected sockets
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 } // ctsTraffic namespace

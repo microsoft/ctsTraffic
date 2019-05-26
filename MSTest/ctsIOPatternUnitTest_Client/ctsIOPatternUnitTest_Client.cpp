@@ -19,12 +19,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 // ctl headers
 #include <ctTimer.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 #include "ctsIOPattern.h"
-
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -94,65 +92,65 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
         }
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) NOEXCEPT
+        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
 
-        bool IsListening() NOEXCEPT
+        bool IsListening() noexcept
         {
             return s_IsListening;
         }
 
 
-        const MediaStreamSettings& GetMediaStream() NOEXCEPT
+        const MediaStreamSettings& GetMediaStream() noexcept
         {
             return s_MediaStreamSettings;
         }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() NOEXCEPT
+        ctsSignedLongLong GetTcpBytesPerSecond() noexcept
         {
             return s_TcpBytesPerSecond;
         }
-        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
+        ctsUnsignedLong GetMaxBufferSize() noexcept
         {
             return s_MaxBufferSize;
         }
-        ctsUnsignedLong GetBufferSize() NOEXCEPT
+        ctsUnsignedLong GetBufferSize() noexcept
         {
             return s_BufferSize;
         }
-        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
+        ctsUnsignedLongLong GetTransferSize() noexcept
         {
             return s_TransferSize;
         }
 
-        float GetStatusTimeStamp() NOEXCEPT
+        float GetStatusTimeStamp() noexcept
         {
             return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }
@@ -409,7 +407,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailMultipleSends)
@@ -436,9 +434,9 @@ namespace ctsUnitTest {
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task2).c_str());
 
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task1, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task2, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailReceivingConnectionId)
@@ -446,11 +444,11 @@ namespace ctsUnitTest {
             this->SetTestBaseClassDefaults(Client);
 
             std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
-            ctsIOTask test_task = test_pattern->initiate_io();
+            const ctsIOTask test_task = test_pattern->initiate_io();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailGracefulShutdownAfterSend)
@@ -480,7 +478,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailHardShutdownAfterSend)
@@ -510,7 +508,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::HardShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailGracefulShutdownAFterRecv)
@@ -540,7 +538,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailHardShutdownAFterRecv)
@@ -570,7 +568,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::HardShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailFINAfterSend)
@@ -606,7 +604,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestClientBaseClass_FailFINAfterRecv)
@@ -642,7 +640,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1UL, test_pattern->get_last_error());
+            Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestClientBaseClass_TooManyBytesOnFINAfterSend)

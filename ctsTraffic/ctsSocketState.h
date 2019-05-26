@@ -17,8 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-// ctl headers
-#include <ctVersionConversion.hpp>
 
 namespace ctsTraffic {
     //
@@ -58,24 +56,24 @@ namespace ctsTraffic {
         //
         explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
 
-        ~ctsSocketState() NOEXCEPT;
+        ~ctsSocketState() noexcept;
 
         //
         // explicit method to 'start' the state machine
         // - this is required to ensure the object is fully instatiated before
         //   it is passed to the threadpool thread
         //
-        void start() NOEXCEPT;
+        void start() noexcept;
 
         //
         // Completes the current socket state
         //
-        void complete_state(DWORD _error) NOEXCEPT;
+        void complete_state(DWORD _error) noexcept;
 
         //
         // Accessor to current state information
         //
-        InternalState current_state() const NOEXCEPT;
+        InternalState current_state() const noexcept;
 
         //
         // copy c'tor and assignment
@@ -94,15 +92,15 @@ namespace ctsTraffic {
         mutable CRITICAL_SECTION       state_guard{};
         std::weak_ptr<ctsSocketBroker> broker{};
         std::shared_ptr<ctsSocket>     socket{};
-        unsigned long                  last_error = 0UL;
         InternalState                  state = InternalState::Creating;
+        int                            last_error = 0UL;
         bool                           initiated_io = false;
 
         //
         // static threadpool callback function
         //
         static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) NOEXCEPT;
+        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) noexcept;
     };
 
 } // namespace

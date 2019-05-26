@@ -39,7 +39,7 @@ namespace ctsTraffic {
     }
 
     _No_competing_thread_
-    ctsSocket::~ctsSocket() NOEXCEPT
+    ctsSocket::~ctsSocket() noexcept
     {
         // shutdown() tears down the socket object
         this->shutdown();
@@ -55,18 +55,18 @@ namespace ctsTraffic {
     }
 
     _Acquires_lock_(socket_cs)
-    void ctsSocket::lock_socket() const NOEXCEPT
+    void ctsSocket::lock_socket() const noexcept
     {
         ::EnterCriticalSection(&this->socket_cs);
     }
 
     _Releases_lock_(socket_cs)
-    void ctsSocket::unlock_socket() const NOEXCEPT
+    void ctsSocket::unlock_socket() const noexcept
     {
         ::LeaveCriticalSection(&this->socket_cs);
     }
 
-    void ctsSocket::set_socket(SOCKET _socket) NOEXCEPT
+    void ctsSocket::set_socket(SOCKET _socket) noexcept
     {
         const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
 
@@ -78,7 +78,7 @@ namespace ctsTraffic {
         this->socket = _socket;
     }
 
-    int ctsSocket::close_socket(int _error_code) NOEXCEPT
+    int ctsSocket::close_socket(int _error_code) noexcept
     {
         int error = 0;
         const ctAutoReleaseCriticalSection auto_lock(&this->socket_cs);
@@ -108,7 +108,7 @@ namespace ctsTraffic {
         return this->tp_iocp;
     }
 
-    void ctsSocket::print_pattern_results(unsigned long _last_error) const NOEXCEPT
+    void ctsSocket::print_pattern_results(unsigned long _last_error) const noexcept
     {
         if (this->pattern) {
             this->pattern->print_stats(
@@ -124,7 +124,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSocket::complete_state(DWORD _error_code) NOEXCEPT
+    void ctsSocket::complete_state(DWORD _error_code) noexcept
     {
         const auto current_io_count = ctMemoryGuardRead(&this->io_count);
         ctFatalCondition(
@@ -145,32 +145,32 @@ namespace ctsTraffic {
         }
     }
 
-    const ctSockaddr& ctsSocket::local_address() const NOEXCEPT
+    const ctSockaddr& ctsSocket::local_address() const noexcept
     {
         return this->local_sockaddr;
     }
 
-    void ctsSocket::set_local_address(const ctSockaddr& _local) NOEXCEPT
+    void ctsSocket::set_local_address(const ctSockaddr& _local) noexcept
     {
         this->local_sockaddr = _local;
     }
 
-    const ctSockaddr& ctsSocket::target_address() const NOEXCEPT
+    const ctSockaddr& ctsSocket::target_address() const noexcept
     {
         return this->target_sockaddr;
     }
 
-    void ctsSocket::set_target_address(const ctSockaddr& _target) NOEXCEPT
+    void ctsSocket::set_target_address(const ctSockaddr& _target) noexcept
     {
         this->target_sockaddr = _target;
     }
 
-    shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const NOEXCEPT
+    shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const noexcept
     {
         return this->pattern;
     }
 
-    void ctsSocket::set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) NOEXCEPT
+    void ctsSocket::set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) noexcept
     {
         this->pattern = _pattern;
         if (ctsConfig::Settings->PrePostSends == 0) {
@@ -180,11 +180,11 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSocket::process_isb_notification() NOEXCEPT
+    void ctsSocket::process_isb_notification() noexcept
     {
         // lock the socket
         const auto shared_this = shared_from_this();
-        auto socket_lock(ctsGuardSocket(shared_this));
+        const auto socket_lock(ctsGuardSocket(shared_this));
         const auto local_socket = socket_lock.get();
         if (local_socket != INVALID_SOCKET) {
             ULONG isb;
@@ -200,11 +200,11 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsSocket::initiate_isb_notification() NOEXCEPT
+    void ctsSocket::initiate_isb_notification() noexcept
     {
         try {
             auto& shared_iocp = thread_pool();
-            OVERLAPPED* ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(this->shared_from_this())](OVERLAPPED* ov) NOEXCEPT {
+            OVERLAPPED* ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(this->shared_from_this())](OVERLAPPED* ov) noexcept {
                 DWORD gle = NO_ERROR;
 
                 auto shared_this_ptr = weak_this_ptr.lock();
@@ -212,7 +212,7 @@ namespace ctsTraffic {
                     return;
                 }
 
-                auto socket_lock(ctsGuardSocket(shared_this_ptr));
+                const auto socket_lock(ctsGuardSocket(shared_this_ptr));
                 const auto local_socket = socket_lock.get();
                 if (local_socket != INVALID_SOCKET) {
                     DWORD transferred, flags; // unneeded
@@ -235,7 +235,7 @@ namespace ctsTraffic {
             }); // lambda for new_request
 
             const auto shared_this = this->shared_from_this();
-            auto socket_lock(ctsGuardSocket(shared_this));
+            const auto socket_lock(ctsGuardSocket(shared_this));
             const auto local_socket = socket_lock.get();
             if (local_socket != INVALID_SOCKET) {
                 const auto error = ::idealsendbacklognotify(local_socket, ov, nullptr);
@@ -261,12 +261,12 @@ namespace ctsTraffic {
         }
     }
 
-    long ctsSocket::increment_io() NOEXCEPT
+    long ctsSocket::increment_io() noexcept
     {
         return ctMemoryGuardIncrement(&this->io_count);
     }
 
-    long ctsSocket::decrement_io() NOEXCEPT
+    long ctsSocket::decrement_io() noexcept
     {
         const auto io_value = ctMemoryGuardDecrement(&this->io_count);
         ctl::ctFatalCondition(
@@ -275,12 +275,12 @@ namespace ctsTraffic {
         return io_value;
     }
 
-    long ctsSocket::pended_io() NOEXCEPT
+    long ctsSocket::pended_io() noexcept
     {
         return ctMemoryGuardRead(&this->io_count);
     }
 
-    void ctsSocket::shutdown() NOEXCEPT
+    void ctsSocket::shutdown() noexcept
     {
         // close the socket to trigger IO to complete/shutdown
         this->close_socket();

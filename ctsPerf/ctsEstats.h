@@ -35,43 +35,49 @@ namespace ctsPerf {
 
 namespace details {
 
-    static const unsigned long InvalidLongEstatsValue = 0xffffffff;
-    static const unsigned long long InvalidLongLongEstatsValue = 0xffffffffffffffff;
+    // Invalid*EstatsValues come only when we have enabled Application Verifier
+    // pageheap will pack uninitialized heap with this bit pattern
+    // This helps us detect if we are trying to read uninitialized memory in our structs
+    // returned from estats* APIs
+    static const unsigned long InvalidLongEstatsValue = 0xc0c0c0c0;
+    static const unsigned long long InvalidLongLongEstatsValue = 0xc0c0c0c0c0c0c0c0;
 
+    // Will also check for -1 since we will initialize our structs with that value before handing them down
+    // if we see -1 it tells us that there's not an ESTATS value in this case
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG t) noexcept
     {
+#ifdef _TESTING_ESTATS_VALUES
         if (t == InvalidLongEstatsValue)
         {
-            return false;
-        }
-        if (t > 0x10000000)
-        {
-#ifdef _TESTING_ESTATS_VALUES
             wprintf(L"\t** %ws : %lu\n", name, t);
-#else
-            UNREFERENCED_PARAMETER(name);
-#endif
             return false;
         }
+#endif
+        if (t == 0xffffffff)
+        {
+            return false;
+        }
+
+        UNREFERENCED_PARAMETER(name);
         return true;
     }
     inline
     bool IsRodValueValid(_In_ LPCWSTR name, ULONG64 t) noexcept
     {
+#ifdef _TESTING_ESTATS_VALUES
         if (t == InvalidLongLongEstatsValue)
         {
-            return false;
-        }
-        if (t > 0x1000000000000000)
-        {
-#ifdef _TESTING_ESTATS_VALUES
             wprintf(L"\t** %ws : %llu\n", name, t);
-#else
-            UNREFERENCED_PARAMETER(name);
-#endif
             return false;
         }
+#endif
+        if (t == 0xffffffffffffffff)
+        {
+            return false;
+        }
+        
+        UNREFERENCED_PARAMETER(name);
         return true;
     }
 
@@ -81,68 +87,68 @@ namespace details {
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsSynOpts> {
         typedef void* read_write_type;
-        typedef PTCP_ESTATS_SYN_OPTS_ROS_v0 read_only_static_type;
+        typedef TCP_ESTATS_SYN_OPTS_ROS_v0 read_only_static_type;
         typedef void* read_only_dynamic_type;
     };
 
     template<>
     struct EstatsTypeConverter<TcpConnectionEstatsData> {
-        typedef PTCP_ESTATS_DATA_RW_v0 read_write_type;
+        typedef TCP_ESTATS_DATA_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_DATA_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_DATA_ROD_v0 read_only_dynamic_type;
     };
 
     template<>
     struct EstatsTypeConverter<TcpConnectionEstatsSndCong> {
-        typedef PTCP_ESTATS_SND_CONG_RW_v0 read_write_type;
-        typedef PTCP_ESTATS_SND_CONG_ROS_v0 read_only_static_type;
-        typedef PTCP_ESTATS_SND_CONG_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_SND_CONG_RW_v0 read_write_type;
+        typedef TCP_ESTATS_SND_CONG_ROS_v0 read_only_static_type;
+        typedef TCP_ESTATS_SND_CONG_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsPath> {
-        typedef PTCP_ESTATS_PATH_RW_v0 read_write_type;
+        typedef TCP_ESTATS_PATH_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_PATH_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_PATH_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsSendBuff> {
-        typedef PTCP_ESTATS_SEND_BUFF_RW_v0 read_write_type;
+        typedef TCP_ESTATS_SEND_BUFF_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_SEND_BUFF_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_SEND_BUFF_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsRec> {
-        typedef PTCP_ESTATS_REC_RW_v0 read_write_type;
+        typedef TCP_ESTATS_REC_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_REC_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_REC_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsObsRec> {
-        typedef PTCP_ESTATS_OBS_REC_RW_v0 read_write_type;
+        typedef TCP_ESTATS_OBS_REC_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_OBS_REC_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_OBS_REC_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsBandwidth> {
-        typedef PTCP_ESTATS_BANDWIDTH_RW_v0 read_write_type;
+        typedef TCP_ESTATS_BANDWIDTH_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_BANDWIDTH_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_BANDWIDTH_ROD_v0 read_only_dynamic_type;
     };
 
     template <>
     struct EstatsTypeConverter<TcpConnectionEstatsFineRtt> {
-        typedef PTCP_ESTATS_FINE_RTT_RW_v0 read_write_type;
+        typedef TCP_ESTATS_FINE_RTT_RW_v0 read_write_type;
         typedef void* read_only_static_type;
-        typedef PTCP_ESTATS_FINE_RTT_ROD_v0 read_only_dynamic_type;
+        typedef TCP_ESTATS_FINE_RTT_ROD_v0 read_only_dynamic_type;
     };
 
     template <TCP_ESTATS_TYPE TcpType>
-    void SetEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
+    void SetPerConnectionEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type *pRw)  // NOLINT
     {
         const auto err = ::SetPerTcpConnectionEStats(
             tcpRow,
@@ -153,31 +159,8 @@ namespace details {
             throw ctl::ctException(err, L"SetPerTcpConnectionEStats", false);
         }
     }
-
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
-    {
-        return ::GetPerTcpConnectionEStats(
-            tcpRow,
-            TcpType,
-            nullptr, 0, 0, // read-write information
-            reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
-            nullptr, 0, 0); // read-only dynamic information
-    }
-
-    template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
-    {
-        return ::GetPerTcpConnectionEStats(
-            tcpRow,
-            TcpType,
-            nullptr, 0, 0, // read-write information
-            nullptr, 0, 0, // read-only static information
-            reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
-    }
-
-    template <TCP_ESTATS_TYPE TcpType>
-    void SetEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type pRw)  // NOLINT
+    void SetPerConnectionEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type *pRw)  // NOLINT
     {
         const auto err = ::SetPerTcp6ConnectionEStats(
             tcpRow,
@@ -189,26 +172,104 @@ namespace details {
         }
     }
 
-    template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type pRos) NOEXCEPT  // NOLINT
+    // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
+    inline ULONG GetPerConnectionStaticEstats(const PMIB_TCPROW tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept  // NOLINT
     {
-        return ::GetPerTcp6ConnectionEStats(
+        return ::GetPerTcpConnectionEStats(
             tcpRow,
-            TcpType,
+            TcpConnectionEstatsSynOpts,
             nullptr, 0, 0, // read-write information
             reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
             nullptr, 0, 0); // read-only dynamic information
     }
-
     template <TCP_ESTATS_TYPE TcpType>
-    ULONG GetReadOnlyDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type pRod) NOEXCEPT  // NOLINT
+    ULONG GetPerConnectionStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type *pRos) noexcept  // NOLINT
+    {
+        typename EstatsTypeConverter<TcpType>::read_write_type rw;
+
+        auto error = ::GetPerTcpConnectionEStats(
+            tcpRow,
+            TcpType,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+            reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+            nullptr, 0, 0); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollection)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
+    }
+
+    // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
+    inline ULONG GetPerConnectionStaticEstats(const PMIB_TCP6ROW tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept  // NOLINT
     {
         return ::GetPerTcp6ConnectionEStats(
             tcpRow,
-            TcpType,
+            TcpConnectionEstatsSynOpts,
             nullptr, 0, 0, // read-write information
+            reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+            nullptr, 0, 0); // read-only dynamic information
+    }
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetPerConnectionStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type *pRos) noexcept  // NOLINT
+    {
+        typename EstatsTypeConverter<TcpType>::read_write_type rw;
+
+        auto error = ::GetPerTcp6ConnectionEStats(
+            tcpRow,
+            TcpType,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+            reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+            nullptr, 0, 0); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollection)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
+    }
+
+
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetPerConnectionDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type *pRod) noexcept  // NOLINT
+    {
+        typename EstatsTypeConverter<TcpType>::read_write_type rw;
+
+        auto error = ::GetPerTcpConnectionEStats(
+            tcpRow,
+            TcpType,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
             nullptr, 0, 0, // read-only static information
             reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollection)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
+    }
+    template <TCP_ESTATS_TYPE TcpType>
+    ULONG GetPerConnectionDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type *pRod) noexcept  // NOLINT
+    {
+        typename EstatsTypeConverter<TcpType>::read_write_type rw;
+
+        auto error = ::GetPerTcp6ConnectionEStats(
+            tcpRow,
+            TcpType,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+            nullptr, 0, 0, // read-only static information
+            reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollection)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
     }
 
     // the root template type that each ESTATS_TYPE will specialize for
@@ -236,7 +297,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSynOpts> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"Mss-Received,Mss-Sent";
         }
@@ -246,7 +307,7 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void StartTracking(const PTCPROW) const NOEXCEPT
+        void StartTracking(const PTCPROW) const noexcept
         {
             // always on
         }
@@ -256,7 +317,7 @@ namespace details {
             if (MssRcvd == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
                 FillMemory(&Ros, sizeof Ros, -1);
-                if (0 == GetReadOnlyStaticEstats<TcpConnectionEstatsSynOpts>(tcpRow, &Ros)) {
+                if (0 == GetPerConnectionStaticEstats(tcpRow, &Ros)) {
 
                     if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssRcvd", Ros.MssRcvd)) {
                         MssRcvd = Ros.MssRcvd;
@@ -276,7 +337,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsData> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"Bytes-In,Bytes-Out";
         }
@@ -290,14 +351,14 @@ namespace details {
         {
             TCP_ESTATS_DATA_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsData>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsData>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_DATA_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsData>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsData>(tcpRow, &Rod)) {
 
                 if (IsRodValueValid(L"TcpConnectionEstatsData - DataBytesIn", Rod.DataBytesIn)) {
                     DataBytesIn = Rod.DataBytesIn;
@@ -316,34 +377,14 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsSndCong> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return L"CongWin(mean),CongWin(stddev),"
-                L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
-                L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited, [xValidValues,xInvalidValues] ";
-#else
             return L"CongWin(mean),CongWin(stddev),"
                 L"XIntoReceiverLimited,XIntoSenderLimited,XIntoCongestionLimited,"
                 L"BytesSentRecvLimited,BytesSentSenderLimited,BytesSentCongLimited";
-#endif
         }
         std::wstring PrintData() const
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return
-                ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
-                ctl::ctString::format_string(
-                    L",%lu,%lu,%lu,%Iu,%Iu,%Iu, [%lu,%lu] ",
-                    transitionsIntoReceiverLimited,
-                    transitionsIntoSenderLimited,
-                    transitionsIntoCongestionLimited,
-                    bytesSentInReceiverLimited,
-                    bytesSentInSenderLimited,
-                    bytesSentInCongestionLimited,
-                    validValues,
-                    invalidValues);
-#else
             return
                 ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
                 ctl::ctString::format_string(
@@ -354,7 +395,6 @@ namespace details {
                     bytesSentInReceiverLimited,
                     bytesSentInSenderLimited,
                     bytesSentInCongestionLimited);
-#endif
         }
 
         template <typename PTCPROW>
@@ -362,30 +402,29 @@ namespace details {
         {
             TCP_ESTATS_SND_CONG_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rod)) {
 
 #ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurCwnd > 0x10000000 && Rod.CurCwnd != UninitializedUlong) ||
-                    Rod.SndLimBytesRwin > 0x10000000 ||
-                    Rod.SndLimBytesSnd > 0x10000000 ||
-                    Rod.SndLimBytesCwnd > 0x10000000 ||
-                    Rod.SndLimTransRwin > 0x10000000 ||
-                    Rod.SndLimTransSnd > 0x10000000 ||
-                    Rod.SndLimTransCwnd > 0x10000000)
+                if (Rod.CurCwnd == InvalidLongEstatsValue ||
+                    Rod.SndLimBytesRwin == InvalidLongLongEstatsValue ||
+                    Rod.SndLimBytesSnd == InvalidLongLongEstatsValue ||
+                    Rod.SndLimBytesCwnd == InvalidLongLongEstatsValue ||
+                    Rod.SndLimTransRwin == InvalidLongEstatsValue ||
+                    Rod.SndLimTransSnd == InvalidLongEstatsValue ||
+                    Rod.SndLimTransCwnd == InvalidLongEstatsValue)
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
                     WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)remoteAddr.writeCompleteAddress(remote_address);
 
-                    ++invalidValues;
                     printf(
                         "[%ws : %ws] Bad TcpConnectionEstatsSndCong (TCP_ESTATS_SND_CONG_ROD_v0): "
                         "CurCwnd (%lX) "
@@ -404,13 +443,10 @@ namespace details {
                         Rod.SndLimTransRwin,
                         Rod.SndLimTransSnd,
                         Rod.SndLimTransCwnd);
-                } else {
-                    ++validValues;
                 }
-#else
+#endif
                 UNREFERENCED_PARAMETER(localAddr);
                 UNREFERENCED_PARAMETER(remoteAddr);
-#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - CurCwnd", Rod.CurCwnd)) {
                     conjestionWindows.push_back(Rod.CurCwnd);
@@ -446,45 +482,19 @@ namespace details {
         ULONG transitionsIntoReceiverLimited = 0;
         ULONG transitionsIntoSenderLimited = 0;
         ULONG transitionsIntoCongestionLimited = 0;
-
-#ifdef _TESTING_ESTATS_VALUES
-        ULONG validValues = 0;
-        ULONG invalidValues = 0;
-#endif
     };
 
     template <>
     class EstatsDataTracking<TcpConnectionEstatsPath> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
-                L"RetransTimer(mean),RetransTimer(stddev),"
-                L"RTT(mean),Rtt(stddev), [xValidValues,xInvalidValues] ";
-#else
             return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
                 L"RetransTimer(mean),RetransTimer(stddev),"
                 L"RTT(mean),Rtt(stddev)";
-#endif
         }
         std::wstring PrintData() const
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return ctl::ctString::format_string(
-                L",%lu,%lu,%lu,%lu,%lu",
-                bytesRetrans,
-                dupAcksRcvd,
-                sacksRcvd,
-                congestionSignals,
-                maxSegmentSize) +
-                ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
-                ctsWriteDetails::PrintMeanStdDev(roundTripTime) +
-                ctl::ctString::format_string(
-                    L" [%lu,%lu] ",
-                    validValues,
-                    invalidValues);
-#else
             return ctl::ctString::format_string(
                 L",%lu,%lu,%lu,%lu,%lu",
                 bytesRetrans,
@@ -494,7 +504,6 @@ namespace details {
                 maxSegmentSize) +
                 ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
                 ctsWriteDetails::PrintMeanStdDev(roundTripTime);
-#endif
         }
 
         template <typename PTCPROW>
@@ -502,30 +511,29 @@ namespace details {
         {
             TCP_ESTATS_PATH_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsPath>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsPath>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_PATH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsPath>(tcpRow, &Rod)) {
 
 #ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRto > 0x10000000 && Rod.CurRto != UninitializedUlong) ||
-                    (Rod.SmoothedRtt > 0x10000000 && Rod.SmoothedRtt != UninitializedUlong) ||
-                    (Rod.BytesRetrans > 0x10000000 && Rod.BytesRetrans != UninitializedUlong) ||
-                    (Rod.DupAcksIn > 0x10000000 && Rod.DupAcksIn != UninitializedUlong) ||
-                    (Rod.SacksRcvd > 0x10000000 && Rod.SacksRcvd != UninitializedUlong) ||
-                    (Rod.CongSignals > 0x10000000 && Rod.CongSignals != UninitializedUlong) ||
-                    (Rod.CurMss > 0x10000000 && Rod.CurMss != UninitializedUlong))
+                if (Rod.CurRto == InvalidLongEstatsValue ||
+                    Rod.SmoothedRtt == InvalidLongEstatsValue ||
+                    Rod.BytesRetrans == InvalidLongEstatsValue ||
+                    Rod.DupAcksIn == InvalidLongEstatsValue ||
+                    Rod.SacksRcvd == InvalidLongEstatsValue ||
+                    Rod.CongSignals == InvalidLongEstatsValue ||
+                    Rod.CurMss == InvalidLongEstatsValue)
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
                     WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)remoteAddr.writeCompleteAddress(remote_address);
 
-                    ++invalidValues;
                     printf(
                         "[%ws : %ws] Bad TcpConnectionEstatsPath (TCP_ESTATS_PATH_ROD_v0): "
                         "CurRto (%lX) "
@@ -544,13 +552,10 @@ namespace details {
                         Rod.SacksRcvd,
                         Rod.CongSignals,
                         Rod.CurMss);
-                } else {
-                    ++validValues;
                 }
-#else
+#endif
                 UNREFERENCED_PARAMETER(localAddr);
                 UNREFERENCED_PARAMETER(remoteAddr);
-#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CurRto", Rod.CurRto)) {
                     retransmitTimer.push_back(Rod.CurRto);
@@ -584,33 +589,24 @@ namespace details {
         ULONG sacksRcvd = 0;
         ULONG congestionSignals = 0;
         ULONG maxSegmentSize = 0;
-
-#ifdef _TESTING_ESTATS_VALUES
-        ULONG validValues = 0;
-        ULONG invalidValues = 0;
-#endif
     };
 
     template <>
     class EstatsDataTracking<TcpConnectionEstatsRec> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
-#else
             return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev)";
-#endif
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
             formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow);
 
             formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
-                L"-1" :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
 
             ULONG calculatedMin = InvalidLongEstatsValue;
@@ -630,26 +626,16 @@ namespace details {
             }
 
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", calculatedMin);
 
             formattedString += (calculatedMax == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
 
-#ifdef _TESTING_ESTATS_VALUES
-            return
-                formattedString +
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
-                ctl::ctString::format_string(
-                    L" [%lu,%lu] ",
-                    validValues,
-                    invalidValues);
-#else
             return
                 formattedString +
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow);
-#endif
         }
 
         template <typename PTCPROW>
@@ -657,7 +643,7 @@ namespace details {
         {
             TCP_ESTATS_REC_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsRec>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsRec>(tcpRow, &Rw);
         }
 
         template <typename PTCPROW>
@@ -665,20 +651,19 @@ namespace details {
         {
             TCP_ESTATS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsRec>(tcpRow, &Rod)) {
 
 #ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRwinSent > 0x10000000 && Rod.CurRwinSent != UninitializedUlong) ||
-                    (Rod.MinRwinSent > 0x10000000 && Rod.MinRwinSent != UninitializedUlong) ||
-                    (Rod.MaxRwinSent > 0x10000000 && Rod.MaxRwinSent != UninitializedUlong) ||
-                    (Rod.MinRwinSent != UninitializedUlong && Rod.MinRwinSent > Rod.MaxRwinSent && Rod.MaxRwinSent > 0))
+                if (Rod.CurRwinSent == InvalidLongEstatsValue ||
+                    Rod.MinRwinSent == InvalidLongEstatsValue ||
+                    Rod.MaxRwinSent == InvalidLongEstatsValue ||
+                    (Rod.MinRwinSent != InvalidLongEstatsValue && Rod.MinRwinSent > Rod.MaxRwinSent && Rod.MaxRwinSent > 0))
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
                     WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)remoteAddr.writeCompleteAddress(remote_address);
 
-                    ++invalidValues;
                     printf(
                         "[%ws : %ws] Bad TcpConnectionEstatsRec (TCP_ESTATS_REC_ROD_v0): "
                         "CurRwinSent (%lX) "
@@ -689,13 +674,10 @@ namespace details {
                         Rod.CurRwinSent,
                         Rod.MinRwinSent,
                         Rod.MaxRwinSent);
-                } else {
-                    ++validValues;
                 }
-#else
+#endif
                 UNREFERENCED_PARAMETER(localAddr);
                 UNREFERENCED_PARAMETER(remoteAddr);
-#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - CurRwinSent", Rod.CurRwinSent)) {
                     receiveWindow.push_back(Rod.CurRwinSent);
@@ -713,33 +695,24 @@ namespace details {
         std::vector<ULONG> receiveWindow;
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
-
-#ifdef _TESTING_ESTATS_VALUES
-        ULONG validValues = 0;
-        ULONG invalidValues = 0;
-#endif
     };
 
     template <>
     class EstatsDataTracking<TcpConnectionEstatsObsRec> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
-#ifdef _TESTING_ESTATS_VALUES
-            return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev), [xValidValues,xInvalidValues] ";
-#else
             return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev)";
-#endif
         }
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
             formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow);
 
             formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
 
             ULONG calculatedMin = InvalidLongEstatsValue;
@@ -760,27 +733,16 @@ namespace details {
             }
 
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", calculatedMin);
 
             formattedString += (calculatedMax == InvalidLongEstatsValue) ?
-                L"-1," :
+                L"(bad)," :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
-
-#ifdef _TESTING_ESTATS_VALUES
-            return
-                formattedString +
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow) +
-                ctl::ctString::format_string(
-                    L" [%lu,%lu] ",
-                    validValues,
-                    invalidValues);
-#else
 
             return
                 formattedString + 
                 ctsWriteDetails::PrintMeanStdDev(receiveWindow);
-#endif
         }
 
         template <typename PTCPROW>
@@ -788,27 +750,26 @@ namespace details {
         {
             TCP_ESTATS_OBS_REC_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr)
         {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rod)) {
 
 #ifdef _TESTING_ESTATS_VALUES
-                if ((Rod.CurRwinRcvd > 0x10000000 && Rod.CurRwinRcvd != UninitializedUlong) ||
-                    (Rod.MinRwinRcvd > 0x10000000 && Rod.MinRwinRcvd != UninitializedUlong) ||
-                    (Rod.MaxRwinRcvd > 0x10000000 && Rod.MaxRwinRcvd != UninitializedUlong) ||
-                    (Rod.MinRwinRcvd != UninitializedUlong && Rod.MinRwinRcvd > Rod.MaxRwinRcvd && Rod.MaxRwinRcvd > 0))
+                if (Rod.CurRwinRcvd == InvalidLongEstatsValue ||
+                    Rod.MinRwinRcvd == InvalidLongEstatsValue ||
+                    Rod.MaxRwinRcvd == InvalidLongEstatsValue ||
+                    (Rod.MinRwinRcvd != InvalidLongEstatsValue && Rod.MinRwinRcvd != 0xffffffff && Rod.MinRwinRcvd > Rod.MaxRwinRcvd && Rod.MaxRwinRcvd > 0))
                 {
                     WCHAR local_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)localAddr.writeCompleteAddress(local_address);
                     WCHAR remote_address[ctl::IP_STRING_MAX_LENGTH] = {};
                     (void)remoteAddr.writeCompleteAddress(remote_address);
 
-                    ++invalidValues;
                     printf(
                         "[%ws : %ws] Bad TcpConnectionEstatsObsRec (TCP_ESTATS_OBS_REC_ROD_v0): "
                         "CurRwinRcvd (%lX) "
@@ -820,13 +781,9 @@ namespace details {
                         Rod.MinRwinRcvd,
                         Rod.MaxRwinRcvd);
                 }
-                else {
-                    ++validValues;
-                }
-#else
+#endif
                 UNREFERENCED_PARAMETER(localAddr);
                 UNREFERENCED_PARAMETER(remoteAddr);
-#endif
 
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - CurRwinRcvd", Rod.CurRwinRcvd)) {
                     receiveWindow.push_back(Rod.CurRwinRcvd);
@@ -844,17 +801,12 @@ namespace details {
         std::vector<ULONG> receiveWindow;
         ULONG minReceiveWindow = 0;
         ULONG maxReceiveWindow = 0;
-
-#ifdef _TESTING_ESTATS_VALUES
-        ULONG validValues = 0;
-        ULONG invalidValues = 0;
-#endif
     };
 
     template <>
     class EstatsDataTracking<TcpConnectionEstatsBandwidth> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"";
         }
@@ -869,14 +821,14 @@ namespace details {
             TCP_ESTATS_BANDWIDTH_RW_v0 Rw;
             Rw.EnableCollectionInbound = TcpBoolOptEnabled;
             Rw.EnableCollectionOutbound = TcpBoolOptEnabled;
-            SetEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
                 // store data from this instance
             }
         }
@@ -885,7 +837,7 @@ namespace details {
     template <>
     class EstatsDataTracking<TcpConnectionEstatsFineRtt> {
     public:
-        static LPCWSTR PrintHeader() NOEXCEPT
+        static LPCWSTR PrintHeader() noexcept
         {
             return L"";
         }
@@ -899,14 +851,14 @@ namespace details {
         {
             TCP_ESTATS_FINE_RTT_RW_v0 Rw;
             Rw.EnableCollection = TRUE;
-            SetEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rw);
+            SetPerConnectionEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetReadOnlyDynamicEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rod)) {
+            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rod)) {
                 // store data from this instance
             }
         }
@@ -1150,6 +1102,7 @@ private:
     ULONG tableCounter = 0;
 
     bool UpdateEstats() noexcept
+    try
     {
         bool accessDenied = false;
         ++tableCounter;
@@ -1223,6 +1176,10 @@ private:
 
         return !accessDenied;
     }
+    catch (const std::exception& e) {
+        wprintf(L"ctsEstats::UpdateEstats exception: %ws\n", ctl::ctString::format_exception(e).c_str());
+        return false;
+    }
 
     void RefreshIPv4Data()
     {
@@ -1267,8 +1224,8 @@ private:
         }
     }
 
-    template <TCP_ESTATS_TYPE TcpType, typename MIBTYPE>
-    void UpdateDataPoints(std::set<details::EstatsDataPoint<TcpType>>& data, MIBTYPE tableEntry)
+    template <TCP_ESTATS_TYPE TcpType, typename Mibtype>
+    void UpdateDataPoints(std::set<details::EstatsDataPoint<TcpType>>& data, Mibtype tableEntry)
     {
         const auto emplaceResults = data.emplace(tableEntry);
         // first == iterator inserted

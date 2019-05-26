@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <rpc.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
 #include <ctException.hpp>
@@ -58,7 +57,7 @@ namespace ctsTraffic
         }
 
         template <typename T>
-        void Start(_In_ T& _statistics_object) NOEXCEPT
+        void Start(_In_ T& _statistics_object) noexcept
         {
             // only calculate the QPC the first time
             // - willing to take the cost of 2 interlocked operations the first time this is initialized
@@ -69,7 +68,7 @@ namespace ctsTraffic
         }
 
         template <typename T>
-        void End(_In_ T& _statistics_object) NOEXCEPT
+        void End(_In_ T& _statistics_object) noexcept
         {
             _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
         }
@@ -81,17 +80,17 @@ namespace ctsTraffic
         long long previous_value;
 
     public:
-        ctStatsTracking() NOEXCEPT :
+        ctStatsTracking() noexcept :
             current_value(0),
             previous_value(0)
         {
         }
-        explicit ctStatsTracking(long long _initial_value) NOEXCEPT :
+        explicit ctStatsTracking(long long _initial_value) noexcept :
             current_value(_initial_value),
             previous_value(_initial_value)
         {
         }
-        explicit ctStatsTracking(const ctStatsTracking& _in) NOEXCEPT :
+        explicit ctStatsTracking(const ctStatsTracking& _in) noexcept :
             current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
             previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
         {
@@ -101,57 +100,57 @@ namespace ctsTraffic
         ctStatsTracking(ctStatsTracking&&) = delete;
         ctStatsTracking& operator=(ctStatsTracking&&) = delete;
 
-        long long get() const NOEXCEPT
+        long long get() const noexcept
         {
             return ctl::ctMemoryGuardRead(&current_value);
         }
         //
         // Safely writes to the current value, returning the *prior* value
         //
-        long long set(long long _new_value) NOEXCEPT
+        long long set(long long _new_value) noexcept
         {
             return ctl::ctMemoryGuardWrite(&current_value, _new_value);
         }
-        long long set_conditionally(long long _new_value, long long _if_equals) NOEXCEPT
+        long long set_conditionally(long long _new_value, long long _if_equals) noexcept
         {
             return ctl::ctMemoryGuardWriteConditionally(&current_value, _new_value, _if_equals);
         }
         //
         // Adds 1 to the current value, returning the new value
         //
-        long long increment() NOEXCEPT
+        long long increment() noexcept
         {
             return ctl::ctMemoryGuardIncrement(&current_value);
         }
         //
         // Subtracts 1 from the current value, returning the new value
         //
-        long long decrement() NOEXCEPT
+        long long decrement() noexcept
         {
             return ctl::ctMemoryGuardDecrement(&current_value);
         }
         //
         // Adds the [in] value to the current value, returning the original value
         //
-        long long add(long long _value) NOEXCEPT
+        long long add(long long _value) noexcept
         {
             return ctl::ctMemoryGuardAdd(&current_value, _value);
         }
         //
         // Subtracts the [in] value from the current value, returning the original value
         //
-        long long subtract(long long _value) NOEXCEPT
+        long long subtract(long long _value) noexcept
         {
             return ctl::ctMemoryGuardAdd(&current_value, _value);
         }
         //
         // Get / Sets a new value to the 'previous' value, returning the prior 'previous' value
         //
-        long long get_prior_value() NOEXCEPT
+        long long get_prior_value() noexcept
         {
             return ctl::ctMemoryGuardRead(&previous_value);
         }
-        long long set_prior_value(long long _new_value) NOEXCEPT
+        long long set_prior_value(long long _new_value) noexcept
         {
             return ctl::ctMemoryGuardWrite(&previous_value, _new_value);
         }
@@ -159,7 +158,7 @@ namespace ctsTraffic
         // Updates the previous value with the current value
         // - returning the difference (current_value - previous_value)
         //
-        long long snap_value_difference() NOEXCEPT
+        long long snap_value_difference() noexcept
         {
             const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
             const long long capture_prior_value = ctl::ctMemoryGuardWrite(&previous_value, capture_current_value);
@@ -169,7 +168,7 @@ namespace ctsTraffic
         // Returns the difference (current_value - previous_value)
         // - without modifying either value
         //
-        long long read_value_difference() const NOEXCEPT
+        long long read_value_difference() const noexcept
         {
             const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
             const long long capture_prior_value = ctl::ctMemoryGuardRead(&previous_value);
@@ -187,7 +186,7 @@ namespace ctsTraffic
         ctStatsTracking connection_error_count;
         ctStatsTracking protocol_error_count;
 
-        explicit ctsConnectionStatistics(long long _start_time = 0LL) NOEXCEPT :
+        explicit ctsConnectionStatistics(long long _start_time = 0LL) noexcept :
             start_time(_start_time),
             end_time(0LL),
             active_connection_count(0LL),
@@ -207,7 +206,7 @@ namespace ctsTraffic
         //   connection values in status messages always display the aggregate values
         //   (not displaying only changes in connection settings over each time slice)
         //
-        ctsConnectionStatistics snap_view(bool _clear_settings) NOEXCEPT
+        ctsConnectionStatistics snap_view(bool _clear_settings) noexcept
         {
             const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             const long long prior_time_read = (_clear_settings) ?
@@ -238,7 +237,7 @@ namespace ctsTraffic
         // unique connection identifier
         char connection_identifier[ctsStatistics::ConnectionIdLength]{};
 
-        explicit ctsUdpStatistics(long long _start_time = 0LL) NOEXCEPT :
+        explicit ctsUdpStatistics(long long _start_time = 0LL) noexcept :
             start_time(_start_time),
             end_time(0LL),
             bits_received(0LL),
@@ -252,7 +251,7 @@ namespace ctsTraffic
         //
         // implementing the copy c'tor with memory barriers in place
         //
-        ctsUdpStatistics(const ctsUdpStatistics& _in) NOEXCEPT :
+        ctsUdpStatistics(const ctsUdpStatistics& _in) noexcept :
             start_time(_in.start_time),
             end_time(_in.end_time),
             bits_received(_in.bits_received),
@@ -268,7 +267,7 @@ namespace ctsTraffic
 
         ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
 
-        long long current_bytes() const NOEXCEPT
+        long long current_bytes() const noexcept
         {
             return this->bits_received.get() / 8;
         }
@@ -276,7 +275,7 @@ namespace ctsTraffic
         //
         // snap-view will set the returned start time == last read time to capture the delta
         //
-        ctsUdpStatistics snap_view(bool _clear_settings) NOEXCEPT
+        ctsUdpStatistics snap_view(bool _clear_settings) noexcept
         {
             const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             const long long prior_time_read = (_clear_settings) ?
@@ -314,7 +313,7 @@ namespace ctsTraffic
         // unique connection identifier
         char connection_identifier[ctsStatistics::ConnectionIdLength]{};
 
-        explicit ctsTcpStatistics(long long _current_time = 0LL) NOEXCEPT :
+        explicit ctsTcpStatistics(long long _current_time = 0LL) noexcept :
             start_time(_current_time),
             end_time(0LL),
             bytes_sent(0LL),
@@ -328,7 +327,7 @@ namespace ctsTraffic
         //
         // implementing the copy c'tor with memory barriers in place
         //
-        ctsTcpStatistics(const ctsTcpStatistics& _in) NOEXCEPT :
+        ctsTcpStatistics(const ctsTcpStatistics& _in) noexcept :
             start_time(_in.start_time),
             end_time(_in.end_time),
             bytes_sent(_in.bytes_sent),
@@ -341,7 +340,7 @@ namespace ctsTraffic
 
         ctsTcpStatistics operator=(const ctsTcpStatistics& _in) = delete;
 
-        long long current_bytes() const NOEXCEPT
+        long long current_bytes() const noexcept
         {
             return this->bytes_recv.get() + this->bytes_sent.get();
         }
@@ -350,7 +349,7 @@ namespace ctsTraffic
         // snap-view will set the returned start time == last read time to capture the delta
         // - and end time == current time
         //
-        ctsTcpStatistics snap_view(bool _clear_settings) NOEXCEPT
+        ctsTcpStatistics snap_view(bool _clear_settings) noexcept
         {
             const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
             const long long prior_time_read = (_clear_settings) ?

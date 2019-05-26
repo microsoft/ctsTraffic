@@ -18,14 +18,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-
-
 
 namespace ctsTraffic {
     //
@@ -35,7 +32,7 @@ namespace ctsTraffic {
     //
     // Its intended use is either for UDP sockets, or for very few concurrent connections
     //
-    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -43,13 +40,13 @@ namespace ctsTraffic {
             return;
         }
 
-        int error = NO_ERROR;
+        int error;
         try {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const auto socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
-                ctl::ctSockaddr local_addr;
+                const ctl::ctSockaddr local_addr;
 
                 error = ctsConfig::SetPreConnectOptions(socket);
                 if (error != NO_ERROR) {
@@ -61,7 +58,7 @@ namespace ctsTraffic {
                     ctsConfig::PrintErrorIfFailed(L"connect", error);
                 } else {
                     // set the local address
-                    int local_addr_len = local_addr.length();
+                    auto local_addr_len = local_addr.length();
                     if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
                         shared_socket->set_local_address(local_addr);
                     }

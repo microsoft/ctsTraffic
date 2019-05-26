@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <functional>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSockaddr.hpp>
 #include <ctLocks.hpp>
 // project headers
@@ -24,7 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsIOPatternProtocolPolicy.hpp"
 #include "ctsIOPatternRateLimitPolicy.hpp"
-
 
 namespace ctsTraffic {
 
@@ -58,13 +56,13 @@ namespace ctsTraffic {
         ///   _bytes_transferred : the number of bytes successfully transferred from the task
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
-        ctsIOTask initiate_io() NOEXCEPT;
-        virtual ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) NOEXCEPT = 0;
+        ctsIOTask initiate_io() noexcept;
+        virtual ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) noexcept = 0;
 
         ///
         /// Enabling callers to trigger writing statistics via ctsConfig
         ///
-        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT = 0;
+        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept = 0;
 
         ///
         /// Some derived IO types require callbacks to the IO functions
@@ -75,7 +73,7 @@ namespace ctsTraffic {
         ///
         /// Exposing the last recorded error from the requested IO
         ///
-        virtual unsigned long get_last_error() const NOEXCEPT = 0;
+        virtual unsigned long get_last_error() const noexcept = 0;
     };
 
 
@@ -92,7 +90,7 @@ namespace ctsTraffic {
             }
         }
 
-        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT override final
+        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept override final
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
@@ -112,7 +110,7 @@ namespace ctsTraffic {
             this->callback = std::move(_callback);
         }
 
-        unsigned long get_last_error() const NOEXCEPT override final
+        unsigned long get_last_error() const noexcept override final
         {
             const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
             return this->protocol_policy.get_last_error();
@@ -133,17 +131,17 @@ namespace ctsTraffic {
         ctsIOPatternRateLimitPolicy<RateLimitPolicy> ratelimit_policy;
 
         ///
-        /// void start_stats() NOEXCEPT
+        /// void start_stats() noexcept
         /// - has been replaced with ctsStatistics::Start(this->stats)
         ///
 
         ///
-        /// void end_stats() NOEXCEPT
+        /// void end_stats() noexcept
         /// - has been replaced with ctsStatistics::End(this->stats)
         ///
 
         ///
-        /// char* connection_id() NOEXCEPT
+        /// char* connection_id() noexcept
         /// - has been replaced with stats.connection_identifier;
         ///
     };

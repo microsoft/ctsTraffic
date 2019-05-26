@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
-#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
 #include "ctTimer.hpp"
@@ -44,14 +43,14 @@ namespace ctl
 			ctThreadpoolTimerCallbackInfo(const ctThreadpoolTimerCallbackInfo&) = delete;
 			ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
 
-			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& _callback, long long _milliseconds) NOEXCEPT :
+			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& _callback, long long _milliseconds) noexcept :
 				callback(std::move(_callback))
 			{
 				using namespace ctTimer;
 				timer_expiration = convert_msec_absolute_filetime(snap_system_time_as_msec() + _milliseconds);
 			}
 
-			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& _callback, long long _milliseconds, unsigned long _period) NOEXCEPT :
+			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& _callback, long long _milliseconds, unsigned long _period) noexcept :
 				callback(std::move(_callback)),
 				reoccuring_period(_period)
 			{
@@ -60,13 +59,13 @@ namespace ctl
 			}
 
 			// supporting only move semantics
-			ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _callback_info) NOEXCEPT
+			ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& _callback_info) noexcept
 			{
 				callback = std::move(_callback_info.callback);
 				timer_expiration = _callback_info.timer_expiration;
 				reoccuring_period = _callback_info.reoccuring_period;
 			}
-			ctThreadpoolTimerCallbackInfo& operator=(ctThreadpoolTimerCallbackInfo&& _callback_info) NOEXCEPT
+			ctThreadpoolTimerCallbackInfo& operator=(ctThreadpoolTimerCallbackInfo&& _callback_info) noexcept
 			{
 				callback = std::move(_callback_info.callback);
 				timer_expiration = _callback_info.timer_expiration;
@@ -75,7 +74,7 @@ namespace ctl
 			}
 
 			// update FILETIME to the next time based off the reoccuring period
-			void update_expiration() NOEXCEPT
+			void update_expiration() noexcept
 			{
 				// addition in hundredNs to avoid loss of precision if were to convert to milliseconds
 				using namespace ctTimer;
@@ -83,7 +82,7 @@ namespace ctl
 				timer_expiration = convert_hundredNs_absolute_filetime(next_timer_hundredNs);
 			}
 
-			void swap(ctThreadpoolTimerCallbackInfo& _in) NOEXCEPT
+			void swap(ctThreadpoolTimerCallbackInfo& _in) noexcept
 			{
 				using std::swap;
 				swap(this->callback, _in.callback);
@@ -107,7 +106,7 @@ namespace ctl
 		// These c'tors can fail under low resources
 		// - ctl::ctException (from the ThreadPool APIs)
 		//
-		explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON _ptp_env = nullptr) NOEXCEPT :  // NOLINT
+		explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON _ptp_env = nullptr) noexcept :  // NOLINT
 			tp_environment(_ptp_env)
 		{
 			if (!::InitializeCriticalSectionEx(&timer_lock, 4000, 0))
@@ -117,7 +116,7 @@ namespace ctl
 			}
 		}
 
-		~ctThreadpoolTimer() NOEXCEPT
+		~ctThreadpoolTimer() noexcept
 		{
 			// wait for all callbacks
 			::EnterCriticalSection(&timer_lock);
@@ -159,7 +158,7 @@ namespace ctl
 					_period));
 		}
 
-		void stop_all_timers() NOEXCEPT
+		void stop_all_timers() noexcept
 		{
 			::EnterCriticalSection(&timer_lock);
 			for (const auto& timer : tp_timers) {
@@ -206,7 +205,7 @@ namespace ctl
 			auto unused_callback = std::find_if(
 				std::begin(this->callback_objects),
 				std::end(this->callback_objects),
-				[](const details::ctThreadpoolTimerCallbackInfo& _info) NOEXCEPT {
+				[](const details::ctThreadpoolTimerCallbackInfo& _info) noexcept {
 					// returns if a null callback (not being used)
 					return !static_cast<bool>(_info.callback);
 				});
@@ -249,7 +248,7 @@ namespace ctl
 		static void CALLBACK ctThreadPoolTimerCallback(
 			PTP_CALLBACK_INSTANCE /*_instance*/,
 			PVOID _context,
-			PTP_TIMER _timer) NOEXCEPT
+			PTP_TIMER _timer) noexcept
 		{
 			auto this_ptr = static_cast<ctThreadpoolTimer*>(_context);
 			// save off the functor to invoke outside the lock
@@ -262,7 +261,7 @@ namespace ctl
 				const auto found_timer = std::find_if(
 					std::begin(this_ptr->tp_timers),
 					std::end(this_ptr->tp_timers),
-					[_timer](PTP_TIMER _callback_timer) NOEXCEPT
+					[_timer](PTP_TIMER _callback_timer) noexcept
 					{
 						// returns if a null callback (not being used)
 						return (_timer == _callback_timer);

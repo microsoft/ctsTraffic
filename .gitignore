@@ -22,3 +22,5 @@
 /MSTest/Debug
 /ctsPerf/*.csv
 /MSTest/Release
+/ctsPerf/ARM/Release
+/ctsTraffic/ARM/Release

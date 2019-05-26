@@ -20,7 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <Winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctSockaddr.hpp>
@@ -28,7 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
 #include "ctsSocketGuard.hpp"
-
 
 namespace ctsTraffic {
     //
@@ -49,7 +47,7 @@ namespace ctsTraffic {
         explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent);
 
         _No_competing_thread_
-        ~ctsSocket() NOEXCEPT;
+        ~ctsSocket() noexcept;
 
         //
         // Assigns the object a new SOCKET value and fully initializes the object for use
@@ -61,7 +59,7 @@ namespace ctsTraffic {
         //
         // A no-fail operation
         //
-        void set_socket(SOCKET _socket) NOEXCEPT;
+        void set_socket(SOCKET _socket) noexcept;
 
         //
         // Safely closes the encapsulated socket 
@@ -72,7 +70,7 @@ namespace ctsTraffic {
         //
         // It's made available for injectors who may want to close the SOCKET at random times
         // 
-        int close_socket(int _error_code = NO_ERROR) NOEXCEPT;
+        int close_socket(int _error_code = NO_ERROR) noexcept;
 
         //
         // Provides access to the IOCP ThreadPool associated with the SOCKET
@@ -88,38 +86,38 @@ namespace ctsTraffic {
         // The only successful DWORD value is NO_ERROR (0)
         // Any other DWORD indicates error
         //
-        void complete_state(DWORD _error_code) NOEXCEPT;
+        void complete_state(DWORD _error_code) noexcept;
 
         //
         // Gets/Sets the local address of the SOCKET
         //
-        const ctl::ctSockaddr& local_address() const NOEXCEPT;
-        void set_local_address(const ctl::ctSockaddr& _local) NOEXCEPT;
+        const ctl::ctSockaddr& local_address() const noexcept;
+        void set_local_address(const ctl::ctSockaddr& _local) noexcept;
 
         //
         // Gets/Sets the target address of the SOCKET, if there is one
         //
-        const ctl::ctSockaddr& target_address() const NOEXCEPT;
-        void set_target_address(const ctl::ctSockaddr& _target) NOEXCEPT;
+        const ctl::ctSockaddr& target_address() const noexcept;
+        void set_target_address(const ctl::ctSockaddr& _target) noexcept;
 
         //
         // Get/Set the ctsIOPattern
         //
-        std::shared_ptr<ctsIOPattern> io_pattern() const NOEXCEPT;
-        void set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) NOEXCEPT;
+        std::shared_ptr<ctsIOPattern> io_pattern() const noexcept;
+        void set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) noexcept;
 
         //
         // methods for functors to use for refcounting the # of IO they have issued on this socket
         //
-        long increment_io() NOEXCEPT;
-        long decrement_io() NOEXCEPT;
-        long pended_io() NOEXCEPT;
+        long increment_io() noexcept;
+        long decrement_io() noexcept;
+        long pended_io() noexcept;
 
         //
         // method for the parent to instruct the ctsSocket to print the connection data
         // - which it is tracking, including the internal statistics
         //
-        void print_pattern_results(unsigned long _last_error) const NOEXCEPT;
+        void print_pattern_results(unsigned long _last_error) const noexcept;
 
         //
         // Function to register a task for completion at the future point in time referenced
@@ -141,15 +139,15 @@ namespace ctsTraffic {
         // ctsSocketState is given friend-access to call shutdown
         //
         friend class ctsSocketState;
-        void shutdown() NOEXCEPT;
+        void shutdown() noexcept;
 
         // ctsSocketGuard is given friend-access to call lock & unlock
         friend class ctsSocketGuard <std::shared_ptr<ctsSocket>>;
-        _Acquires_lock_(socket_cs) void lock_socket() const NOEXCEPT;
-        _Releases_lock_(socket_cs) void unlock_socket() const NOEXCEPT;
+        _Acquires_lock_(socket_cs) void lock_socket() const noexcept;
+        _Releases_lock_(socket_cs) void unlock_socket() const noexcept;
 
-        void initiate_isb_notification()  NOEXCEPT;
-        void process_isb_notification() NOEXCEPT;
+        void initiate_isb_notification()  noexcept;
+        void process_isb_notification() noexcept;
 
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods

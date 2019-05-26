@@ -16,13 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <functional>
-
 // os headers
 #include <Windows.h>
-
-// ctl headers
-#include <ctVersionConversion.hpp>
-
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
@@ -40,10 +35,10 @@ namespace ctsTraffic {
         int error_code = 0;
         unsigned long bytes_transferred = 0;
 
-        wsIOResult() NOEXCEPT
-        {
-        }
-        explicit wsIOResult(int _error) NOEXCEPT
+        wsIOResult() noexcept
+        = default;
+
+        explicit wsIOResult(int _error) noexcept
         {
             error_code = _error;
         }
@@ -55,7 +50,7 @@ namespace ctsTraffic {
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept;
 
     //
     // WSASendTo
@@ -63,10 +58,10 @@ namespace ctsTraffic {
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT;
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept;
 
     //
     // Set LINGER options to force a RST when the socket is closed
     //
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) NOEXCEPT;
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept;
 }

@@ -42,7 +42,7 @@ namespace ctsTraffic {
     /// Called to 'accept' incoming connections
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         try {
             ctsMediaStreamServerImpl::init_once();
@@ -64,7 +64,7 @@ namespace ctsTraffic {
     /// Called initiate IO on a datagram socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         ctsIOTask next_task;
         try {
@@ -104,7 +104,7 @@ namespace ctsTraffic {
     /// Called to remove that socket from the tracked vector of connected sockets
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         try {
             ctsMediaStreamServerImpl::init_once();
@@ -235,7 +235,7 @@ namespace ctsTraffic {
                 const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
+                    [&shared_socket] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
                         return (shared_socket->target_address() == _connected_socket->get_address());
                     }
                 );
@@ -325,7 +325,7 @@ namespace ctsTraffic {
             const auto found_socket = std::find_if(
                 std::begin(ctsMediaStreamServerImpl::connected_sockets),
                 std::end(ctsMediaStreamServerImpl::connected_sockets),
-                [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
+                [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
                 return _target_addr == _connected_socket->get_address();
             });
 
@@ -351,7 +351,7 @@ namespace ctsTraffic {
                 const auto found_socket = std::find_if(
                     std::begin(ctsMediaStreamServerImpl::connected_sockets),
                     std::end(ctsMediaStreamServerImpl::connected_sockets),
-                    [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) NOEXCEPT {
+                    [&_target_addr] (const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
                     return _target_addr == _connected_socket->get_address();
                 });
 
@@ -410,7 +410,7 @@ namespace ctsTraffic {
 
         wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr)
         {
-            auto this_socket_lock(ctsGuardSocket(this_ptr));
+            const auto this_socket_lock(ctsGuardSocket(this_ptr));
             const SOCKET socket = this_socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 return wsIOResult(WSA_OPERATION_ABORTED);

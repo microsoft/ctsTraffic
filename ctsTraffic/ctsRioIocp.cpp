@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 #include <mswsock.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctSocketExtensions.hpp>
 #include <ctSockaddr.hpp>
 #include <ctScopeGuard.hpp>
@@ -45,19 +44,19 @@ namespace ctsTraffic {
     /// forward-declaring CQ-functions leveraging the below variables
     ///
     static void  s_make_room_in_cq(ULONG _new_slots);
-    static void  s_release_room_in_cq(ULONG _slots) NOEXCEPT;
-    static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) NOEXCEPT;
-    static void  s_delete_all_cqs() NOEXCEPT;
+    static void  s_release_room_in_cq(ULONG _slots) noexcept;
+    static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) noexcept;
+    static void  s_delete_all_cqs() noexcept;
     ///
     /// Forward-declaring the IOCP threadpool function
     ///
-    static DWORD WINAPI RioIocpThreadProc(LPVOID) NOEXCEPT;
+    static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept;
 
     ///
     /// Management of the CQ and its corresponding threadpool implemented in this unnamed namespace
     /// - initialized with InitOneExecuteOnce
     /// 
-    static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT;
+    static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) noexcept;
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE s_sharedbuffer_initializer = INIT_ONCE_STATIC_INIT;
 
@@ -127,7 +126,7 @@ namespace ctsTraffic {
     /// Release slots in the CQ
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static void s_release_room_in_cq(ULONG _slots) NOEXCEPT
+    static void s_release_room_in_cq(ULONG _slots) noexcept
     {
         ctl::ctAutoReleasePriorityCriticalSection priority_lock_on_static_cs(*s_prioritized_cs);
 
@@ -150,7 +149,7 @@ namespace ctsTraffic {
     /// - will always post a Notify with proper synchronization
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) NOEXCEPT
+    static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) noexcept
     {
         // taking a lower-priority lock, to allow the priority lock to interrupt dequeing
         // - so it can add space to the CQ
@@ -183,7 +182,7 @@ namespace ctsTraffic {
     /// Shutdown all IOCP threads and close the CQ
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static void s_delete_all_cqs() NOEXCEPT
+    static void s_delete_all_cqs() noexcept
     {
         unsigned threads_alive = 0;
         // send an exit key to all threads, then wait on all threads to exit
@@ -255,7 +254,7 @@ namespace ctsTraffic {
     /// Singleton initialization routine for the global CQ and its corresponding IOCP thread pool
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
+    static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) noexcept
     {
         // delete all cq's on error
         ctlScopeGuard(deleteAllCqsOnError, { s_delete_all_cqs(); });
@@ -384,7 +383,7 @@ namespace ctsTraffic {
         ///
         /// Returns NO_ERROR for success, or a Win32 error on failure
         ///
-        DWORD make_room_in_rq() NOEXCEPT
+        DWORD make_room_in_rq() noexcept
         {
             try {
                 const size_t new_rqueue_used = this->rqueue_used + RioRQGrowthFactor;
@@ -424,7 +423,7 @@ namespace ctsTraffic {
         /// Guarantees that there is roon in the RQ for the next IO request
         /// - assumes the caller has locked the this->weak_socket -> ctsSocket
         ///
-        void release_room_in_rq() NOEXCEPT
+        void release_room_in_rq() noexcept
         {
             this->rqueue_used -= RioRQGrowthFactor;
         }
@@ -444,7 +443,7 @@ namespace ctsTraffic {
             }
 
             // lock the socket when doing IO on it
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 throw std::exception("ctsRioIocp: invalid socket given to RioSocketContext");
@@ -483,7 +482,7 @@ namespace ctsTraffic {
             // no failures
             releaseRoomInCqOnFailure.dismiss();
         }
-        ~RioSocketContext() NOEXCEPT
+        ~RioSocketContext() noexcept
         {
             // release all the space in the CQ for this RQ
             s_release_room_in_cq(static_cast<ULONG>(this->rqueue_reserved));
@@ -493,10 +492,15 @@ namespace ctsTraffic {
             }
         }
 
+        RioSocketContext(const RioSocketContext&) = delete;
+        RioSocketContext(RioSocketContext&&) = delete;
+        RioSocketContext& operator=(const RioSocketContext&) = delete;
+        RioSocketContext& operator=(RioSocketContext&&) = delete;
+
         ///
         /// Exposes access to a shared_ptr for the contained ctsSocket
         ///
-        std::shared_ptr<ctsSocket> get_socket() const NOEXCEPT
+        std::shared_ptr<ctsSocket> get_socket() const noexcept
         {
             return this->weak_socket.lock();
         }
@@ -505,7 +509,7 @@ namespace ctsTraffic {
         /// Should be called once for every IO that was completed
         /// Returns the current # of outstanding IO on the socket
         ///
-        LONG complete_io(const ctsIOTask& _task, ULONG _transferred, LONG _status) NOEXCEPT
+        LONG complete_io(const ctsIOTask& _task, ULONG _transferred, LONG _status) noexcept
         {
             // get a reference on the ctsSocket and IOPattern
             auto shared_socket(this->weak_socket.lock());
@@ -592,7 +596,7 @@ namespace ctsTraffic {
         /// Attempts to send/recv IO on the socket
         /// Returns the counter of pended IO on the socket
         ///
-        LONG execute_io() NOEXCEPT
+        LONG execute_io() noexcept
         {
             auto shared_socket(this->weak_socket.lock());
             ctl::ctFatalCondition(
@@ -602,7 +606,7 @@ namespace ctsTraffic {
             auto shared_pattern(shared_socket->io_pattern());
 
             // hold onto the RIO socket lock while posting IO on it
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             SOCKET rio_socket = socket_lock.get();
             if (INVALID_SOCKET == rio_socket) {
                 return WSAECONNABORTED;
@@ -691,8 +695,8 @@ namespace ctsTraffic {
                             break;
                         case IOTaskAction::Send:
                             RIOFunction = L"RIOSendEx";
-                            PRIO_BUF premote = &this->rio_remote_address;
-                            if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, premote, nullptr, nullptr, 0, request_context.get())) {
+                            const auto pRemote = &this->rio_remote_address;
+                            if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, pRemote, nullptr, nullptr, 0, request_context.get())) {
                                 error = ::WSAGetLastError();
                             }
                             break;
@@ -710,16 +714,12 @@ namespace ctsTraffic {
                     }
                 } else {
                     // don't let the request_context be freed: it's now the context ptr in the RIO request
-                    request_context.release();
+                    (void) request_context.release();
                 }
             } // while (...)
 
             return refcount_io;
         }
-
-        // non-copyable
-        RioSocketContext(const RioSocketContext&) = delete;
-        RioSocketContext& operator=(const RioSocketContext&) = delete;
     };
 
 
@@ -732,7 +732,7 @@ namespace ctsTraffic {
     ///   - subsequently taking the CS
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static DWORD WINAPI RioIocpThreadProc(LPVOID) NOEXCEPT
+    static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept
     {
         RIORESULT rio_result_array[RioResultArrayLength];
 
@@ -811,7 +811,7 @@ namespace ctsTraffic {
     } // RioIocpThreadProc
 
 
-    void ctsRioIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsRioIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());

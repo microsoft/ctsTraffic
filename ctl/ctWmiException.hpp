@@ -28,7 +28,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include "ctException.hpp"
 #include "ctComInitialize.hpp"
-#include "ctVersionConversion.hpp"
 
 namespace ctl
 {
@@ -82,26 +81,26 @@ namespace ctl
 
 	public:
 		// c'tors and d'tor
-		ctWmiErrorInfo() NOEXCEPT : error_info(nullptr)
+		ctWmiErrorInfo() noexcept : error_info(nullptr)
 		{
 			get_error_info();
 		}
 
-		explicit ctWmiErrorInfo(ctComPtr<IWbemClassObject> _error_info) NOEXCEPT
+		explicit ctWmiErrorInfo(ctComPtr<IWbemClassObject> _error_info) noexcept
 		: error_info(std::move(_error_info))
 		{
 		}
 
-		~ctWmiErrorInfo() NOEXCEPT = default;
+		~ctWmiErrorInfo() noexcept = default;
 
-		ctWmiErrorInfo(const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo(const ctWmiErrorInfo& _inObj) noexcept = default;
 
 		// assignment operators with lvalues and rvalues
-		ctWmiErrorInfo& operator=(const ctWmiErrorInfo& _inObj) NOEXCEPT = default;
-		ctWmiErrorInfo(ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
-		ctWmiErrorInfo& operator=(ctWmiErrorInfo&& _inObj) NOEXCEPT = default;
+		ctWmiErrorInfo& operator=(const ctWmiErrorInfo& _inObj) noexcept = default;
+		ctWmiErrorInfo(ctWmiErrorInfo&& _inObj) noexcept = default;
+		ctWmiErrorInfo& operator=(ctWmiErrorInfo&& _inObj) noexcept = default;
 
-		void get_error_info() const NOEXCEPT
+		void get_error_info() const noexcept
 		{
 			ctComPtr<IErrorInfo> errorInfo;
 			HRESULT hr = ::GetErrorInfo(0, errorInfo.get_addr_of());
@@ -120,12 +119,12 @@ namespace ctl
 			}
 		}
 
-		void release() const NOEXCEPT
+		void release() const noexcept
 		{
 			this->error_info.release();
 		}
 
-		bool has_error() const NOEXCEPT
+		bool has_error() const noexcept
 		{
 			return (this->error_info.get() != nullptr);
 		}
@@ -136,7 +135,7 @@ namespace ctl
 		}
 
 		// ReSharper disable once CppMemberFunctionMayBeConst
-		void swap(_Inout_ ctWmiErrorInfo& _lhs) NOEXCEPT
+		void swap(_Inout_ ctWmiErrorInfo& _lhs) noexcept
 		{
 			using std::swap;
 			swap(this->error_info, _lhs.error_info);
@@ -284,52 +283,52 @@ namespace ctl
 		///
 		/// constructors
 		///
-		ctWmiException() NOEXCEPT = default;
+		ctWmiException() noexcept = default;
 
-		explicit ctWmiException(HRESULT _ulCode) NOEXCEPT : ctException(_ulCode)
+		explicit ctWmiException(HRESULT _ulCode) noexcept : ctException(_ulCode)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject) noexcept :
 			ctException(_ulCode)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(LPCWSTR _wszMessage, bool _bMessageCopy = true) noexcept :
 			ctException(_wszMessage, _bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(LPCWSTR _wszMessage, const IWbemClassObject* _classObject, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(LPCWSTR _wszMessage, const IWbemClassObject* _classObject, bool _bMessageCopy = true) noexcept :
 			ctException(_wszMessage, _bMessageCopy)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) noexcept :
 			ctException(_ulCode, _wszMessage, _bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, bool _bMessageCopy = true) noexcept :
 			ctException(_ulCode, _wszMessage, _bMessageCopy)
 		{
 			get_className(_classObject);
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) noexcept :
 			ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT :
+		explicit ctWmiException(HRESULT _ulCode, const IWbemClassObject* _classObject, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) noexcept :
 			ctException(_ulCode, _wszMessage, _wszLocation, _bBothStringCopy)
 		{
 			get_className(_classObject);
 		}
 
-		ctWmiException(const ctWmiException& e) NOEXCEPT : 
+		ctWmiException(const ctWmiException& e) noexcept : 
 			ctException(e),
 		    errorInfo(e.errorInfo)
 		{
@@ -340,21 +339,21 @@ namespace ctl
 				className = SysAllocString(e.className);
 			}
 		}
-		ctWmiException& operator=(const ctWmiException& e) NOEXCEPT
+		ctWmiException& operator=(const ctWmiException& e) noexcept
 		{
 			using std::swap;
 			auto temp(e);
 			swap(*this, temp);
 			return *this;
 		}
-		ctWmiException(ctWmiException&& rhs) NOEXCEPT
+		ctWmiException(ctWmiException&& rhs) noexcept
 		: className(rhs.className),
 		  errorInfo(std::move(rhs.errorInfo))
 		{
 			// took ownership of the bstr
 			rhs.className = nullptr;
 		}
-		ctWmiException& operator=(ctWmiException&& rhs) NOEXCEPT
+		ctWmiException& operator=(ctWmiException&& rhs) noexcept
 		{
 			SysFreeString(className);
 			className = rhs.className;
@@ -365,19 +364,19 @@ namespace ctl
 			return *this;
 		}
 
-		virtual ~ctWmiException() NOEXCEPT
+		virtual ~ctWmiException() noexcept
 		{
 			// SysFreeString handles NULL
 			SysFreeString(className);
 		}
 
 		// public accessors
-		virtual const wchar_t* class_w() const NOEXCEPT
+		virtual const wchar_t* class_w() const noexcept
 		{
 			return (className == nullptr) ? L"" : className;
 		}
 
-		virtual ctWmiErrorInfo error_info() const NOEXCEPT
+		virtual ctWmiErrorInfo error_info() const noexcept
 		{
 			// copy c'tor of ctWmiErrorInfo is no-throw
 			// - so is safe to return a copy here
@@ -389,7 +388,7 @@ namespace ctl
 		BSTR className = nullptr;
 		ctWmiErrorInfo errorInfo;
 
-		void get_className(const IWbemClassObject* _classObject) NOEXCEPT
+		void get_className(const IWbemClassObject* _classObject) noexcept
 		{
 			//
 			// protect against a null IWbemClassObject pointer
@@ -615,7 +614,7 @@ namespace ctl
 	//
 	// non-member swap function
 	//
-	inline void swap(_Inout_ ctWmiErrorInfo& _rhs, _Inout_ ctWmiErrorInfo& _lhs) NOEXCEPT
+	inline void swap(_Inout_ ctWmiErrorInfo& _rhs, _Inout_ ctWmiErrorInfo& _lhs) noexcept
 	{
 		_rhs.swap(_lhs);
 	}

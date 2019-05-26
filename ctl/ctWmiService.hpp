@@ -22,8 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctException.hpp"
 #include "ctWmiException.hpp"
 #include "ctComInitialize.hpp"
-#include "ctVersionConversion.hpp"
-
 
 namespace ctl
 {
@@ -88,14 +86,14 @@ namespace ctl
 
 		~ctWmiService() = default;
 
-		ctWmiService(const ctWmiService& _service) NOEXCEPT
+		ctWmiService(const ctWmiService& _service) noexcept
 		: wbemLocator(_service.wbemLocator),
 		  wbemServices(_service.wbemServices)
 		{
 			// empty
 		}
 
-		ctWmiService& operator=(const ctWmiService& _service) NOEXCEPT
+		ctWmiService& operator=(const ctWmiService& _service) noexcept
 		{
 			ctWmiService temp(_service);
 			using std::swap;
@@ -104,12 +102,12 @@ namespace ctl
 			return *this;
 		}
 
-		ctWmiService(ctWmiService&& rhs) NOEXCEPT
+		ctWmiService(ctWmiService&& rhs) noexcept
 		: wbemLocator(std::move(rhs.wbemLocator)),
 		  wbemServices(std::move(rhs.wbemServices))
 		{
 		}
-		ctWmiService& operator=(ctWmiService&& rhs) NOEXCEPT
+		ctWmiService& operator=(ctWmiService&& rhs) noexcept
 		{
 			wbemLocator = std::move(rhs.wbemLocator);
 			wbemServices = std::move(rhs.wbemServices);
@@ -123,33 +121,33 @@ namespace ctl
 		///
 		/// A no-fail/no-throw operation
 		////////////////////////////////////////////////////////////////////////////////
-		IWbemServices* operator->() NOEXCEPT
+		IWbemServices* operator->() noexcept
 		{
 			return this->wbemServices.get();
 		}
 
-		const IWbemServices* operator ->() const NOEXCEPT
+		const IWbemServices* operator ->() const noexcept
 		{
 			return this->wbemServices.get();
 		}
 
-		bool operator ==(const ctWmiService& _service) const NOEXCEPT
+		bool operator ==(const ctWmiService& _service) const noexcept
 		{
 			return this->wbemLocator == _service.wbemLocator &&
 				   this->wbemServices == _service.wbemServices;
 		}
 
-		bool operator !=(const ctWmiService& _service) const NOEXCEPT
+		bool operator !=(const ctWmiService& _service) const noexcept
 		{
 			return !(*this == _service);
 		}
 
-		IWbemServices* get() NOEXCEPT
+		IWbemServices* get() noexcept
 		{
 			return this->wbemServices.get();
 		}
 
-		const IWbemServices* get() const NOEXCEPT
+		const IWbemServices* get() const noexcept
 		{
 			return this->wbemServices.get();
 		}

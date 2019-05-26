@@ -43,9 +43,9 @@ namespace ctsTraffic {
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept
     {
-        auto socket_lock(ctsGuardSocket(_shared_socket));
+        const auto socket_lock(ctsGuardSocket(_shared_socket));
         const SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return wsIOResult(WSAECONNABORTED);
@@ -99,9 +99,9 @@ namespace ctsTraffic {
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) NOEXCEPT
+        std::function<void(OVERLAPPED*)>&& _callback) noexcept
     {
-        auto socket_lock(ctsGuardSocket(_shared_socket));
+        const auto socket_lock(ctsGuardSocket(_shared_socket));
         const SOCKET socket = socket_lock.get();
         if (INVALID_SOCKET == socket) {
             return wsIOResult(WSAECONNABORTED);
@@ -149,7 +149,7 @@ namespace ctsTraffic {
         return return_result;
     }
 
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) NOEXCEPT
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept
     {
         wsIOResult return_result;
         ::linger linger_option{};

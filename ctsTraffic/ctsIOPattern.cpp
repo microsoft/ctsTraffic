@@ -54,7 +54,7 @@ namespace ctsTraffic {
     static const unsigned long s_FinBufferSize = 4; // just 4 bytes for the FIN
     static char s_FinBuffer[s_FinBufferSize];
 
-    BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
+    BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
     {
         // first create the buffer pattern
         for (unsigned long fill_slot = 0; fill_slot < BufferPatternSize; ++fill_slot)
@@ -159,7 +159,7 @@ namespace ctsTraffic {
             return nullptr;
         }
     }
-    char* ctsIOPattern::AccessSharedBuffer() NOEXCEPT
+    char* ctsIOPattern::AccessSharedBuffer() noexcept
     {
         // this init-once call is no-fail
         (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
@@ -227,7 +227,7 @@ namespace ctsTraffic {
     }
 
 
-    ctsIOPattern::~ctsIOPattern() NOEXCEPT
+    ctsIOPattern::~ctsIOPattern() noexcept
     {
         if (recv_rio_bufferid != RIO_INVALID_BUFFERID && recv_rio_bufferid != s_SharedBufferId) {
             ctRIODeregisterBuffer(recv_rio_bufferid);
@@ -236,7 +236,7 @@ namespace ctsTraffic {
         ::DeleteCriticalSection(&cs);
     }
 
-    ctsIOTask ctsIOPattern::initiate_io() NOEXCEPT
+    ctsIOTask ctsIOPattern::initiate_io() noexcept
     {
         // make sure stats starts tracking IO at the first IO request
         this->start_stats();
@@ -364,7 +364,7 @@ namespace ctsTraffic {
     /// Returns the current status of the IO operation on this socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) NOEXCEPT
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) noexcept
     {
         //
         // Take the object lock before touching internal values
@@ -517,7 +517,7 @@ namespace ctsTraffic {
         return this->current_status();
     }
 
-    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
+    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
     {
         const ctAutoReleaseCriticalSection local_cs(&this->cs);
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
@@ -525,7 +525,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
+    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
     {
         const ctAutoReleaseCriticalSection local_cs(&this->cs);
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
@@ -533,7 +533,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::new_task(IOTaskAction _action, unsigned long _max_transfer) NOEXCEPT
+    ctsIOTask ctsIOPattern::new_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
     {
         //
         // with TCP, we need to calculate the buffer size based off bytes remaining
@@ -673,7 +673,7 @@ namespace ctsTraffic {
 
         return return_task;
     }
-    bool ctsIOPattern::verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) const NOEXCEPT
+    bool ctsIOPattern::verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) const noexcept
     {
         // only doing deep verification if the user asked us to
         if (!ctsConfig::Settings->ShouldVerifyBuffers) {
@@ -730,7 +730,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPull::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternPull::next_task() noexcept
     {
         if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
             --this->recv_needed;
@@ -746,7 +746,7 @@ namespace ctsTraffic {
 
         return ctsIOTask();
     }
-    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
     {
         if (IOTaskAction::Send == _task.ioAction) {
             this->stats.bytes_sent.add(_completed_bytes);
@@ -787,7 +787,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPush::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternPush::next_task() noexcept
     {
         if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
             --this->recv_needed;
@@ -803,7 +803,7 @@ namespace ctsTraffic {
 
         return ctsIOTask();
     }
-    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
     {
         if (IOTaskAction::Send == _task.ioAction) {
             this->stats.bytes_sent.add(_completed_bytes);
@@ -851,7 +851,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternPushPull::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternPushPull::next_task() noexcept
     {
         ctsUnsignedLong segment_size;
         if (this->listening) {
@@ -883,7 +883,7 @@ namespace ctsTraffic {
             return ctsIOTask();
         }
     }
-    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) noexcept
     {
         if (IOTaskAction::Send == _task.ioAction) {
             this->stats.bytes_sent.add(_current_transfer);
@@ -959,7 +959,7 @@ namespace ctsTraffic {
     /// Return an empty task when no more IO is needed
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOTask ctsIOPatternDuplex::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternDuplex::next_task() noexcept
     {
         ctsIOTask return_task;
 
@@ -995,7 +995,7 @@ namespace ctsTraffic {
 
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
     {
         switch (_task.ioAction) {
         case IOTaskAction::Send:
@@ -1048,7 +1048,7 @@ namespace ctsTraffic {
         PrintDebugInfo(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / this->frame_rate_fps));
     }
     // required virtual functions
-    ctsIOTask ctsIOPatternMediaStreamServer::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternMediaStreamServer::next_task() noexcept
     {
         ctsIOTask return_task;
         switch (this->state) {
@@ -1080,7 +1080,7 @@ namespace ctsTraffic {
         }
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) noexcept
     {
         if (_task.buffer_type != ctsIOTask::BufferType::UdpConnectionId) {
             const ctsUnsignedLong current_transfer_bits = _current_transfer * 8UL;

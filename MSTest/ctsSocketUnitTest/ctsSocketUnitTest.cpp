@@ -15,14 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 #include <ctString.hpp>
-#include <ctVersionConversion.hpp>
 
 #include "ctsSocket.h"
 #include "ctsSocketGuard.hpp"
 #include "ctsSocketState.h"
 #include "ctsIOPattern.h"
 #include "ctsWinsockLayer.h"
-
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -58,12 +56,12 @@ namespace ctsTraffic {
         return nullptr;
     }
 
-    void ctsSocketState::complete_state(DWORD) NOEXCEPT
+    void ctsSocketState::complete_state(DWORD) noexcept
     {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET) NOEXCEPT
+	wsIOResult ctsSetLingertoRSTSocket(SOCKET) noexcept
 	{
 		return wsIOResult();
 	}
@@ -71,7 +69,7 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(LPCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
@@ -81,34 +79,34 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) NOEXCEPT
+        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
                     ctl::ctString::format_exception(e).c_str()).c_str());
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }

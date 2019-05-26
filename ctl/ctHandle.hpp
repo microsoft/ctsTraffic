@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // project headers
-#include "ctVersionConversion.hpp"
 #include "ctscopedt.hpp"
 
 
@@ -32,16 +31,15 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
+			if ((h != nullptr) && (h != INVALID_HANDLE_VALUE)) {
 				::CloseHandle(h);
 			}
 		}
 	};
 
-	typedef ctScopedT<HANDLE, NULL, ctHandleDeleter> ctScopedHandle;
+	typedef ctScopedT<HANDLE, nullptr, ctHandleDeleter> ctScopedHandle;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -53,10 +51,9 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctHKeyDeleter
 	{
-		void operator()(const HKEY h) const NOEXCEPT  // NOLINT
+		void operator()(const HKEY h) const noexcept  // NOLINT
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if ((h != NULL) &&
+			if ((h != nullptr) &&
 				(h != HKEY_CLASSES_ROOT) &&
 				(h != HKEY_CURRENT_CONFIG) &&
 				(h != HKEY_CURRENT_USER) &&
@@ -69,7 +66,7 @@ namespace ctl
 		}
 	};
 
-	typedef ctScopedT<HKEY, NULL, ctHKeyDeleter> ctScopedHKey;
+	typedef ctScopedT<HKEY, nullptr, ctHKeyDeleter> ctScopedHKey;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -81,16 +78,15 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctFindHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
+			if ((h != nullptr) && (h != INVALID_HANDLE_VALUE)) {
 				::FindClose(h);
 			}
 		}
 	};
 
-	typedef ctScopedT<HANDLE, NULL, ctFindHandleDeleter> ctScopedFindHandle;
+	typedef ctScopedT<HANDLE, nullptr, ctFindHandleDeleter> ctScopedFindHandle;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -102,16 +98,15 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctEventLogHandleDeleter
 	{
-		void operator()(const HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const HANDLE h) const noexcept  // NOLINT
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if ((h != NULL) && (h != INVALID_HANDLE_VALUE)) {
+			if ((h != nullptr) && (h != INVALID_HANDLE_VALUE)) {
 				::CloseEventLog(h);
 			}
 		}
 	};
 
-	typedef ctScopedT<HANDLE, NULL, ctEventLogHandleDeleter> ctScopedEventLogHandle;
+	typedef ctScopedT<HANDLE, nullptr, ctEventLogHandleDeleter> ctScopedEventLogHandle;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -123,16 +118,15 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctLibraryHandleDeleter
 	{
-		void operator()(const HMODULE h) const NOEXCEPT
+		void operator()(const HMODULE h) const noexcept
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if (h != NULL) {
+			if (h != nullptr) {
 				::FreeLibrary(h);
 			}
 		}
 	};
 
-	typedef ctScopedT<HMODULE, NULL, ctLibraryHandleDeleter> ctScopedLibraryHandle;
+	typedef ctScopedT<HMODULE, nullptr, ctLibraryHandleDeleter> ctScopedLibraryHandle;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -144,16 +138,15 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctServiceHandleDeleter
 	{
-		void operator()(const SC_HANDLE h) const NOEXCEPT  // NOLINT
+		void operator()(const SC_HANDLE h) const noexcept  // NOLINT
 		{
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			if (h != NULL) {
+			if (h != nullptr) {
 				::CloseServiceHandle(h);
 			}
 		}
 	};
 
-	typedef ctScopedT<SC_HANDLE, NULL, ctServiceHandleDeleter> ctScopedServiceHandle;
+	typedef ctScopedT<SC_HANDLE, nullptr, ctServiceHandleDeleter> ctScopedServiceHandle;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +159,7 @@ namespace ctl
 	///////////////////////////////////////////////////////////////////////////////////
 	struct ctSocketHandleDeleter
 	{
-		void operator()(const SOCKET s) const NOEXCEPT
+		void operator()(const SOCKET s) const noexcept
 		{
 			if (s != INVALID_SOCKET) {
 				::closesocket(s);

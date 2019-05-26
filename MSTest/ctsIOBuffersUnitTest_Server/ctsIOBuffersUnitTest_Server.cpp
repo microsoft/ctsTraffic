@@ -14,11 +14,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <SDKDDKVer.h>
 #include "CppUnitTest.h"
 
-#include <memory>
 #include <vector>
 #include <algorithm>
 
-#include <ctVersionConversion.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctString.hpp>
 
@@ -35,42 +33,42 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) NOEXCEPT
+        void PrintException(const std::exception& e) noexcept
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) NOEXCEPT
+        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
         }
 
-        bool IsListening( ) NOEXCEPT
+        bool IsListening( ) noexcept
         {
             return s_Listening;
         }
 
-        ctsUnsignedLongLong GetTransferSize( ) NOEXCEPT
+        ctsUnsignedLongLong GetTransferSize( ) noexcept
         {
             return s_TransferSize;
         }
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return 0;
         }

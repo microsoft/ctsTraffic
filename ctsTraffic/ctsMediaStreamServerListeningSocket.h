@@ -46,22 +46,22 @@ namespace ctsTraffic {
         _Guarded_by_(object_guard)
         DWORD recv_flags = 0;
 
-        void recv_completion(OVERLAPPED* _ov) NOEXCEPT;
+        void recv_completion(OVERLAPPED* _ov) noexcept;
 
     public:
         ctsMediaStreamServerListeningSocket(
             ctl::ctScopedSocket&& _listening_socket,
             ctl::ctSockaddr _listening_addr);
 
-        ~ctsMediaStreamServerListeningSocket() NOEXCEPT;
+        ~ctsMediaStreamServerListeningSocket() noexcept;
 
-        SOCKET get_socket() const NOEXCEPT;
+        SOCKET get_socket() const noexcept;
 
-        ctl::ctSockaddr get_address() const NOEXCEPT;
+        ctl::ctSockaddr get_address() const noexcept;
 
-        void reset() NOEXCEPT;
+        void reset() noexcept;
 
-        void initiate_recv() NOEXCEPT;
+        void initiate_recv() noexcept;
 
         // non-copyable
         ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;

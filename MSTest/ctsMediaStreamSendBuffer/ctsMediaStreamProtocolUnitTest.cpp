@@ -26,10 +26,6 @@ template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFram
 {
     return std::to_wstring(_value);
 }
-template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<long long>(const long long& _value)
-{
-    return std::to_wstring(_value);
-}
 template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<ctsTraffic::MediaStreamAction>(const ctsTraffic::MediaStreamAction& _message)
 {
     switch (_message) {

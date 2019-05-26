@@ -160,7 +160,7 @@ namespace ctsTraffic {
 
             return TRUE;
         }
-        static void ctsConfigInitOnce() NOEXCEPT
+        static void ctsConfigInitOnce() noexcept
         {
             ctFatalCondition(
                 !::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, nullptr, nullptr),
@@ -172,7 +172,7 @@ namespace ctsTraffic {
         /// parses the configuration of the local system for options dependent on deployments
         ///
         //////////////////////////////////////////////////////////////////////////////////////////
-        static void check_system_settings() NOEXCEPT
+        static void check_system_settings() noexcept
         {
             // Windows 10+ exposes a new socket option: SO_REUSE_UNICASTPORT
             // - this allows for much greater reuse of local ports, but also requires
@@ -545,7 +545,37 @@ namespace ctsTraffic {
                 }
             }
         }
-
+        //////////////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Parses for the InlineCompletions setting to use
+        ///
+        /// -InlineCompletions:on
+        /// -InlineCompletions:off
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////////
+        static
+        void set_inlineCompletions(vector<const wchar_t*>& _args)
+        {
+            const auto found_arg = find_if(begin(_args), end(_args), [](const wchar_t* parameter) -> bool {
+                const wchar_t* value = ParseArgument(parameter, L"-inlinecompletions");
+                return (value != nullptr);
+                });
+            if (found_arg != end(_args)) {
+                const wchar_t* value = ParseArgument(*found_arg, L"-inlinecompletions");
+                if (ctString::iordinal_equals(L"on", value)) {
+                    Settings->Options |= OptionType::HANDLE_INLINE_IOCP;
+                }
+                else if (ctString::iordinal_equals(L"off", value)) {
+                    Settings->Options &= ~OptionType::HANDLE_INLINE_IOCP;
+                }
+                else {
+                    throw invalid_argument("-inlinecompletions");
+                }
+                // always remove the arg from our vector
+                _args.erase(found_arg);
+            }
+        }
+        
         //////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// Parses for the L4 Protocol to limit to usage
@@ -950,7 +980,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [] (const ctSockaddr& addr) NOEXCEPT { return addr.family() == AF_INET; }),
+                            [] (const ctSockaddr& addr) noexcept { return addr.family() == AF_INET; }),
                         end(Settings->TargetAddresses)
                     );
                 } else if (0 == target_v4) {
@@ -958,7 +988,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [] (const ctSockaddr& addr) NOEXCEPT { return addr.family() == AF_INET; }),
+                            [] (const ctSockaddr& addr) noexcept { return addr.family() == AF_INET; }),
                         end(Settings->BindAddresses)
                     );
                 }
@@ -968,7 +998,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->TargetAddresses),
                             end(Settings->TargetAddresses),
-                            [] (const ctSockaddr& addr) NOEXCEPT { return addr.family() == AF_INET6; }),
+                            [] (const ctSockaddr& addr) noexcept { return addr.family() == AF_INET6; }),
                         end(Settings->TargetAddresses)
                     );
                 } else if (0 == target_v6) {
@@ -976,7 +1006,7 @@ namespace ctsTraffic {
                         remove_if(
                             begin(Settings->BindAddresses),
                             end(Settings->BindAddresses),
-                            [] (const ctSockaddr& addr) NOEXCEPT { return addr.family() == AF_INET6; }),
+                            [] (const ctSockaddr& addr) noexcept { return addr.family() == AF_INET6; }),
                         end(Settings->BindAddresses)
                     );
                 }
@@ -2056,7 +2086,7 @@ namespace ctsTraffic {
                                  L" -Acc, -Bind, -Compartment, -Conn, -IO, -LocalPort,                   \n"
                                  L" -OnError, -Options, -Pattern, -PrePostRecvs, -PrePostSends,          \n"
                                  L" -RateLimitPeriod, -RecvBufValue, -SendBufValue,                      \n"
-                                 L" -ThrottleConnections, -TimeLimit                                     \n"
+                                 L" -ThrottleConnections, -TimeLimit, -InlineCompletions                 \n"
                                  L"                                                                      \n"
                                  L"----------------------------------------------------------------------\n"
                                  L"-Acc:<accept,AcceptEx>\n"
@@ -2090,6 +2120,12 @@ namespace ctsTraffic {
                                  L"   - the interface index which to use for outbound connectivity\n"
                                  L"     assigns the interface with IP_UNICAST_IF / IPV6_UNICAST_IF\n"
                                  L"\t- <default> == not set (will not restrict binding to any specific interface)\n"
+                                 L"-InlineCompletions:[on,off]\n"
+                                 L"   - will set the below option on all SOCKETs for OVERLAPPED I/O calls so inline successful\n"
+                                 L"     completions will not be queued to the completion handler\n"
+                                 L"     ::SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)\n"
+                                 L"\t- <default> == on for the TCP 'iocp' -IO mode and the UDP client receiver\n"
+                                 L"                 off for all other -IO modes\n"
                                  L"-IO:<readwritefile>\n"
                                  L"   - an additional IO option beyond iocp and rioiocp\n"
                                  L"\t- readwritefile : leverages ReadFile/WriteFile using IOCP for async completions\n"
@@ -2366,6 +2402,7 @@ namespace ctsTraffic {
             // - hence it is requirement to invoke it prior to any socket operation
             //
             set_ioFunction(args);
+            set_inlineCompletions(args);
             set_create(args);
             set_connect(args);
             set_accept(args);
@@ -2407,7 +2444,7 @@ namespace ctsTraffic {
             return true;
         }
 
-        void Shutdown() NOEXCEPT
+        void Shutdown() noexcept
         {
             ctsConfigInitOnce();
 
@@ -2432,7 +2469,7 @@ namespace ctsTraffic {
 
         // the Legend is to explain the fields for status updates
         // - only print if status updates are going to be provided
-        void PrintLegend() NOEXCEPT
+        void PrintLegend() noexcept
         {
             ctsConfigInitOnce();
 
@@ -2482,14 +2519,14 @@ namespace ctsTraffic {
         }
 
         // Always print to console if override
-        void PrintExceptionOverride(const exception& e) NOEXCEPT
+        void PrintExceptionOverride(const exception& e) noexcept
         {
             ctsConfigInitOnce();
 
             ctFatalCondition(s_BreakOnError, L"[ctsTraffic] >> exception - %hs\n", e.what());
 
             try {
-                auto formatted_string(
+                const auto formatted_string(
                     ctl::ctString::format_string(
                     L"[%.3f] %ws",
                     ctsConfig::GetStatusTimeStamp(),
@@ -2515,12 +2552,12 @@ namespace ctsTraffic {
         ///   and prints to console accordingly
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        void PrintException(const exception& e) NOEXCEPT
+        void PrintException(const exception& e) noexcept
         {
             ctsConfigInitOnce();
 
             try {
-                wstring exception_text(ctString::format_exception(e));
+                const wstring exception_text(ctString::format_exception(e));
 
                 if (!s_ShutdownCalled) {
                     ctFatalCondition(s_BreakOnError, L"Fatal exception: %ws", exception_text.c_str());
@@ -2551,7 +2588,7 @@ namespace ctsTraffic {
             }
         }
         // Always print to console if override
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2576,7 +2613,7 @@ namespace ctsTraffic {
 
             va_end(argptr);
         }
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2624,7 +2661,7 @@ namespace ctsTraffic {
                 va_end(argptr);
             }
         }
-        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) NOEXCEPT
+        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2653,7 +2690,7 @@ namespace ctsTraffic {
                             ctsConfig::GetStatusTimeStamp(),
                             ctsIOPattern::BuildProtocolErrorString(_why));
                     } else {
-                        ctException error_details(_why, _what);
+                        const ctException error_details(_why, _what);
                         error_string = ctl::ctString::format_string(
                             L"[%.3f] %ws failed (%u) %ws",
                             ctsConfig::GetStatusTimeStamp(),
@@ -2675,7 +2712,7 @@ namespace ctsTraffic {
                 }
             }
         }
-        void PrintStatusUpdate() NOEXCEPT
+        void PrintStatusUpdate() noexcept
         {
             if (!s_ShutdownCalled) {
                 if (s_PrintStatusInformation) {
@@ -2752,7 +2789,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) NOEXCEPT
+        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept
         {
             if (!s_ShutdownCalled) {
                 if (s_JitterLogger) {
@@ -2760,18 +2797,21 @@ namespace ctsTraffic {
                     double ms_since_prior_receive = 0.0;
                     // calculate time since the prior receive
                     if (previous_frame.receiver_qpc != 0) {
-                        ms_since_prior_receive = ((current_frame.receiver_qpc * 1000.0) / current_frame.receiver_qpf) - 
-                                                 ((previous_frame.receiver_qpc * 1000.0) / previous_frame.receiver_qpf);
+                        ms_since_prior_receive =
+                            (current_frame.receiver_qpc * 1000.0 / current_frame.receiver_qpf) - 
+                            (previous_frame.receiver_qpc * 1000.0) / previous_frame.receiver_qpf;
                     }
 
                     // estimating time in flight for this frame by determining how much time since the first send was just 'waiting' to send this frame
                     // and subtracing that from how much time since the first receive - since time between receives should at least be time between sends
                     double ms_estimated_time_in_flight = 0.0;
                     if (first_frame.receiver_qpc != 0) {
-                        const double ms_since_first_receive = ((current_frame.receiver_qpc * 1000.0) / current_frame.receiver_qpf) -
-                                                        ((first_frame.receiver_qpc * 1000.0) / first_frame.receiver_qpf);
-                        const double ms_since_first_send = ((current_frame.sender_qpc * 1000.0) / current_frame.sender_qpf) -
-                                                     ((first_frame.sender_qpc * 1000.0) / first_frame.sender_qpf);
+                        const double ms_since_first_receive =
+                            (current_frame.receiver_qpc * 1000.0 / current_frame.receiver_qpf) -
+                            (first_frame.receiver_qpc * 1000.0 / first_frame.receiver_qpf);
+                        const double ms_since_first_send =
+                            (current_frame.sender_qpc * 1000.0 / current_frame.sender_qpf) -
+                            (first_frame.sender_qpc * 1000.0 / first_frame.sender_qpf);
                         ms_estimated_time_in_flight = ms_since_first_receive - ms_since_first_send;
                     }
 
@@ -2794,7 +2834,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) NOEXCEPT
+        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2839,7 +2879,7 @@ namespace ctsTraffic {
             }
         }
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2967,7 +3007,7 @@ namespace ctsTraffic {
             catch (const exception&) {
             }
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
         {
             ctsConfigInitOnce();
 
@@ -3095,7 +3135,7 @@ namespace ctsTraffic {
             catch (const exception&) {
             }
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) NOEXCEPT
+        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
         {
             if (ctsConfig::ProtocolType::TCP == Settings->Protocol) {
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsTcpStatistics());
@@ -3103,7 +3143,7 @@ namespace ctsTraffic {
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsUdpStatistics());
             }
         }
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) NOEXCEPT
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -3154,7 +3194,7 @@ namespace ctsTraffic {
         /// - accessor functions made public to retrieve configuration details
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ctsUnsignedLong GetBufferSize() NOEXCEPT
+        ctsUnsignedLong GetBufferSize() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3166,7 +3206,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsUnsignedLong GetMaxBufferSize() NOEXCEPT
+        ctsUnsignedLong GetMaxBufferSize() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3179,7 +3219,7 @@ namespace ctsTraffic {
         }
 
 
-        ctsUnsignedLongLong GetTransferSize() NOEXCEPT
+        ctsUnsignedLongLong GetTransferSize() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3191,7 +3231,7 @@ namespace ctsTraffic {
             }
         }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() NOEXCEPT
+        ctsSignedLongLong GetTcpBytesPerSecond() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3203,7 +3243,7 @@ namespace ctsTraffic {
             }
         }
 
-        int GetListenBacklog() NOEXCEPT
+        int GetListenBacklog() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3215,7 +3255,7 @@ namespace ctsTraffic {
             return backlog;
         }
 
-        const MediaStreamSettings& GetMediaStream() NOEXCEPT
+        const MediaStreamSettings& GetMediaStream() noexcept
         {
             ctsConfigInitOnce();
 
@@ -3226,14 +3266,14 @@ namespace ctsTraffic {
             return s_MediaStreamSettings;
         }
 
-        bool IsListening() NOEXCEPT
+        bool IsListening() noexcept
         {
             ctsConfigInitOnce();
 
             return !Settings->ListenAddresses.empty();
         }
 
-        float GetStatusTimeStamp() NOEXCEPT
+        float GetStatusTimeStamp() noexcept
         {
             return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
@@ -3245,7 +3285,7 @@ namespace ctsTraffic {
         /// - currently only implementing pre-bind options
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address) NOEXCEPT
+        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address) noexcept
         {
             ctsConfigInitOnce();
 
@@ -3369,7 +3409,7 @@ namespace ctsTraffic {
             }
 
             if (Settings->Options & OptionType::SET_RECV_BUF) {
-                int recv_buff = Settings->RecvBufValue;
+                auto recv_buff = Settings->RecvBufValue;
                 const auto error = ::setsockopt(
                     _s,
                     SOL_SOCKET,
@@ -3384,7 +3424,7 @@ namespace ctsTraffic {
             }
 
             if (Settings->Options & OptionType::SET_SEND_BUF) {
-                int send_buff = Settings->SendBufValue;
+                auto send_buff = Settings->SendBufValue;
                 const auto error = ::setsockopt(
                     _s,
                     SOL_SOCKET,
@@ -3439,7 +3479,7 @@ namespace ctsTraffic {
             return NO_ERROR;
         }
 
-        int SetPreConnectOptions(SOCKET _s) NOEXCEPT
+        int SetPreConnectOptions(SOCKET _s) noexcept
         {
             ctsConfigInitOnce();
             UNREFERENCED_PARAMETER(_s);
@@ -3692,23 +3732,23 @@ namespace ctsTraffic {
                             static_cast<ULONGLONG>(Settings->ServerExitLimit)));
                 }
             } else {
-                unsigned long long total_connections = 0;
+                unsigned long long totalConnections;
                 if (ctsConfig::Settings->Iterations == MAXULONGLONG) {
-                    total_connections = MAXULONGLONG;
+                    totalConnections = MAXULONGLONG;
                 } else {
-                    total_connections = ctsConfig::Settings->Iterations * static_cast<unsigned long long>(ctsConfig::Settings->ConnectionLimit);
+                    totalConnections = ctsConfig::Settings->Iterations * static_cast<unsigned long long>(ctsConfig::Settings->ConnectionLimit);
                 }
-                if (total_connections > MAXLONG) {
+                if (totalConnections > MAXLONG) {
                     setting_string.append(
                         ctString::format_string(
                             L"\tTotal outgoing connections before exit (iterations * concurrent connections) : 0x%llx\n",
-                            total_connections));
+                            totalConnections));
                 } else {
                     setting_string.append(
                         ctString::format_string(
                             L"\tTotal outgoing connections before exit (iterations * concurrent connections) : %llu [0x%llx]\n",
-                            total_connections,
-                            total_connections));
+                            totalConnections,
+                            totalConnections));
                 }
             }
 
@@ -3774,12 +3814,12 @@ namespace ctsTraffic {
             return socket;
         }
 
-        bool ShutdownCalled() NOEXCEPT
+        bool ShutdownCalled() noexcept
         {
             return s_ShutdownCalled;
         }
 
-        unsigned long ConsoleVerbosity() NOEXCEPT
+        unsigned long ConsoleVerbosity() noexcept
         {
             return s_ConsoleVerbosity;
         }

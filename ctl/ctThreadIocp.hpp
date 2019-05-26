@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // ct headers
-#include "ctVersionConversion.hpp"
 #include "ctException.hpp"
 
 
@@ -53,7 +52,7 @@ namespace ctl
 		{
 			::ZeroMemory(&ov, sizeof ov);
 		}
-		~ctThreadIocpCallbackInfo() NOEXCEPT = default;
+		~ctThreadIocpCallbackInfo() noexcept = default;
 		// non-copyable
 		ctThreadIocpCallbackInfo(const ctThreadIocpCallbackInfo&) = delete;
 		ctThreadIocpCallbackInfo& operator=(const ctThreadIocpCallbackInfo&) = delete;
@@ -130,13 +129,13 @@ namespace ctl
 			}
 		}
 
-		ctThreadIocp(ctThreadIocp&& rhs) NOEXCEPT
+		ctThreadIocp(ctThreadIocp&& rhs) noexcept
 		: ptp_io(rhs.ptp_io)
 		{
 			// null out the moved-from object's TP ptr since this object now has ownership
 			rhs.ptp_io = nullptr;
 		}
-		ctThreadIocp& operator=(ctThreadIocp&& rhs) NOEXCEPT
+		ctThreadIocp& operator=(ctThreadIocp&& rhs) noexcept
 		{
 			ptp_io = rhs.ptp_io;
 			// null out the moved-from object's TP ptr since this object now has ownership
@@ -186,7 +185,7 @@ namespace ctl
 		// This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
 		// - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
 		//
-		void cancel_request(OVERLAPPED* _pov) const NOEXCEPT
+		void cancel_request(OVERLAPPED* _pov) const noexcept
 		{
 			::CancelThreadpoolIo(ptp_io);
 			const auto old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);

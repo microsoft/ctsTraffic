@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 // local headers
@@ -26,11 +25,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSocketGuard.hpp"
 
-
 namespace ctsTraffic {
 
     /// forward delcaration
-    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ///
     /// IO Threadpool completion callback 
@@ -38,7 +36,7 @@ namespace ctsTraffic {
     static void ctsReadWriteIocpIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctsIOTask& _io_task) NOEXCEPT
+        const ctsIOTask& _io_task) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -51,7 +49,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // lock the socket just long enough to read the result
         {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
@@ -102,7 +100,7 @@ namespace ctsTraffic {
     ///
     /// The registered function with ctsConfig
     ///
-    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // must get a reference to the socket and the IO pattern
         auto shared_socket(_weak_socket.lock());
@@ -118,7 +116,7 @@ namespace ctsTraffic {
         int io_error = NO_ERROR;
 
         // lock the socket while doing IO
-        auto socket_lock(ctsGuardSocket(shared_socket));
+        const auto socket_lock(ctsGuardSocket(shared_socket));
         SOCKET socket = socket_lock.get();
         if (socket != INVALID_SOCKET) {
             // loop until failure or initiate_io returns None
@@ -154,7 +152,7 @@ namespace ctsTraffic {
                         // these are the only calls which can throw in this function
                         io_thread_pool = shared_socket->thread_pool();
                         pov = io_thread_pool->new_request(
-                            [_weak_socket, next_io](OVERLAPPED* _ov) NOEXCEPT
+                            [_weak_socket, next_io](OVERLAPPED* _ov) noexcept
                         { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                     }
                     catch (const std::exception& e) {

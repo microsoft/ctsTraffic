@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctTimer.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 #include <utility>
 // project headers
 #include "ctsMediaStreamServerConnectedSocket.h"
@@ -55,7 +54,7 @@ namespace ctsTraffic {
         }
     }
 
-    ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() NOEXCEPT
+    ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() noexcept
     {
         // stop the TP before deleting the CS
         ::SetThreadpoolTimer(task_timer, nullptr, 0, 0);
@@ -66,39 +65,39 @@ namespace ctsTraffic {
     }
 
     _Acquires_lock_(object_guard)
-    void ctsMediaStreamServerConnectedSocket::lock_socket() const NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::lock_socket() const noexcept
     {
         ::EnterCriticalSection(&object_guard);
     }
 
     _Releases_lock_(object_guard)
-    void ctsMediaStreamServerConnectedSocket::unlock_socket() const NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::unlock_socket() const noexcept
     {
         ::LeaveCriticalSection(&object_guard);
     }
 
-    const ctSockaddr& ctsMediaStreamServerConnectedSocket::get_address() const NOEXCEPT
+    const ctSockaddr& ctsMediaStreamServerConnectedSocket::get_address() const noexcept
     {
         return remote_addr;
     }
 
-    long long ctsMediaStreamServerConnectedSocket::get_startTime() const NOEXCEPT
+    long long ctsMediaStreamServerConnectedSocket::get_startTime() const noexcept
     {
         return connect_time;
     }
 
-    ctsIOTask ctsMediaStreamServerConnectedSocket::get_nextTask() const NOEXCEPT
+    ctsIOTask ctsMediaStreamServerConnectedSocket::get_nextTask() const noexcept
     {
         const ctAutoReleaseCriticalSection object_lock(&object_guard);
         return next_task;
     }
 
-    long long ctsMediaStreamServerConnectedSocket::increment_sequence() NOEXCEPT
+    long long ctsMediaStreamServerConnectedSocket::increment_sequence() noexcept
     {
         return ctMemoryGuardIncrement(&sequence_number);
     }
     
-    void ctsMediaStreamServerConnectedSocket::schedule_task(const ctsIOTask& _task) NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::schedule_task(const ctsIOTask& _task) noexcept
     {
         const auto shared_socket(this->weak_socket.lock());
         if (shared_socket) {
@@ -118,7 +117,7 @@ namespace ctsTraffic {
         }
     }
 
-    void ctsMediaStreamServerConnectedSocket::complete_state(unsigned long _error_code) const NOEXCEPT
+    void ctsMediaStreamServerConnectedSocket::complete_state(unsigned long _error_code) const noexcept
     {
         std::shared_ptr<ctsSocket> shared_socket(this->weak_socket);
         if (shared_socket) {
@@ -126,7 +125,7 @@ namespace ctsTraffic {
         }
     }
         
-    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) NOEXCEPT
+    VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) noexcept
     {
         auto this_ptr = static_cast<ctsMediaStreamServerConnectedSocket*>(_context);
 

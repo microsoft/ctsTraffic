@@ -19,17 +19,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 #include <string>
 #include <vector>
-
 // os headers
 #include <Windows.h>
 #include <Objbase.h>
 #include <OleAuto.h>
-
 // local headers
 #include "ctException.hpp"
 #include "ctScopeGuard.hpp"
-#include "ctVersionConversion.hpp"
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,7 +88,7 @@ namespace ctl
 			}
 		}
 
-		~ctComInitialize() NOEXCEPT
+		~ctComInitialize() noexcept
 		{
 			if (uninit_required) {
 				::CoUninitialize();
@@ -167,14 +163,14 @@ namespace ctl
 		////////////////////////////////////////////////////////////////////////////////
 		ctComPtr() = default;
 
-		explicit ctComPtr(_In_opt_ T* _t) NOEXCEPT : t(_t)
+		explicit ctComPtr(_In_opt_ T* _t) noexcept : t(_t)
 		{
 			if (t) {
 				t->AddRef();
 			}
 		}
 
-		~ctComPtr() NOEXCEPT
+		~ctComPtr() noexcept
 		{
 			release();
 		}
@@ -186,14 +182,14 @@ namespace ctl
 		/// All are no-throw/no-fail operations
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComPtr(const ctComPtr& _obj) NOEXCEPT : t(_obj.t)
+		ctComPtr(const ctComPtr& _obj) noexcept : t(_obj.t)
 		{
 			if (t) {
 				t->AddRef();
 			}
 		}
 
-		ctComPtr& operator =(const ctComPtr& _obj) NOEXCEPT
+		ctComPtr& operator =(const ctComPtr& _obj) noexcept
 		{
 			ctComPtr copy(_obj);
 			this->swap(copy);
@@ -207,13 +203,13 @@ namespace ctl
 		/// All are no-throw/no-fail operations
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComPtr(ctComPtr&& _obj) NOEXCEPT
+		ctComPtr(ctComPtr&& _obj) noexcept
 		{
 			// initialized to nullptr ... swap with the [in] object
 			this->swap(_obj);
 		}
 
-		ctComPtr& operator =(ctComPtr&& _obj) NOEXCEPT
+		ctComPtr& operator =(ctComPtr&& _obj) noexcept
 		{
 			ctComPtr temp(std::move(_obj));
 			this->swap(temp);
@@ -229,12 +225,12 @@ namespace ctl
 		/// All are no-throw/no-fail operations
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		bool operator ==(const ctComPtr& _obj) const NOEXCEPT
+		bool operator ==(const ctComPtr& _obj) const noexcept
 		{
 			return t == _obj.t;
 		}
 
-		bool operator !=(const ctComPtr& _obj) const NOEXCEPT
+		bool operator !=(const ctComPtr& _obj) const noexcept
 		{
 			return t != _obj.t;
 		}
@@ -252,7 +248,7 @@ namespace ctl
 		/// A no-throw/no-fail operation
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void set(const T* _ptr) NOEXCEPT
+		void set(const T* _ptr) noexcept
 		{
 			release();
 			t = _ptr;
@@ -286,38 +282,38 @@ namespace ctl
 		/// All are no-throw/no-fail operations
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		T* operator ->() NOEXCEPT
+		T* operator ->() noexcept
 		{
 			return t;
 		}
 
-		const T* operator ->() const NOEXCEPT
+		const T* operator ->() const noexcept
 		{
 			return t;
 		}
 
-		T* get() NOEXCEPT
+		T* get() noexcept
 		{
 			return t;
 		}
 
-		const T* get() const NOEXCEPT
+		const T* get() const noexcept
 		{
 			return t;
 		}
 
-		T** get_addr_of() NOEXCEPT
+		T** get_addr_of() noexcept
 		{
 			release();
 			return (&t);
 		}
 
-		IUnknown* get_IUnknown() NOEXCEPT
+		IUnknown* get_IUnknown() noexcept
 		{
 			return t;
 		}
 
-		const IUnknown* get_IUnknown() const NOEXCEPT
+		const IUnknown* get_IUnknown() const noexcept
 		{
 			return t;
 		}
@@ -332,7 +328,7 @@ namespace ctl
 		/// A no-throw/no-fail operation
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void release() NOEXCEPT
+		void release() noexcept
 		{
 			if (t) {
 				t->Release();
@@ -347,7 +343,7 @@ namespace ctl
 		/// A no-fail swap() operator to safely swap the internal values of 2 objects
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void swap(ctComPtr& _in) NOEXCEPT
+		void swap(ctComPtr& _in) noexcept
 		{
 			using std::swap;
 			swap(t, _in.t);
@@ -368,7 +364,7 @@ namespace ctl
 	///
 	////////////////////////////////////////////////////////////////////////////////
 	template <typename T>
-	void swap(ctComPtr<T>& _lhs, ctComPtr<T>& _rhs) NOEXCEPT
+	void swap(ctComPtr<T>& _lhs, ctComPtr<T>& _rhs) noexcept
 	{
 		_lhs.swap(_rhs);
 	}
@@ -393,7 +389,7 @@ namespace ctl
 		/// - on failure, will throw std::bad_alloc (derived from std::exception)
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComBstr() NOEXCEPT = default;
+		ctComBstr() noexcept = default;
 
 		explicit ctComBstr(_In_opt_ LPCWSTR _string)
 		{
@@ -425,7 +421,7 @@ namespace ctl
 			}
 		}
 
-		~ctComBstr() NOEXCEPT
+		~ctComBstr() noexcept
 		{
 			SysFreeString(bstr);
 		}
@@ -447,12 +443,12 @@ namespace ctl
 			return *this;
 		}
 
-		ctComBstr(ctComBstr&& _obj) NOEXCEPT
+		ctComBstr(ctComBstr&& _obj) noexcept
 		{
 			this->swap(_obj);
 		}
 
-		ctComBstr& operator =(ctComBstr&& _obj) NOEXCEPT
+		ctComBstr& operator =(ctComBstr&& _obj) noexcept
 		{
 			auto temp(std::move(_obj));
 			this->swap(temp);
@@ -466,7 +462,7 @@ namespace ctl
 		/// retrieve and modify the internal size of the buffer containing the string
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		size_t size() const NOEXCEPT
+		size_t size() const noexcept
 		{
 			// if bstr is nullptr, will return zero
 			return SysStringLen(bstr);
@@ -493,7 +489,7 @@ namespace ctl
 		/// explicit BSTR access methods
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void reset() NOEXCEPT
+		void reset() noexcept
 		{
 			::SysFreeString(bstr);
 			bstr = nullptr;
@@ -511,24 +507,24 @@ namespace ctl
 			this->swap(temp);
 		}
 
-		BSTR get() NOEXCEPT
+		BSTR get() noexcept
 		{
 			return bstr;
 		}
 
-		BSTR get() const NOEXCEPT
+		BSTR get() const noexcept
 		{
 			return bstr;
 		}
 
-		BSTR* get_addr_of() NOEXCEPT
+		BSTR* get_addr_of() noexcept
 		{
 			::SysFreeString(bstr);
 			bstr = nullptr;
 			return &bstr;
 		}
 
-		LPCWSTR c_str() const NOEXCEPT
+		LPCWSTR c_str() const noexcept
 		{
 			return static_cast<LPCWSTR>(bstr);
 		}
@@ -540,7 +536,7 @@ namespace ctl
 		/// A no-fail swap() operator to safely swap the internal values of 2 objects
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void swap(_Inout_ ctComBstr& _in) NOEXCEPT
+		void swap(_Inout_ ctComBstr& _in) noexcept
 		{
 			using std::swap;
 			swap(bstr, _in.bstr);
@@ -560,7 +556,7 @@ namespace ctl
 	/// swap(bstr1, bstr2);
 	///
 	////////////////////////////////////////////////////////////////////////////////
-	inline void swap(_Inout_ ctComBstr& _lhs, _Inout_ ctComBstr& _rhs) NOEXCEPT
+	inline void swap(_Inout_ ctComBstr& _lhs, _Inout_ ctComBstr& _rhs) noexcept
 	{
 		_lhs.swap(_rhs);
 	}
@@ -736,7 +732,7 @@ namespace ctl
 		///  input type, streamlining coding requirements from the caller.
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		ctComVariant() NOEXCEPT
+		ctComVariant() noexcept
 		{
 			::VariantInit(&variant);
 		}
@@ -750,7 +746,7 @@ namespace ctl
 			}
 		}
 
-		~ctComVariant() NOEXCEPT
+		~ctComVariant() noexcept
 		{
 			::VariantClear(&variant);
 		}
@@ -771,13 +767,13 @@ namespace ctl
 			return *this;
 		}
 
-		ctComVariant(ctComVariant&& _copy) NOEXCEPT
+		ctComVariant(ctComVariant&& _copy) noexcept
 		{
 			::VariantInit(&variant);
 			this->swap(_copy);
 		}
 
-		ctComVariant& operator =(ctComVariant&& _copy) NOEXCEPT
+		ctComVariant& operator =(ctComVariant&& _copy) noexcept
 		{
 			auto temp(std::move(_copy));
 			this->swap(temp);
@@ -791,7 +787,7 @@ namespace ctl
 		/// explicit VARIANT access methods
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void reset() NOEXCEPT
+		void reset() noexcept
 		{
 			::VariantClear(&variant);
 			// reinitialize in case someone wants to immediately reuse
@@ -804,22 +800,22 @@ namespace ctl
 			this->swap(temp);
 		}
 
-		VARIANT* operator->() NOEXCEPT
+		VARIANT* operator->() noexcept
 		{
 			return &variant;
 		}
 
-		const VARIANT* operator->() const NOEXCEPT
+		const VARIANT* operator->() const noexcept
 		{
 			return &variant;
 		}
 
-		VARIANT* get() NOEXCEPT
+		VARIANT* get() noexcept
 		{
 			return &variant;
 		}
 
-		const VARIANT* get() const NOEXCEPT
+		const VARIANT* get() const noexcept
 		{
 			return &variant;
 		}
@@ -831,24 +827,24 @@ namespace ctl
 		/// all are const no-throw
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void set_empty() NOEXCEPT
+		void set_empty() noexcept
 		{
 			reset();
 			variant.vt = VT_EMPTY;
 		}
 
-		void set_null() NOEXCEPT
+		void set_null() noexcept
 		{
 			reset();
 			variant.vt = VT_NULL;
 		}
 
-		bool is_empty() const NOEXCEPT
+		bool is_empty() const noexcept
 		{
 			return variant.vt == VT_EMPTY;
 		}
 
-		bool is_null() const NOEXCEPT
+		bool is_null() const noexcept
 		{
 			return variant.vt == VT_NULL;
 		}
@@ -860,7 +856,7 @@ namespace ctl
 		/// A no-fail swap() operator to safely swap the internal values of 2 objects
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void swap(_Inout_ ctComVariant& _in) NOEXCEPT
+		void swap(_Inout_ ctComVariant& _in) noexcept
 		{
 			using std::swap;
 			swap(variant, _in.variant);
@@ -871,7 +867,7 @@ namespace ctl
 		/// comparison operators
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		bool operator ==(const ctComVariant& _in) const NOEXCEPT
+		bool operator ==(const ctComVariant& _in) const noexcept
 		{
 			if (variant.vt == VT_NULL) {
 				return _in.variant.vt == VT_NULL;
@@ -988,7 +984,7 @@ namespace ctl
 			return lhs == rhs;
 		}
 
-		bool operator !=(const ctComVariant& _in) const NOEXCEPT
+		bool operator !=(const ctComVariant& _in) const noexcept
 		{
 			return !(*this == _in);
 		}
@@ -1003,7 +999,7 @@ namespace ctl
 		{
 			static const unsigned IntegerLength = 32;
 			ctComBstr bstr;
-			const unsigned int_radix = _int_in_hex ? 16 : 10;
+			const int int_radix = _int_in_hex ? 16 : 10;
 
 			switch (variant.vt) {
 				case VT_EMPTY:
@@ -1179,7 +1175,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		template <typename T>
-		ctComVariant& assign(ctComPtr<T> _t) NOEXCEPT
+		ctComVariant& assign(ctComPtr<T> _t) noexcept
 		{
 			ctComVariant temp;
 			temp.assign_impl(_t);
@@ -1766,79 +1762,79 @@ namespace ctl
 	private:
 		VARIANT variant{};
 
-		void assign_impl(bool _value) NOEXCEPT
+		void assign_impl(bool _value) noexcept
 		{
 			variant.boolVal = _value ? VARIANT_TRUE : VARIANT_FALSE;
 			variant.vt = VT_BOOL;
 		}
 
-		void assign_impl(signed char _value) NOEXCEPT
+		void assign_impl(signed char _value) noexcept
 		{
 			variant.cVal = _value;
 			variant.vt = VT_I1;
 		}
 
-		void assign_impl(unsigned char _value) NOEXCEPT
+		void assign_impl(unsigned char _value) noexcept
 		{
 			variant.bVal = _value; // BYTE == unsigned char
 			variant.vt = VT_UI1;
 		}
 
-		void assign_impl(signed short _value) NOEXCEPT
+		void assign_impl(signed short _value) noexcept
 		{
 			variant.iVal = _value;
 			variant.vt = VT_I2;
 		}
 
-		void assign_impl(unsigned short _value) NOEXCEPT
+		void assign_impl(unsigned short _value) noexcept
 		{
 			variant.uiVal = _value;
 			variant.vt = VT_UI2;
 		}
 
-		void assign_impl(signed long _value) NOEXCEPT
+		void assign_impl(signed long _value) noexcept
 		{
 			variant.lVal = _value;
 			variant.vt = VT_I4;
 		}
 
-		void assign_impl(unsigned long _value) NOEXCEPT
+		void assign_impl(unsigned long _value) noexcept
 		{
 			variant.ulVal = _value;
 			variant.vt = VT_UI4;
 		}
 
-		void assign_impl(signed int _value) NOEXCEPT
+		void assign_impl(signed int _value) noexcept
 		{
 			variant.intVal = _value;
 			variant.vt = VT_INT;
 		}
 
-		void assign_impl(unsigned int _value) NOEXCEPT
+		void assign_impl(unsigned int _value) noexcept
 		{
 			variant.uintVal = _value;
 			variant.vt = VT_UINT;
 		}
 
-		void assign_impl(signed long long _value) NOEXCEPT
+		void assign_impl(signed long long _value) noexcept
 		{
 			variant.llVal = _value;
 			variant.vt = VT_I8;
 		}
 
-		void assign_impl(unsigned long long _value) NOEXCEPT
+		void assign_impl(unsigned long long _value) noexcept
 		{
 			variant.ullVal = _value;
 			variant.vt = VT_UI8;
 		}
 
-		void assign_impl(float _value) NOEXCEPT
+		void assign_impl(float _value) noexcept
 		{
 			variant.fltVal = _value;
 			variant.vt = VT_R4;
 		}
 
-		void assign_impl(double _value) NOEXCEPT
+		void assign_impl(double _value) noexcept
 		{
 			variant.dblVal = _value;
 			variant.vt = VT_R8;
@@ -1980,7 +1976,7 @@ namespace ctl
 		}
 
 		template <typename T>
-		void assign_impl(ctComPtr<T>& _value) NOEXCEPT
+		void assign_impl(ctComPtr<T>& _value) noexcept
 		{
 			variant.punkVal = _value.get_IUnknown();
 			variant.punkVal->AddRef();
@@ -2041,7 +2037,7 @@ namespace ctl
 	/// swap(var1, var2);
 	///
 	////////////////////////////////////////////////////////////////////////////////
-	inline void swap(_Inout_ ctComVariant& _lhs, _Inout_ ctComVariant& _rhs) NOEXCEPT
+	inline void swap(_Inout_ ctComVariant& _lhs, _Inout_ ctComVariant& _rhs) noexcept
 	{
 		_lhs.swap(_rhs);
 	}
@@ -2059,12 +2055,12 @@ namespace ctl
 	{
 		namespace _detail
 		{
-			inline _Ret_z_ const wchar_t* convert_to_ptr(const ctComBstr& source)  NOEXCEPT
+			inline _Ret_z_ const wchar_t* convert_to_ptr(const ctComBstr& source)  noexcept
 			{
 				return source.c_str();
 			}
 
-			inline size_t get_string_length(const ctComBstr& source)  NOEXCEPT
+			inline size_t get_string_length(const ctComBstr& source)  noexcept
 			{
 				return source.size();
 			}

@@ -13,10 +13,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// ctl headers
-#include <ctVersionConversion.hpp>
-
-
 namespace ctsTraffic {
 
     typedef struct ctsIOPatternAllocationTypeStatic_t   ctsIOPatternAllocationTypeStatic;
@@ -30,8 +26,8 @@ namespace ctsTraffic {
     class ctsIOPatternBufferPolicy
     {
     public:
-        char* get_buffer(size_t _size) NOEXCEPT;
-        bool  verify_buffer(const char* _buffer) NOEXCEPT;
+        char* get_buffer(size_t _size) noexcept;
+        bool  verify_buffer(const char* _buffer) noexcept;
     };
 
 

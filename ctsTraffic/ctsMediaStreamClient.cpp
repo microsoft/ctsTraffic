@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <WinSock2.h>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 // project headers
 #include "ctsMediaStreamClient.h"
@@ -30,12 +29,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsMediaStreamProtocol.hpp"
 
-
 namespace ctsTraffic {
 
     struct IoImplStatus
     {
-        unsigned long error_code = 0;
+        int error_code = 0;
         bool continue_io = false;
     };
 
@@ -46,19 +44,19 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IoImplStatus ctsMediaStreamClientIoImpl(
         const std::shared_ptr<ctsSocket>& _shared_socket,
-        const ctsIOTask& _next_io) NOEXCEPT;
+        const ctsIOTask& _next_io) noexcept;
 
     void ctsMediaStreamClientIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctsIOTask& _io_task
-        ) NOEXCEPT;
+        ) noexcept;
 
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctl::ctSockaddr& _target_address
-        ) NOEXCEPT;
+        ) noexcept;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -66,7 +64,7 @@ namespace ctsTraffic {
     /// - with the specified ctsSocket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -79,7 +77,7 @@ namespace ctsTraffic {
         // always register our ctsIOPattern callback since it's necessary for this IO Pattern
         // this callback can be invoked out-of-band directly from the IO Pattern class
         shared_pattern->register_callback(
-            [_weak_socket] (const ctsIOTask& _task) NOEXCEPT {
+            [_weak_socket] (const ctsIOTask& _task) noexcept {
             // attempt to get a reference to the socket
             auto lambda_shared_socket(_weak_socket.lock());
             if (!lambda_shared_socket) {
@@ -132,7 +130,7 @@ namespace ctsTraffic {
     /// using IO Completion Ports
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -142,7 +140,7 @@ namespace ctsTraffic {
 
         // scope to lock
         {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
@@ -164,12 +162,12 @@ namespace ctsTraffic {
         const auto response = ctsWSASendTo(
             shared_socket,
             start_task,
-            [_weak_socket, targetAddress] (OVERLAPPED* ov) NOEXCEPT {
+            [_weak_socket, targetAddress] (OVERLAPPED* ov) noexcept {
             ctsMediaStreamClientConnectionCompletionCallback(ov, _weak_socket, targetAddress);
         });
 
         if (NO_ERROR == response.error_code) {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 shared_socket->complete_state(WSAECONNABORTED);
@@ -177,7 +175,7 @@ namespace ctsTraffic {
             }
 
             // set the local and remote addresses on the socket object
-            ctl::ctSockaddr local_addr;
+            const ctl::ctSockaddr local_addr;
             auto local_addr_len = local_addr.length();
             if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
                 shared_socket->set_local_address(local_addr);
@@ -207,7 +205,7 @@ namespace ctsTraffic {
     /// implementation of processing a ctsIOTask
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    IoImplStatus ctsMediaStreamClientIoImpl(const std::shared_ptr<ctsSocket>& _shared_socket, const ctsIOTask& _next_io) NOEXCEPT
+    IoImplStatus ctsMediaStreamClientIoImpl(const std::shared_ptr<ctsSocket>& _shared_socket, const ctsIOTask& _next_io) noexcept
     {
         IoImplStatus return_status;
 
@@ -215,8 +213,8 @@ namespace ctsTraffic {
             case IOTaskAction::Send: // fall-through
             case IOTaskAction::Recv: {
                 // add-ref the IO about to start
-                LONG io_count = _shared_socket->increment_io();
-                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) NOEXCEPT {
+                (void) _shared_socket->increment_io();
+                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) noexcept {
                     ctsMediaStreamClientIoCompletionCallback(_ov, weak_reference, _next_io);
                 };
 
@@ -279,7 +277,7 @@ namespace ctsTraffic {
                     }
 
                     // decrement the IO count if failed and/or inlined-completed
-                    io_count = _shared_socket->decrement_io();
+                    const auto io_count = _shared_socket->decrement_io();
                     // IO count should never be zero: callers should be guaranteeing a refcount before calling Impl
                     ctl::ctFatalCondition(
                         0 == io_count,
@@ -337,7 +335,7 @@ namespace ctsTraffic {
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctsIOTask& _io_task
-        ) NOEXCEPT
+        ) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -348,7 +346,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scope to the socket lock
         {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (socket != INVALID_SOCKET) {
                 DWORD flags;
@@ -423,7 +421,7 @@ namespace ctsTraffic {
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctl::ctSockaddr& _target_address
-        ) NOEXCEPT
+        ) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -434,7 +432,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scope to the socket lock
         {
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            const auto socket_lock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socket_lock.get();
             if (INVALID_SOCKET == socket) {
                 gle = WSAECONNABORTED;
@@ -449,7 +447,7 @@ namespace ctsTraffic {
 
             if (NO_ERROR == gle) {
                 // set the local and remote addr's
-                ctl::ctSockaddr local_addr;
+                const ctl::ctSockaddr local_addr;
                 int local_addr_len = local_addr.length();
                 if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
                     shared_socket->set_local_address(local_addr);

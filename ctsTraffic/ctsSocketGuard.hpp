@@ -15,9 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <WinSock2.h>
-// ctl headers
-#include <ctVersionConversion.hpp>
-
 
 namespace ctsTraffic {
     //
@@ -39,7 +36,7 @@ namespace ctsTraffic {
     class ctsSocketGuard;
 
     template <typename T>
-    static ctsSocketGuard<T> ctsGuardSocket(const T& _t) NOEXCEPT
+    static ctsSocketGuard<T> ctsGuardSocket(const T& _t) noexcept
     {
         return ctsSocketGuard<T>(_t);
     }
@@ -49,7 +46,7 @@ namespace ctsTraffic {
     {
     public:
         // _Releases_lock_
-        ~ctsSocketGuard() NOEXCEPT
+        ~ctsSocketGuard() noexcept
         {
             // will be null if moved-from
             if (!movedFrom) {
@@ -58,14 +55,14 @@ namespace ctsTraffic {
         }
 
         // movable
-        ctsSocketGuard(ctsSocketGuard&& _rvalue) NOEXCEPT
+        ctsSocketGuard(ctsSocketGuard&& _rvalue) noexcept
         : t(std::move(_rvalue.t)), movedFrom(false)
         {
             _rvalue.movedFrom = true;
         }
-        ctsSocketGuard& operator=(ctsSocketGuard&& _rvalue) NOEXCEPT = delete;
+        ctsSocketGuard& operator=(ctsSocketGuard&& _rvalue) noexcept = delete;
 
-        SOCKET get() const NOEXCEPT
+        SOCKET get() const noexcept
         {
             return t->socket;
         }
@@ -78,7 +75,7 @@ namespace ctsTraffic {
 
     private:
         template <typename G>
-        friend ctsSocketGuard<G> ctsGuardSocket(const G&) NOEXCEPT;
+        friend ctsSocketGuard<G> ctsGuardSocket(const G&) noexcept;
 
         const T& t;
         // tracking moved from by hand, as we cannot modify the const ref
@@ -86,7 +83,7 @@ namespace ctsTraffic {
 
         // private c'tor guarded by the factory function
         // _Acquires_lock_
-        explicit ctsSocketGuard(const T& _t) NOEXCEPT 
+        explicit ctsSocketGuard(const T& _t) noexcept 
         : t(_t), movedFrom(false)
         {
             t->lock_socket();

@@ -15,11 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// ctl headers
-#include <ctVersionConversion.hpp>
 // local headers
 #include "ctsSocket.h"
-
 
 namespace ctsTraffic {
 
@@ -29,7 +26,7 @@ namespace ctsTraffic {
     /// - with the specified ctsSocket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -37,6 +34,6 @@ namespace ctsTraffic {
     /// using IO Completion Ports
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
 } // namespace

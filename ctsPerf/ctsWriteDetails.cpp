@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsWriteDetails.h"
 
 // cpp headers
-#include <cstdio>
 #include <string>
 
 // os headers

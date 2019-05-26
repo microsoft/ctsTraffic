@@ -122,14 +122,14 @@ namespace ctsPerf {
         ctsWriteDetails(const ctsWriteDetails&) = delete;
         ctsWriteDetails& operator=(const ctsWriteDetails&) = delete;
 
-        ctsWriteDetails(ctsWriteDetails&& rhs) NOEXCEPT
+        ctsWriteDetails(ctsWriteDetails&& rhs) noexcept
         : file_name(std::move(rhs.file_name)),
           file_handle(rhs.file_handle)
         {
             // don't let the moved-from object close the handle
             rhs.file_handle = INVALID_HANDLE_VALUE;
         }
-        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) NOEXCEPT
+        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) noexcept
         {
             if (file_handle != INVALID_HANDLE_VALUE) {
                 ::CloseHandle(file_handle);
@@ -160,10 +160,10 @@ namespace ctsPerf {
 
             start_row(_class_name, _counter_name);
 
-            std::wstring formatted_data(PrintDetails(_data));
-            const auto length = static_cast<DWORD>(formatted_data.length() * sizeof(wchar_t));
+            const std::wstring formattedData(PrintDetails(_data));
+            const auto length = static_cast<DWORD>(formattedData.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, formatted_data.c_str(), length, &written, nullptr)) {
+            if (!::WriteFile(file_handle, formattedData.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
@@ -181,7 +181,7 @@ namespace ctsPerf {
             // [0] == count
             // [1] == first
             // [2] == last
-            std::wstring difference = details::write(_data[0], _data[2] - _data[1]);
+            const std::wstring difference = details::write(_data[0], _data[2] - _data[1]);
             const auto length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
             DWORD written;
             if (!::WriteFile(file_handle, difference.c_str(), length, &written, nullptr)) {
@@ -204,10 +204,10 @@ namespace ctsPerf {
             // [1] == min
             // [2] == max
             // [3] == mean
-            std::wstring mean_string = details::write(_data[0], _data[1]) + details::write(_data[2], _data[3]);
-            const auto length = static_cast<DWORD>(mean_string.length() * sizeof(wchar_t));
+            const std::wstring meanString = details::write(_data[0], _data[1]) + details::write(_data[2], _data[3]);
+            const auto length = static_cast<DWORD>(meanString.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, mean_string.c_str(), length, &written, nullptr)) {
+            if (!::WriteFile(file_handle, meanString.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 

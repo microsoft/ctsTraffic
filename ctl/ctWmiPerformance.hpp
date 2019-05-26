@@ -200,7 +200,7 @@ namespace ctl {
 
             ctWmiPerformanceDataAccessor(ctComPtr<IWbemConfigureRefresher> _config, LPCWSTR _classname);
 
-            ~ctWmiPerformanceDataAccessor() NOEXCEPT
+            ~ctWmiPerformanceDataAccessor() noexcept
             {
                 clear();
             }
@@ -210,11 +210,11 @@ namespace ctl {
             ///
             void refresh();
 
-            access_iterator begin() const NOEXCEPT
+            access_iterator begin() const noexcept
             {
                 return accessor_objects.cbegin();
             }
-            access_iterator end() const NOEXCEPT
+            access_iterator end() const noexcept
             {
                 return accessor_objects.cend();
             }
@@ -224,7 +224,7 @@ namespace ctl {
             ctWmiPerformanceDataAccessor& operator=(const ctWmiPerformanceDataAccessor&) = delete;
 
             // movable
-            ctWmiPerformanceDataAccessor(ctWmiPerformanceDataAccessor&& rhs) NOEXCEPT :
+            ctWmiPerformanceDataAccessor(ctWmiPerformanceDataAccessor&& rhs) noexcept :
                 enumeration_object(std::move(rhs.enumeration_object)),
                 accessor_objects(std::move(rhs.accessor_objects)),
                 current_iterator(std::move(rhs.current_iterator))
@@ -234,7 +234,7 @@ namespace ctl {
                 rhs.accessor_objects.clear();
                 rhs.current_iterator = rhs.accessor_objects.end();
             }
-            ctWmiPerformanceDataAccessor& operator=(ctWmiPerformanceDataAccessor&& rhs) NOEXCEPT
+            ctWmiPerformanceDataAccessor& operator=(ctWmiPerformanceDataAccessor&& rhs) noexcept
             {
                 enumeration_object = std::move(rhs.enumeration_object);
                 accessor_objects = std::move(rhs.accessor_objects);
@@ -253,7 +253,7 @@ namespace ctl {
             std::vector<TAccess*> accessor_objects;
             access_iterator current_iterator;
 
-            void clear() NOEXCEPT;
+            void clear() noexcept;
         };
 
         inline
@@ -299,7 +299,7 @@ namespace ctl {
                     true);
             }
 
-            auto instance = *enum_instances.begin();
+            const auto instance = *enum_instances.begin();
             LONG lid;
             const auto hr = _config->AddObjectByTemplate(
                 wmi.get(),
@@ -362,7 +362,7 @@ namespace ctl {
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() NOEXCEPT
+        inline void ctWmiPerformanceDataAccessor<IWbemHiPerfEnum, IWbemObjectAccess>::clear() noexcept
         {
             for (IWbemObjectAccess* _object : accessor_objects) {
                 _object->Release();
@@ -372,7 +372,7 @@ namespace ctl {
         }
 
         template <>
-        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() NOEXCEPT
+        inline void ctWmiPerformanceDataAccessor<IWbemClassObject, IWbemClassObject>::clear() noexcept
         {
             current_iterator = accessor_objects.end();
         }
@@ -455,7 +455,7 @@ namespace ctl {
                 }
             }
 
-            typename std::vector<T>::const_iterator access_begin() NOEXCEPT
+            typename std::vector<T>::const_iterator access_begin() noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 // when accessing data, calculate the mean
@@ -465,7 +465,7 @@ namespace ctl {
                 return counter_data.cbegin();
             }
 
-            typename std::vector<T>::const_iterator access_end() const NOEXCEPT
+            typename std::vector<T>::const_iterator access_end() const noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return counter_data.cend();
@@ -520,14 +520,14 @@ namespace ctl {
                         true);
                 }
             }
-            ~ctWmiPeformanceCounterData() NOEXCEPT
+            ~ctWmiPeformanceCounterData() noexcept
             {
                 ::DeleteCriticalSection(&guard_data);
             }
 
             /// _instance_name == nullptr means match everything
             /// - allows for the caller to not have to pass Name filters multiple times
-            bool match(_In_opt_ LPCWSTR _instance_name) const NOEXCEPT
+            bool match(_In_opt_ LPCWSTR _instance_name) const noexcept
             {
                 if (nullptr == _instance_name) {
                     return true;
@@ -563,24 +563,24 @@ namespace ctl {
                 add_data(value.retrieve(&instance_data));
             }
 
-            typename std::vector<T>::const_iterator begin() NOEXCEPT
+            typename std::vector<T>::const_iterator begin() noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_begin();
             }
-            typename std::vector<T>::const_iterator end() const NOEXCEPT
+            typename std::vector<T>::const_iterator end() const noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_end();
             }
 
-            size_t count() NOEXCEPT
+            size_t count() noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 return access_end() - access_begin();
             }
 
-            void clear() NOEXCEPT
+            void clear() noexcept
             {
                 const ctAutoReleaseCriticalSection auto_guard(&guard_data);
                 counter_data.clear();
@@ -713,12 +713,12 @@ namespace ctl {
             bool is_empty;
 
         public:
-            explicit iterator(typename std::vector<T>::const_iterator && _instance) NOEXCEPT
+            explicit iterator(typename std::vector<T>::const_iterator && _instance) noexcept
             : current(std::move(_instance)),
               is_empty(false)
             {
             }
-            iterator() NOEXCEPT : current(), is_empty(true)
+            iterator() noexcept : current(), is_empty(true)
             {
             }
             ~iterator() = default;
@@ -729,24 +729,24 @@ namespace ctl {
             /// move c'tor and move assignment
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            iterator(iterator&& _i) NOEXCEPT
+            iterator(iterator&& _i) noexcept
             : current(std::move(_i.current)),
               is_empty(std::move(_i.is_empty))
             {
             }
-            iterator& operator =(iterator&& _i) NOEXCEPT
+            iterator& operator =(iterator&& _i) noexcept
             {
                 current = std::move(_i.current);
                 is_empty = std::move(_i.is_empty);
                 return *this;
             }
 
-            iterator(const iterator& _i) NOEXCEPT
+            iterator(const iterator& _i) noexcept
             : current(_i.current),
               is_empty(_i.is_empty)
             {
             }
-            iterator& operator =(const iterator& i) NOEXCEPT
+            iterator& operator =(const iterator& i) noexcept
             {
                 iterator local_copy(i);
                 *this = std::move(local_copy);
@@ -771,14 +771,14 @@ namespace ctl {
             }
             */
 
-            bool operator==(const iterator& _iter) const NOEXCEPT
+            bool operator==(const iterator& _iter) const noexcept
             {
                 if (is_empty || _iter.is_empty) {
                     return (is_empty == _iter.is_empty);
                 }
                 return (current == _iter.current);
             }
-            bool operator!=(const iterator& _iter) const NOEXCEPT
+            bool operator!=(const iterator& _iter) const noexcept
             {
                 return !(*this == _iter);
             }
@@ -828,7 +828,7 @@ namespace ctl {
             ::InitializeCriticalSectionEx(&guard_counter_data, 4000, 0);
         }
 
-        virtual ~ctWmiPerformanceCounter() NOEXCEPT
+        virtual ~ctWmiPerformanceCounter() noexcept
         {
             ::DeleteCriticalSection(&guard_counter_data);
         }
@@ -983,7 +983,7 @@ namespace ctl {
         //
         // the derived classes need to use the same refresher object
         //
-        ctComPtr<IWbemConfigureRefresher> access_refresher() const NOEXCEPT
+        ctComPtr<IWbemConfigureRefresher> access_refresher() const noexcept
         {
             return configure_refresher;
         }
@@ -1014,7 +1014,7 @@ namespace ctl {
                 auto tracked_instance = std::find_if(
                     std::begin(counter_data),
                     std::end(counter_data),
-                    [&] (std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _counter_data) NOEXCEPT {
+                    [&] (std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _counter_data) noexcept {
                     return _counter_data->match(instance_name->bstrVal);
                 });
 
@@ -1122,7 +1122,7 @@ namespace ctl {
             }
         }
 
-        virtual ~ctWmiPerformance() NOEXCEPT
+        virtual ~ctWmiPerformance() noexcept
         {
             stop_all_counters();
         }
@@ -1153,7 +1153,7 @@ namespace ctl {
                 _interval);
         }
         // no-throw / no-fail
-        void stop_all_counters() NOEXCEPT
+        void stop_all_counters() noexcept
         {
             if (timer) {
                 timer->stop_all_timers();
@@ -1164,7 +1164,7 @@ namespace ctl {
         }
 
         // no-throw / no-fail
-        void clear_counter_data() NOEXCEPT
+        void clear_counter_data() noexcept
         {
             for (auto& _callback : callbacks) {
                 _callback(details::CallbackAction::Clear);
@@ -1190,7 +1190,7 @@ namespace ctl {
         ctWmiPerformance& operator=(const ctWmiPerformance&) = delete;
 
         // movable
-        ctWmiPerformance(ctWmiPerformance&& rhs) NOEXCEPT :
+        ctWmiPerformance(ctWmiPerformance&& rhs) noexcept :
             wmi_service(std::move(rhs.wmi_service)),
             refresher(std::move(rhs.refresher)),
             config_refresher(std::move(rhs.config_refresher)),
@@ -1198,7 +1198,7 @@ namespace ctl {
             timer(std::move(rhs.timer))
         {
         }
-        ctWmiPerformance& operator=(ctWmiPerformance&& rhs) NOEXCEPT
+        ctWmiPerformance& operator=(ctWmiPerformance&& rhs) noexcept
         {
             wmi_service = std::move(rhs.wmi_service);
             refresher = std::move(rhs.refresher);
@@ -1219,7 +1219,7 @@ namespace ctl {
         // declare last to guarantee will be destroyed first
         std::unique_ptr<ctThreadpoolTimer> timer;
 
-        static void TimerCallback(ctWmiPerformance* this_ptr, unsigned long _interval) NOEXCEPT
+        static void TimerCallback(ctWmiPerformance* this_ptr, unsigned long _interval) noexcept
         {
             try {
                 // must guarantee COM is initialized on this thread
@@ -1279,11 +1279,11 @@ namespace ctl {
         const unsigned long stringFieldNameCount = 0;
         const wchar_t** stringFieldNames = nullptr;
 
-        template <typename T> bool PropertyNameExists(LPCWSTR name) const NOEXCEPT;
+        template <typename T> bool PropertyNameExists(LPCWSTR name) const noexcept;
     };
 
     template <> 
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(LPCWSTR name) const noexcept
     {
         for (unsigned counter = 0; counter < this->ulongFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->ulongFieldNames[counter])) {
@@ -1294,7 +1294,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(LPCWSTR name) const noexcept
     {
         for (unsigned counter = 0; counter < this->ulonglongFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->ulonglongFieldNames[counter])) {
@@ -1305,7 +1305,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(LPCWSTR name) const noexcept
     {
         for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->stringFieldNames[counter])) {
@@ -1316,7 +1316,7 @@ namespace ctl {
         return false;
     }
     template <>
-    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ctComBstr>(LPCWSTR name) const NOEXCEPT
+    inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ctComBstr>(LPCWSTR name) const noexcept
     {
         for (unsigned counter = 0; counter < this->stringFieldNameCount; ++counter) {
             if (ctString::iordinal_equals(name, this->stringFieldNames[counter])) {

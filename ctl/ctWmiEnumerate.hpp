@@ -27,8 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctWmiService.hpp"
 #include "ctWmiInstance.hpp"
 #include "ctWmiException.hpp"
-#include "ctVersionConversion.hpp"
-
 
 namespace ctl
 {
@@ -65,7 +63,7 @@ namespace ctl
 			/// - c'tor can take a reference to the parent's WMI Enum interface (to traverse)
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			explicit iterator(ctWmiService _services) NOEXCEPT :
+			explicit iterator(ctWmiService _services) noexcept :
 				wbemServices(std::move(_services))
 			{
 			}
@@ -78,14 +76,14 @@ namespace ctl
 				this->increment();
 			}
 
-			~iterator() NOEXCEPT = default;
-			iterator(const iterator&) NOEXCEPT = default;
-			iterator& operator =(const iterator&) NOEXCEPT = default;
-			iterator(iterator&&) NOEXCEPT = default;
-			iterator& operator =(iterator&&) NOEXCEPT = default;
+			~iterator() noexcept = default;
+			iterator(const iterator&) noexcept = default;
+			iterator& operator =(const iterator&) noexcept = default;
+			iterator(iterator&&) noexcept = default;
+			iterator& operator =(iterator&&) noexcept = default;
 
 
-			void swap(_Inout_ iterator& _i) NOEXCEPT
+			void swap(_Inout_ iterator& _i) noexcept
 			{
 				using std::swap;
 				swap(this->index, _i.index);
@@ -94,7 +92,7 @@ namespace ctl
 				swap(this->ctInstance, _i.ctInstance);
 			}
 
-			unsigned long location() const NOEXCEPT
+			unsigned long location() const noexcept
 			{
 				return this->index;
 			}
@@ -105,12 +103,12 @@ namespace ctl
 			/// - dereference operators to access the internal WMI class object
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			ctWmiInstance& operator*() const NOEXCEPT
+			ctWmiInstance& operator*() const noexcept
 			{
 				return *this->ctInstance;
 			}
 
-			ctWmiInstance* operator->() const NOEXCEPT
+			ctWmiInstance* operator->() const noexcept
 			{
 				return this->ctInstance.get();
 			}
@@ -124,8 +122,8 @@ namespace ctl
 			/// - throwing a ctWmiException object capturing the WMI failures
 			///
 			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(const iterator&) const NOEXCEPT;
-			bool operator!=(const iterator&) const NOEXCEPT;
+			bool operator==(const iterator&) const noexcept;
+			bool operator!=(const iterator&) const noexcept;
 
 			iterator& operator++(); // preincrement
 			iterator operator++(int); // postincrement
@@ -164,7 +162,7 @@ namespace ctl
 		/// Default d'tor, copy c'tor, and copy assignment operators
 		//
 		////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiEnumerate(ctWmiService _wbemServices) NOEXCEPT :
+		explicit ctWmiEnumerate(ctWmiService _wbemServices) noexcept :
 			wbemServices(std::move(_wbemServices))
 		{
 		}
@@ -242,7 +240,7 @@ namespace ctl
 			return iterator(this->wbemServices, this->wbemEnumerator);
 		}
 
-		iterator end() const NOEXCEPT
+		iterator end() const noexcept
 		{
 			return iterator(this->wbemServices);
 		}
@@ -261,7 +259,7 @@ namespace ctl
 			return iterator(this->wbemServices, this->wbemEnumerator);
 		}
 
-		iterator cend() const NOEXCEPT
+		iterator cend() const noexcept
 		{
 			return iterator(this->wbemServices);
 		}
@@ -282,7 +280,7 @@ namespace ctl
 	///
 	////////////////////////////////////////////////////////////////////////////////
 	inline
-	bool ctWmiEnumerate::iterator::operator==(const iterator& _iter) const NOEXCEPT
+	bool ctWmiEnumerate::iterator::operator==(const iterator& _iter) const noexcept
 	{
 		if (this->index != END_ITERATOR_INDEX) {
 			return (
@@ -296,7 +294,7 @@ namespace ctl
 	}
 
 	inline
-	bool ctWmiEnumerate::iterator::operator!=(const iterator& _iter) const NOEXCEPT
+	bool ctWmiEnumerate::iterator::operator!=(const iterator& _iter) const noexcept
 	{
 		return !(*this == _iter);
 	}

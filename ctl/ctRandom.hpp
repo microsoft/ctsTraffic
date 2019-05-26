@@ -16,8 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <random>
 #include <memory>
-// ctl headers
-#include "ctVersionConversion.hpp"
 
 namespace ctl
 {
@@ -81,9 +79,9 @@ namespace ctl
 		void seed(unsigned long _seed) const;
 
 		// Enabling move, move assign, and swap
-		ctRandomTwister(ctRandomTwister&& other) NOEXCEPT;
-		ctRandomTwister& operator=(ctRandomTwister&& other) NOEXCEPT;
-		void swap(ctRandomTwister& other) NOEXCEPT;
+		ctRandomTwister(ctRandomTwister&& other) noexcept;
+		ctRandomTwister& operator=(ctRandomTwister&& other) noexcept;
+		void swap(ctRandomTwister& other) noexcept;
 
 		~ctRandomTwister() = default;
 
@@ -98,7 +96,7 @@ namespace ctl
 	};
 
 	// non-member namespace swap
-	inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) NOEXCEPT
+	inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) noexcept
 	{
 		lhs.swap(rhs);
 	}
@@ -116,19 +114,19 @@ namespace ctl
 	{
 	}
 
-	inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) NOEXCEPT :
+	inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) noexcept :
 		engine(std::move(other.engine))
 	{
 	}
 
-	inline ctRandomTwister& ctRandomTwister::operator=(ctRandomTwister&& other) NOEXCEPT
+	inline ctRandomTwister& ctRandomTwister::operator=(ctRandomTwister&& other) noexcept
 	{
 		ctRandomTwister temp(std::move(other));
 		temp.swap(*this);
 		return *this;
 	}
 
-	inline void ctRandomTwister::swap(ctRandomTwister& other) NOEXCEPT
+	inline void ctRandomTwister::swap(ctRandomTwister& other) noexcept
 	{
 		using std::swap;
 		swap(this->engine, other.engine);

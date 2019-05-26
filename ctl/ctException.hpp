@@ -21,8 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 // os headers
 #include <Windows.h>
-// ctl headers
-#include "ctVersionConversion.hpp"
 
 namespace ctl
 {
@@ -37,7 +35,7 @@ namespace ctl
 	//  - an optional wide-char string for the location of the exception throwing
 	//  - a method to translate Win32 error codes to a wide-char string
 	//
-	//  All methods are specified NOEXCEPT - no method can fail
+	//  All methods are specified noexcept - no method can fail
 	//  - should alloc failures occur, an empty string is returned the the caller
 	//
 	//  ** Note on methods returning pointers to const buffers:
@@ -54,54 +52,54 @@ namespace ctl
 	class ctException : public std::exception
 	{
 	public:
-		ctException() NOEXCEPT;
-		explicit ctException(const std::exception& e) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode) NOEXCEPT;
-		explicit ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(const std::wstring& _wsMessage) NOEXCEPT;
-		explicit ctException(const std::string& _sMessage) NOEXCEPT;
+		ctException() noexcept;
+		explicit ctException(const std::exception& e) noexcept;
+		explicit ctException(unsigned long _ulCode) noexcept;
+		explicit ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy = true) noexcept;
+		explicit ctException(LPCWSTR _wszMessage, bool _bMessageCopy = true) noexcept;
+		explicit ctException(const std::wstring& _wsMessage) noexcept;
+		explicit ctException(const std::string& _sMessage) noexcept;
 
-		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy = true) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode, const std::wstring& _wsMessage) NOEXCEPT;
-		explicit ctException(unsigned long _ulCode, const std::string& _sMessage) NOEXCEPT;
+		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy = true) noexcept;
+		explicit ctException(unsigned long _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation, bool _bBothStringCopy = true) noexcept;
+		explicit ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy = true) noexcept;
+		explicit ctException(unsigned long _ulCode, const std::wstring& _wsMessage) noexcept;
+		explicit ctException(unsigned long _ulCode, const std::string& _sMessage) noexcept;
 
 		// ReSharper disable once CppHidingFunction
-		virtual ctException& operator=(const std::exception& e) NOEXCEPT;
+		virtual ctException& operator=(const std::exception& e) noexcept;
 
-		ctException(const ctException& e) NOEXCEPT;
-		ctException& operator=(const ctException& e) NOEXCEPT;
-		ctException(ctException&& e) NOEXCEPT;
-		ctException& operator=(ctException&& e) NOEXCEPT;
+		ctException(const ctException& e) noexcept;
+		ctException& operator=(const ctException& e) noexcept;
+		ctException(ctException&& e) noexcept;
+		ctException& operator=(ctException&& e) noexcept;
 
-		virtual ~ctException() NOEXCEPT;
+		virtual ~ctException() noexcept;
 
 		// public accessors
-		unsigned long why() const NOEXCEPT;
-		const char* what() const NOEXCEPT override;
-		const wchar_t* what_w() const NOEXCEPT;
-		const wchar_t* where_w() const NOEXCEPT;
+		unsigned long why() const noexcept;
+		const char* what() const noexcept override;
+		const wchar_t* what_w() const noexcept;
+		const wchar_t* where_w() const noexcept;
 
-		const wchar_t* translation_w() const NOEXCEPT;
+		const wchar_t* translation_w() const noexcept;
 
 		// no-fail operators
-		void reset() NOEXCEPT;
+		void reset() noexcept;
 
 	private:
 		// private functions to alloc and copy string buffers
-		char* calloc_and_copy_s(_In_ LPCSTR tSrc) const NOEXCEPT;
-		wchar_t* calloc_and_copy_w(LPCWSTR tSrc) const NOEXCEPT;
+		char* calloc_and_copy_s(_In_ LPCSTR tSrc) const noexcept;
+		wchar_t* calloc_and_copy_w(LPCWSTR tSrc) const noexcept;
 
 		// not making swap() public since the base class does not implement swap()
 		// - and that risks getting our objects out of sync
 		// - using this internally in a controlled manner with temporaries
-		void swap(ctException& e) NOEXCEPT;
+		void swap(ctException& e) noexcept;
 
 		// private multi-byte/wide-char translators
-		void wszMessageToszMessage() NOEXCEPT;
-		void szMessageTowszMessage() NOEXCEPT;
+		void wszMessageToszMessage() noexcept;
+		void szMessageTowszMessage() noexcept;
 
 		// private member variables
 		const char* szMessage = nullptr;
@@ -124,18 +122,18 @@ namespace ctl
 	//   - if no copy is made, the pointer won't be deleted on destruction
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException::ctException() NOEXCEPT :
+	inline ctException::ctException() noexcept :
 		std::exception("") // initialize the base c'tor
 	{
 	}
 
-	inline ctException::ctException(unsigned long _ulCode) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode) noexcept :
 		std::exception(""), // initialize the base c'tor
 		ulCode(_ulCode) // initializing with args
 	{
 	}
 
-	inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT:
+	inline ctException::ctException(_In_ LPCSTR _szMessage, bool _bMessageCopy) noexcept:
 		std::exception(""), // initialize the base c'tor
 		szMessage(_szMessage), // initializing with args
 		bMessageCopy_s(_bMessageCopy) // initializing with args
@@ -147,7 +145,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
+	inline ctException::ctException(LPCWSTR _wszMessage, bool _bMessageCopy) noexcept :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage), // initializing with args
 		bMessageCopy_w(_bMessageCopy) // initializing with args
@@ -159,7 +157,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(const std::wstring& _wsMessage) NOEXCEPT :
+	inline ctException::ctException(const std::wstring& _wsMessage) noexcept :
 		std::exception("") // initialize the base c'tor
 	{
 		wszMessage = calloc_and_copy_w(_wsMessage.c_str());
@@ -168,7 +166,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(const std::string& _sMessage) NOEXCEPT :
+	inline ctException::ctException(const std::string& _sMessage) noexcept :
 		std::exception("") // initialize the base c'tor
 	{
 		szMessage = calloc_and_copy_s(_sMessage.c_str());
@@ -177,7 +175,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, LPCWSTR _wszMessage, bool _bMessageCopy) noexcept :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage), // initializing with args
 		ulCode(_ulCode), // initializing with args
@@ -191,7 +189,7 @@ namespace ctl
 	}
 
 	inline ctException::ctException(unsigned long _ulCode, LPCWSTR _wszMessage, LPCWSTR _wszLocation,
-	                                bool _bBothStringCopy) NOEXCEPT :
+	                                bool _bBothStringCopy) noexcept :
 		std::exception(""), // initialize the base c'tor
 		wszMessage(_wszMessage),
 		wszLocation(_wszLocation), // initializing with args
@@ -207,7 +205,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, _In_ LPCSTR _szMessage, bool _bMessageCopy) noexcept :
 		std::exception(_szMessage), // initialize the base c'tor
 		szMessage(_szMessage), // initializing with args
 		ulCode(_ulCode), // initializing with args
@@ -220,7 +218,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, const std::wstring& _wsMessage) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, const std::wstring& _wsMessage) noexcept :
 		std::exception(""), // initialize the base c'tor
 		ulCode(_ulCode) // initializing with args
 	{
@@ -230,7 +228,7 @@ namespace ctl
 		wszMessageToszMessage();
 	}
 
-	inline ctException::ctException(unsigned long _ulCode, const std::string& _sMessage) NOEXCEPT :
+	inline ctException::ctException(unsigned long _ulCode, const std::string& _sMessage) noexcept :
 		std::exception(""), // initialize the base c'tor
 		ulCode(_ulCode) // initializing with args
 	{
@@ -240,7 +238,7 @@ namespace ctl
 		szMessageTowszMessage();
 	}
 
-	inline ctException::ctException(const std::exception& e) NOEXCEPT :
+	inline ctException::ctException(const std::exception& e) noexcept :
 		std::exception(e) // initialize the base c'tor
 	{
 		szMessage = calloc_and_copy_s(e.what());
@@ -254,7 +252,7 @@ namespace ctl
 	// Copy constructor
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException::ctException(const ctException& e) NOEXCEPT :
+	inline ctException::ctException(const ctException& e) noexcept :
 		std::exception(""), // initialize the base c'tor
 		szMessage(e.szMessage),
 		wszMessage(e.wszMessage),
@@ -283,14 +281,14 @@ namespace ctl
 	// - safe even if (this == &e)
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException& ctException::operator=(const std::exception& e) NOEXCEPT
+	inline ctException& ctException::operator=(const std::exception& e) noexcept
 	{
 		ctException ctTemp(e);
 		this->swap(ctTemp);
 		return *this;
 	}
 
-	inline ctException& ctException::operator=(const ctException& e) NOEXCEPT
+	inline ctException& ctException::operator=(const ctException& e) noexcept
 	{
 		// ReSharper disable once CppUseAuto
 		ctException ctTemp(e);
@@ -338,7 +336,7 @@ namespace ctl
 	// Destructor
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline ctException::~ctException() NOEXCEPT
+	inline ctException::~ctException() noexcept
 	{
 		this->reset();
 	}
@@ -349,7 +347,7 @@ namespace ctl
 	// - no-fail operation to clear all members
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline void ctException::reset() NOEXCEPT
+	inline void ctException::reset() noexcept
 	{
 		if (this->bMessageCopy_s) free(const_cast<void*>(static_cast<const void*>(this->szMessage)));
 		if (this->bMessageCopy_w) free(const_cast<void*>(static_cast<const void*>(this->wszMessage)));
@@ -372,7 +370,7 @@ namespace ctl
 	// - returns the unsigned long integer error code
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline unsigned long ctException::why() const NOEXCEPT
+	inline unsigned long ctException::why() const noexcept
 	{
 		return ulCode;
 	}
@@ -384,7 +382,7 @@ namespace ctl
 	// - virtual function called if called polymorphically from an std::exception object
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline const char* ctException::what() const NOEXCEPT
+	inline const char* ctException::what() const noexcept
 	{
 		return this->szMessage != nullptr ? this->szMessage : "";
 	}
@@ -396,7 +394,7 @@ namespace ctl
 	// - the "wide" version of std::exception::what()
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline const wchar_t* ctException::what_w() const NOEXCEPT
+	inline const wchar_t* ctException::what_w() const noexcept
 	{
 		return this->wszMessage != nullptr ? this->wszMessage : L"";
 	}
@@ -407,7 +405,7 @@ namespace ctl
 	// - returns the wchar_t* member for where the failure occured
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline const wchar_t* ctException::where_w() const NOEXCEPT
+	inline const wchar_t* ctException::where_w() const noexcept
 	{
 		return this->wszLocation != nullptr ? this->wszLocation : L"";
 	}
@@ -418,7 +416,7 @@ namespace ctl
 	// - returns the wchar_t* member for the system translation of the error from this->why()
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline const wchar_t* ctException::translation_w() const NOEXCEPT
+	inline const wchar_t* ctException::translation_w() const noexcept
 	{
 		// If the translation has already been performed, return the existing value.
 		if (this->wszTranslation) {
@@ -461,7 +459,7 @@ namespace ctl
 	// - converts the wide-char message string to the multi-byte char string
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline void ctException::wszMessageToszMessage() NOEXCEPT
+	inline void ctException::wszMessageToszMessage() noexcept
 	{
 		if (!this->wszMessage) {
 			return;
@@ -507,7 +505,7 @@ namespace ctl
 	// - converts the multi-byte char message string to the wide-char string
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline void ctException::szMessageTowszMessage() NOEXCEPT
+	inline void ctException::szMessageTowszMessage() noexcept
 	{
 		if (!this->szMessage) {
 			return;
@@ -538,7 +536,7 @@ namespace ctl
 	//        - or nullptr if failed to allocate
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline char* ctException::calloc_and_copy_s(_In_ LPCSTR tSrc) const NOEXCEPT
+	inline char* ctException::calloc_and_copy_s(_In_ LPCSTR tSrc) const noexcept
 	{
 		// no need to copy a nullptr ptr
 		if (!tSrc) {
@@ -567,7 +565,7 @@ namespace ctl
 	//        - or nullptr if failed to allocate
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline wchar_t* ctException::calloc_and_copy_w(LPCWSTR tSrc) const NOEXCEPT
+	inline wchar_t* ctException::calloc_and_copy_w(LPCWSTR tSrc) const noexcept
 	{
 		// no need to copy a nullptr ptr
 		if (!tSrc) {
@@ -593,7 +591,7 @@ namespace ctl
 	// - no-fail swap operation to swap 2 ctException objects
 	//
 	///////////////////////////////////////////////////////////////////////////////////////////////////
-	inline void ctException::swap(ctException& e) NOEXCEPT
+	inline void ctException::swap(ctException& e) noexcept
 	{
 		using std::swap;
 		swap(this->ulCode, e.ulCode);
@@ -607,7 +605,7 @@ namespace ctl
 	}
 
 #ifdef _CPPRTTI
-	inline unsigned long ctErrorCode(const std::exception& _exception) NOEXCEPT
+	inline int ctErrorCode(const std::exception& _exception) noexcept
 	{
 		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
 		if (ctex) {
@@ -617,7 +615,7 @@ namespace ctl
 		}
 	}
 #else
-	inline unsigned long ctErrorCode(const std::exception& _exception) NOEXCEPT
+	inline int ctErrorCode(const std::exception& _exception) noexcept
 	{
 		return ERROR_OUTOFMEMORY;
 	}
@@ -643,14 +641,14 @@ namespace ctl
 		///
 		__analysis_noreturn
 		inline
-		void FailFast(_In_ EXCEPTION_RECORD* _exr) NOEXCEPT
+		void FailFast(_In_ EXCEPTION_RECORD* _exr) noexcept
 		{
 			RaiseFailFastException(_exr, nullptr, 0);
 		}
 	}
 
 	inline
-	void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+	void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) noexcept
 	{
 		if (_condition) {
 			// write everyting out into a single string
@@ -679,13 +677,13 @@ namespace ctl
 
 	inline
 	__analysis_noreturn
-	void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) NOEXCEPT
+	void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) noexcept
 	{
 		ctFatalConditionVa(true, _text, _argptr);
 	}
 
 	inline
-	void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+	void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) noexcept
 	{
 		if (_condition) {
 			va_list argptr;
@@ -698,7 +696,7 @@ namespace ctl
 
 	inline
 	__analysis_noreturn
-	void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) NOEXCEPT
+	void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) noexcept
 	{
 		va_list argptr;
 		va_start(argptr, _text);
@@ -714,7 +712,7 @@ namespace ctl
 	///
 	inline
 	__analysis_noreturn
-	void ctFatalCondition(const ctException& _exception) NOEXCEPT
+	void ctFatalCondition(const ctException& _exception) noexcept
 	{
 		ctFatalCondition(
 			true,
@@ -729,7 +727,7 @@ namespace ctl
 #ifdef _CPPRTTI
 	inline
 	__analysis_noreturn
-	void ctFatalCondition(const std::exception& _exception) NOEXCEPT
+	void ctFatalCondition(const std::exception& _exception) noexcept
 	{
 		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
 		if (ctex) {
@@ -744,7 +742,7 @@ namespace ctl
 #else
     inline
     __analysis_noreturn
-    void ctFatalCondition(const std::exception& _exception) NOEXCEPT
+    void ctFatalCondition(const std::exception& _exception) noexcept
     {
         ctFatalCondition(
             true,

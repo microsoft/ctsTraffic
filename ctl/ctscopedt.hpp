@@ -16,8 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <new>
 #include <utility>
-// ctl headers
-#include "ctVersionConversion.hpp"
 
 namespace ctl
 {
@@ -33,10 +31,10 @@ namespace ctl
 	//    does not need to be released
 	//
 	//  - typename Fn should reference a functor which implements:
-	//            void operator()(T&) NOEXCEPT'
+	//            void operator()(T&) noexcept'
 	//    - should free the resource type T
 	//
-	//  All methods are specified NOEXCEPT - none can throw
+	//  All methods are specified noexcept - none can throw
 	//
 	//  This class does not allow copy assignment or construction by design, but does
 	//  allow move assignment and construction
@@ -54,16 +52,16 @@ namespace ctl
 		// - optionally take a deleter Functor instance
 		// - default constructor initializes with tNullValue
 		///////////////////////////////////////////////////////////////
-		ctScopedT() NOEXCEPT : tValue(tNullValue)
+		ctScopedT() noexcept : tValue(tNullValue)
 		{
 		}
 
 		// non-explicit by design
-		explicit ctScopedT(T const& t) NOEXCEPT : tValue(t)
+		explicit ctScopedT(T const& t) noexcept : tValue(t)
 		{
 		}
 
-		ctScopedT(T const& t, Fn const& f) NOEXCEPT : tValue(t), closeFunctor(f)
+		ctScopedT(T const& t, Fn const& f) noexcept : tValue(t), closeFunctor(f)
 		{
 		}
 
@@ -72,7 +70,7 @@ namespace ctl
 		ctScopedT(ctScopedT const&) = delete;
 		ctScopedT& operator=(ctScopedT const&) = delete;
 
-		ctScopedT(ctScopedT&& other) NOEXCEPT :
+		ctScopedT(ctScopedT&& other) noexcept :
 			tValue(std::move(other.tValue)),
 			closeFunctor(std::move(other.closeFunctor))
 		{
@@ -80,40 +78,40 @@ namespace ctl
 			other.tValue = tNullValue;
 		}
 
-		ctScopedT& operator=(ctScopedT&& other) NOEXCEPT
+		ctScopedT& operator=(ctScopedT&& other) noexcept
 		{
 			ctScopedT(std::move(other)).swap(*this);
 			return *this;
 		}
 
 		// default destructor (no-fail)
-		~ctScopedT() NOEXCEPT
+		~ctScopedT() noexcept
 		{
 			this->reset();
 		}
 
 		// getter
-		const T& get() const NOEXCEPT
+		const T& get() const noexcept
 		{
 			return this->tValue;
 		}
 
 		// function to free internal resources
-		T release() NOEXCEPT
+		T release() noexcept
 		{
 			T value = this->tValue;
 			this->tValue = tNullValue;
 			return value;
 		}
 
-		void reset(T const& newValue = tNullValue) NOEXCEPT
+		void reset(T const& newValue = tNullValue) noexcept
 		{
 			closeFunctor(this->tValue);
 			this->tValue = newValue;
 		}
 
 		// implementation of swap()
-		void swap(ctScopedT& tShared) NOEXCEPT
+		void swap(ctScopedT& tShared) noexcept
 		{
 			using std::swap;
 			swap(this->closeFunctor, tShared.closeFunctor);
@@ -131,7 +129,7 @@ namespace ctl
 	// no-throw guarantee
 	///////////////////////////////////////////////////////////////////
 	template <typename T, T tNullValue, typename Fn>
-	void swap(ctScopedT<T, tNullValue, Fn>& a, ctScopedT<T, tNullValue, Fn>& b) NOEXCEPT
+	void swap(ctScopedT<T, tNullValue, Fn>& a, ctScopedT<T, tNullValue, Fn>& b) noexcept
 	{
 		a.swap(b);
 	}
@@ -142,13 +140,13 @@ namespace ctl
 	// no-throw guarantee
 	///////////////////////////////////////////////////////////////////
 	template <typename T, T tNullValue, typename FnT, typename A, A aNullValue, typename FnA>
-	bool operator==(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) NOEXCEPT
+	bool operator==(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) noexcept
 	{
 		return (lhs.get() == rhs.get());
 	}
 
 	template <typename T, T tNullValue, typename FnT, typename A, A aNullValue, typename FnA>
-	bool operator!=(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) NOEXCEPT
+	bool operator!=(ctScopedT<T, tNullValue, FnT> const& lhs, ctScopedT<A, aNullValue, FnA> const& rhs) noexcept
 	{
 		return (lhs.get() != rhs.get());
 	}

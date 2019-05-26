@@ -20,7 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctScopeGuard.hpp>
 #include <ctTimer.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsStatistics.hpp"
@@ -109,16 +108,11 @@ namespace ctsTraffic {
         deleteTimerCallbackOnError.dismiss();
     }
     
-    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() NOEXCEPT
+    ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() noexcept
     {
-        // cleanly shutdown the TP timer
-        // - indicate this by setting the TP_TIMER to null under the cs
-        // - so the callback will no longer schedule more TP timer instances
-        // - then wait for everything to clean up
-        PTP_TIMER original_timer = nullptr;
-
         this->base_lock();
-        original_timer = this->renderer_timer;
+        // ReSharper disable once CppLocalVariableMayBeConst
+        PTP_TIMER original_timer = this->renderer_timer;
         this->renderer_timer = nullptr;
         this->base_unlock();
 
@@ -132,7 +126,7 @@ namespace ctsTraffic {
         ::CloseThreadpoolTimer(original_timer);
     }
 
-    ctsIOTask ctsIOPatternMediaStreamClient::next_task() NOEXCEPT
+    ctsIOTask ctsIOPatternMediaStreamClient::next_task() noexcept
     {
         if (0 == this->base_time_milliseconds) {
             // initiate the timers the first time the object is used
@@ -145,7 +139,7 @@ namespace ctsTraffic {
         ctsIOTask return_task;
         if (this->recv_needed > 0) {
             // don't try posting more than UdpDatagramMaximumSizeBytes at a time
-            unsigned long max_size_buffer = 0;
+            unsigned long max_size_buffer;
             if (this->frame_size_bytes > UdpDatagramMaximumSizeBytes) {
                 max_size_buffer = UdpDatagramMaximumSizeBytes;
             } else {
@@ -160,7 +154,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) NOEXCEPT
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
     {
         LARGE_INTEGER qpc;
         ::QueryPerformanceCounter(&qpc);
@@ -293,7 +287,7 @@ namespace ctsTraffic {
     /// If the sequence number was not found, will return end(frame_entries)
     ///
     _Requires_lock_held_(cs)
-    vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) NOEXCEPT
+    vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long _seq_number) noexcept
     {
         const ctsSignedLongLong head_sequence_number = this->head_entry->sequence_number;
         const ctsSignedLongLong tail_sequence_number = head_sequence_number + this->frame_entries.size() - 1;
@@ -316,7 +310,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::received_buffered_frames() NOEXCEPT
+    bool ctsIOPatternMediaStreamClient::received_buffered_frames() noexcept
     {
         if (this->frame_entries[0].sequence_number > 1) {
             // we've already received enough datagrams to fill one buffer
@@ -336,7 +330,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) const NOEXCEPT
+    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) const noexcept
     {
         bool timer_scheduled = false;
         // only schedule the next timer instance if the d'tor hasn't indicated it's wanting to exit
@@ -364,7 +358,7 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_start_timer() const NOEXCEPT
+    void ctsIOPatternMediaStreamClient::set_next_start_timer() const noexcept
     {
         if (this->start_timer != nullptr) {
             // convert to filetime from milliseconds
@@ -378,7 +372,7 @@ namespace ctsTraffic {
     // "render the current frame"
     // - update the current frame as "read" and move the head to the next frame
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::render_frame() NOEXCEPT
+    void ctsIOPatternMediaStreamClient::render_frame() noexcept
     {
         if (this->head_entry->received == this->frame_size_bytes) {
             ctsConfig::Settings->UdpStatusDetails.successful_frames.increment();
@@ -424,7 +418,7 @@ namespace ctsTraffic {
         }
     }
 
-    VOID CALLBACK ctsIOPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT
+    VOID CALLBACK ctsIOPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) noexcept
     {
         static const char StartBuffer[] = "START";
 
@@ -456,7 +450,7 @@ namespace ctsTraffic {
         // else, don't schedule this timer anymore
     }
 
-    VOID CALLBACK ctsIOPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) NOEXCEPT
+    VOID CALLBACK ctsIOPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID _context, PTP_TIMER) noexcept
     {
         auto* this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(_context);
 

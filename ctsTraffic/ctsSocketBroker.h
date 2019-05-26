@@ -19,12 +19,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctHandle.hpp>
 // project headers
 #include "ctsSocketState.h"
-
 
 namespace ctsTraffic {
 
@@ -41,16 +39,16 @@ namespace ctsTraffic {
 
         // only the c'tor can throw
         ctsSocketBroker();
-        ~ctsSocketBroker() NOEXCEPT;
+        ~ctsSocketBroker() noexcept;
 
         void start();
 
         // methods that the child ctsSocketState objects will invoke when they change state
-        void initiating_io() NOEXCEPT;
-        void closing(bool _was_active) NOEXCEPT;
+        void initiating_io() noexcept;
+        void closing(bool _was_active) noexcept;
 
         // method to wait on when all connections are completed
-        bool wait(DWORD _milliseconds) const NOEXCEPT;
+        bool wait(DWORD _milliseconds) const noexcept;
 
         // not copyable
         ctsSocketBroker(const ctsSocketBroker&) = delete;
@@ -80,7 +78,7 @@ namespace ctsTraffic {
         // Callback for the threadpool timer to scavenge closed sockets and recreate new ones
         // - this allows destroying ctsSockets outside of an inline path from ctsSocket
         //
-        static void TimerCallback(_In_ ctsSocketBroker* _broker) NOEXCEPT;
+        static void TimerCallback(_In_ ctsSocketBroker* _broker) noexcept;
     };
 
 } // namespace

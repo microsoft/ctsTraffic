@@ -41,6 +41,8 @@ CALL :TESTCASES pull iocp
 CALL :TESTCASES pushpull iocp
 CALL :TESTCASES duplex iocp
 
+goto :eof
+
 CALL :TESTCASES push rioiocp
 CALL :TESTCASES pull rioiocp
 CALL :TESTCASES pushpull rioiocp

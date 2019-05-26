@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 // local headers
@@ -29,7 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 
     /// forward delcaration
-    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT;
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     struct ctsSendRecvStatus
     {
@@ -47,7 +46,7 @@ namespace ctsTraffic {
     static void ctsIoCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctsIOTask& _io_task) NOEXCEPT
+        const ctsIOTask& _io_task) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {
@@ -62,7 +61,7 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scoping the socket lock
         {
-            auto socketlock(ctsGuardSocket(shared_socket));
+            const auto socketlock(ctsGuardSocket(shared_socket));
             const SOCKET socket = socketlock.get();
             // if we no longer have a valid socket or the pattern was destroyed, return early
             if (!shared_pattern || INVALID_SOCKET == socket) {
@@ -116,7 +115,7 @@ namespace ctsTraffic {
     /// ** ctsSocket::increment_io must have been called before this function was invoked
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) NOEXCEPT
+    static ctsSendRecvStatus ctsProcessIOTask(SOCKET _socket, const std::shared_ptr<ctsSocket>& _shared_socket, const std::shared_ptr<ctsIOPattern>& _shared_pattern, const ctsIOTask& next_io) noexcept
     {
         ctsSendRecvStatus return_status;
 
@@ -145,18 +144,19 @@ namespace ctsTraffic {
 
         } else {
             try {
-                OVERLAPPED* pov = nullptr;
                 // attempt to allocate an IO thread-pool object
                 const std::shared_ptr<ctl::ctThreadIocp>& io_thread_pool(_shared_socket->thread_pool());
-                pov = io_thread_pool->new_request(
-                    [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), next_io](OVERLAPPED* _ov) NOEXCEPT
-                { ctsIoCompletionCallback(_ov, weak_reference, next_io); });
+                OVERLAPPED* pov = io_thread_pool->new_request(
+                    [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), next_io](OVERLAPPED* _ov) noexcept
+                    {
+                        ctsIoCompletionCallback(_ov, weak_reference, next_io);
+                    });
 
                 WSABUF wsabuf;
                 wsabuf.buf = next_io.buffer + next_io.buffer_offset;
                 wsabuf.len = next_io.buffer_length;
 
-                const wchar_t* function_name = nullptr;
+                const wchar_t* function_name;
                 if (IOTaskAction::Send == next_io.ioAction) {
                     function_name = L"WSASend";
                     if (::WSASend(_socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0) {
@@ -240,7 +240,7 @@ namespace ctsTraffic {
     /// Processes the given task and then calls ctsSendRecvIocp function to deal with any additional tasks
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) NOEXCEPT
+    static void ctsProcessIOTaskCallback(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& next_io) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -248,7 +248,7 @@ namespace ctsTraffic {
             return;
         }
         // take a lock on the socket before working with it
-        auto socketlock(ctsGuardSocket(shared_socket));
+        const auto socketlock(ctsGuardSocket(shared_socket));
         // increment IO for this IO request
         shared_socket->increment_io();
 
@@ -276,7 +276,7 @@ namespace ctsTraffic {
     ///
     /// The function registered with ctsConfig
     ///
-    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
@@ -284,7 +284,7 @@ namespace ctsTraffic {
             return;
         }
         // take a lock on the socket before working with it
-        auto socketlock(ctsGuardSocket(shared_socket));
+        const auto socketlock(ctsGuardSocket(shared_socket));
         // hold a reference on the iopattern
         auto shared_pattern(shared_socket->io_pattern());
         //

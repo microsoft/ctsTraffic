@@ -36,12 +36,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 ///  }
 ///
 
-
 // cpp headers
-#include <memory> // for std::addressof()
-// ctl headers
-#include "ctVersionConversion.hpp"
-
+#include <memory>
 
 namespace ctl
 {
@@ -49,12 +45,12 @@ namespace ctl
 	class ctScopeGuardT
 	{
 	public:
-		explicit ctScopeGuardT(F& f) NOEXCEPT :
+		explicit ctScopeGuardT(F& f) noexcept :
 			m_p(std::addressof(f))
 		{
 		}
 
-		void run_once() NOEXCEPT
+		void run_once() noexcept
 		{
 			if (m_p) {
 				(*m_p)();
@@ -62,12 +58,12 @@ namespace ctl
 			m_p = nullptr;
 		}
 
-		void dismiss() NOEXCEPT
+		void dismiss() noexcept
 		{
 			m_p = nullptr;
 		}
 
-		~ctScopeGuardT() NOEXCEPT
+		~ctScopeGuardT() noexcept
 		{
 			if (m_p) {
 				(*m_p)();
@@ -85,6 +81,6 @@ namespace ctl
 	};
 
 #define ctlScopeGuard(NAME, BODY)  \
-    auto xx##NAME##xx = [&]() NOEXCEPT BODY; \
+    auto xx##NAME##xx = [&]() noexcept BODY; \
     ::ctl::ctScopeGuardT<decltype(xx##NAME##xx)> NAME(xx##NAME##xx)
 } // namespace

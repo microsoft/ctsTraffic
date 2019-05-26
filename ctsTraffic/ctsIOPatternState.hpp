@@ -16,13 +16,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctException.hpp>
 // project headers
 #include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
-
 
 namespace ctsTraffic {
 
@@ -81,33 +79,33 @@ namespace ctsTraffic {
         bool pended_state = false;
 
     public:
-        ctsIOPatternState() NOEXCEPT;
+        ctsIOPatternState() noexcept;
 
-        ctsUnsignedLongLong get_remaining_transfer() const NOEXCEPT;
-        ctsUnsignedLongLong get_max_transfer() const NOEXCEPT;
-        void set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) NOEXCEPT;
-        ctsUnsignedLong get_ideal_send_backlog() const NOEXCEPT;
-        void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT;
+        ctsUnsignedLongLong get_remaining_transfer() const noexcept;
+        ctsUnsignedLongLong get_max_transfer() const noexcept;
+        void set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) noexcept;
+        ctsUnsignedLong get_ideal_send_backlog() const noexcept;
+        void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) noexcept;
 
-        bool is_completed() const NOEXCEPT;
+        bool is_completed() const noexcept;
 
-        bool is_current_task_more_io() const NOEXCEPT;
-        ctsIOPatternProtocolTask get_next_task() NOEXCEPT;
-        void notify_next_task(const ctsIOTask& _next_task) NOEXCEPT;
-        ctsIOPatternProtocolError completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT;
+        bool is_current_task_more_io() const noexcept;
+        ctsIOPatternProtocolTask get_next_task() noexcept;
+        void notify_next_task(const ctsIOTask& _next_task) noexcept;
+        ctsIOPatternProtocolError completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) noexcept;
 
-        ctsIOPatternProtocolError update_error(DWORD _error_code) NOEXCEPT;
+        ctsIOPatternProtocolError update_error(DWORD _error_code) noexcept;
     };
 
 
-    inline ctsIOPatternState::ctsIOPatternState() NOEXCEPT
+    inline ctsIOPatternState::ctsIOPatternState() noexcept
     {
         if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol) {
             internal_state = InternalPatternState::MoreIo;
         }
     }
 
-    inline ctsUnsignedLongLong ctsIOPatternState::get_remaining_transfer() const NOEXCEPT
+    inline ctsUnsignedLongLong ctsIOPatternState::get_remaining_transfer() const noexcept
     {
         //
         // Guard our internal tracking - all protocol logic assumes these rules
@@ -130,34 +128,34 @@ namespace ctsTraffic {
 
         return this->max_transfer - already_transferred;
     }
-    inline ctsUnsignedLongLong ctsIOPatternState::get_max_transfer() const NOEXCEPT
+    inline ctsUnsignedLongLong ctsIOPatternState::get_max_transfer() const noexcept
     {
         return this->max_transfer;
     }
-    inline void ctsIOPatternState::set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) NOEXCEPT
+    inline void ctsIOPatternState::set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) noexcept
     {
         this->max_transfer = _new_max_transfer;
     }
-    inline ctsUnsignedLong ctsIOPatternState::get_ideal_send_backlog() const NOEXCEPT
+    inline ctsUnsignedLong ctsIOPatternState::get_ideal_send_backlog() const noexcept
     {
         return this->isb;
     }
-    inline void ctsIOPatternState::set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) NOEXCEPT
+    inline void ctsIOPatternState::set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) noexcept
     {
         this->isb = _new_isb;
     }
 
-    inline bool ctsIOPatternState::is_completed() const NOEXCEPT
+    inline bool ctsIOPatternState::is_completed() const noexcept
     {
         return (InternalPatternState::CompletedTransfer == this->internal_state || InternalPatternState::ErrorIOFailed == this->internal_state);
     }
 
-    inline bool ctsIOPatternState::is_current_task_more_io() const NOEXCEPT
+    inline bool ctsIOPatternState::is_current_task_more_io() const noexcept
     {
         return (this->internal_state == InternalPatternState::MoreIo);
     }
 
-    inline ctsIOPatternProtocolTask ctsIOPatternState::get_next_task() NOEXCEPT
+    inline ctsIOPatternProtocolTask ctsIOPatternState::get_next_task() noexcept
     {
         if (this->pended_state) {
             // already indicated the next state: waiting for it to complete
@@ -224,14 +222,14 @@ namespace ctsTraffic {
     }
 
 
-    inline void ctsIOPatternState::notify_next_task(const ctsIOTask& _next_task) NOEXCEPT
+    inline void ctsIOPatternState::notify_next_task(const ctsIOTask& _next_task) noexcept
     {
         if (_next_task.track_io) {
             this->inflight_bytes += _next_task.buffer_length;
         }
     }
 
-    inline ctsIOPatternProtocolError ctsIOPatternState::update_error(DWORD _error_code) NOEXCEPT
+    inline ctsIOPatternProtocolError ctsIOPatternState::update_error(DWORD _error_code) noexcept
     {
         // if we have already failed, return early
         if (InternalPatternState::ErrorIOFailed == this->internal_state) {
@@ -264,7 +262,7 @@ namespace ctsTraffic {
         return ctsIOPatternProtocolError::NoError;
     }
 
-    inline ctsIOPatternProtocolError ctsIOPatternState::completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) NOEXCEPT
+    inline ctsIOPatternProtocolError ctsIOPatternState::completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) noexcept
     {
         //
         // If already failed, don't continue processing

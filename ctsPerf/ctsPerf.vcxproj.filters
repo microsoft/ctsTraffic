@@ -49,9 +49,6 @@
     <ClInclude Include="..\ctl\ctTimer.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctVersionConversion.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiClassObject.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -115,5 +112,8 @@
     <ClCompile Include="ctsWriteDetails.cpp">
       <Filter>Source FIles</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

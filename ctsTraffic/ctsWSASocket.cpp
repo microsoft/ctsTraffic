@@ -17,12 +17,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctVersionConversion.hpp>
 #include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-
 
 namespace ctsTraffic {
 
@@ -30,7 +28,7 @@ namespace ctsTraffic {
     static long long s_TargetCounter = 0LL;
     static long long s_PortCounter = 0LL;
 
-    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) NOEXCEPT
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         auto shared_socket(_weak_socket.lock());
         if (!shared_socket) {

@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctException.hpp>
 #include <ctLocks.hpp>
-#include <ctVersionConversion.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"
@@ -30,12 +29,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 
-
 namespace ctsTraffic {
 
     namespace statics {
         // forward-declarations
-        inline static bool GrowConnectionIdBuffer() NOEXCEPT;
+        inline static bool GrowConnectionIdBuffer() noexcept;
 
         // pre-reserving for up to 1 million concurrent connections
         static const unsigned long ServerMaxConnections = 1000000UL;
@@ -51,7 +49,7 @@ namespace ctsTraffic {
         static ::RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
         static ::CRITICAL_SECTION ConnectionIdLock;
 
-        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) NOEXCEPT
+        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
         {
             using ::ctsTraffic::ctsConfig::Settings;
             using ::ctsTraffic::ctsConfig::IsListening;
@@ -140,7 +138,7 @@ namespace ctsTraffic {
         // - to handle more incoming connections
         //
         //////////////////////////////////////////////////////////////////////////
-        inline static bool GrowConnectionIdBuffer() NOEXCEPT
+        inline static bool GrowConnectionIdBuffer() noexcept
         {
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
             using ::ctsTraffic::ctsUnsignedLong;
@@ -195,7 +193,7 @@ namespace ctsTraffic {
             (void) ::InitOnceExecuteOnce(&statics::ConnectionIdInitOnce, statics::InitOnceIOPatternCallback, nullptr, nullptr);
 
             ::ctsTraffic::ctsIOTask return_task;
-            char* next_buffer = nullptr;
+            char* next_buffer;
             {
                 const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
                 if (statics::ConnectionIdVector->empty()) {
@@ -241,7 +239,7 @@ namespace ctsTraffic {
             return return_task;
         }
 
-        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) NOEXCEPT
+        inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) noexcept
         {
             const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
             try {
@@ -259,7 +257,7 @@ namespace ctsTraffic {
             }
         }
 
-        inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) NOEXCEPT
+        inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ::ctsTraffic::ctsIOTask& _task, unsigned long _current_transfer) noexcept
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength) {
                 PrintDebugInfo(
@@ -268,7 +266,7 @@ namespace ctsTraffic {
                 return false;
             }
 
-            char* io_buffer = nullptr;
+            char* io_buffer;
             if (::ctsTraffic::ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
                 // RIO is registered at the ConnectionIdBuffer address
                 // - thus needs to specify the offset to get to the unique buffer for this request

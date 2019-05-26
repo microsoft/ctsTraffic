@@ -15,9 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <windows.h>
-// ctl headers
-#include "ctVersionConversion.hpp"
-
 
 namespace ctl
 {
@@ -40,7 +37,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		constexpr
-		long long convert_msec_hundredNs(long long _milliseconds) NOEXCEPT
+		long long convert_msec_hundredNs(long long _milliseconds) noexcept
 		{
 			return static_cast<long long>(_milliseconds * 10000LL);
 		}
@@ -51,7 +48,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		constexpr
-		long long convert_hundredNs_msec(long long _hundred_nanoseconds) NOEXCEPT
+		long long convert_hundredNs_msec(long long _hundred_nanoseconds) noexcept
 		{
 			return static_cast<long long>(_hundred_nanoseconds / 10000LL);
 		}
@@ -62,7 +59,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		FILETIME convert_hundredNs_absolute_filetime(long long _hundred_nanoseconds) NOEXCEPT
+		FILETIME convert_hundredNs_absolute_filetime(long long _hundred_nanoseconds) noexcept
 		{
 			ULARGE_INTEGER ulong_integer;
 			ulong_integer.QuadPart = _hundred_nanoseconds;
@@ -78,7 +75,7 @@ namespace ctl
 		/// - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
 		///
 		inline
-		FILETIME convert_hundredNs_relative_filetime(long long _hundred_nanoseconds) NOEXCEPT
+		FILETIME convert_hundredNs_relative_filetime(long long _hundred_nanoseconds) noexcept
 		{
 			ULARGE_INTEGER ulong_integer;
 			ulong_integer.QuadPart = static_cast<ULONGLONG>(-_hundred_nanoseconds);
@@ -95,7 +92,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		long long convert_filetime_hundredNs(const FILETIME& _filetime) NOEXCEPT
+		long long convert_filetime_hundredNs(const FILETIME& _filetime) noexcept
 		{
 			ULARGE_INTEGER ulong_integer;
 			ulong_integer.HighPart = _filetime.dwHighDateTime;
@@ -110,13 +107,13 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		FILETIME convert_msec_absolute_filetime(long long _milliseconds) NOEXCEPT
+		FILETIME convert_msec_absolute_filetime(long long _milliseconds) noexcept
 		{
 			return convert_hundredNs_absolute_filetime(convert_msec_hundredNs(_milliseconds));
 		}
 
 		inline
-		FILETIME convert_msec_relative_filetime(long long _milliseconds) NOEXCEPT
+		FILETIME convert_msec_relative_filetime(long long _milliseconds) noexcept
 		{
 			return convert_hundredNs_relative_filetime(convert_msec_hundredNs(_milliseconds));
 		}
@@ -127,7 +124,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		long long convert_filetime_msec(const FILETIME& _filetime) NOEXCEPT
+		long long convert_filetime_msec(const FILETIME& _filetime) noexcept
 		{
 			ULARGE_INTEGER ulong_integer;
 			ulong_integer.HighPart = _filetime.dwHighDateTime;
@@ -146,7 +143,7 @@ namespace ctl
 			static INIT_ONCE s_QpfInitOnce = INIT_ONCE_STATIC_INIT;
 			static LARGE_INTEGER s_Qpf;
 
-			static BOOL CALLBACK s_QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) NOEXCEPT
+			static BOOL CALLBACK s_QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
 			{
 				::QueryPerformanceFrequency(&s_Qpf);
 				return TRUE;
@@ -154,7 +151,7 @@ namespace ctl
 		}
 
 		inline
-		long long snap_qpf() NOEXCEPT
+		long long snap_qpf() noexcept
 		{
 			(void)::InitOnceExecuteOnce(&details::s_QpfInitOnce, details::s_QpfInitOnceCallback, nullptr, nullptr);
 			return details::s_Qpf.QuadPart;
@@ -166,10 +163,10 @@ namespace ctl
 		///
 #ifdef CTSTRAFFIC_UNIT_TESTS
         inline
-        long long snap_qpc_as_msec() NOEXCEPT;
+        long long snap_qpc_as_msec() noexcept;
 #else
 		inline
-		long long snap_qpc_as_msec() NOEXCEPT
+		long long snap_qpc_as_msec() noexcept
 		{
 			(void)::InitOnceExecuteOnce(&details::s_QpfInitOnce, details::s_QpfInitOnceCallback, nullptr, nullptr);
 			LARGE_INTEGER qpc;
@@ -183,7 +180,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		FILETIME snap_qpc_as_filetime() NOEXCEPT
+		FILETIME snap_qpc_as_filetime() noexcept
 		{
 			return convert_hundredNs_absolute_filetime(snap_qpc_as_msec());
 		}
@@ -193,7 +190,7 @@ namespace ctl
 		/// (FILETIME records time in one-hundred-nano-seconds)
 		///
 		inline
-		FILETIME snap_system_time_as_filetime() NOEXCEPT
+		FILETIME snap_system_time_as_filetime() noexcept
 		{
 			FILETIME return_filetime;
 			::GetSystemTimeAsFileTime(&return_filetime);
@@ -204,7 +201,7 @@ namespace ctl
 		/// Returns the current 'time' from GetSystemTimeAsFiletime in terms of milliseconds
 		///
 		inline
-		long long snap_system_time_as_msec() NOEXCEPT
+		long long snap_system_time_as_msec() noexcept
 		{
 			return convert_filetime_msec(snap_system_time_as_filetime());
 		}
