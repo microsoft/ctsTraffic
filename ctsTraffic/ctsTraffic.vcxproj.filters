@@ -261,6 +261,7 @@
     <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd">
       <Filter>TestScripts</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\TestScripts\streaming.txt">
