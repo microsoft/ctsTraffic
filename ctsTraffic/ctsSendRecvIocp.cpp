@@ -164,7 +164,7 @@ namespace ctsTraffic {
                     }
                 } else {
                     function_name = L"WSARecv";
-                    DWORD flags = 0;
+                    DWORD flags = (ctsConfig::Settings->Options & ctsConfig::OptionType::MSG_WAIT_ALL) ? MSG_WAITALL : 0;
                     if (::WSARecv(_socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0) {
                         return_status.io_errorcode = ::WSAGetLastError();
                     }

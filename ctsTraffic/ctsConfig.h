@@ -31,7 +31,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // Forward declaring ctsSocket project headers cannot be included due to circular references
     //
@@ -41,13 +42,15 @@ namespace ctsTraffic {
     class ctsSocket;
     typedef std::function<void(std::weak_ptr<ctsSocket>)> ctsSocketFunction;
 
-    namespace ctsConfig {
+    namespace ctsConfig
+    {
 
         //
         // Declaring enum types in the ctsConfig namespace
         // - to be referenced by ctsConfig functions
         //
-        enum class ProtocolType {
+        enum class ProtocolType
+        {
             NoProtocolSet,
             TCP,
             UDP
@@ -91,8 +94,9 @@ namespace ctsTraffic {
             REUSE_UNICAST_PORT = 0x0010,
             SET_RECV_BUF = 0x0020,
             SET_SEND_BUF = 0x0040,
-			ENABLE_CIRCULAR_QUEUEING = 0x0080,
-            // next enum  = 0x0100
+            ENABLE_CIRCULAR_QUEUEING = 0x0080,
+            MSG_WAIT_ALL = 0x0100,
+            // next enum  = 0x0200
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +111,7 @@ namespace ctsTraffic {
             return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
         inline
-        OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
+            OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
         {
             lhs = lhs | rhs;
             return lhs;
@@ -162,7 +166,8 @@ namespace ctsTraffic {
 
         void PrintLegend() noexcept;
 
-        struct JitterFrameEntry {
+        struct JitterFrameEntry
+        {
             long long sequence_number = 0LL;
             long long sender_qpc = 0LL;
             long long sender_qpf = 0LL;
@@ -217,16 +222,17 @@ namespace ctsTraffic {
         int SetPreConnectOptions(SOCKET _s) noexcept;
 
         // for the MediaStream pattern
-        struct MediaStreamSettings {
-			// set by ctsConfig from command-line arguments
-			ctsSignedLongLong BitsPerSecond = 0;
-			ctsUnsignedLong FramesPerSecond = 0;
-			ctsUnsignedLong BufferDepthSeconds = 0;
-			ctsUnsignedLong StreamLengthSeconds = 0;
-			// internally calculated
-			ctsUnsignedLong FrameSizeBytes = 0;
-			ctsUnsignedLong StreamLengthFrames = 0;
-			ctsUnsignedLong BufferedFrames = 0;
+        struct MediaStreamSettings
+        {
+            // set by ctsConfig from command-line arguments
+            ctsSignedLongLong BitsPerSecond = 0;
+            ctsUnsignedLong FramesPerSecond = 0;
+            ctsUnsignedLong BufferDepthSeconds = 0;
+            ctsUnsignedLong StreamLengthSeconds = 0;
+            // internally calculated
+            ctsUnsignedLong FrameSizeBytes = 0;
+            ctsUnsignedLong StreamLengthFrames = 0;
+            ctsUnsignedLong BufferedFrames = 0;
 
             ctsUnsignedLongLong CalculateTransferSize()
             {
@@ -244,18 +250,22 @@ namespace ctsTraffic {
                     L"The BitsPerSecond value (%lld) must be evenly divisible by 8", static_cast<long long>(BitsPerSecond));
 
                 // number of frames to keep buffered - only relevant on the client
-                if (!IsListening()) {
+                if (!IsListening())
+                {
                     ctl::ctFatalCondition(
                         0 == BufferDepthSeconds,
                         L"BufferDepthSeconds cannot be set to zero");
+
                     BufferedFrames = BufferDepthSeconds * FramesPerSecond;
-                    if (BufferedFrames < BufferDepthSeconds || BufferedFrames < FramesPerSecond) {
+                    if (BufferedFrames < BufferDepthSeconds || BufferedFrames < FramesPerSecond)
+                    {
                         throw std::invalid_argument("The total buffered frames exceed the maximum allowed : review -BufferDepth and -FrameRate");
                     }
                 }
 
                 const ctsUnsignedLongLong total_stream_length_frames = StreamLengthSeconds * FramesPerSecond;
-                if (total_stream_length_frames > MAXULONG32) {
+                if (total_stream_length_frames > MAXULONG32)
+                {
                     throw std::invalid_argument("The total stream length in frame-count exceeds the maximum allowed to be streamed (2^32)");
                 }
 
@@ -263,17 +273,20 @@ namespace ctsTraffic {
                 ctsUnsignedLongLong total_stream_length_bytes = static_cast<unsigned long long>((static_cast<long long>(BitsPerSecond) / 8ULL) * static_cast<unsigned long>(StreamLengthSeconds));
 
                 // guarantee that the total stream length aligns evenly with total_frames
-                if (total_stream_length_bytes % total_stream_length_frames != 0) {
+                if (total_stream_length_bytes % total_stream_length_frames != 0)
+                {
                     total_stream_length_bytes -= total_stream_length_bytes % total_stream_length_frames;
                 }
 
                 const ctsUnsignedLongLong total_frame_size_bytes = total_stream_length_bytes / total_stream_length_frames;
-                if (total_frame_size_bytes > MAXULONG32) {
+                if (total_frame_size_bytes > MAXULONG32)
+                {
                     throw std::invalid_argument("The frame size in bytes exceeds the maximum allowed to be streamed (2^32)");
                 }
 
                 FrameSizeBytes = static_cast<unsigned long>(total_frame_size_bytes);
-                if (FrameSizeBytes < 40) {
+                if (FrameSizeBytes < 40)
+                {
                     throw std::invalid_argument("The frame size is too small - it must be at least 40 bytes");
                 }
                 StreamLengthFrames = static_cast<unsigned long>(total_stream_length_frames);
@@ -289,9 +302,10 @@ namespace ctsTraffic {
         };
         const MediaStreamSettings& GetMediaStream() noexcept;
 
-        struct ctsConfigSettings {
+        struct ctsConfigSettings
+        {
+            // dynamically initialize status details with current qpc
             ctsConfigSettings() noexcept :
-                // dynamically initialize status details with current qpc
                 ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
             {
             }

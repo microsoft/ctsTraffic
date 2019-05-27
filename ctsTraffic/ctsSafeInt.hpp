@@ -34,13 +34,13 @@ namespace ctsTraffic {
         }
     };
     /// Visual Studio build system using safeint.h
-    typedef msl::utilities::SafeInt<unsigned long, ctsSafeIntErrorPolicy>       ctsUnsignedLong;
-    typedef msl::utilities::SafeInt<unsigned long long, ctsSafeIntErrorPolicy>  ctsUnsignedLongLong;
-    typedef msl::utilities::SafeInt<signed long, ctsSafeIntErrorPolicy>         ctsSignedLong;
-    typedef msl::utilities::SafeInt<long long, ctsSafeIntErrorPolicy>           ctsSignedLongLong;
-    typedef msl::utilities::SafeInt<size_t, ctsSafeIntErrorPolicy>              ctsSizeT;
+    using ctsUnsignedLong = msl::utilities::SafeInt<unsigned long, ctsSafeIntErrorPolicy>;
+    using ctsUnsignedLongLong = msl::utilities::SafeInt<unsigned long long, ctsSafeIntErrorPolicy>;
+    using ctsSignedLong = msl::utilities::SafeInt<signed long, ctsSafeIntErrorPolicy>;
+    using ctsSignedLongLong = msl::utilities::SafeInt<long long, ctsSafeIntErrorPolicy>;
+    using ctsSizeT = msl::utilities::SafeInt<size_t, ctsSafeIntErrorPolicy>;
 
-    typedef msl::utilities::SafeIntException ctsSafeIntException;
+    using ctsSafeIntException = msl::utilities::SafeIntException;
 
     inline
     LPCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
