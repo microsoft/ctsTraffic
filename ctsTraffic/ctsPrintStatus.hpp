@@ -51,23 +51,22 @@ namespace ctsTraffic {
 
     public:
         ctsStatusInformation() noexcept = default;
-
+        virtual ~ctsStatusInformation() noexcept = default;
         // base class is movable
         ctsStatusInformation(ctsStatusInformation&& _moved_from) noexcept
         {
             ::wmemcpy_s(this->OutputBuffer, OutputBufferSize + 1, _moved_from.OutputBuffer, OutputBufferSize + 1);
             _moved_from.reset_buffer();
         }
-
-        virtual ~ctsStatusInformation() noexcept = default;
+        ctsStatusInformation(const ctsStatusInformation&) = delete;
+        ctsStatusInformation& operator=(const ctsStatusInformation&) = delete;
+        ctsStatusInformation& operator=(ctsStatusInformation&&) = delete;
 
         LPCWSTR print_legend(const ctsConfig::StatusFormatting& _format) noexcept
         {
-            if (ctsConfig::StatusFormatting::Csv == _format) {
-                return nullptr;
-            } else {
-                return this->format_legend(_format);
-            }
+            return (ctsConfig::StatusFormatting::Csv == _format) ?
+                nullptr :
+                this->format_legend(_format);
         }
 
         LPCWSTR print_header(const ctsConfig::StatusFormatting& _format) noexcept
@@ -122,7 +121,7 @@ namespace ctsTraffic {
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, float _value) noexcept
         {
             static const unsigned long CoversionBufferLength = 16;
-            wchar_t ConversionBuffer[CoversionBufferLength];
+            wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
                 _right_justified_offset > OutputBufferSize,
@@ -137,7 +136,7 @@ namespace ctsTraffic {
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
             const auto converted = ::_snwprintf_s(
-                ConversionBuffer,
+                conversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
                 L"%.3f",
@@ -151,13 +150,13 @@ namespace ctsTraffic {
             ::wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
-                ConversionBuffer,
+                conversionBuffer,
                 converted);
         }
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, unsigned long _value) noexcept
         {
             static const unsigned long CoversionBufferLength = 12;
-            wchar_t ConversionBuffer[CoversionBufferLength];
+            wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
                 _right_justified_offset > OutputBufferSize,
@@ -172,7 +171,7 @@ namespace ctsTraffic {
             _Analysis_assume_(_max_length > CoversionBufferLength - 1);
 
             const int converted = ::_snwprintf_s(
-                ConversionBuffer,
+                conversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
                 L"%u",
@@ -186,13 +185,13 @@ namespace ctsTraffic {
             ::wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
-                ConversionBuffer,
+                conversionBuffer,
                 converted);
         }
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, long long _value) noexcept
         {
             static const unsigned long CoversionBufferLength = 20;
-            wchar_t ConversionBuffer[CoversionBufferLength];
+            wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
                 _value < 0LL,
@@ -213,7 +212,7 @@ namespace ctsTraffic {
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
             const int converted = ::_snwprintf_s(
-                ConversionBuffer,
+                conversionBuffer,
                 CoversionBufferLength,
                 _TRUNCATE,
                 L"%lld",
@@ -227,7 +226,7 @@ namespace ctsTraffic {
             ::wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
-                ConversionBuffer,
+                conversionBuffer,
                 converted);
         }
 
@@ -355,10 +354,14 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsUdpStatusInformation : public ctsStatusInformation {
+    class ctsUdpStatusInformation final : public ctsStatusInformation {
     public:
         ctsUdpStatusInformation() noexcept = default;
-        ~ctsUdpStatusInformation() noexcept = default;
+        ~ctsUdpStatusInformation() noexcept override = default;
+        ctsUdpStatusInformation(const ctsUdpStatusInformation&) = delete;
+        ctsUdpStatusInformation(ctsUdpStatusInformation&&) = default;
+        ctsUdpStatusInformation& operator=(const ctsUdpStatusInformation&) = delete;
+        ctsUdpStatusInformation& operator=(ctsUdpStatusInformation&&) = delete;
 
         //
         // Pure-Virtual functions required to be defined
@@ -394,7 +397,7 @@ namespace ctsTraffic {
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return
-                    L"TimeSlice,Streams,Bits/Sec,Completed,Dropped,Repeated,Errors\r\n";
+                    L"TimeSlice,Bits/Sec,Streams,Completed,Dropped,Repeated,Errors\r\n";
 
             } else if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
                 // Formatted to fit on an 80-column command shell
@@ -489,10 +492,10 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsTcpStatusInformation : public ctsStatusInformation {
+    class ctsTcpStatusInformation final : public ctsStatusInformation {
     public:
         ctsTcpStatusInformation() noexcept = default;
-        ~ctsTcpStatusInformation() noexcept = default;
+        ~ctsTcpStatusInformation() noexcept override = default;
         ctsTcpStatusInformation(const ctsTcpStatusInformation&) = delete;
         ctsTcpStatusInformation& operator=(const ctsTcpStatusInformation&) = delete;
         ctsTcpStatusInformation(ctsTcpStatusInformation&&) = delete;

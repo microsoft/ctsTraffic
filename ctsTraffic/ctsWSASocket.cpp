@@ -66,7 +66,7 @@ namespace ctsTraffic {
             }
         }
 
-        SOCKET socket = INVALID_SOCKET;
+        auto socket = INVALID_SOCKET;
         int gle = 0;
         const wchar_t* function = L"CreateWSASocket";
         try {
@@ -138,4 +138,3 @@ namespace ctsTraffic {
     }
 
 } // namespace
-
