@@ -19,6 +19,7 @@
 *.aps
 /ctsTraffic/.vs
 /.vs
+/.vscode
 /MSTest/Debug
 /ctsPerf/*.csv
 /MSTest/Release
