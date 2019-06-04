@@ -233,6 +233,25 @@ namespace details {
     }
 
 
+    // TcpConnectionEstatsBandwidth is unique in that there are two rw flags
+    inline ULONG GetPerConnectionDynamicEstats(const PMIB_TCPROW tcpRow, TCP_ESTATS_BANDWIDTH_ROD_v0* pRod) noexcept // NOLINT
+    {
+        EstatsTypeConverter<TcpConnectionEstatsBandwidth>::read_write_type rw;
+
+        auto error = ::GetPerTcpConnectionEStats(
+            tcpRow,
+            TcpConnectionEstatsBandwidth,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+            nullptr, 0, 0, // read-only static information
+            reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollectionInbound && !rw.EnableCollectionOutbound)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
+    }    
     template <TCP_ESTATS_TYPE TcpType>
     ULONG GetPerConnectionDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type *pRod) noexcept  // NOLINT
     {
@@ -247,6 +266,25 @@ namespace details {
         // only return success if the read-only dynamic struct returned that this was enabled
         // else the read-only static information is not populated
         if (error == ERROR_SUCCESS && !rw.EnableCollection)
+        {
+            error = ERROR_NO_DATA;
+        }
+        return error;
+    }
+    // TcpConnectionEstatsBandwidth is unique in that there are two rw flags
+    inline ULONG GetPerConnectionDynamicEstats(const PMIB_TCP6ROW tcpRow, TCP_ESTATS_BANDWIDTH_ROD_v0* pRod) noexcept // NOLINT
+    {
+        EstatsTypeConverter<TcpConnectionEstatsBandwidth>::read_write_type rw;
+
+        auto error = ::GetPerTcp6ConnectionEStats(
+            tcpRow,
+            TcpConnectionEstatsBandwidth,
+            reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)),      // read-write information
+            nullptr, 0, 0,                                                         // read-only static information
+            reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+        // only return success if the read-only dynamic struct returned that this was enabled
+        // else the read-only static information is not populated
+        if (error == ERROR_SUCCESS && !rw.EnableCollectionInbound && !rw.EnableCollectionOutbound)
         {
             error = ERROR_NO_DATA;
         }
@@ -808,11 +846,19 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() noexcept
         {
-            return L"";
+            return L"OutboundBandwidth,InboundBandwidth,OutboundInstability,"
+                   L"InboundInstability,OutboundBandwidthPeaked,InboundBandwidthPeaked";
         }
         std::wstring PrintData() const
         {
-            return L"";
+            return ctsWriteDetails::PrintMeanStdDev(outboundBandwidth) +
+                   ctsWriteDetails::PrintMeanStdDev(inboundBandwidth) +
+                   ctsWriteDetails::PrintMeanStdDev(outboundInstability) +
+                   ctsWriteDetails::PrintMeanStdDev(inboundInstability) +
+                   ctl::ctString::format_string(
+                   L",%lu,%lu",
+                   outboundBandwidthPeaked,
+                   inboundBandwidthPeaked);
         }
 
         template <typename PTCPROW>
@@ -824,14 +870,46 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr &, const ctl::ctSockaddr &)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rod)) {
-                // store data from this instance
+            if (0 == GetPerConnectionDynamicEstats(tcpRow, &Rod))
+            {
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundBandwidth", Rod.OutboundBandwidth))
+                {
+                    outboundBandwidth.push_back(Rod.OutboundBandwidth);
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundBandwidth", Rod.InboundBandwidth))
+                {
+                    inboundBandwidth.push_back(Rod.InboundBandwidth);
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundInstability", Rod.OutboundInstability))
+                {
+                    outboundInstability.push_back(Rod.OutboundInstability);
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundInstability", Rod.InboundInstability))
+                {
+                    inboundInstability.push_back(Rod.InboundInstability);
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - OutboundBandwidthPeaked", Rod.OutboundBandwidthPeaked))
+                {
+                    outboundBandwidthPeaked = Rod.OutboundBandwidthPeaked;
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsBandwidth - InboundBandwidthPeaked", Rod.InboundBandwidthPeaked))
+                {
+                    inboundBandwidthPeaked = Rod.InboundBandwidthPeaked;
+                }
             }
         }
+
+    private:
+        std::vector<ULONG64> outboundBandwidth;
+        std::vector<ULONG64> inboundBandwidth;
+        std::vector<ULONG64> outboundInstability;
+        std::vector<ULONG64> inboundInstability;
+        BOOLEAN outboundBandwidthPeaked = false;
+        BOOLEAN inboundBandwidthPeaked = false;
     };
 
     template <>
@@ -1036,6 +1114,9 @@ public:
                 const details::EstatsDataPoint<TcpConnectionEstatsData> matchingData(
                     entry.LocalAddr(),
                     entry.RemoteAddr());
+                const details::EstatsDataPoint<TcpConnectionEstatsBandwidth> matchingbandwidthData(
+                        entry.LocalAddr(),
+                        entry.RemoteAddr());
 
                 const auto foundEntry = byteTrackingData.find(matchingData);
                 if (foundEntry != byteTrackingData.end()) {
@@ -1043,6 +1124,15 @@ public:
                         entry.PrintAddresses() +
                         entry.PrintData() +
                         foundEntry->PrintData());
+                }
+
+                const auto foundBandwidthEntry = bandwidthData.find(matchingbandwidthData);
+                if (foundBandwidthEntry != bandwidthData.end())
+                {
+                    senderCongestionWriter.write_row(
+                        entry.PrintAddresses() +
+                        entry.PrintData() +
+                        foundBandwidthEntry->PrintData());
                 }
             }
         }
@@ -1091,6 +1181,7 @@ private:
     std::set<details::EstatsDataPoint<TcpConnectionEstatsRec>> localReceiveWindowData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsObsRec>> remoteReceiveWindowData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsSndCong>> senderCongestionData;
+    std::set<details::EstatsDataPoint<TcpConnectionEstatsBandwidth>> bandwidthData;
 
     ctsWriteDetails pathInfoWriter;
     ctsWriteDetails receiveWindowWriter;
@@ -1126,6 +1217,7 @@ private:
                     UpdateDataPoints(localReceiveWindowData, tableEntry);
                     UpdateDataPoints(remoteReceiveWindowData, tableEntry);
                     UpdateDataPoints(senderCongestionData, tableEntry);
+                    UpdateDataPoints(bandwidthData, tableEntry);
                 }
                 catch (const ctl::ctException& e) {
                     if (e.why() == ERROR_ACCESS_DENIED) {
@@ -1154,6 +1246,7 @@ private:
                     UpdateDataPoints(localReceiveWindowData, tableEntry);
                     UpdateDataPoints(remoteReceiveWindowData, tableEntry);
                     UpdateDataPoints(senderCongestionData, tableEntry);
+                    UpdateDataPoints(bandwidthData, tableEntry);
                 }
                 catch (const ctl::ctException& e) {
                     if (e.why() == ERROR_ACCESS_DENIED) {
