@@ -1331,36 +1331,42 @@ private:
         {L"inboundInstability",               TcpConnectionEstatsBandwidth}
     };
 
+    enum TRACKING_TYPE {
+        UNTRACKED,
+        BASIC,
+        DETAIL
+    };
+
     // Map of which stats are enabled
-    std::map<std::wstring, BOOLEAN> liveTrackedStatistics {
-        {L"MssRcvd",                          true},
-        {L"MssSent",                          true},
-        {L"DataBytesIn",                      false},
-        {L"DataBytesOut",                     false},
-        {L"conjestionWindow",                 true},
-        {L"bytesSentInReceiverLimited",       false},
-        {L"bytesSentInSenderLimited",         false},
-        {L"bytesSentInCongestionLimited",     false},
-        {L"transitionsIntoReceiverLimited",   false},
-        {L"transitionsIntoSenderLimited",     false},
-        {L"transitionsIntoCongestionLimited", false},
-        {L"retransmitTimer",                  true},
-        {L"roundTripTime",                    true},
-        {L"bytesRetrans",                     true},
-        {L"dupAcksRcvd",                      false},
-        {L"sacksRcvd",                        false},
-        {L"congestionSignals",                false},
-        {L"maxSegmentSize",                   false},
-        {L"curLocalReceiveWindow",            false},
-        {L"minLocalReceiveWindow",            false},
-        {L"maxLocalReceiveWindow",            false},
-        {L"curRemoteReceiveWindow",           false},
-        {L"minRemoteReceiveWindow",           false},
-        {L"maxRemoteReceiveWindow",           false},
-        {L"outboundBandwidth",                true},
-        {L"inboundBandwidth",                 true},
-        {L"outboundInstability",              true},
-        {L"inboundInstability",               true}
+    std::map<std::wstring, TRACKING_TYPE> liveTrackedStatistics {
+        {L"MssRcvd",                          BASIC},
+        {L"MssSent",                          BASIC},
+        {L"DataBytesIn",                      UNTRACKED},
+        {L"DataBytesOut",                     UNTRACKED},
+        {L"conjestionWindow",                 DETAIL},
+        {L"bytesSentInReceiverLimited",       UNTRACKED},
+        {L"bytesSentInSenderLimited",         UNTRACKED},
+        {L"bytesSentInCongestionLimited",     UNTRACKED},
+        {L"transitionsIntoReceiverLimited",   UNTRACKED},
+        {L"transitionsIntoSenderLimited",     UNTRACKED},
+        {L"transitionsIntoCongestionLimited", UNTRACKED},
+        {L"retransmitTimer",                  BASIC},
+        {L"roundTripTime",                    DETAIL},
+        {L"bytesRetrans",                     BASIC},
+        {L"dupAcksRcvd",                      UNTRACKED},
+        {L"sacksRcvd",                        UNTRACKED},
+        {L"congestionSignals",                UNTRACKED},
+        {L"maxSegmentSize",                   UNTRACKED},
+        {L"curLocalReceiveWindow",            UNTRACKED},
+        {L"minLocalReceiveWindow",            UNTRACKED},
+        {L"maxLocalReceiveWindow",            UNTRACKED},
+        {L"curRemoteReceiveWindow",           UNTRACKED},
+        {L"minRemoteReceiveWindow",           UNTRACKED},
+        {L"maxRemoteReceiveWindow",           UNTRACKED},
+        {L"outboundBandwidth",                BASIC},
+        {L"inboundBandwidth",                 BASIC},
+        {L"outboundInstability",              BASIC},
+        {L"inboundInstability",               BASIC}
     };
 
     // since updates are always serialized on a timer, just reuse the same buffer
@@ -1371,17 +1377,17 @@ private:
     // Statistics summary
     typedef struct detailedStats {
         size_t  samples = 0;
-        ULONG64 min;
-        ULONG64 max;
-        DOUBLE mean;
-        DOUBLE stddev;
-        DOUBLE median;
-        DOUBLE iqr;
+        ULONG64 min = ULONG_MAX;
+        ULONG64 max = ULONG_MAX;
+        DOUBLE mean = -0.00001;
+        DOUBLE stddev = -0.00001;
+        DOUBLE median = -0.00001;
+        DOUBLE iqr = -0.00001;
     } DETAILED_STATS;
 
     // Generate a DETAILED_STATS struct for the given statistic across all connections.
-    // Min/Max: global min/max, Mean: mean of means, Median: median of medians,
-    // StdDev: stddev of means, IQR: iqr of medians.
+    //      Min/Max: global min/max, Mean: mean of means, Median: median of medians,
+    //      StdDev: stddev of means, IQR: iqr of medians.
     DETAILED_STATS GatherGlobalStatisticSummary(std::wstring statName, TCP_ESTATS_TYPE TcpType)
     {
         // Handle different data structure types
@@ -1424,20 +1430,18 @@ private:
 
             mins.push_back(*std::min_element(std::begin(values), std::end(values)));
             maxs.push_back(*std::max_element(std::begin(values), std::end(values)));
-            means.push_back(std::get<0>(ctl::ctSampledStandardDeviation(std::begin(means), std::end(means))));
-            medians.push_back(std::get<1>(ctl::ctInterquartileRange(std::begin(medians), std::end(medians))));
+            means.push_back(std::get<0>(ctl::ctSampledStandardDeviation(std::begin(values), std::end(values))));
+            medians.push_back(std::get<1>(ctl::ctInterquartileRange(std::begin(values), std::end(values))));
         }
 
-        size_t size = std::size(mins);
-        if (size == 0) {
-            return {};
-        }
+        // If no data was collected, return an empty struct
+        if (mins.empty()) {return {};}
 
         auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(means), std::end(means));
         auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(medians), std::end(medians));
 
         DETAILED_STATS s = {
-            size,
+            std::size(mins),
             *std::min_element(std::begin(mins), std::end(mins)),
             *std::max_element(std::begin(maxs), std::end(maxs)),
             std::get<0>(mstddev_tuple),
@@ -1448,44 +1452,143 @@ private:
         return s;
     }
 
+
+    // Generate a vector of DETAILED_STATS structs representing a summaries for the given statistic for each connection.
+    std::vector<DETAILED_STATS> GatherPerConnectionStatisticSummaries(std::wstring statName, TCP_ESTATS_TYPE TcpType)
+    {
+        // Handle different data structure types
+        // This sucks
+        switch (TcpType)
+        {
+            case TcpConnectionEstatsSynOpts:
+                return _GatherPerConnectionStatisticSummaries(statName, synOptsData);
+            case TcpConnectionEstatsData:
+                return _GatherPerConnectionStatisticSummaries(statName, byteTrackingData);
+            case TcpConnectionEstatsPath:
+                return _GatherPerConnectionStatisticSummaries(statName, pathInfoData);
+            case TcpConnectionEstatsRec:
+                return _GatherPerConnectionStatisticSummaries(statName, localReceiveWindowData);
+            case TcpConnectionEstatsObsRec:
+                return _GatherPerConnectionStatisticSummaries(statName, remoteReceiveWindowData);
+            case TcpConnectionEstatsSndCong:
+                return _GatherPerConnectionStatisticSummaries(statName, senderCongestionData);
+            case TcpConnectionEstatsBandwidth:
+                return _GatherPerConnectionStatisticSummaries(statName, bandwidthData);
+            default: // Never occurs bc this is an enum
+                return {};
+        }
+    }
+    // Actual function, wrapper handles differing datastructure types
+    template <TCP_ESTATS_TYPE TcpType>
+    std::vector<DETAILED_STATS> _GatherPerConnectionStatisticSummaries(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
+    {
+        std::vector<DETAILED_STATS> perConnectionSatisticSummaries;
+
+        for (const auto &entry : dataStructure)
+        {
+            std::vector<ULONG64> values = *(entry.GetData().at(statName));
+            if (values.empty()) {continue;} // Ignore empty entries
+
+            sort(std::begin(values), std::end(values));
+            auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(values), std::end(values));
+            auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(values), std::end(values));
+
+            DETAILED_STATS s = {
+                std::size(values),
+                *std::min_element(std::begin(values), std::end(values)),
+                *std::max_element(std::begin(values), std::end(values)),
+                std::get<0>(mstddev_tuple),
+                std::get<1>(mstddev_tuple),
+                std::get<1>(interquartile_tuple),
+                std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
+            };
+
+            perConnectionSatisticSummaries.push_back(s);
+        }
+
+        return perConnectionSatisticSummaries;
+    }
+
+
     void PrintStat(ULONG64 stat, const int& width) {
         std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << stat;
     }
     void PrintStat(DOUBLE stat, const int& width) {
-        std::wcout.precision(5);
+        std::wcout.precision(3);
         std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
     }
+    void PrintStatSummary(std::wstring title, DETAILED_STATS summary, const int& width) {
+        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << title;
+            PrintStat(summary.min, width);
+            PrintStat(summary.mean, width);
+            PrintStat(summary.max, width);
+            PrintStat(summary.stddev, width);
+            PrintStat(summary.median, width);
+            PrintStat(summary.iqr, width);
+        std::wcout << L" |" << std::endl;
+    }
+    
     void PrintHeaderTitle(std::wstring title, const int& width) {
         std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << title;
     }
+    void PrintStdHeader(std::wstring firstColumnName, const int& width) {
+        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
+        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << firstColumnName;
+            PrintHeaderTitle(L"Min", width);
+            PrintHeaderTitle(L"Mean", width);
+            PrintHeaderTitle(L"Max", width);
+            PrintHeaderTitle(L"StdDev", width);
+            PrintHeaderTitle(L"Median", width);
+            PrintHeaderTitle(L"IQR", width);
+        std::wcout << L" |" << std::endl;
+        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
+    }
+    void PrintStdFooter() {
+        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
+    }
+
+    void clear_screen(char fill = ' ') { 
+        COORD tl = {0,0};
+        CONSOLE_SCREEN_BUFFER_INFO s;
+        HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);   
+        GetConsoleScreenBufferInfo(console, &s);
+        DWORD written, cells = s.dwSize.X * s.dwSize.Y;
+        FillConsoleOutputCharacter(console, fill, cells, tl, &written);
+        FillConsoleOutputAttribute(console, s.wAttributes, cells, tl, &written);
+        SetConsoleCursorPosition(console, tl);
+    }
 
     void PrintDataUpdate() {
-        std::wcout << "===================================================================================================" << std::endl;
-        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << L"Stat Name";
-            PrintHeaderTitle(L"Min", 10);
-            PrintHeaderTitle(L"Mean", 10);
-            PrintHeaderTitle(L"Max", 10);
-            PrintHeaderTitle(L"StdDev", 10);
-            PrintHeaderTitle(L"Median", 10);
-            PrintHeaderTitle(L"IQR", 10);
-        std::wcout << L"|" << std::endl;
+        // -- Global summary table --
+        clear_screen();
+        PrintStdHeader(L"GLobal Statistics", 12);
         for (auto stat : liveTrackedStatistics)
         {
-            // Ignore disabled stats
-            if (!stat.second) {continue;}
+            // Ignore utracked stats
+            if (stat.second == UNTRACKED) {continue;}
 
-            auto detailedStats = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
-
-            std::wcout << std::left << std::setw(20) << std::setfill(L' ') << stat.first;
-                PrintStat(detailedStats.min, 10);
-                PrintStat(detailedStats.mean, 10);
-                PrintStat(detailedStats.max, 10);
-                PrintStat(detailedStats.stddev, 10);
-                PrintStat(detailedStats.median, 10);
-                PrintStat(detailedStats.iqr, 10);
-            std::wcout << L"|" << std::endl;
+            auto detailedStatsSummary = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
+            PrintStatSummary(stat.first, detailedStatsSummary, 12);
         }
+        PrintStdFooter();
         std::wcout << std::endl;
+
+        // -- Detailed Pre-Statistic Results --
+        for (auto stat : liveTrackedStatistics)
+        {
+            // Only print Detail-level tracked stats in the detailed format
+            if (stat.second != DETAIL) {continue;}
+
+            PrintStdHeader(stat.first, 12);
+
+            auto detailedStatsSummaries = GatherPerConnectionStatisticSummaries(stat.first, trackedStatisticsDataTypes.at(stat.first));
+
+            for (auto summary : detailedStatsSummaries)
+            {
+                PrintStatSummary(ctl::ctString::format_string(L"Samples: %u", summary.samples), summary, 12);
+            }
+            PrintStdFooter();
+        }
     }
 
     bool UpdateEstats() noexcept
