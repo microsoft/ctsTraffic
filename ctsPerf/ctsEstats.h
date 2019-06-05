@@ -14,9 +14,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
+#include <iostream>
+#include <iomanip>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <set>
+#include <unordered_map>
+#include <map>
 // os headers
 #include <Windows.h>
 // Winsock2 is needed for IPHelper headers
@@ -30,6 +35,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctString.hpp>
 #include <ctSockaddr.hpp>
 #include <ctThreadPoolTimer.hpp>
+#include <ctMath.hpp>
+
+#define _LIVE_PRINT
 
 namespace ctsPerf {
 
@@ -341,7 +349,21 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            return L"," + std::to_wstring(MssRcvd) + L"," + std::to_wstring(MssSent);
+            std::wstring formattedString(L"");
+            formattedString += (MssRcvd.empty()) ? L"," : L"," + std::to_wstring(MssRcvd.back());
+            formattedString += (MssSent.empty()) ? L"," : L"," + std::to_wstring(MssSent.back());
+            return formattedString;
+        }
+        // std::wstring DetailPrintData(std::unordered_map<std::wstring, BOOLEAN> &liveTrackedStatistics) const
+        // {
+        //     return 
+        // }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {
+                {L"MssRcvd", &MssRcvd},
+                {L"MssSent", &MssSent}
+            };
         }
 
         template <typename PTCPROW>
@@ -352,24 +374,28 @@ namespace details {
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&)
         {
-            if (MssRcvd == 0) {
+            if (MssRcvdCount == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
                 FillMemory(&Ros, sizeof Ros, -1);
                 if (0 == GetPerConnectionStaticEstats(tcpRow, &Ros)) {
 
                     if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssRcvd", Ros.MssRcvd)) {
-                        MssRcvd = Ros.MssRcvd;
+                        MssRcvd.push_back(Ros.MssRcvd - MssRcvdCount);
+                        MssRcvdCount = Ros.MssRcvd;
                     }
                     if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssSent", Ros.MssSent)) {
-                        MssSent = Ros.MssSent;
+                        MssSent.push_back(Ros.MssSent - MssSentCount);
+                        MssSentCount = Ros.MssSent;
                     }
                 }
             }
         }
 
     private:
-        ULONG MssRcvd = 0;
-        ULONG MssSent = 0;
+        std::vector<ULONG64> MssRcvd;
+        ULONG MssRcvdCount = 0;
+        std::vector<ULONG64> MssSent;
+        ULONG MssSentCount = 0;
     };
 
     template <>
@@ -381,7 +407,17 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            return L"," + std::to_wstring(DataBytesIn) + L"," + std::to_wstring(DataBytesOut);
+            std::wstring formattedString(L"");
+            formattedString += (DataBytesIn.empty()) ? L"," : L"," + std::to_wstring(DataBytesIn.back());
+            formattedString += (DataBytesOut.empty()) ? L"," : L"," + std::to_wstring(DataBytesOut.back());
+            return formattedString;
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64>*> GetData()
+        {
+            return {
+                {L"DataBytesIn", &DataBytesIn},
+                {L"DataBytesOut", &DataBytesOut}
+            };
         }
 
         template <typename PTCPROW>
@@ -399,17 +435,21 @@ namespace details {
             if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsData>(tcpRow, &Rod)) {
 
                 if (IsRodValueValid(L"TcpConnectionEstatsData - DataBytesIn", Rod.DataBytesIn)) {
-                    DataBytesIn = Rod.DataBytesIn;
+                    DataBytesIn.push_back(Rod.DataBytesIn - DataBytesInCount);
+                    DataBytesInCount = Rod.DataBytesIn;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsData - DataBytesOut", Rod.DataBytesOut)) {
-                    DataBytesOut = Rod.DataBytesOut;
+                    DataBytesOut.push_back(Rod.DataBytesOut - DataBytesOutCount);
+                    DataBytesOutCount = Rod.DataBytesOut;                
                 }
             }
         }
 
     private:
-        ULONG64 DataBytesIn = 0;
-        ULONG64 DataBytesOut = 0;
+        std::vector<ULONG64> DataBytesIn;
+        ULONG64 DataBytesInCount = 0;
+        std::vector<ULONG64> DataBytesOut;
+        ULONG64 DataBytesOutCount = 0;
     };
 
     template <>
@@ -423,16 +463,27 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            return
-                ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindows) +
-                ctl::ctString::format_string(
-                    L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
-                    transitionsIntoReceiverLimited,
-                    transitionsIntoSenderLimited,
-                    transitionsIntoCongestionLimited,
-                    bytesSentInReceiverLimited,
-                    bytesSentInSenderLimited,
-                    bytesSentInCongestionLimited);
+            std::wstring formattedString = ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindow);
+            formattedString += (transitionsIntoReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoReceiverLimited.back());
+            formattedString += (transitionsIntoSenderLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoSenderLimited.back());
+            formattedString += (transitionsIntoCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoCongestionLimited.back());
+            formattedString += (bytesSentInReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInReceiverLimited.back());
+            formattedString += (bytesSentInSenderLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInSenderLimited.back());
+            formattedString += (bytesSentInCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInCongestionLimited.back());
+            return formattedString;
+
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {
+                {L"conjestionWindow", &conjestionWindow},
+                {L"bytesSentInReceiverLimited", &bytesSentInReceiverLimited},
+                {L"bytesSentInSenderLimited", &bytesSentInSenderLimited},
+                {L"bytesSentInCongestionLimited", &bytesSentInCongestionLimited},
+                {L"transitionsIntoReceiverLimited", &transitionsIntoReceiverLimited},
+                {L"transitionsIntoSenderLimited", &transitionsIntoSenderLimited},
+                {L"transitionsIntoCongestionLimited", &transitionsIntoCongestionLimited}
+            };
         }
 
         template <typename PTCPROW>
@@ -487,39 +538,51 @@ namespace details {
                 UNREFERENCED_PARAMETER(remoteAddr);
 
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - CurCwnd", Rod.CurCwnd)) {
-                    conjestionWindows.push_back(Rod.CurCwnd);
+                    conjestionWindow.push_back(Rod.CurCwnd);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesRwin", Rod.SndLimBytesRwin)) {
-                    bytesSentInReceiverLimited = Rod.SndLimBytesRwin;
+                    bytesSentInReceiverLimited.push_back(Rod.SndLimBytesRwin - bytesSentInReceiverLimitedCount);
+                    bytesSentInReceiverLimitedCount = Rod.SndLimBytesRwin;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesSnd", Rod.SndLimBytesSnd)) {
-                    bytesSentInSenderLimited = Rod.SndLimBytesSnd;
+                    bytesSentInSenderLimited.push_back(Rod.SndLimBytesSnd - bytesSentInSenderLimitedCount);
+                    bytesSentInSenderLimitedCount = Rod.SndLimBytesSnd;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimBytesCwnd", Rod.SndLimBytesCwnd)) {
-                    bytesSentInCongestionLimited = Rod.SndLimBytesCwnd;
+                    bytesSentInCongestionLimited.push_back(Rod.SndLimBytesCwnd - bytesSentInCongestionLimitedCount);
+                    bytesSentInCongestionLimitedCount = Rod.SndLimBytesCwnd;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransRwin", Rod.SndLimTransRwin)) {
-                    transitionsIntoReceiverLimited = Rod.SndLimTransRwin;
+                    transitionsIntoReceiverLimited.push_back(Rod.SndLimTransRwin - transitionsIntoReceiverLimitedCount);
+                    transitionsIntoReceiverLimitedCount = Rod.SndLimTransRwin;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransSnd", Rod.SndLimTransSnd)) {
-                    transitionsIntoSenderLimited = Rod.SndLimTransSnd;
+                    transitionsIntoSenderLimited.push_back(Rod.SndLimTransSnd - transitionsIntoSenderLimitedCount);
+                    transitionsIntoSenderLimitedCount = Rod.SndLimTransSnd;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - SndLimTransCwnd", Rod.SndLimTransCwnd)) {
-                    transitionsIntoCongestionLimited = Rod.SndLimTransCwnd;
+                    transitionsIntoCongestionLimited.push_back(Rod.SndLimTransCwnd - transitionsIntoCongestionLimitedCount);
+                    transitionsIntoCongestionLimitedCount = Rod.SndLimTransCwnd;
                 }
             }
         }
 
     private:
-        std::vector<ULONG> conjestionWindows;
+        std::vector<ULONG64> conjestionWindow;
 
-        SIZE_T bytesSentInReceiverLimited = 0;
-        SIZE_T bytesSentInSenderLimited = 0;
-        SIZE_T bytesSentInCongestionLimited = 0;
+        std::vector<ULONG64> bytesSentInReceiverLimited;
+        ULONG64 bytesSentInReceiverLimitedCount = 0;
+        std::vector<ULONG64> bytesSentInSenderLimited;
+        ULONG64 bytesSentInSenderLimitedCount = 0;
+        std::vector<ULONG64> bytesSentInCongestionLimited;
+        ULONG64 bytesSentInCongestionLimitedCount = 0;
 
-        ULONG transitionsIntoReceiverLimited = 0;
-        ULONG transitionsIntoSenderLimited = 0;
-        ULONG transitionsIntoCongestionLimited = 0;
+        std::vector<ULONG64> transitionsIntoReceiverLimited;
+        ULONG64 transitionsIntoReceiverLimitedCount = 0;
+        std::vector<ULONG64> transitionsIntoSenderLimited;
+        ULONG64 transitionsIntoSenderLimitedCount = 0;
+        std::vector<ULONG64> transitionsIntoCongestionLimited;
+        ULONG64 transitionsIntoCongestionLimitedCount = 0;
     };
 
     template <>
@@ -533,15 +596,27 @@ namespace details {
         }
         std::wstring PrintData() const
         {
-            return ctl::ctString::format_string(
-                L",%lu,%lu,%lu,%lu,%lu",
-                bytesRetrans,
-                dupAcksRcvd,
-                sacksRcvd,
-                congestionSignals,
-                maxSegmentSize) +
-                ctsWriteDetails::PrintMeanStdDev(retransmitTimer) +
-                ctsWriteDetails::PrintMeanStdDev(roundTripTime);
+            std::wstring formattedString(L"");
+            formattedString += (bytesRetrans.empty()) ? L"," : L"," + std::to_wstring(bytesRetrans.back());
+            formattedString += (dupAcksRcvd.empty()) ? L"," : L"," + std::to_wstring(dupAcksRcvd.back());
+            formattedString += (sacksRcvd.empty()) ? L"," : L"," + std::to_wstring(sacksRcvd.back());
+            formattedString += (congestionSignals.empty()) ? L"," : L"," + std::to_wstring(congestionSignals.back());
+            formattedString += (maxSegmentSize.empty()) ? L"," : L"," + std::to_wstring(maxSegmentSize.back());
+            formattedString += ctsWriteDetails::PrintMeanStdDev(retransmitTimer);
+            formattedString += ctsWriteDetails::PrintMeanStdDev(roundTripTime);
+            return formattedString;
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {
+                {L"retransmitTimer", &retransmitTimer},
+                {L"roundTripTime", &roundTripTime},
+                {L"bytesRetrans", &bytesRetrans},
+                {L"dupAcksRcvd", &dupAcksRcvd},
+                {L"sacksRcvd", &sacksRcvd},
+                {L"congestionSignals", &congestionSignals},
+                {L"maxSegmentSize", &maxSegmentSize}
+            };
         }
 
         template <typename PTCPROW>
@@ -602,31 +677,42 @@ namespace details {
                     roundTripTime.push_back(Rod.SmoothedRtt);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - BytesRetrans", Rod.BytesRetrans)) {
-                    bytesRetrans = Rod.BytesRetrans;
+                    bytesRetrans.push_back(Rod.BytesRetrans - bytesRetransCount);
+                    bytesRetransCount = Rod.BytesRetrans;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - DupAcksIn", Rod.DupAcksIn)) {
-                    dupAcksRcvd = Rod.DupAcksIn;
+                    dupAcksRcvd.push_back(Rod.DupAcksIn - dupAcksRcvdCount);
+                    dupAcksRcvdCount = Rod.DupAcksIn;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - SacksRcvd", Rod.SacksRcvd)) {
-                    sacksRcvd = Rod.SacksRcvd;
+                    sacksRcvd.push_back(Rod.SacksRcvd - sacksRcvdCount);
+                    sacksRcvdCount = Rod.SacksRcvd;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CongSignals", Rod.CongSignals)) {
-                    congestionSignals = Rod.CongSignals;
+                    congestionSignals.push_back(Rod.CongSignals - congestionSignalsCount);
+                    congestionSignalsCount = Rod.CongSignals;
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CurMss", Rod.CurMss)) {
-                    maxSegmentSize = Rod.CurMss;
+                    maxSegmentSize.push_back(Rod.CurMss - maxSegmentSizeCount);
+                    maxSegmentSizeCount = Rod.CurMss;
                 }
             }
         }
 
     private:
-        std::vector<ULONG> retransmitTimer;
-        std::vector<ULONG> roundTripTime;
-        ULONG bytesRetrans = 0;
-        ULONG dupAcksRcvd = 0;
-        ULONG sacksRcvd = 0;
-        ULONG congestionSignals = 0;
-        ULONG maxSegmentSize = 0;
+        std::vector<ULONG64> retransmitTimer;
+        std::vector<ULONG64> roundTripTime;
+
+        std::vector<ULONG64> bytesRetrans;
+        ULONG64 bytesRetransCount = 0;
+        std::vector<ULONG64> dupAcksRcvd;
+        ULONG64 dupAcksRcvdCount = 0;
+        std::vector<ULONG64> sacksRcvd;
+        ULONG64 sacksRcvdCount = 0;
+        std::vector<ULONG64> congestionSignals;
+        ULONG64 congestionSignalsCount = 0;
+        std::vector<ULONG64> maxSegmentSize;
+        ULONG64 maxSegmentSizeCount = 0;
     };
 
     template <>
@@ -639,17 +725,17 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
+            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
-                ctl::ctString::format_string(L"%lu,", minReceiveWindow);
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back());
 
-            formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
+            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
-                ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back());
 
-            ULONG calculatedMin = InvalidLongEstatsValue;
-            ULONG calculatedMax = InvalidLongEstatsValue;
-            for (const auto& value : receiveWindow)
+            ULONG64 calculatedMin = InvalidLongEstatsValue;
+            ULONG64 calculatedMax = InvalidLongEstatsValue;
+            for (const auto &value : curReceiveWindow)
             {
                 if (calculatedMin == InvalidLongEstatsValue) {
                     calculatedMin = value;
@@ -671,9 +757,16 @@ namespace details {
                 L"(bad)," :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
 
-            return
-                formattedString +
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+            return formattedString +
+                   ctsWriteDetails::PrintMeanStdDev(curReceiveWindow);
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {
+                {L"curLocalReceiveWindow", &curReceiveWindow},
+                {L"minLocalReceiveWindow", &minReceiveWindow},
+                {L"maxLocalReceiveWindow", &maxReceiveWindow}
+            };
         }
 
         template <typename PTCPROW>
@@ -718,21 +811,24 @@ namespace details {
                 UNREFERENCED_PARAMETER(remoteAddr);
 
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - CurRwinSent", Rod.CurRwinSent)) {
-                    receiveWindow.push_back(Rod.CurRwinSent);
+                    curReceiveWindow.push_back(Rod.CurRwinSent);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - MinRwinSent", Rod.MinRwinSent)) {
-                    minReceiveWindow = Rod.MinRwinSent;
+                    minReceiveWindow.push_back(Rod.MinRwinSent);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - MaxRwinSent", Rod.MaxRwinSent)) {
-                    maxReceiveWindow = Rod.MaxRwinSent;
+                    maxReceiveWindow.push_back(Rod.MaxRwinSent);
                 }
             }
         }
 
     private:
-        std::vector<ULONG> receiveWindow;
-        ULONG minReceiveWindow = 0;
-        ULONG maxReceiveWindow = 0;
+        std::vector<ULONG64> curReceiveWindow;
+
+        std::vector<ULONG64> minReceiveWindow;
+        ULONG64 minReceiveWindowCount = 0;
+        std::vector<ULONG64> maxReceiveWindow;
+        ULONG64 maxReceiveWindowCount = 0;
     };
 
     template <>
@@ -745,17 +841,17 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += (minReceiveWindow == InvalidLongEstatsValue) ?
-                L"(bad)," :
-                ctl::ctString::format_string(L"%lu,", minReceiveWindow);
+            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?                
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back())
+                : L"(bad),";
 
-            formattedString += (maxReceiveWindow == InvalidLongEstatsValue) ?
-                L"(bad)," :
-                ctl::ctString::format_string(L"%lu,", maxReceiveWindow);
+            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?                
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back())
+                : L"(bad),";
 
-            ULONG calculatedMin = InvalidLongEstatsValue;
-            ULONG calculatedMax = InvalidLongEstatsValue;
-            for (const auto& value : receiveWindow)
+            ULONG64 calculatedMin = InvalidLongEstatsValue;
+            ULONG64 calculatedMax = InvalidLongEstatsValue;
+            for (const auto &value : curReceiveWindow)
             {
                 if (calculatedMin == InvalidLongEstatsValue) {
                     calculatedMin = value;
@@ -771,16 +867,23 @@ namespace details {
             }
 
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
-                L"(bad)," :
-                ctl::ctString::format_string(L"%lu,", calculatedMin);
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back())
+                : L"(bad),";
 
             formattedString += (calculatedMax == InvalidLongEstatsValue) ?
-                L"(bad)," :
-                ctl::ctString::format_string(L"%lu", calculatedMax);
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back())
+                : L"(bad),";
 
-            return
-                formattedString + 
-                ctsWriteDetails::PrintMeanStdDev(receiveWindow);
+            return formattedString +
+                   ctsWriteDetails::PrintMeanStdDev(curReceiveWindow);
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {
+                {L"curRemoteReceiveWindow", &curReceiveWindow},
+                {L"minRemoteReceiveWindow", &minReceiveWindow},
+                {L"maxRemoteReceiveWindow", &maxReceiveWindow}
+            };
         }
 
         template <typename PTCPROW>
@@ -824,21 +927,21 @@ namespace details {
                 UNREFERENCED_PARAMETER(remoteAddr);
 
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - CurRwinRcvd", Rod.CurRwinRcvd)) {
-                    receiveWindow.push_back(Rod.CurRwinRcvd);
+                    curReceiveWindow.push_back(Rod.CurRwinRcvd);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MinRwinRcvd", Rod.MinRwinRcvd)) {
-                    minReceiveWindow = Rod.MinRwinRcvd;
+                    minReceiveWindow.push_back(Rod.MinRwinRcvd);
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MaxRwinRcvd", Rod.MaxRwinRcvd)) {
-                    maxReceiveWindow = Rod.MaxRwinRcvd;
+                    maxReceiveWindow.push_back(Rod.MaxRwinRcvd);
                 }
             }
         }
 
     private:
-        std::vector<ULONG> receiveWindow;
-        ULONG minReceiveWindow = 0;
-        ULONG maxReceiveWindow = 0;
+        std::vector<ULONG64> curReceiveWindow;
+        std::vector<ULONG64> minReceiveWindow;
+        std::vector<ULONG64> maxReceiveWindow;
     };
 
     template <>
@@ -846,8 +949,8 @@ namespace details {
     public:
         static LPCWSTR PrintHeader() noexcept
         {
-            return L"OutboundBandwidth,InboundBandwidth,OutboundInstability,"
-                   L"InboundInstability,OutboundBandwidthPeaked,InboundBandwidthPeaked";
+            return L"OutboundBandwidth(mean),OutboundBandwidth(stddev),InboundBandwidth(mean),InboundBandwidth(stddev),OutboundInstability(mean),OutboundInstability(stddev),"
+                   L"InboundInstability(mean),InboundInstability(stddev),OutboundBandwidthPeaked,InboundBandwidthPeaked";
         }
         std::wstring PrintData() const
         {
@@ -855,10 +958,17 @@ namespace details {
                    ctsWriteDetails::PrintMeanStdDev(inboundBandwidth) +
                    ctsWriteDetails::PrintMeanStdDev(outboundInstability) +
                    ctsWriteDetails::PrintMeanStdDev(inboundInstability) +
-                   ctl::ctString::format_string(
-                   L",%lu,%lu",
-                   outboundBandwidthPeaked,
-                   inboundBandwidthPeaked);
+                   std::wstring((outboundBandwidthPeaked) ? L",yes" : L",no") +
+                   std::wstring((inboundBandwidthPeaked) ? L",yes" : L",no");
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64>*> GetData()
+        {
+            return {
+                {L"outboundBandwidth", &outboundBandwidth},
+                {L"inboundBandwidth", &inboundBandwidth},
+                {L"outboundInstability", &outboundInstability},
+                {L"inboundInstability", &inboundInstability}
+            };
         }
 
         template <typename PTCPROW>
@@ -922,6 +1032,10 @@ namespace details {
         std::wstring PrintData() const
         {
             return L"";
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
+        {
+            return {};
         }
 
         template <typename PTCPROW>
@@ -1031,6 +1145,10 @@ namespace details {
         {
             return data.PrintData();
         }
+        std::unordered_map<std::wstring, std::vector<ULONG64>* > GetData() const
+        {
+            return data.GetData();
+        }
 
         template <typename T>
         void StartTracking(T tcpRow) const
@@ -1115,24 +1233,17 @@ public:
                     entry.LocalAddr(),
                     entry.RemoteAddr());
                 const details::EstatsDataPoint<TcpConnectionEstatsBandwidth> matchingbandwidthData(
-                        entry.LocalAddr(),
-                        entry.RemoteAddr());
+                    entry.LocalAddr(),
+                    entry.RemoteAddr());
 
                 const auto foundEntry = byteTrackingData.find(matchingData);
-                if (foundEntry != byteTrackingData.end()) {
-                    senderCongestionWriter.write_row(
-                        entry.PrintAddresses() +
-                        entry.PrintData() +
-                        foundEntry->PrintData());
-                }
-
                 const auto foundBandwidthEntry = bandwidthData.find(matchingbandwidthData);
-                if (foundBandwidthEntry != bandwidthData.end())
-                {
+                if ((foundEntry != byteTrackingData.end()) || (foundBandwidthEntry != bandwidthData.end())) {
                     senderCongestionWriter.write_row(
                         entry.PrintAddresses() +
                         entry.PrintData() +
-                        foundBandwidthEntry->PrintData());
+                        ((foundEntry != byteTrackingData.end()) ? foundEntry->PrintData() : L",,") + 
+                        ((foundBandwidthEntry != bandwidthData.end()) ? foundBandwidthEntry->PrintData() : L",,,,,,,,,"));
                 }
             }
         }
@@ -1156,7 +1267,8 @@ public:
             senderCongestionWriter.create_file(
                 std::wstring(details::EstatsDataPoint<TcpConnectionEstatsSndCong>::PrintAddressHeader()) +
                 L"," + details::EstatsDataPoint<TcpConnectionEstatsSndCong>::PrintHeader() +
-                L"," + details::EstatsDataPoint<TcpConnectionEstatsData>::PrintHeader());
+                L"," + details::EstatsDataPoint<TcpConnectionEstatsData>::PrintHeader() +
+                L"," + details::EstatsDataPoint<TcpConnectionEstatsBandwidth>::PrintHeader());
 
             started = UpdateEstats();
         }
@@ -1187,10 +1299,194 @@ private:
     ctsWriteDetails receiveWindowWriter;
     ctsWriteDetails senderCongestionWriter;
 
+    // Mapping of which data structure each stat is tracked in
+    std::map<std::wstring, TCP_ESTATS_TYPE> trackedStatisticsDataTypes {
+        {L"MssRcvd",                          TcpConnectionEstatsSynOpts},
+        {L"MssSent",                          TcpConnectionEstatsSynOpts},
+        {L"DataBytesIn",                      TcpConnectionEstatsData},
+        {L"DataBytesOut",                     TcpConnectionEstatsData},
+        {L"conjestionWindow",                 TcpConnectionEstatsSndCong},
+        {L"bytesSentInReceiverLimited",       TcpConnectionEstatsSndCong},
+        {L"bytesSentInSenderLimited",         TcpConnectionEstatsSndCong},
+        {L"bytesSentInCongestionLimited",     TcpConnectionEstatsSndCong},
+        {L"transitionsIntoReceiverLimited",   TcpConnectionEstatsSndCong},
+        {L"transitionsIntoSenderLimited",     TcpConnectionEstatsSndCong},
+        {L"transitionsIntoCongestionLimited", TcpConnectionEstatsSndCong},
+        {L"retransmitTimer",                  TcpConnectionEstatsPath},
+        {L"roundTripTime",                    TcpConnectionEstatsPath},
+        {L"bytesRetrans",                     TcpConnectionEstatsPath},
+        {L"dupAcksRcvd",                      TcpConnectionEstatsPath},
+        {L"sacksRcvd",                        TcpConnectionEstatsPath},
+        {L"congestionSignals",                TcpConnectionEstatsPath},
+        {L"maxSegmentSize",                   TcpConnectionEstatsPath},
+        {L"curLocalReceiveWindow",            TcpConnectionEstatsRec},
+        {L"minLocalReceiveWindow",            TcpConnectionEstatsRec},
+        {L"maxLocalReceiveWindow",            TcpConnectionEstatsRec},
+        {L"curRemoteReceiveWindow",           TcpConnectionEstatsObsRec},
+        {L"minRemoteReceiveWindow",           TcpConnectionEstatsObsRec},
+        {L"maxRemoteReceiveWindow",           TcpConnectionEstatsObsRec},
+        {L"outboundBandwidth",                TcpConnectionEstatsBandwidth},
+        {L"inboundBandwidth",                 TcpConnectionEstatsBandwidth},
+        {L"outboundInstability",              TcpConnectionEstatsBandwidth},
+        {L"inboundInstability",               TcpConnectionEstatsBandwidth}
+    };
+
+    // Map of which stats are enabled
+    std::map<std::wstring, BOOLEAN> liveTrackedStatistics {
+        {L"MssRcvd",                          true},
+        {L"MssSent",                          true},
+        {L"DataBytesIn",                      false},
+        {L"DataBytesOut",                     false},
+        {L"conjestionWindow",                 true},
+        {L"bytesSentInReceiverLimited",       false},
+        {L"bytesSentInSenderLimited",         false},
+        {L"bytesSentInCongestionLimited",     false},
+        {L"transitionsIntoReceiverLimited",   false},
+        {L"transitionsIntoSenderLimited",     false},
+        {L"transitionsIntoCongestionLimited", false},
+        {L"retransmitTimer",                  true},
+        {L"roundTripTime",                    true},
+        {L"bytesRetrans",                     true},
+        {L"dupAcksRcvd",                      false},
+        {L"sacksRcvd",                        false},
+        {L"congestionSignals",                false},
+        {L"maxSegmentSize",                   false},
+        {L"curLocalReceiveWindow",            false},
+        {L"minLocalReceiveWindow",            false},
+        {L"maxLocalReceiveWindow",            false},
+        {L"curRemoteReceiveWindow",           false},
+        {L"minRemoteReceiveWindow",           false},
+        {L"maxRemoteReceiveWindow",           false},
+        {L"outboundBandwidth",                true},
+        {L"inboundBandwidth",                 true},
+        {L"outboundInstability",              true},
+        {L"inboundInstability",               true}
+    };
+
     // since updates are always serialized on a timer, just reuse the same buffer
     static const ULONG StartingTableSize = 4096;
     std::vector<char> tcpTable;
     ULONG tableCounter = 0;
+
+    // Statistics summary
+    typedef struct detailedStats {
+        size_t  samples = 0;
+        ULONG64 min;
+        ULONG64 max;
+        DOUBLE mean;
+        DOUBLE stddev;
+        DOUBLE median;
+        DOUBLE iqr;
+    } DETAILED_STATS;
+
+    // Generate a DETAILED_STATS struct for the given statistic across all connections.
+    // Min/Max: global min/max, Mean: mean of means, Median: median of medians,
+    // StdDev: stddev of means, IQR: iqr of medians.
+    DETAILED_STATS GatherGlobalStatisticSummary(std::wstring statName, TCP_ESTATS_TYPE TcpType)
+    {
+        // Handle different data structure types
+        // This sucks
+        switch (TcpType)
+        {
+            case TcpConnectionEstatsSynOpts:
+                return _GatherGlobalStatisticSummary(statName, synOptsData);
+            case TcpConnectionEstatsData:
+                return _GatherGlobalStatisticSummary(statName, byteTrackingData);
+            case TcpConnectionEstatsPath:
+                return _GatherGlobalStatisticSummary(statName, pathInfoData);
+            case TcpConnectionEstatsRec:
+                return _GatherGlobalStatisticSummary(statName, localReceiveWindowData);
+            case TcpConnectionEstatsObsRec:
+                return _GatherGlobalStatisticSummary(statName, remoteReceiveWindowData);
+            case TcpConnectionEstatsSndCong:
+                return _GatherGlobalStatisticSummary(statName, senderCongestionData);
+            case TcpConnectionEstatsBandwidth:
+                return _GatherGlobalStatisticSummary(statName, bandwidthData);
+            default: // Never occurs bc this is an enum
+                return {};
+        }
+    }
+    // Actual function, wrapper handles differing datastructure types
+    template <TCP_ESTATS_TYPE TcpType>
+    DETAILED_STATS _GatherGlobalStatisticSummary(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
+    {
+        std::vector<ULONG64> mins;
+        std::vector<ULONG64> maxs;
+        std::vector<DOUBLE> means;
+        std::vector<DOUBLE> medians;
+
+        for (const auto &entry : dataStructure)
+        {
+            std::vector<ULONG64> values = *(entry.GetData().at(statName));
+            if (values.empty()) {continue;} // Ignore empty entries
+
+            sort(std::begin(values), std::end(values));
+
+            mins.push_back(*std::min_element(std::begin(values), std::end(values)));
+            maxs.push_back(*std::max_element(std::begin(values), std::end(values)));
+            means.push_back(std::get<0>(ctl::ctSampledStandardDeviation(std::begin(means), std::end(means))));
+            medians.push_back(std::get<1>(ctl::ctInterquartileRange(std::begin(medians), std::end(medians))));
+        }
+
+        size_t size = std::size(mins);
+        if (size == 0) {
+            return {};
+        }
+
+        auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(means), std::end(means));
+        auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(medians), std::end(medians));
+
+        DETAILED_STATS s = {
+            size,
+            *std::min_element(std::begin(mins), std::end(mins)),
+            *std::max_element(std::begin(maxs), std::end(maxs)),
+            std::get<0>(mstddev_tuple),
+            std::get<1>(mstddev_tuple),
+            std::get<1>(interquartile_tuple),
+            std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
+        };
+        return s;
+    }
+
+    void PrintStat(ULONG64 stat, const int& width) {
+        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << stat;
+    }
+    void PrintStat(DOUBLE stat, const int& width) {
+        std::wcout.precision(5);
+        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
+    }
+    void PrintHeaderTitle(std::wstring title, const int& width) {
+        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << title;
+    }
+
+    void PrintDataUpdate() {
+        std::wcout << "===================================================================================================" << std::endl;
+        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << L"Stat Name";
+            PrintHeaderTitle(L"Min", 10);
+            PrintHeaderTitle(L"Mean", 10);
+            PrintHeaderTitle(L"Max", 10);
+            PrintHeaderTitle(L"StdDev", 10);
+            PrintHeaderTitle(L"Median", 10);
+            PrintHeaderTitle(L"IQR", 10);
+        std::wcout << L"|" << std::endl;
+        for (auto stat : liveTrackedStatistics)
+        {
+            // Ignore disabled stats
+            if (!stat.second) {continue;}
+
+            auto detailedStats = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
+
+            std::wcout << std::left << std::setw(20) << std::setfill(L' ') << stat.first;
+                PrintStat(detailedStats.min, 10);
+                PrintStat(detailedStats.mean, 10);
+                PrintStat(detailedStats.max, 10);
+                PrintStat(detailedStats.stddev, 10);
+                PrintStat(detailedStats.median, 10);
+                PrintStat(detailedStats.iqr, 10);
+            std::wcout << L"|" << std::endl;
+        }
+        std::wcout << std::endl;
+    }
 
     bool UpdateEstats() noexcept
     try
@@ -1261,6 +1557,9 @@ private:
         catch (const std::exception& e) {
             wprintf(L"ctsEstats::UpdateEstats exception: %ws\n", ctl::ctString::format_exception(e).c_str());
         }
+
+        // Print to console
+        PrintDataUpdate();
 
         if (!accessDenied) {
             // schedule timer from this moment
