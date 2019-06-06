@@ -142,6 +142,8 @@ namespace ctsPerf {
             return *this;
         }
 
+        void setFilename(std::wstring fileName);
+
         void create_file(bool _mean_only = false);
         void create_file(const std::wstring& _banner_text);
 

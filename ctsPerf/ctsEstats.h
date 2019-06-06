@@ -1195,6 +1195,8 @@ public:
         pathInfoWriter(L"EstatsPathInfo.csv"),
         receiveWindowWriter(L"EstatsReceiveWindow.csv"),
         senderCongestionWriter(L"EstatsSenderCongestion.csv"),
+        globalStatsWriter(L"LiveData\\GlobalSummary_0.csv"),
+        perConnectionStatsWriter(L"LiveData\\DetailSummary_0.csv"),
         tcpTable(StartingTableSize)
     {
     }
@@ -1295,9 +1297,18 @@ private:
     std::set<details::EstatsDataPoint<TcpConnectionEstatsSndCong>> senderCongestionData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsBandwidth>> bandwidthData;
 
+    // Old-style full-run scope .csv writers
     ctsWriteDetails pathInfoWriter;
     ctsWriteDetails receiveWindowWriter;
     ctsWriteDetails senderCongestionWriter;
+
+    // "Live" (per-poll) .csv writers
+    ctsWriteDetails globalStatsWriter;
+    ctsWriteDetails perConnectionStatsWriter;
+    // Counter for filenames
+    ULONG globalFileNumber = 0;
+    ULONG detailFileNumber = 0;
+
 
     // Mapping of which type of data structure each stat is tracked in
     std::map<std::wstring, TCP_ESTATS_TYPE> trackedStatisticsDataTypes {
@@ -1343,7 +1354,7 @@ private:
         {L"MssSent",                          BASIC},
         {L"DataBytesIn",                      UNTRACKED},
         {L"DataBytesOut",                     UNTRACKED},
-        {L"conjestionWindow",                 BASIC},
+        {L"conjestionWindow",                 DETAIL},
         {L"bytesSentInReceiverLimited",       UNTRACKED},
         {L"bytesSentInSenderLimited",         UNTRACKED},
         {L"bytesSentInCongestionLimited",     UNTRACKED},
@@ -1587,6 +1598,45 @@ private:
         return perConnectionSatisticSummaries;
     }
 
+
+    void OpenAndStartGlobalStatSummaryCSV() {
+        globalStatsWriter.setFilename(L"LiveData\\GlobalSummary_" + std::to_wstring(globalFileNumber) + L".csv");
+        globalFileNumber++;
+        globalStatsWriter.create_file(std::wstring(L"GLobal Statistic,Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change"));
+    }
+    void SaveGlobalStatSummaryLineToCSV(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary) {
+        globalStatsWriter.write_row(
+            title + L"," +
+            std::to_wstring(std::get<0>(summary).min) + L"," + std::to_wstring(std::get<1>(summary).min * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).mean) + L"," + std::to_wstring(std::get<1>(summary).mean * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).max) + L"," + std::to_wstring(std::get<1>(summary).max * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).stddev) + L"," + std::to_wstring(std::get<1>(summary).stddev * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).median) + L"," + std::to_wstring(std::get<1>(summary).median * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).iqr) + L"," + std::to_wstring(std::get<1>(summary).iqr * 100)
+        );
+    }
+
+    void OpenAndStartDetailStatSummaryCSV() {
+        globalStatsWriter.setFilename(L"LiveData\\DetailSummary_" + std::to_wstring(detailFileNumber) + L".csv");
+        detailFileNumber++;
+        globalStatsWriter.create_file(std::wstring(L"Samples,Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change"));
+    }
+    void SaveDetailStatHeaderLineToCSV(std::wstring title) {
+        globalStatsWriter.write_empty_row();
+        globalStatsWriter.write_row(title + L",Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change");
+    }
+    void SaveDetailStatSummaryLineToCSV(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary) {
+        globalStatsWriter.write_row(
+            std::to_wstring(std::get<0>(summary).samples) + L"," +
+            std::to_wstring(std::get<0>(summary).min) + L"," + std::to_wstring(std::get<1>(summary).min * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).mean) + L"," + std::to_wstring(std::get<1>(summary).mean * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).max) + L"," + std::to_wstring(std::get<1>(summary).max * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).stddev) + L"," + std::to_wstring(std::get<1>(summary).stddev * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).median) + L"," + std::to_wstring(std::get<1>(summary).median * 100) + L"," +
+            std::to_wstring(std::get<0>(summary).iqr) + L"," + std::to_wstring(std::get<1>(summary).iqr * 100)
+        );
+    }
+
     void ResetSetConsoleColor() {
         auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
@@ -1662,7 +1712,7 @@ private:
         std::wcout << L" |" << std::endl;
     }
     void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
-        SetConsoleColorConnectionStatus(std::get<0>(summary).samples > std::get<1>(summary).samples);
+        SetConsoleColorConnectionStatus(std::get<1>(summary).samples > 0);
         std::wcout << L"Samples: ";
         std::wcout << std::left << std::setw(11) << std::setfill(L' ') << std::get<0>(summary).samples;
 
@@ -1696,6 +1746,7 @@ private:
         std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
     }
 
+
     void clear_screen(char fill = ' ') { 
         COORD tl = {0,0};
         CONSOLE_SCREEN_BUFFER_INFO s;
@@ -1706,11 +1757,11 @@ private:
         FillConsoleOutputAttribute(console, s.wAttributes, cells, tl, &written);
         SetConsoleCursorPosition(console, tl);
     }
-
     void PrintDataUpdate() {
         // -- Global summary table --
         clear_screen();
         PrintStdHeader(L"GLobal Statistics", 12);
+        OpenAndStartGlobalStatSummaryCSV();
         for (auto stat : liveTrackedStatistics)
         {
             // Ignore utracked stats
@@ -1718,23 +1769,27 @@ private:
 
             auto detailedStatsSummary = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
             PrintGlobalStatSummary(stat.first, detailedStatsSummary, 12);
+            SaveGlobalStatSummaryLineToCSV(stat.first, detailedStatsSummary);
         }
         PrintStdFooter();
         std::wcout << std::endl;
 
         // -- Detailed Pre-Statistic Results --
+        OpenAndStartDetailStatSummaryCSV();
         for (auto stat : liveTrackedStatistics)
         {
             // Only print Detail-level tracked stats in the detailed format
             if (stat.second != DETAIL) {continue;}
 
             PrintStdHeader(stat.first, 12);
+            SaveDetailStatHeaderLineToCSV(stat.first);
 
             auto detailedStatsSummaries = GatherPerConnectionStatisticSummaries(stat.first, trackedStatisticsDataTypes.at(stat.first));
 
             for (auto summary : detailedStatsSummaries)
             {
                 PrintPerConnectionStatSummary(summary, 12);
+                SaveDetailStatSummaryLineToCSV(summary);
             }
             PrintStdFooter();
         }

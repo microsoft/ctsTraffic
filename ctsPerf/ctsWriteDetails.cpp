@@ -28,6 +28,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsPerf {
 
+    void ctsWriteDetails::setFilename(std::wstring fileName) {
+        file_name = fileName;
+    }
+
     void ctsWriteDetails::create_file(bool _mean_only)
     {
         file_handle = ::CreateFileW(
