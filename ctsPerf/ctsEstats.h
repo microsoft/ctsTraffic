@@ -1299,7 +1299,7 @@ private:
     ctsWriteDetails receiveWindowWriter;
     ctsWriteDetails senderCongestionWriter;
 
-    // Mapping of which data structure each stat is tracked in
+    // Mapping of which type of data structure each stat is tracked in
     std::map<std::wstring, TCP_ESTATS_TYPE> trackedStatisticsDataTypes {
         {L"MssRcvd",                          TcpConnectionEstatsSynOpts},
         {L"MssSent",                          TcpConnectionEstatsSynOpts},
@@ -1343,7 +1343,7 @@ private:
         {L"MssSent",                          BASIC},
         {L"DataBytesIn",                      UNTRACKED},
         {L"DataBytesOut",                     UNTRACKED},
-        {L"conjestionWindow",                 DETAIL},
+        {L"conjestionWindow",                 BASIC},
         {L"bytesSentInReceiverLimited",       UNTRACKED},
         {L"bytesSentInSenderLimited",         UNTRACKED},
         {L"bytesSentInCongestionLimited",     UNTRACKED},
@@ -1384,11 +1384,37 @@ private:
         DOUBLE median = -0.00001;
         DOUBLE iqr = -0.00001;
     } DETAILED_STATS;
+    // Representation of the %change of each statistic since the last poll
+    typedef struct detailedStatsChange {
+        DOUBLE samples = 1.0;
+        DOUBLE min = 0.0;
+        DOUBLE max = 0.0;
+        DOUBLE mean = 0.0;
+        DOUBLE stddev = 0.0;
+        DOUBLE median = 0.0;
+        DOUBLE iqr = 0.0;
+    } DETAILED_STATS_PERCENT_CHANGE;
+
+    std::map<std::tuple<std::wstring, ctl::ctSockaddr, ctl::ctSockaddr>, DETAILED_STATS> previousPerConnectionStatsSummaries;
+    std::map<std::wstring, DETAILED_STATS> previousGlobalStatsSummaries;
+
+    template<typename T>
+    DOUBLE PercentChange(T oldVal, T newVal) {
+        if (newVal > oldVal) {
+            return (static_cast<DOUBLE>(newVal - oldVal) / oldVal);
+        }
+        else if (newVal < oldVal) {
+            return -1 * (static_cast<DOUBLE>(oldVal - newVal) / oldVal);
+        }
+        else {
+            return 0.0;
+        }
+    }
 
     // Generate a DETAILED_STATS struct for the given statistic across all connections.
     //      Min/Max: global min/max, Mean: mean of means, Median: median of medians,
     //      StdDev: stddev of means, IQR: iqr of medians.
-    DETAILED_STATS GatherGlobalStatisticSummary(std::wstring statName, TCP_ESTATS_TYPE TcpType)
+    std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> GatherGlobalStatisticSummary(std::wstring statName, TCP_ESTATS_TYPE TcpType)
     {
         // Handle different data structure types
         // This sucks
@@ -1414,7 +1440,7 @@ private:
     }
     // Actual function, wrapper handles differing datastructure types
     template <TCP_ESTATS_TYPE TcpType>
-    DETAILED_STATS _GatherGlobalStatisticSummary(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
+    std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> _GatherGlobalStatisticSummary(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
     {
         std::vector<ULONG64> mins;
         std::vector<ULONG64> maxs;
@@ -1440,6 +1466,7 @@ private:
         auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(means), std::end(means));
         auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(medians), std::end(medians));
 
+        // Build summary struct
         DETAILED_STATS s = {
             std::size(mins),
             *std::min_element(std::begin(mins), std::end(mins)),
@@ -1449,12 +1476,35 @@ private:
             std::get<1>(interquartile_tuple),
             std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
         };
-        return s;
+
+        // Build a struct marking %change of each value
+        // Handle case where no previous summary exists
+        DETAILED_STATS_PERCENT_CHANGE c;
+        try {
+            DETAILED_STATS s_prev = previousGlobalStatsSummaries.at(statName);
+            c = {
+                PercentChange(s.samples, s_prev.samples),
+                PercentChange(s.min, s_prev.min),
+                PercentChange(s.max, s_prev.max),
+                PercentChange(s.mean, s_prev.mean),
+                PercentChange(s.stddev, s_prev.stddev),
+                PercentChange(s.median, s_prev.median),
+                PercentChange(s.iqr, s_prev.iqr)
+            };
+        }
+        catch (std::out_of_range&) {
+            c = {};
+        }
+
+        // Update previous tracked with this new summary
+        previousGlobalStatsSummaries.insert_or_assign(statName, s);
+
+        return std::make_tuple(s, c);
     }
 
 
     // Generate a vector of DETAILED_STATS structs representing a summaries for the given statistic for each connection.
-    std::vector<DETAILED_STATS> GatherPerConnectionStatisticSummaries(std::wstring statName, TCP_ESTATS_TYPE TcpType)
+    std::vector<std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE>> GatherPerConnectionStatisticSummaries(std::wstring statName, TCP_ESTATS_TYPE TcpType)
     {
         // Handle different data structure types
         // This sucks
@@ -1480,9 +1530,9 @@ private:
     }
     // Actual function, wrapper handles differing datastructure types
     template <TCP_ESTATS_TYPE TcpType>
-    std::vector<DETAILED_STATS> _GatherPerConnectionStatisticSummaries(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
+    std::vector<std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE>> _GatherPerConnectionStatisticSummaries(std::wstring statName, std::set<details::EstatsDataPoint<TcpType>> &dataStructure)
     {
-        std::vector<DETAILED_STATS> perConnectionSatisticSummaries;
+        std::vector<std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE>> perConnectionSatisticSummaries;
 
         for (const auto &entry : dataStructure)
         {
@@ -1503,29 +1553,120 @@ private:
                 std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
             };
 
-            perConnectionSatisticSummaries.push_back(s);
+            // Tuple to identify this entry in the previous summaries tracking structure
+            auto perConnectionStatIDTuple = std::make_tuple(
+                statName,
+                entry.LocalAddr(),
+                entry.RemoteAddr()
+            );
+
+            // Build a struct marking %change of each value
+            // Handle case where no previous summary exists
+            DETAILED_STATS_PERCENT_CHANGE c;
+            try {
+                DETAILED_STATS s_prev = previousPerConnectionStatsSummaries.at(perConnectionStatIDTuple);
+                c = {
+                    PercentChange(s.samples, s_prev.samples),
+                    PercentChange(s.min, s_prev.min),
+                    PercentChange(s.max, s_prev.max),
+                    PercentChange(s.mean, s_prev.mean),
+                    PercentChange(s.stddev, s_prev.stddev),
+                    PercentChange(s.median, s_prev.median),
+                    PercentChange(s.iqr, s_prev.iqr)
+                };
+            }
+            catch (std::out_of_range&) {
+                c = {};
+            }
+
+            previousPerConnectionStatsSummaries.insert_or_assign(perConnectionStatIDTuple, s);
+
+            perConnectionSatisticSummaries.push_back(std::make_tuple(s, c));
         }
 
         return perConnectionSatisticSummaries;
     }
 
+    void ResetSetConsoleColor() {
+        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
+    void SetConsoleColorConnectionStatus(BOOLEAN connectionOpen) {
+        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (connectionOpen) {
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE);
+        }
+        else {
+            ResetSetConsoleColor();
+        }
+    }
+    void SetConsoleColorFromPercentChange(DOUBLE percentChange) {
+        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        if(percentChange < -1.0) { // Blue BG
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE);
+        }
+        if(percentChange < -0.25) { // Blue
+            SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        }
+        if(percentChange < -0.01) { // Cyan
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        }
+        if(percentChange < 0.0) { // Green
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+        }
+        if (percentChange == 0.0) { // White -- "No Change"
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        }
+        if (percentChange < 0.01) { // Yellow
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN);
+        }
+        else if (percentChange < 0.25) { // Magenta
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        }
+        else if (percentChange < 1.0) { // Red
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        }
+        else { // Red BG
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED);
+        }
+    }
+    void PrintStat(ULONG64 stat, DOUBLE percentChange, const int& width) {
+        ResetSetConsoleColor();
+        std::wcout << L" | ";
 
-    void PrintStat(ULONG64 stat, const int& width) {
-        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << stat;
+        if (stat > 0.0) {SetConsoleColorFromPercentChange(percentChange);}
+        std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
     }
-    void PrintStat(DOUBLE stat, const int& width) {
+    void PrintStat(DOUBLE stat, DOUBLE percentChange, const int& width) {
+        ResetSetConsoleColor();
+        std::wcout << L" | ";
+
+        if (stat > 0.0) {SetConsoleColorFromPercentChange(percentChange);}
         std::wcout.precision(3);
-        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
+        std::wcout << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
     }
-    void PrintStatSummary(std::wstring title, DETAILED_STATS summary, const int& width) {
+    void PrintGlobalStatSummary(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
         std::wcout << std::left << std::setw(20) << std::setfill(L' ') << title;
-            PrintStat(summary.min, width);
-            PrintStat(summary.mean, width);
-            PrintStat(summary.max, width);
-            PrintStat(summary.stddev, width);
-            PrintStat(summary.median, width);
-            PrintStat(summary.iqr, width);
+            PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
+            PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
+            PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
+            PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
+            PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
+            PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
+        ResetSetConsoleColor();
         std::wcout << L" |" << std::endl;
+    }
+    void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
+    SetConsoleColorConnectionStatus(std::get<0>(summary).samples > std::get<1>(summary).samples);
+    std::wcout << std::left << std::setw(20) << std::setfill(L' ') << L"Samples: " << std::get<0>(summary).samples;
+        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
+        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
+        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
+        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
+        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
+        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
+    ResetSetConsoleColor();
+    std::wcout << L" |" << std::endl;
     }
     
     void PrintHeaderTitle(std::wstring title, const int& width) {
@@ -1568,7 +1709,7 @@ private:
             if (stat.second == UNTRACKED) {continue;}
 
             auto detailedStatsSummary = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
-            PrintStatSummary(stat.first, detailedStatsSummary, 12);
+            PrintGlobalStatSummary(stat.first, detailedStatsSummary, 12);
         }
         PrintStdFooter();
         std::wcout << std::endl;
@@ -1585,7 +1726,7 @@ private:
 
             for (auto summary : detailedStatsSummaries)
             {
-                PrintStatSummary(ctl::ctString::format_string(L"Samples: %u", summary.samples), summary, 12);
+                PrintPerConnectionStatSummary(summary, 12);
             }
             PrintStdFooter();
         }
