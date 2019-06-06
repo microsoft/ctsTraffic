@@ -1401,10 +1401,10 @@ private:
     template<typename T>
     DOUBLE PercentChange(T oldVal, T newVal) {
         if (newVal > oldVal) {
-            return (static_cast<DOUBLE>(newVal - oldVal) / oldVal);
+            return -1 * (static_cast<DOUBLE>(newVal - oldVal) / oldVal);
         }
         else if (newVal < oldVal) {
-            return -1 * (static_cast<DOUBLE>(oldVal - newVal) / oldVal);
+            return (static_cast<DOUBLE>(oldVal - newVal) / oldVal);
         }
         else {
             return 0.0;
@@ -1602,23 +1602,23 @@ private:
     }
     void SetConsoleColorFromPercentChange(DOUBLE percentChange) {
         auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        if(percentChange < -1.0) { // Blue BG
+        if(percentChange <= -1.0) { // Blue BG
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE);
         }
-        if(percentChange < -0.25) { // Blue
+        else if(percentChange < -0.25) { // Blue
             SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         }
-        if(percentChange < -0.01) { // Cyan
+        else if(percentChange < -0.01) { // Cyan
             SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         }
-        if(percentChange < 0.0) { // Green
+        else if(percentChange < 0.0) { // Green
             SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
         }
-        if (percentChange == 0.0) { // White -- "No Change"
+        else if (percentChange == 0.0) { // White -- "No Change"
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         }
-        if (percentChange < 0.01) { // Yellow
-            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN);
+        else if (percentChange < 0.01) { // Yellow
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
         }
         else if (percentChange < 0.25) { // Magenta
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
@@ -1626,47 +1626,55 @@ private:
         else if (percentChange < 1.0) { // Red
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
         }
-        else { // Red BG
+        else if (percentChange >= 1.0){ // Red BG
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED);
+        }
+        else { // Error state, should never happen
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN);
         }
     }
     void PrintStat(ULONG64 stat, DOUBLE percentChange, const int& width) {
         ResetSetConsoleColor();
         std::wcout << L" | ";
 
-        if (stat > 0.0) {SetConsoleColorFromPercentChange(percentChange);}
+        SetConsoleColorFromPercentChange(percentChange);
         std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
     }
     void PrintStat(DOUBLE stat, DOUBLE percentChange, const int& width) {
         ResetSetConsoleColor();
         std::wcout << L" | ";
 
-        if (stat > 0.0) {SetConsoleColorFromPercentChange(percentChange);}
-        std::wcout.precision(3);
+        std::wcout.precision(2);
+        SetConsoleColorFromPercentChange(percentChange);
         std::wcout << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
     }
     void PrintGlobalStatSummary(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
         std::wcout << std::left << std::setw(20) << std::setfill(L' ') << title;
-            PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
-            PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
-            PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
-            PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
-            PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
-            PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
-        ResetSetConsoleColor();
-        std::wcout << L" |" << std::endl;
-    }
-    void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
-    SetConsoleColorConnectionStatus(std::get<0>(summary).samples > std::get<1>(summary).samples);
-    std::wcout << std::left << std::setw(20) << std::setfill(L' ') << L"Samples: " << std::get<0>(summary).samples;
+
         PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
         PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
         PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
         PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
         PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
         PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
-    ResetSetConsoleColor();
-    std::wcout << L" |" << std::endl;
+
+        ResetSetConsoleColor();
+        std::wcout << L" |" << std::endl;
+    }
+    void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
+        SetConsoleColorConnectionStatus(std::get<0>(summary).samples > std::get<1>(summary).samples);
+        std::wcout << L"Samples: ";
+        std::wcout << std::left << std::setw(11) << std::setfill(L' ') << std::get<0>(summary).samples;
+
+        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
+        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
+        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
+        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
+        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
+        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
+
+        ResetSetConsoleColor();
+        std::wcout << L" |" << std::endl;
     }
     
     void PrintHeaderTitle(std::wstring title, const int& width) {
