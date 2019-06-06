@@ -1283,6 +1283,12 @@ public:
             timer.stop_all_timers();
         }
 
+        // Setup console formatting
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO csbiInfo = {0};
+        GetConsoleScreenBufferInfo(hConsole, &csbiInfo);
+        orig_wAttributes = csbiInfo.wAttributes;
+
         return started;
     }
 
@@ -1308,6 +1314,11 @@ private:
     // Counter for filenames
     ULONG globalFileNumber = 0;
     ULONG detailFileNumber = 0;
+
+    // Console output formatting
+    HANDLE hConsole;
+    WORD orig_wAttributes;
+    WORD BACKGROUND_MASK = 0x00F0;
 
 
     // Mapping of which type of data structure each stat is tracked in
@@ -1411,11 +1422,20 @@ private:
 
     template<typename T>
     DOUBLE PercentChange(T oldVal, T newVal) {
-        if (newVal > oldVal) {
-            return -1 * (static_cast<DOUBLE>(newVal - oldVal) / oldVal);
+        if(oldVal == newVal) {
+            return 0.0;
+        }
+        if ((oldVal == 0)) {
+            return 1.0;
+        }
+        else if ((newVal == 0)) {
+            return -1.0;
+        }
+        else if (newVal > oldVal) {
+            return (static_cast<DOUBLE>(newVal - oldVal) / oldVal);
         }
         else if (newVal < oldVal) {
-            return (static_cast<DOUBLE>(oldVal - newVal) / oldVal);
+            return -1 * (static_cast<DOUBLE>(oldVal - newVal) / oldVal);
         }
         else {
             return 0.0;
@@ -1494,13 +1514,13 @@ private:
         try {
             DETAILED_STATS s_prev = previousGlobalStatsSummaries.at(statName);
             c = {
-                PercentChange(s.samples, s_prev.samples),
-                PercentChange(s.min, s_prev.min),
-                PercentChange(s.max, s_prev.max),
-                PercentChange(s.mean, s_prev.mean),
-                PercentChange(s.stddev, s_prev.stddev),
-                PercentChange(s.median, s_prev.median),
-                PercentChange(s.iqr, s_prev.iqr)
+                PercentChange(s_prev.samples, s.samples),
+                PercentChange(s_prev.min, s.min),
+                PercentChange(s_prev.max, s.max),
+                PercentChange(s_prev.mean, s.mean),
+                PercentChange(s_prev.stddev, s.stddev),
+                PercentChange(s_prev.median, s.median),
+                PercentChange(s_prev.iqr, s.iqr)
             };
         }
         catch (std::out_of_range&) {
@@ -1577,13 +1597,13 @@ private:
             try {
                 DETAILED_STATS s_prev = previousPerConnectionStatsSummaries.at(perConnectionStatIDTuple);
                 c = {
-                    PercentChange(s.samples, s_prev.samples),
-                    PercentChange(s.min, s_prev.min),
-                    PercentChange(s.max, s_prev.max),
-                    PercentChange(s.mean, s_prev.mean),
-                    PercentChange(s.stddev, s_prev.stddev),
-                    PercentChange(s.median, s_prev.median),
-                    PercentChange(s.iqr, s_prev.iqr)
+                    PercentChange(s_prev.samples, s.samples),
+                    PercentChange(s_prev.min, s.min),
+                    PercentChange(s_prev.max, s.max),
+                    PercentChange(s_prev.mean, s.mean),
+                    PercentChange(s_prev.stddev, s.stddev),
+                    PercentChange(s_prev.median, s.median),
+                    PercentChange(s_prev.iqr, s.iqr)
                 };
             }
             catch (std::out_of_range&) {
@@ -1638,46 +1658,43 @@ private:
     }
 
     void ResetSetConsoleColor() {
-        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        SetConsoleTextAttribute(hConsole, orig_wAttributes);
     }
     void SetConsoleColorConnectionStatus(BOOLEAN connectionOpen) {
-        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         if (connectionOpen) {
-            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE | (orig_wAttributes & BACKGROUND_MASK));
         }
         else {
             ResetSetConsoleColor();
         }
     }
     void SetConsoleColorFromPercentChange(DOUBLE percentChange) {
-        auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         if(percentChange <= -1.0) { // Blue BG
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE);
         }
         else if(percentChange < -0.25) { // Blue
-            SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if(percentChange < -0.01) { // Cyan
-            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if(percentChange < 0.0) { // Green
-            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if (percentChange == 0.0) { // White -- "No Change"
-            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if (percentChange < 0.01) { // Yellow
-            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if (percentChange < 0.25) { // Magenta
-            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if (percentChange < 1.0) { // Red
-            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY | (orig_wAttributes & BACKGROUND_MASK));
         }
         else if (percentChange >= 1.0){ // Red BG
-            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED);
+            SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | (orig_wAttributes & BACKGROUND_MASK));
         }
         else { // Error state, should never happen
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN);
