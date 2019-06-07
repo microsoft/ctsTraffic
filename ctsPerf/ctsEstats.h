@@ -1315,6 +1315,11 @@ private:
     ULONG globalFileNumber = 0;
     ULONG detailFileNumber = 0;
 
+    // since updates are always serialized on a timer, just reuse the same buffer
+    static const ULONG StartingTableSize = 4096;
+    std::vector<char> tcpTable;
+    ULONG tableCounter = 0;
+
     // Console output formatting
     HANDLE hConsole;
     WORD orig_wAttributes;
@@ -1355,14 +1360,14 @@ private:
 
     enum TRACKING_TYPE {
         UNTRACKED,
-        BASIC,
+        GLOBAL,
         DETAIL
     };
 
     // Map of which stats are enabled
     std::map<std::wstring, TRACKING_TYPE> liveTrackedStatistics {
-        {L"MssRcvd",                          BASIC},
-        {L"MssSent",                          BASIC},
+        {L"MssRcvd",                          GLOBAL},
+        {L"MssSent",                          GLOBAL},
         {L"DataBytesIn",                      UNTRACKED},
         {L"DataBytesOut",                     UNTRACKED},
         {L"conjestionWindow",                 DETAIL},
@@ -1372,9 +1377,9 @@ private:
         {L"transitionsIntoReceiverLimited",   UNTRACKED},
         {L"transitionsIntoSenderLimited",     UNTRACKED},
         {L"transitionsIntoCongestionLimited", UNTRACKED},
-        {L"retransmitTimer",                  BASIC},
+        {L"retransmitTimer",                  GLOBAL},
         {L"roundTripTime",                    DETAIL},
-        {L"bytesRetrans",                     BASIC},
+        {L"bytesRetrans",                     GLOBAL},
         {L"dupAcksRcvd",                      UNTRACKED},
         {L"sacksRcvd",                        UNTRACKED},
         {L"congestionSignals",                UNTRACKED},
@@ -1385,18 +1390,16 @@ private:
         {L"curRemoteReceiveWindow",           UNTRACKED},
         {L"minRemoteReceiveWindow",           UNTRACKED},
         {L"maxRemoteReceiveWindow",           UNTRACKED},
-        {L"outboundBandwidth",                BASIC},
-        {L"inboundBandwidth",                 BASIC},
-        {L"outboundInstability",              BASIC},
-        {L"inboundInstability",               BASIC}
+        {L"outboundBandwidth",                GLOBAL},
+        {L"inboundBandwidth",                 GLOBAL},
+        {L"outboundInstability",              GLOBAL},
+        {L"inboundInstability",               GLOBAL}
     };
 
-    // since updates are always serialized on a timer, just reuse the same buffer
-    static const ULONG StartingTableSize = 4096;
-    std::vector<char> tcpTable;
-    ULONG tableCounter = 0;
+    BOOLEAN printGlobal = false;
+    BOOLEAN printDetail = true;
 
-    // Statistics summary
+    // Statistics summary data structure
     typedef struct detailedStats {
         size_t  samples = 0;
         ULONG64 min = ULONG_MAX;
@@ -1777,7 +1780,8 @@ private:
     void PrintDataUpdate() {
         // -- Global summary table --
         clear_screen();
-        PrintStdHeader(L"GLobal Statistics", 12);
+
+        if (printGlobal) {PrintStdHeader(L"GLobal Statistics", 12);}
         OpenAndStartGlobalStatSummaryCSV();
         for (auto stat : liveTrackedStatistics)
         {
@@ -1785,11 +1789,14 @@ private:
             if (stat.second == UNTRACKED) {continue;}
 
             auto detailedStatsSummary = GatherGlobalStatisticSummary(stat.first, trackedStatisticsDataTypes.at(stat.first));
-            PrintGlobalStatSummary(stat.first, detailedStatsSummary, 12);
+            if (printGlobal) {PrintGlobalStatSummary(stat.first, detailedStatsSummary, 12);}
             SaveGlobalStatSummaryLineToCSV(stat.first, detailedStatsSummary);
         }
-        PrintStdFooter();
-        std::wcout << std::endl;
+
+        if (printGlobal) {
+            PrintStdFooter();
+            std::wcout << std::endl;
+        }
 
         // -- Detailed Pre-Statistic Results --
         OpenAndStartDetailStatSummaryCSV();
@@ -1798,17 +1805,17 @@ private:
             // Only print Detail-level tracked stats in the detailed format
             if (stat.second != DETAIL) {continue;}
 
-            PrintStdHeader(stat.first, 12);
+            if (printDetail) {PrintStdHeader(stat.first, 12);}
             SaveDetailStatHeaderLineToCSV(stat.first);
 
             auto detailedStatsSummaries = GatherPerConnectionStatisticSummaries(stat.first, trackedStatisticsDataTypes.at(stat.first));
 
             for (auto summary : detailedStatsSummaries)
             {
-                PrintPerConnectionStatSummary(summary, 12);
+                if (printDetail) {PrintPerConnectionStatSummary(summary, 12);}
                 SaveDetailStatSummaryLineToCSV(summary);
             }
-            PrintStdFooter();
+            if (printDetail) {PrintStdFooter();}
         }
     }
 
@@ -1882,7 +1889,7 @@ private:
             wprintf(L"ctsEstats::UpdateEstats exception: %ws\n", ctl::ctString::format_exception(e).c_str());
         }
 
-        // Print to console
+        // Print to console and CSV's
         PrintDataUpdate();
 
         if (!accessDenied) {
