@@ -50,6 +50,7 @@ static const WCHAR UsageStatement[] =
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
 	L" -Networking [will enable performance and reliability related Network counters]\n"
 	L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
+    L"     -EstatsPollRate:<rate> [Defines the frequency (in ms) of polling for Estats. Default = 1000]\n"
 	L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
     L"\n"
     L" [optionally the specific interface description can be specified\n"
@@ -62,6 +63,13 @@ static const WCHAR UsageStatement[] =
     L"  by default is no process tracking\n"
     L"  -process:<process name>\n"
     L"  -pid:<process id>\n"
+    L"\n"
+    L"[optionally specific stats can be tracked \"live\" (saved on each poll)]\n"
+    L" -maxStatsHistoryLength:#### [Number of values of history to keep for each stat. Default = 10]\n"
+    L" -trackGlobal:<stat1>;<stat2>;...;<statn> [';'-separated list of stats to live-track globally]\n"
+    L" -trackDetail:<stat1>;<stat2>;...;<statn> [';'-separated list of stats to live-track per-connection]\n"
+    L" -printGlobalLive:<true|false> [Whether to print global stats live to console. Default = true]\n"
+    L" -printDetailLive:<true|false> [Whether to print per-connection stats live to console. Default = true]\n"
     L"\n\n"
     L"For example:\n"
     L"> ctsPerf.exe\n"
@@ -149,14 +157,28 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return gle;
     }
 
+    // Flags to be set by arguments
     auto trackNetworking = false;
     auto trackEstats = false;
+    ULONG estatsPollRate = 1000;
+
+    ULONG maxStatsHistoryLength = 10; // default to 10 samples
+
+    // Lists of stats to track
+    std::set<std::wstring> globalTrackedStats;
+    std::set<std::wstring> detailTrackedStats;
+
+    // Wether to print each stat type live to console. Both on by default
+    auto livePrintGlobalStats = true;
+    auto livePrintDetailStats = true;
 	
 	wstring trackInterfaceDescription;
     wstring trackProcess;
     auto processId = UninitializedProcessId;
     DWORD timeToRunMs = 60000; // default to 60 seconds
 
+
+    // Parse Arguments
 	for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
         if (ctString::istarts_with(argv[arg_count - 1], L"-process:")) {
             trackProcess = argv[arg_count - 1];
@@ -174,8 +196,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 wprintf(UsageStatement);
                 return 1;
             }
-        
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:")) {
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:")) {
             wstring pidString(argv[arg_count - 1]);
 
             // strip off the "pid:" preface to the string
@@ -195,23 +217,123 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 }
             }
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
             trackEstats = true;
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-estatsPollRate:")) {
+            wstring pollrateString(argv[arg_count - 1]);
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
+            // strip off the "estatsPollRate:" preface to the string
+            const auto endOfToken = find(pollrateString.begin(), pollrateString.end(), L':');
+            pollrateString.erase(pollrateString.begin(), endOfToken + 1);
+
+            estatsPollRate = ::wcstoul(pollrateString.c_str(), nullptr, 10);
+            if (estatsPollRate == 0 || estatsPollRate == ULONG_MAX) {
+                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                wprintf(UsageStatement);
+                return 1;
+            }
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-maxStatsHistoryLength:")) {
+            wstring maxHistString(argv[arg_count - 1]);
+
+            // strip off the "maxStatsHistoryLength:" preface to the string
+            const auto endOfToken = find(maxHistString.begin(), maxHistString.end(), L':');
+            maxHistString.erase(maxHistString.begin(), endOfToken + 1);
+
+            maxStatsHistoryLength = ::wcstoul(maxHistString.c_str(), nullptr, 10);
+            if (maxStatsHistoryLength == 0 || maxStatsHistoryLength == ULONG_MAX) {
+                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                wprintf(UsageStatement);
+                return 1;
+            }
+
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-trackGlobal:")) {
+            wstring globalStatsString(argv[arg_count - 1]);
+
+            // strip off the "trackGlobal:" preface to the string
+            const auto endOfToken = find(globalStatsString.begin(), globalStatsString.end(), L':');
+            globalStatsString.erase(globalStatsString.begin(), endOfToken + 1);
+
+            std::wstringstream wss(globalStatsString);
+            std::wstring tmp;
+            while(std::getline(wss, tmp, L';')) {
+                globalTrackedStats.emplace(tmp);
+            }
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-trackDetail:")) {
+            wstring detailStatsString(argv[arg_count - 1]);
+
+            // strip off the "trackDetail:" preface to the string
+            const auto endOfToken = find(detailStatsString.begin(), detailStatsString.end(), L':');
+            detailStatsString.erase(detailStatsString.begin(), endOfToken + 1);
+
+            std::wstringstream wss(detailStatsString);
+            std::wstring tmp;
+            while(std::getline(wss, tmp, L';')) {
+                detailTrackedStats.emplace(tmp);
+            }
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-printGlobalLive:")) {
+            wstring printGlobalString(argv[arg_count - 1]);
+
+            // strip off the "printGlobalLive:" preface to the string
+            const auto endOfToken = find(printGlobalString.begin(), printGlobalString.end(), L':');
+            printGlobalString.erase(printGlobalString.begin(), endOfToken + 1);
+
+            // get true or false from string
+            if (printGlobalString == L"true") {
+                livePrintGlobalStats = true;
+            }
+            else if (printGlobalString == L"false") {
+                livePrintGlobalStats = false;
+            }
+            else {
+                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                wprintf(UsageStatement);
+                return 1;
+            }
+            
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-printDetailLive:")) {
+            wstring printDetailString(argv[arg_count - 1]);
+
+            // strip off the "printDetailLive:" preface to the string
+            const auto endOfToken = find(printDetailString.begin(), printDetailString.end(), L':');
+            printDetailString.erase(printDetailString.begin(), endOfToken + 1);
+
+            // get true or false from string
+            if (printDetailString == L"true") {
+                livePrintDetailStats = true;
+            }
+            else if (printDetailString == L"false") {
+                livePrintDetailStats = false;
+            }
+            else {
+                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                wprintf(UsageStatement);
+                return 1;
+            }
+            
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
             trackNetworking = true;
         
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:")) {
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:")) {
             trackInterfaceDescription = argv[arg_count - 1];
 
             // strip off the "-InterfaceDescription:" preface to the string
             const auto endOfToken = find(trackInterfaceDescription.begin(), trackInterfaceDescription.end(), L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
+        } 
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
             g_MeanOnly = true;
-
-        } else {
+        } 
+        else {
             const auto timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
             if (timeToRun == 0 || timeToRun == ULONG_MAX) {
                 wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
@@ -237,7 +359,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
 
     try {
-        ctsPerf::ctsEstats estats;
+        ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, &globalTrackedStats, &detailTrackedStats, livePrintGlobalStats, livePrintDetailStats);
         if (trackEstats) {
             if (estats.start()) {
                 wprintf(L"Enabling ESTATS\n");
