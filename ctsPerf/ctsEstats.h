@@ -350,8 +350,8 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (MssRcvd.empty()) ? L"," : L"," + std::to_wstring(MssRcvd.back());
-            formattedString += (MssSent.empty()) ? L"," : L"," + std::to_wstring(MssSent.back());
+            formattedString += (MssRcvd.empty()) ? L"," : L"," + MssRcvdCount;
+            formattedString += (MssSent.empty()) ? L"," : L"," + MssSentCount;
             return formattedString;
         }
         // std::wstring DetailPrintData(std::unordered_map<std::wstring, BOOLEAN> &liveTrackedStatistics) const
@@ -416,8 +416,8 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (DataBytesIn.empty()) ? L"," : L"," + std::to_wstring(DataBytesIn.back());
-            formattedString += (DataBytesOut.empty()) ? L"," : L"," + std::to_wstring(DataBytesOut.back());
+            formattedString += (DataBytesIn.empty()) ? L"," : L"," + DataBytesInCount;
+            formattedString += (DataBytesOut.empty()) ? L"," : L"," + DataBytesOutCount;
             return formattedString;
         }
         std::unordered_map<std::wstring, std::vector<ULONG64>*> GetData()
@@ -480,12 +480,12 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString = ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindow);
-            formattedString += (transitionsIntoReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoReceiverLimited.back());
-            formattedString += (transitionsIntoSenderLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoSenderLimited.back());
-            formattedString += (transitionsIntoCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoCongestionLimited.back());
-            formattedString += (bytesSentInReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInReceiverLimited.back());
-            formattedString += (bytesSentInSenderLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInSenderLimited.back());
-            formattedString += (bytesSentInCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInCongestionLimited.back());
+            formattedString += (transitionsIntoReceiverLimited.empty()) ? L"," : L"," + transitionsIntoReceiverLimitedCount;
+            formattedString += (transitionsIntoSenderLimited.empty()) ? L"," : L"," + transitionsIntoSenderLimitedCount;
+            formattedString += (transitionsIntoCongestionLimited.empty()) ? L"," : L"," + transitionsIntoCongestionLimitedCount;
+            formattedString += (bytesSentInReceiverLimited.empty()) ? L"," : L"," + bytesSentInReceiverLimitedCount;
+            formattedString += (bytesSentInSenderLimited.empty()) ? L"," : L"," + bytesSentInSenderLimitedCount;
+            formattedString += (bytesSentInCongestionLimited.empty()) ? L"," : L"," + bytesSentInCongestionLimitedCount;
             return formattedString;
 
         }
@@ -641,11 +641,11 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (bytesRetrans.empty()) ? L"," : L"," + std::to_wstring(bytesRetrans.back());
-            formattedString += (dupAcksRcvd.empty()) ? L"," : L"," + std::to_wstring(dupAcksRcvd.back());
-            formattedString += (sacksRcvd.empty()) ? L"," : L"," + std::to_wstring(sacksRcvd.back());
-            formattedString += (congestionSignals.empty()) ? L"," : L"," + std::to_wstring(congestionSignals.back());
-            formattedString += (maxSegmentSize.empty()) ? L"," : L"," + std::to_wstring(maxSegmentSize.back());
+            formattedString += (bytesRetrans.empty()) ? L"," : L"," + bytesRetransCount;
+            formattedString += (dupAcksRcvd.empty()) ? L"," : L"," + dupAcksRcvdCount;
+            formattedString += (sacksRcvd.empty()) ? L"," : L"," + sacksRcvdCount;
+            formattedString += (congestionSignals.empty()) ? L"," : L"," + congestionSignalsCount;
+            formattedString += (maxSegmentSize.empty()) ? L"," : L"," + maxSegmentSizeCount;
             formattedString += ctsWriteDetails::PrintMeanStdDev(retransmitTimer);
             formattedString += ctsWriteDetails::PrintMeanStdDev(roundTripTime);
             return formattedString;
@@ -1887,13 +1887,13 @@ private:
     }
 
 
-    void clear_screen(char fill = ' ') { 
+    void clear_screen() { 
         COORD tl = {0,0};
         CONSOLE_SCREEN_BUFFER_INFO s;
         HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);   
         GetConsoleScreenBufferInfo(console, &s);
         DWORD written, cells = s.dwSize.X * s.dwSize.Y;
-        FillConsoleOutputCharacter(console, fill, cells, tl, &written);
+        FillConsoleOutputCharacter(console, ' ', cells, tl, &written);
         FillConsoleOutputAttribute(console, s.wAttributes, cells, tl, &written);
         SetConsoleCursorPosition(console, tl);
     }
@@ -1901,7 +1901,9 @@ private:
         // Do not do live updates if there are no tracked stats
         if (globalTrackedStats->empty() && detailTrackedStats->empty()) {return;}
 
-        clear_screen();
+        if (printGlobal || printDetail) {
+            clear_screen();
+        }
 
         // -- Global summary table --
         if (!globalTrackedStats->empty()) {
