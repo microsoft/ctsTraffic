@@ -23,7 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctLocks.hpp>
 #include <ctException.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsConfig.h"
@@ -153,15 +152,13 @@ namespace ctsTraffic {
                 if (!::InitializeCriticalSectionEx(&ctsMediaStreamServerImpl::connected_object_guard, 4000, 0)) {
                     throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
                 }
-                ctlScopeGuard(
-                    deleteConnectedObjectguardOnError,
+                auto deleteConnectedObjectguardOnError = wil::scope_exit([&]()
                     {::DeleteCriticalSection(&ctsMediaStreamServerImpl::connected_object_guard);});
 
                 if (!::InitializeCriticalSectionEx(&ctsMediaStreamServerImpl::awaiting_object_guard, 4000, 0)) {
                     throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
                 }
-                ctlScopeGuard(
-                    deleteAwaitingObjectguardOnError,
+                auto deleteAwaitingObjectguardOnError = wil::scope_exit([&]()
                     {::DeleteCriticalSection(&ctsMediaStreamServerImpl::awaiting_object_guard);});
 
                 // 'listen' to each address
@@ -198,8 +195,8 @@ namespace ctsTraffic {
                 }
 
                 // dismiss scope guards as there were no errors
-                deleteConnectedObjectguardOnError.dismiss();
-                deleteAwaitingObjectguardOnError.dismiss();
+                deleteConnectedObjectguardOnError.release();
+                deleteAwaitingObjectguardOnError.release();
             }
             catch (const std::exception& e) {
                 ctsConfig::PrintException(e);

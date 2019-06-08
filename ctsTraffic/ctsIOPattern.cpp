@@ -17,9 +17,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 
+// wil headers
+#include <wil/resource.h>
+
 // ctl headers
 #include <ctSocketExtensions.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctLocks.hpp>
 #include <ctTimer.hpp>
 
@@ -181,7 +183,7 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
         }
-        ctlScopeGuard(deleteCSonError, { ::DeleteCriticalSection(&cs); });
+        auto deleteCSonError = wil::scope_exit([&]() { ::DeleteCriticalSection(&cs); });
 
         // if TCP, will always need a recv buffer for the final FIN 
         if ((_recv_count > 0) || (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)) {
@@ -223,7 +225,7 @@ namespace ctsTraffic {
         }
 
         // init was successful - don't delete
-        deleteCSonError.dismiss();
+        deleteCSonError.release();
     }
 
 

@@ -22,11 +22,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <WinSock2.h>
 
+// wil headers
+#include <wil/resource.h>
+
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
 #include <ctWmiPerformance.hpp>
-#include <ctScopeGuard.hpp>
 
 // project headers
 #include "ctsWriteDetails.h"
@@ -45,7 +47,7 @@ BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
     return TRUE;
 }
 
-static const WCHAR UsageStatement[] = 
+static const WCHAR UsageStatement[] =
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
 	L" -Networking [will enable performance and reliability related Network counters]\n"
@@ -151,7 +153,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     auto trackNetworking = false;
     auto trackEstats = false;
-	
+
 	wstring trackInterfaceDescription;
     wstring trackProcess;
     auto processId = UninitializedProcessId;
@@ -174,7 +176,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 wprintf(UsageStatement);
                 return 1;
             }
-        
+
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:")) {
             wstring pidString(argv[arg_count - 1]);
 
@@ -200,7 +202,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
             trackNetworking = true;
-        
+
         } else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:")) {
             trackInterfaceDescription = argv[arg_count - 1];
 
@@ -252,7 +254,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctWmiService wmi(L"root\\cimv2");
         g_wmi = &wmi;
 
-        ctlScopeGuard(deleteAllCounters, { DeleteAllCounters(); });
+        auto deleteAllCounters = wil::scope_exit([&]() { DeleteAllCounters(); });
 
         ctsPerf::ctsWriteDetails cpuwriter(g_FileName);
 		cpuwriter.create_file(g_MeanOnly);
@@ -286,7 +288,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         if (!trackProcess.empty()) {
             performance_vector.emplace_back(InstantiatePerProcessByNameCounters(trackProcess));
-        
+
         } else if (processId != UninitializedProcessId) {
             performance_vector.emplace_back(InstantiatePerProcessByPIDCounters(processId));
         }
@@ -371,14 +373,14 @@ ctWmiPerformance InstantiateProcessorCounters()
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_dpcs_queued_per_second);
 	wprintf(L".");
-	
+
 	processor_percent_privileged_time = ctCreatePerfCounter<ULONGLONG>(
 		ctWmiClassName::Processor,
 		L"PercentPrivilegedTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_privileged_time);
 	wprintf(L".");
-	
+
 	processor_percent_user_time = ctCreatePerfCounter<ULONGLONG>(
 		ctWmiClassName::Processor,
 		L"PercentUserTime",
@@ -415,7 +417,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 		// need to replace the comma so the csv will print correctly
 		writer.write_row(
 			ctString::format_string(
-				L"Processor %ws", 
+				L"Processor %ws",
 				ctString::replace_all_copy(name, L",", L" - ").c_str()));
 
         const auto processor_range = processor_time->reference_range(name.c_str());
@@ -545,7 +547,7 @@ ctWmiPerformance InstantiateMemoryCounters()
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(non_paged_pool_bytes);
     wprintf(L".");
-    
+
     return performance_counter;
 }
 void DeleteMemoryCounters() noexcept
@@ -1298,7 +1300,7 @@ ctWmiPerformance InstantiateTCPCounters()
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connection_failures);
     wprintf(L".");
-    
+
     tcpip_tcpv4_connections_reset = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv4,
         L"ConnectionsReset",
@@ -1753,7 +1755,7 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
         wstring full_name(trackProcess);
         full_name += L".exe";
         counter_classname = ctString::format_string(L"Process (%ws)", full_name.c_str());
-        
+
     } else {
         counter_classname = ctString::format_string(L"Process (pid %u)", processId);
     }

@@ -16,9 +16,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 // os headers
 #include <Windows.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctException.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctTimer.hpp>
 // project headers
 #include "ctsIOPattern.h"
@@ -93,7 +94,7 @@ namespace ctsTraffic {
         if (!renderer_timer) {
             throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
-        ctlScopeGuard(deleteTimerCallbackOnError,
+        auto deleteTimerCallbackOnError = wil::scope_exit([&]()
         {
             ::SetThreadpoolTimer(renderer_timer, nullptr, 0, 0);
             ::WaitForThreadpoolTimerCallbacks(renderer_timer, FALSE);
@@ -105,7 +106,7 @@ namespace ctsTraffic {
             throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
         // no errors, dismiss the scope guard
-        deleteTimerCallbackOnError.dismiss();
+        deleteTimerCallbackOnError.release();
     }
     
     ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() noexcept
@@ -426,7 +427,7 @@ namespace ctsTraffic {
         // take the base lock before touching any internal members
         this_ptr->base_lock();
         // guarantee the lock is released on exit
-        ctlScopeGuard(unlockBaseLockOnExit, {this_ptr->base_unlock();});
+        auto unlockBaseLockOnExit = wil::scope_exit([&]() {this_ptr->base_unlock();});
 
         if (this_ptr->finished_stream) {
             return;
@@ -460,7 +461,7 @@ namespace ctsTraffic {
             // take the base lock before touching any internal members
             this_ptr->base_lock();
             // guarantee the lock is released on exit
-            ctlScopeGuard(unlockBaseLockOnExit, { this_ptr->base_unlock(); });
+            auto unlockBaseLockOnExit = wil::scope_exit([&]() { this_ptr->base_unlock(); });
 
             if (this_ptr->finished_stream) {
                 return;

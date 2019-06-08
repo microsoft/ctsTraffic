@@ -27,7 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctThreadPoolTimer.hpp>
-#include <ctScopeGuard.hpp>
 
 // project headers
 #include "ctsConfig.h"
@@ -70,7 +69,7 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketBroker", false);
         }
-        ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
+        auto deleteCsOnExit = wil::scope_exit([&]() { ::DeleteCriticalSection(&this->cs); });
 
         // create our manual-reset notification event
         if (!done_event.try_create(wil::EventOptions::ManualReset, nullptr)) {
@@ -78,7 +77,7 @@ namespace ctsTraffic {
         }
 
         // no failures, dismiss the scope guards
-        deleteCsOnExit.dismiss();
+        deleteCsOnExit.release();
     }
 
     ctsSocketBroker::~ctsSocketBroker() noexcept

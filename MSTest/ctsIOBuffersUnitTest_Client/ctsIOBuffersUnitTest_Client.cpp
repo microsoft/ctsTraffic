@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <vector>
 
-#include <ctScopeGuard.hpp>
+#include <wil/resource.h>
 
 #include "ctsIOBuffers.hpp"
 
@@ -76,9 +76,9 @@ namespace ctsTraffic {
 /// End of Fakes
 ///
 
-using namespace ctsTraffic; 
+using namespace ctsTraffic;
 namespace ctsUnitTest
-{		
+{
     TEST_CLASS(ctsIOBuffersUnitTest_Client)
     {
     private:
@@ -96,20 +96,20 @@ namespace ctsUnitTest
         {
             delete ctsConfig::Settings;
         }
-        
+
         TEST_METHOD(RequestAndReturnOneConnection)
         {
             ctsIOTask test_task;
-            ctlScopeGuard(return_test_task, { ctsIOBuffers::ReleaseConnectionIdBuffer(test_task); });
+            auto return_test_task = wil::scope_exit([&]() { ctsIOBuffers::ReleaseConnectionIdBuffer(test_task); });
             test_task = ctsIOBuffers::NewConnectionIdBuffer(stats.connection_identifier);
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             Assert::IsNotNull(test_task.buffer);
             Assert::AreEqual(0UL, test_task.buffer_offset);
 
-            return_test_task.run_once( );
+            return_test_task.reset( );
 
             ctsIOTask test_task_second;
-            ctlScopeGuard(return_test_task_second, { ctsIOBuffers::ReleaseConnectionIdBuffer(test_task_second); });
+            auto return_test_task_second = wil::scope_exit([&]() { ctsIOBuffers::ReleaseConnectionIdBuffer(test_task_second); });
             test_task_second = ctsIOBuffers::NewConnectionIdBuffer(stats.connection_identifier);
             Assert::AreEqual(test_task_second.buffer, test_task.buffer);
 
@@ -119,7 +119,7 @@ namespace ctsUnitTest
         TEST_METHOD(RequestAndReturnAllConnections)
         {
             std::vector<ctsIOTask> test_tasks;
-            ctlScopeGuard(return_test_tasks, { 
+            auto return_test_tasks = wil::scope_exit([&]() {
                 for (auto& task : test_tasks) {
                     ctsIOBuffers::ReleaseConnectionIdBuffer(task);
                 }
@@ -135,10 +135,10 @@ namespace ctsUnitTest
             }
 
             // return the buffers back via the scope guard
-            return_test_tasks.run_once( );
+            return_test_tasks.reset( );
 
             std::vector<ctsIOTask> test_tasks_second;
-            ctlScopeGuard(return_test_tasks_second, {
+            auto return_test_tasks_second = wil::scope_exit([&]() {
                 for (auto& task : test_tasks_second) {
                     ctsIOBuffers::ReleaseConnectionIdBuffer(task);
                 }
