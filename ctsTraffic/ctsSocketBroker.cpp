@@ -73,8 +73,7 @@ namespace ctsTraffic {
         ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
 
         // create our manual-reset notification event
-        done_event.reset(::CreateEvent(nullptr, TRUE, FALSE, nullptr));
-        if (nullptr == done_event.get()) {
+        if (!done_event.try_create(wil::EventOptions::ManualReset, nullptr)) {
             throw ctException(::GetLastError(), L"CreateEvent", L"ctsSocketBroker", false);
         }
 
@@ -107,7 +106,7 @@ namespace ctsTraffic {
 
         // only loop to pending_limit
         while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
-            // for outgoing connections, limit to ConnectionThrottleLimit 
+            // for outgoing connections, limit to ConnectionThrottleLimit
             // - to prevent killing the box with DPCs with too many concurrent connect attempts
             // checking first since TimerCallback might have already established connections
             if (!ctsConfig::Settings->AcceptFunction &&

@@ -18,11 +18,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctLocks.hpp>
 #include <ctException.hpp>
 #include <ctScopeGuard.hpp>
-#include <ctHandle.hpp>
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsConfig.h"
@@ -121,7 +122,7 @@ namespace ctsTraffic {
 
     namespace ctsMediaStreamServerImpl {
         std::vector<std::unique_ptr<ctsMediaStreamServerListeningSocket>> listening_sockets;
-        
+
         // function for doing the actual IO for a UDP media stream datagram connection
         wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* this_ptr);
 
@@ -165,7 +166,7 @@ namespace ctsTraffic {
 
                 // 'listen' to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
-                    ctl::ctScopedSocket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
+                    wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
 
                     const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                     if (error != NO_ERROR) {
@@ -217,7 +218,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// Schedule the first IO on the specified ctsSocket
-        /// 
+        ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
         {
@@ -260,7 +261,7 @@ namespace ctsTraffic {
         /// Process a new ctsSocket from the ctsSocketBroker
         /// - accept_socket takes the ctsSocket to create a new entry
         ///   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
-        /// 
+        ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
         {
@@ -281,8 +282,8 @@ namespace ctsTraffic {
                         const ctl::ctAutoReleaseCriticalSection lock_connected_object(&ctsMediaStreamServerImpl::connected_object_guard);
                         ctsMediaStreamServerImpl::connected_sockets.emplace_back(
                             std::make_shared<ctsMediaStreamServerConnectedSocket>(
-                            _weak_socket, 
-                            waiting_endpoint->first, 
+                            _weak_socket,
+                            waiting_endpoint->first,
                             waiting_endpoint->second,
                             ctsMediaStreamServerImpl::ConnectedSocketIo));
                     }
@@ -316,7 +317,7 @@ namespace ctsTraffic {
         ///
         /// Process the removal of a connected socket once it is completed
         /// - remove_socket takes the remote address to find the socket
-        /// 
+        ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void remove_socket(const ctl::ctSockaddr& _target_addr)
         {
@@ -341,7 +342,7 @@ namespace ctsTraffic {
         /// - else we'll queue it to awaiting_endpoints
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void start(const ctl::ctScopedSocket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
+        void start(const wil::unique_socket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
         {
             // before starting a socket, verify there is not already a connected socket with this same socket address
             // scope the lock
@@ -508,7 +509,7 @@ namespace ctsTraffic {
                         }
                         return wsIOResult(error);
                     }
-                    
+
                     // successfully completed synchronously
                     return_results.bytes_transferred += bytes_sent;
                 }

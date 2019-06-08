@@ -18,9 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctThreadPoolTimer.hpp>
-#include <ctHandle.hpp>
 // project headers
 #include "ctsSocketState.h"
 
@@ -60,7 +61,7 @@ namespace ctsTraffic {
         // CS to guard access to the vector socket_pool
         CRITICAL_SECTION cs{};
         // notification event when we're done
-        ctl::ctScopedHandle done_event{};
+        wil::unique_event_nothrow done_event{};
         // vector of currently active sockets
         // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
         // - and thus there must be at least one refcount on that object to call shared_from_this()

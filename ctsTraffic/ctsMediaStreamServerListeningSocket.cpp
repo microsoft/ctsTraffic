@@ -19,11 +19,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 
+// wil headers
+#include <wil/resource.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
-#include <ctHandle.hpp>
 #include <utility>
 
 // project headers
@@ -35,7 +37,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic {
 
-    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(ctl::ctScopedSocket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
+    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
         thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
         socket(std::move(_listening_socket)),
         listening_addr(std::move(_listening_addr))
@@ -97,12 +99,12 @@ namespace ctsTraffic {
                         this->recv_completion(_ov); });
 
                     error = ::WSARecvFrom(
-                        this->socket.get(), 
-                        &wsabuf, 
-                        1, 
-                        nullptr, 
-                        &this->recv_flags, 
-                        this->remote_addr.sockaddr(), 
+                        this->socket.get(),
+                        &wsabuf,
+                        1,
+                        nullptr,
+                        &this->recv_flags,
+                        this->remote_addr.sockaddr(),
                         &this->remote_addr_len,
                         pov,
                         nullptr);
@@ -111,7 +113,7 @@ namespace ctsTraffic {
                         error = ::WSAGetLastError();
                         if (WSA_IO_PENDING == error) {
                             // pending is not an error
-                            error = NO_ERROR; 
+                            error = NO_ERROR;
                         } else {
                             this->thread_iocp->cancel_request(pov);
                             if (WSAECONNRESET == error) {

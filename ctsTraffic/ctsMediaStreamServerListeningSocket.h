@@ -18,9 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <windows.h>
 
+#include <wil/resource.h>
+
 #include "ctSockaddr.hpp"
 #include "ctThreadIocp.hpp"
-#include "ctHandle.hpp"
 
 namespace ctsTraffic {
     class ctsMediaStreamServerListeningSocket {
@@ -34,7 +35,7 @@ namespace ctsTraffic {
         _Guarded_by_(object_guard)
         std::array<char, RecvBufferSize> recv_buffer{};
         _Guarded_by_(object_guard)
-        ctl::ctScopedSocket socket;
+        wil::unique_socket socket;
         _Guarded_by_(object_guard)
         ctl::ctSockaddr listening_addr;
 
@@ -50,7 +51,7 @@ namespace ctsTraffic {
 
     public:
         ctsMediaStreamServerListeningSocket(
-            ctl::ctScopedSocket&& _listening_socket,
+            wil::unique_socket&& _listening_socket,
             ctl::ctSockaddr _listening_addr);
 
         ~ctsMediaStreamServerListeningSocket() noexcept;
