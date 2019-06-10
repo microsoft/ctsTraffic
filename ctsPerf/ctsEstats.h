@@ -350,14 +350,10 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (MssRcvd.empty()) ? L"," : L"," + MssRcvdCount;
-            formattedString += (MssSent.empty()) ? L"," : L"," + MssSentCount;
+            formattedString += (MssRcvd.empty()) ? L"," : L"," + std::to_wstring(MssRcvdCount);
+            formattedString += (MssSent.empty()) ? L"," : L"," + std::to_wstring(MssSentCount);
             return formattedString;
         }
-        // std::wstring DetailPrintData(std::unordered_map<std::wstring, BOOLEAN> &liveTrackedStatistics) const
-        // {
-        //     return 
-        // }
         std::unordered_map<std::wstring, std::vector<ULONG64> *> GetData()
         {
             return {
@@ -372,7 +368,7 @@ namespace details {
             // always on
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG maxHistoryLength)
         {
             if (MssRcvdCount == 0) {
                 TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
@@ -383,7 +379,7 @@ namespace details {
                         MssRcvd.push_back(Ros.MssRcvd - MssRcvdCount);
                         MssRcvdCount = Ros.MssRcvd;
                         // Enforce the max length of data history vector
-                        if (MssRcvd.size() > *maxHistoryLength) {
+                        if (MssRcvd.size() > maxHistoryLength) {
                             MssRcvd.erase(std::begin(MssRcvd));
                         }
                     }
@@ -391,7 +387,7 @@ namespace details {
                         MssSent.push_back(Ros.MssSent - MssSentCount);
                         MssSentCount = Ros.MssSent;
                         // Enforce the max length of data history vector                        
-                        if (MssSent.size() > *maxHistoryLength) {
+                        if (MssSent.size() > maxHistoryLength) {
                             MssSent.erase(std::begin(MssSent));
                         }
                     }
@@ -416,8 +412,8 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (DataBytesIn.empty()) ? L"," : L"," + DataBytesInCount;
-            formattedString += (DataBytesOut.empty()) ? L"," : L"," + DataBytesOutCount;
+            formattedString += (DataBytesIn.empty()) ? L"," : L"," + std::to_wstring(DataBytesInCount);
+            formattedString += (DataBytesOut.empty()) ? L"," : L"," + std::to_wstring(DataBytesOutCount);
             return formattedString;
         }
         std::unordered_map<std::wstring, std::vector<ULONG64>*> GetData()
@@ -436,7 +432,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsData>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_DATA_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -446,7 +442,7 @@ namespace details {
                     DataBytesIn.push_back(Rod.DataBytesIn - DataBytesInCount);
                     DataBytesInCount = Rod.DataBytesIn;
                     // Enforce the max length of data history vector
-                    if (DataBytesIn.size() > *maxHistoryLength) {
+                    if (DataBytesIn.size() > maxHistoryLength) {
                         DataBytesIn.erase(std::begin(DataBytesIn));
                     }
                 }
@@ -454,7 +450,7 @@ namespace details {
                     DataBytesOut.push_back(Rod.DataBytesOut - DataBytesOutCount);
                     DataBytesOutCount = Rod.DataBytesOut;
                     // Enforce the max length of data history vector
-                    if (DataBytesOut.size() > *maxHistoryLength) {
+                    if (DataBytesOut.size() > maxHistoryLength) {
                         DataBytesOut.erase(std::begin(DataBytesOut));
                     }
                 }
@@ -480,12 +476,12 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString = ctsPerf::ctsWriteDetails::PrintMeanStdDev(conjestionWindow);
-            formattedString += (transitionsIntoReceiverLimited.empty()) ? L"," : L"," + transitionsIntoReceiverLimitedCount;
-            formattedString += (transitionsIntoSenderLimited.empty()) ? L"," : L"," + transitionsIntoSenderLimitedCount;
-            formattedString += (transitionsIntoCongestionLimited.empty()) ? L"," : L"," + transitionsIntoCongestionLimitedCount;
-            formattedString += (bytesSentInReceiverLimited.empty()) ? L"," : L"," + bytesSentInReceiverLimitedCount;
-            formattedString += (bytesSentInSenderLimited.empty()) ? L"," : L"," + bytesSentInSenderLimitedCount;
-            formattedString += (bytesSentInCongestionLimited.empty()) ? L"," : L"," + bytesSentInCongestionLimitedCount;
+            formattedString += (transitionsIntoReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoReceiverLimitedCount);
+            formattedString += (transitionsIntoSenderLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoSenderLimitedCount);
+            formattedString += (transitionsIntoCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(transitionsIntoCongestionLimitedCount);
+            formattedString += (bytesSentInReceiverLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInReceiverLimitedCount);
+            formattedString += (bytesSentInSenderLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInSenderLimitedCount);
+            formattedString += (bytesSentInCongestionLimited.empty()) ? L"," : L"," + std::to_wstring(bytesSentInCongestionLimitedCount);
             return formattedString;
 
         }
@@ -510,7 +506,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsSndCong>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_SND_CONG_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -556,7 +552,7 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsSndCong - CurCwnd", Rod.CurCwnd)) {
                     conjestionWindow.push_back(Rod.CurCwnd);
                     // Enforce the max length of data history vector
-                    if (conjestionWindow.size() > *maxHistoryLength) {
+                    if (conjestionWindow.size() > maxHistoryLength) {
                         conjestionWindow.erase(std::begin(conjestionWindow));
                     }
                 }
@@ -564,7 +560,7 @@ namespace details {
                     bytesSentInReceiverLimited.push_back(Rod.SndLimBytesRwin - bytesSentInReceiverLimitedCount);
                     bytesSentInReceiverLimitedCount = Rod.SndLimBytesRwin;
                     // Enforce the max length of data history vector
-                    if (bytesSentInReceiverLimited.size() > *maxHistoryLength) {
+                    if (bytesSentInReceiverLimited.size() > maxHistoryLength) {
                         bytesSentInReceiverLimited.erase(std::begin(bytesSentInReceiverLimited));
                     }
                 }
@@ -572,7 +568,7 @@ namespace details {
                     bytesSentInSenderLimited.push_back(Rod.SndLimBytesSnd - bytesSentInSenderLimitedCount);
                     bytesSentInSenderLimitedCount = Rod.SndLimBytesSnd;
                     // Enforce the max length of data history vector
-                    if (bytesSentInSenderLimited.size() > *maxHistoryLength) {
+                    if (bytesSentInSenderLimited.size() > maxHistoryLength) {
                         bytesSentInSenderLimited.erase(std::begin(bytesSentInSenderLimited));
                     }
                 }
@@ -580,7 +576,7 @@ namespace details {
                     bytesSentInCongestionLimited.push_back(Rod.SndLimBytesCwnd - bytesSentInCongestionLimitedCount);
                     bytesSentInCongestionLimitedCount = Rod.SndLimBytesCwnd;
                     // Enforce the max length of data history vector
-                    if (bytesSentInCongestionLimited.size() > *maxHistoryLength) {
+                    if (bytesSentInCongestionLimited.size() > maxHistoryLength) {
                         bytesSentInCongestionLimited.erase(std::begin(bytesSentInCongestionLimited));
                     }
                 }
@@ -588,7 +584,7 @@ namespace details {
                     transitionsIntoReceiverLimited.push_back(Rod.SndLimTransRwin - transitionsIntoReceiverLimitedCount);
                     transitionsIntoReceiverLimitedCount = Rod.SndLimTransRwin;
                     // Enforce the max length of data history vector
-                    if (transitionsIntoReceiverLimited.size() > *maxHistoryLength) {
+                    if (transitionsIntoReceiverLimited.size() > maxHistoryLength) {
                         transitionsIntoReceiverLimited.erase(std::begin(transitionsIntoReceiverLimited));
                     }
                 }
@@ -596,7 +592,7 @@ namespace details {
                     transitionsIntoSenderLimited.push_back(Rod.SndLimTransSnd - transitionsIntoSenderLimitedCount);
                     transitionsIntoSenderLimitedCount = Rod.SndLimTransSnd;
                     // Enforce the max length of data history vector
-                    if (transitionsIntoSenderLimited.size() > *maxHistoryLength) {
+                    if (transitionsIntoSenderLimited.size() > maxHistoryLength) {
                         transitionsIntoSenderLimited.erase(std::begin(transitionsIntoSenderLimited));
                     }
                 }
@@ -604,7 +600,7 @@ namespace details {
                     transitionsIntoCongestionLimited.push_back(Rod.SndLimTransCwnd - transitionsIntoCongestionLimitedCount);
                     transitionsIntoCongestionLimitedCount = Rod.SndLimTransCwnd;
                     // Enforce the max length of data history vector
-                    if (transitionsIntoCongestionLimited.size() > *maxHistoryLength) {
+                    if (transitionsIntoCongestionLimited.size() > maxHistoryLength) {
                         transitionsIntoCongestionLimited.erase(std::begin(transitionsIntoCongestionLimited));
                     }
                 }
@@ -641,11 +637,11 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L"");
-            formattedString += (bytesRetrans.empty()) ? L"," : L"," + bytesRetransCount;
-            formattedString += (dupAcksRcvd.empty()) ? L"," : L"," + dupAcksRcvdCount;
-            formattedString += (sacksRcvd.empty()) ? L"," : L"," + sacksRcvdCount;
-            formattedString += (congestionSignals.empty()) ? L"," : L"," + congestionSignalsCount;
-            formattedString += (maxSegmentSize.empty()) ? L"," : L"," + maxSegmentSizeCount;
+            formattedString += (bytesRetrans.empty()) ? L"," : L"," + std::to_wstring(bytesRetransCount);
+            formattedString += (dupAcksRcvd.empty()) ? L"," : L"," + std::to_wstring(dupAcksRcvdCount);
+            formattedString += (sacksRcvd.empty()) ? L"," : L"," + std::to_wstring(sacksRcvdCount);
+            formattedString += (congestionSignals.empty()) ? L"," : L"," + std::to_wstring(congestionSignalsCount);
+            formattedString += (maxSegmentSize.empty()) ? L"," : L"," + std::to_wstring(maxSegmentSizeCount);
             formattedString += ctsWriteDetails::PrintMeanStdDev(retransmitTimer);
             formattedString += ctsWriteDetails::PrintMeanStdDev(roundTripTime);
             return formattedString;
@@ -671,7 +667,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsPath>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_PATH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -717,14 +713,14 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - CurRto", Rod.CurRto)) {
                     retransmitTimer.push_back(Rod.CurRto);
                     // Enforce the max length of data history vector
-                    if (retransmitTimer.size() > *maxHistoryLength) {
+                    if (retransmitTimer.size() > maxHistoryLength) {
                         retransmitTimer.erase(std::begin(retransmitTimer));
                     }
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsPath - SmoothedRtt", Rod.SmoothedRtt)) {
                     roundTripTime.push_back(Rod.SmoothedRtt);
                     // Enforce the max length of data history vector
-                    if (roundTripTime.size() > *maxHistoryLength) {
+                    if (roundTripTime.size() > maxHistoryLength) {
                         roundTripTime.erase(std::begin(roundTripTime));
                     }
                 }
@@ -732,7 +728,7 @@ namespace details {
                     bytesRetrans.push_back(Rod.BytesRetrans - bytesRetransCount);
                     bytesRetransCount = Rod.BytesRetrans;
                     // Enforce the max length of data history vector
-                    if (bytesRetrans.size() > *maxHistoryLength) {
+                    if (bytesRetrans.size() > maxHistoryLength) {
                         bytesRetrans.erase(std::begin(bytesRetrans));
                     }
                 }
@@ -740,7 +736,7 @@ namespace details {
                     dupAcksRcvd.push_back(Rod.DupAcksIn - dupAcksRcvdCount);
                     dupAcksRcvdCount = Rod.DupAcksIn;
                     // Enforce the max length of data history vector
-                    if (dupAcksRcvd.size() > *maxHistoryLength) {
+                    if (dupAcksRcvd.size() > maxHistoryLength) {
                         dupAcksRcvd.erase(std::begin(dupAcksRcvd));
                     }
                 }
@@ -748,7 +744,7 @@ namespace details {
                     sacksRcvd.push_back(Rod.SacksRcvd - sacksRcvdCount);
                     sacksRcvdCount = Rod.SacksRcvd;
                     // Enforce the max length of data history vector
-                    if (sacksRcvd.size() > *maxHistoryLength) {
+                    if (sacksRcvd.size() > maxHistoryLength) {
                         sacksRcvd.erase(std::begin(sacksRcvd));
                     }
                 }
@@ -756,7 +752,7 @@ namespace details {
                     congestionSignals.push_back(Rod.CongSignals - congestionSignalsCount);
                     congestionSignalsCount = Rod.CongSignals;
                     // Enforce the max length of data history vector
-                    if (congestionSignals.size() > *maxHistoryLength) {
+                    if (congestionSignals.size() > maxHistoryLength) {
                         congestionSignals.erase(std::begin(congestionSignals));
                     }
                 }
@@ -764,7 +760,7 @@ namespace details {
                     maxSegmentSize.push_back(Rod.CurMss - maxSegmentSizeCount);
                     maxSegmentSizeCount = Rod.CurMss;
                     // Enforce the max length of data history vector
-                    if (maxSegmentSize.size() > *maxHistoryLength) {
+                    if (maxSegmentSize.size() > maxHistoryLength) {
                         maxSegmentSize.erase(std::begin(maxSegmentSize));
                     }
                 }
@@ -850,7 +846,7 @@ namespace details {
         }
 
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -885,21 +881,21 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - CurRwinSent", Rod.CurRwinSent)) {
                     curReceiveWindow.push_back(Rod.CurRwinSent);
                     // Enforce the max length of data history vector
-                    if (curReceiveWindow.size() > *maxHistoryLength) {
+                    if (curReceiveWindow.size() > maxHistoryLength) {
                         curReceiveWindow.erase(std::begin(curReceiveWindow));
                     }
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - MinRwinSent", Rod.MinRwinSent)) {
                     minReceiveWindow.push_back(Rod.MinRwinSent);
                     // Enforce the max length of data history vector
-                    if (minReceiveWindow.size() > *maxHistoryLength) {
+                    if (minReceiveWindow.size() > maxHistoryLength) {
                         minReceiveWindow.erase(std::begin(minReceiveWindow));
                     }
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsRec - MaxRwinSent", Rod.MaxRwinSent)) {
                     maxReceiveWindow.push_back(Rod.MaxRwinSent);
                     // Enforce the max length of data history vector
-                    if (maxReceiveWindow.size() > *maxHistoryLength) {
+                    if (maxReceiveWindow.size() > maxHistoryLength) {
                         maxReceiveWindow.erase(std::begin(maxReceiveWindow));
                     }
                 }
@@ -978,7 +974,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsObsRec>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_OBS_REC_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -1013,21 +1009,21 @@ namespace details {
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - CurRwinRcvd", Rod.CurRwinRcvd)) {
                     curReceiveWindow.push_back(Rod.CurRwinRcvd);
                     // Enforce the max length of data history vector
-                    if (curReceiveWindow.size() > *maxHistoryLength) {
+                    if (curReceiveWindow.size() > maxHistoryLength) {
                         curReceiveWindow.erase(std::begin(curReceiveWindow));
                     }
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MinRwinRcvd", Rod.MinRwinRcvd)) {
                     minReceiveWindow.push_back(Rod.MinRwinRcvd);
                     // Enforce the max length of data history vector
-                    if (minReceiveWindow.size() > *maxHistoryLength) {
+                    if (minReceiveWindow.size() > maxHistoryLength) {
                         minReceiveWindow.erase(std::begin(minReceiveWindow));
                     }
                 }
                 if (IsRodValueValid(L"TcpConnectionEstatsObsRec - MaxRwinRcvd", Rod.MaxRwinRcvd)) {
                     maxReceiveWindow.push_back(Rod.MaxRwinRcvd);
                     // Enforce the max length of data history vector
-                    if (maxReceiveWindow.size() > *maxHistoryLength) {
+                    if (maxReceiveWindow.size() > maxHistoryLength) {
                         maxReceiveWindow.erase(std::begin(maxReceiveWindow));
                     }
                 }
@@ -1076,7 +1072,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsBandwidth>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr &, const ctl::ctSockaddr &, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr &, const ctl::ctSockaddr &, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_BANDWIDTH_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -1086,7 +1082,7 @@ namespace details {
                 {
                     outboundBandwidth.push_back(Rod.OutboundBandwidth);
                     // Enforce the max length of data history vector
-                    if (outboundBandwidth.size() > *maxHistoryLength) {
+                    if (outboundBandwidth.size() > maxHistoryLength) {
                         outboundBandwidth.erase(std::begin(outboundBandwidth));
                     }
                 }
@@ -1094,7 +1090,7 @@ namespace details {
                 {
                     inboundBandwidth.push_back(Rod.InboundBandwidth);
                     // Enforce the max length of data history vector
-                    if (inboundBandwidth.size() > *maxHistoryLength) {
+                    if (inboundBandwidth.size() > maxHistoryLength) {
                         inboundBandwidth.erase(std::begin(inboundBandwidth));
                     }
                 }
@@ -1102,7 +1098,7 @@ namespace details {
                 {
                     outboundInstability.push_back(Rod.OutboundInstability);
                     // Enforce the max length of data history vector
-                    if (outboundInstability.size() > *maxHistoryLength) {
+                    if (outboundInstability.size() > maxHistoryLength) {
                         outboundInstability.erase(std::begin(outboundInstability));
                     }
                 }
@@ -1110,7 +1106,7 @@ namespace details {
                 {
                     inboundInstability.push_back(Rod.InboundInstability);
                     // Enforce the max length of data history vector
-                    if (inboundInstability.size() > *maxHistoryLength) {
+                    if (inboundInstability.size() > maxHistoryLength) {
                         inboundInstability.erase(std::begin(inboundInstability));
                     }
                 }
@@ -1158,7 +1154,7 @@ namespace details {
             SetPerConnectionEstats<TcpConnectionEstatsFineRtt>(tcpRow, &Rw);
         }
         template <typename PTCPROW>
-        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG* maxHistoryLength)
+        void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG maxHistoryLength)
         {
             TCP_ESTATS_FINE_RTT_ROD_v0 Rod;
             FillMemory(&Rod, sizeof Rod, -1);
@@ -1188,7 +1184,7 @@ namespace details {
         }
 
         explicit EstatsDataPoint(const PMIB_TCPROW pTcpRow, const ULONG maxHistoryLength) noexcept :  // NOLINT
-            maxHistoryLength(&maxHistoryLength),
+            maxHistoryLength(maxHistoryLength),
             localAddr(AF_INET),
             remoteAddr(AF_INET)
         {
@@ -1206,7 +1202,7 @@ namespace details {
         }
 
         explicit EstatsDataPoint(const PMIB_TCP6ROW pTcpRow, const ULONG maxHistoryLength) noexcept :  // NOLINT
-            maxHistoryLength(&maxHistoryLength),
+            maxHistoryLength(maxHistoryLength),
             localAddr(AF_INET6),
             remoteAddr(AF_INET6)
         {
@@ -1287,13 +1283,13 @@ namespace details {
             return remoteAddr;
         }
 
-        ULONG LastestCounter() const noexcept
+        ULONG LatestCounter() const noexcept
         {
             return latestCounter;
         }
 
     private:
-        const ULONG* maxHistoryLength;
+        const ULONG maxHistoryLength;
         ctl::ctSockaddr localAddr;
         ctl::ctSockaddr remoteAddr;
         // the tracking object must be mutable because EstatsDataPoint instances
@@ -1521,6 +1517,7 @@ private:
 
     // Statistics summary data structure
     typedef struct detailedStats {
+        ULONG latestCounter = 0;
         size_t  samples = 0;
         ULONG64 min = ULONG_MAX;
         ULONG64 max = ULONG_MAX;
@@ -1601,6 +1598,8 @@ private:
         std::vector<DOUBLE> means;
         std::vector<DOUBLE> medians;
 
+        ULONG globalLatestCounter = 0;
+
         for (const auto &entry : dataStructure)
         {
             std::vector<ULONG64> values = *(entry.GetData().at(statName));
@@ -1612,6 +1611,11 @@ private:
             maxs.push_back(*std::max_element(std::begin(values), std::end(values)));
             means.push_back(std::get<0>(ctl::ctSampledStandardDeviation(std::begin(values), std::end(values))));
             medians.push_back(std::get<1>(ctl::ctInterquartileRange(std::begin(values), std::end(values))));
+
+            // Update latest counter if this entry is the latest
+            if (entry.LatestCounter() > globalLatestCounter) {
+                    globalLatestCounter = entry.LatestCounter();
+            }
         }
 
         // If no data was collected, return an empty struct
@@ -1622,14 +1626,14 @@ private:
 
         // Build summary struct
         DETAILED_STATS s = {
+            globalLatestCounter,
             std::size(mins),
             *std::min_element(std::begin(mins), std::end(mins)),
             *std::max_element(std::begin(maxs), std::end(maxs)),
             std::get<0>(mstddev_tuple),
             std::get<1>(mstddev_tuple),
             std::get<1>(interquartile_tuple),
-            std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
-        };
+            std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)};
 
         // Build a struct marking %change of each value
         // Handle case where no previous summary exists
@@ -1698,6 +1702,7 @@ private:
             auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(values), std::end(values));
 
             DETAILED_STATS s = {
+                entry.LatestCounter(),
                 std::size(values),
                 *std::min_element(std::begin(values), std::end(values)),
                 *std::max_element(std::begin(values), std::end(values)),
@@ -1839,7 +1844,8 @@ private:
         std::wcout << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
     }
     void PrintGlobalStatSummary(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
-        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << title;
+        SetConsoleColorConnectionStatus(std::get<0>(summary).latestCounter == tableCounter);
+        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << title;
 
         PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
         PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
@@ -1852,9 +1858,10 @@ private:
         std::wcout << L" |" << std::endl;
     }
     void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
-        SetConsoleColorConnectionStatus(std::get<1>(summary).samples > 0);
+        SetConsoleColorConnectionStatus(std::get<0>(summary).latestCounter == tableCounter);
         std::wcout << L"Samples: ";
-        std::wcout << std::left << std::setw(11) << std::setfill(L' ') << std::get<0>(summary).samples;
+        std::wcout << std::left << std::setw(13) << std::setfill(L' ') << std::to_wstring(std::get<0>(summary).samples) + 
+                                                                        ((std::get<0>(summary).samples == maxHistoryLength) ? std::wstring(L" (max)") : std::wstring(L""));
 
         PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
         PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
@@ -1871,8 +1878,8 @@ private:
         std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << title;
     }
     void PrintStdHeader(std::wstring firstColumnName, const int& width) {
-        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
-        std::wcout << std::left << std::setw(20) << std::setfill(L' ') << firstColumnName;
+        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
+        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << firstColumnName;
             PrintHeaderTitle(L"Min", width);
             PrintHeaderTitle(L"Mean", width);
             PrintHeaderTitle(L"Max", width);
@@ -1880,10 +1887,10 @@ private:
             PrintHeaderTitle(L"Median", width);
             PrintHeaderTitle(L"IQR", width);
         std::wcout << L" |" << std::endl;
-        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
+        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
     }
     void PrintStdFooter() {
-        std::wcout << "---------------------------------------------------------------------------------------------------------------+" << std::endl;
+        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
     }
 
 
@@ -2094,7 +2101,7 @@ private:
             std::end(synOptsData),
             [&](const details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint)
         {
-            return dataPoint.LastestCounter() != tableCounter;
+            return dataPoint.LatestCounter() != tableCounter;
         });
 
         while (foundInstance != std::end(synOptsData))
@@ -2123,6 +2130,10 @@ private:
                 details::EstatsDataPoint<TcpConnectionEstatsSndCong>(localAddr, remoteAddr));
             const auto fSenderCongestionInstanceFound = senderCongestionInstance != senderCongestionData.end();
 
+            const auto bandwidthInstance = bandwidthData.find(
+                details::EstatsDataPoint<TcpConnectionEstatsBandwidth>(localAddr, remoteAddr));
+            const auto fBandwidthInstanceFound = bandwidthInstance != bandwidthData.end();
+
             if (fPathInfoInstanceFound) {
                 pathInfoWriter.write_row(
                     pathInfoInstance->PrintAddresses() +
@@ -2135,12 +2146,22 @@ private:
                     localReceiveWindowInstance->PrintData() +
                     remoteReceiveWindowInstance->PrintData());
             }
-            
-            if (fSenderCongestionInstanceFound && fByteTrackingInstanceFound) {
+
+            // Print bandwith data as well, only if available
+            if (fSenderCongestionInstanceFound && fByteTrackingInstanceFound && (!fBandwidthInstanceFound))
+            {
                 senderCongestionWriter.write_row(
                     senderCongestionInstance->PrintAddresses() +
                     senderCongestionInstance->PrintData() +
                     byteTrackingInstance->PrintData());
+            }
+            if (fSenderCongestionInstanceFound && fByteTrackingInstanceFound && fBandwidthInstanceFound)
+            {
+                senderCongestionWriter.write_row(
+                    senderCongestionInstance->PrintAddresses() +
+                    senderCongestionInstance->PrintData() +
+                    byteTrackingInstance->PrintData() +
+                    bandwidthInstance->PrintData());
             }
 
             synOptsData.erase(synOptsInstance);
@@ -2163,7 +2184,7 @@ private:
                 std::end(synOptsData),
                 [&](const details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint)
             {
-                return dataPoint.LastestCounter() != tableCounter;
+                return dataPoint.LatestCounter() != tableCounter;
             });
         } // while loop
     }

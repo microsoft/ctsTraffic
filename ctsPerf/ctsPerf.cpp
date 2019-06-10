@@ -362,10 +362,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, &globalTrackedStats, &detailTrackedStats, livePrintGlobalStats, livePrintDetailStats);
         if (trackEstats) {
             if (estats.start()) {
-                wprintf(L"Enabling ESTATS\n");
+                wprintf(L"-- Enabled ESTATS --\n");
             } else {
-                wprintf(L"ESTATS cannot be started - verify running as Administrator\n");
-				return 1;
+                wprintf(L"ESTATS could not be started - verify running as Administrator\n");
+                return 1;
             }
         }
 
