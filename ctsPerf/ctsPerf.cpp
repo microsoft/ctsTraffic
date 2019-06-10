@@ -167,6 +167,37 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     // Lists of stats to track
     std::set<std::wstring> globalTrackedStats;
     std::set<std::wstring> detailTrackedStats;
+    // All stats
+    std::set<std::wstring> allStats = {
+        L"MssRcvd",
+        L"MssSent",
+        L"DataBytesIn",
+        L"DataBytesOut",
+        L"conjestionWindow",
+        L"bytesSentInReceiverLimited",
+        L"bytesSentInSenderLimited",
+        L"bytesSentInCongestionLimited",
+        L"transitionsIntoReceiverLimited",
+        L"transitionsIntoSenderLimited",
+        L"transitionsIntoCongestionLimited",
+        L"retransmitTimer",
+        L"roundTripTime",
+        L"bytesRetrans",
+        L"dupAcksRcvd",
+        L"sacksRcvd",
+        L"congestionSignals",
+        L"maxSegmentSize",
+        L"curLocalReceiveWindow",
+        L"minLocalReceiveWindow",
+        L"maxLocalReceiveWindow",
+        L"curRemoteReceiveWindow",
+        L"minRemoteReceiveWindow",
+        L"maxRemoteReceiveWindow",
+        L"outboundBandwidth",
+        L"inboundBandwidth",
+        L"outboundInstability",
+        L"inboundInstability"
+    };
 
     // Wether to print each stat type live to console. Both on by default
     auto livePrintGlobalStats = true;
@@ -257,10 +288,16 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             const auto endOfToken = find(globalStatsString.begin(), globalStatsString.end(), L':');
             globalStatsString.erase(globalStatsString.begin(), endOfToken + 1);
 
-            std::wstringstream wss(globalStatsString);
-            std::wstring tmp;
-            while(std::getline(wss, tmp, L';')) {
-                globalTrackedStats.emplace(tmp);
+            // Handle "ALL" option
+            if (globalStatsString == L"ALL") {
+                globalTrackedStats = allStats;
+            }
+            else {
+                std::wstringstream wss(globalStatsString);
+                std::wstring tmp;
+                while(std::getline(wss, tmp, L';')) {
+                    globalTrackedStats.emplace(tmp);
+                }
             }
         }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-trackDetail:")) {
@@ -270,10 +307,16 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             const auto endOfToken = find(detailStatsString.begin(), detailStatsString.end(), L':');
             detailStatsString.erase(detailStatsString.begin(), endOfToken + 1);
 
-            std::wstringstream wss(detailStatsString);
-            std::wstring tmp;
-            while(std::getline(wss, tmp, L';')) {
-                detailTrackedStats.emplace(tmp);
+            // Handle "ALL" option
+            if (detailStatsString == L"ALL") {
+                detailTrackedStats = allStats;
+            }
+            else {
+                std::wstringstream wss(detailStatsString);
+                std::wstring tmp;
+                while(std::getline(wss, tmp, L';')) {
+                    detailTrackedStats.emplace(tmp);
+                }
             }
         }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-printGlobalLive:")) {
