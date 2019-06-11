@@ -30,6 +30,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ws2ipdef.h>
 #include <Iphlpapi.h>
 #include <Tcpestats.h>
+#include <wlanapi.h>
 
 // ctl headers
 #include <ctString.hpp>
@@ -317,6 +318,337 @@ namespace details {
         return error;
     }
 
+    // Get L2 WLAN data
+    ULONG GetWLANInformation(WLAN_CONNECTION_ATTRIBUTES *connectionAttributes, WLAN_STATISTICS *statistics, WLAN_BSS_ENTRY *bssEntry)
+    {
+        // Reused return code var
+        DWORD dwResult = 0;
+
+        // Open handle
+        HANDLE hClient = NULL;
+        DWORD dwMaxClient = 2;  
+        DWORD dwCurVersion = 0;
+        dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
+        if (dwResult != ERROR_SUCCESS) {
+            wprintf(L"WlanOpenHandle failed with error: %u\n", dwResult);
+            return dwResult;
+            // You can use FormatMessage here to find out why the function failed
+        }
+
+        // Enumerate WLAN interfaces to find the currently connected one, if there is one
+        PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
+        dwResult = WlanEnumInterfaces(hClient, NULL, &pIfList);
+        if (dwResult != ERROR_SUCCESS) {
+            wprintf(L"WlanEnumInterfaces failed with error: %u\n", dwResult);
+            return dwResult;
+            // You can use FormatMessage here to find out why the function failed
+        }
+
+
+        wprintf(L"Num Entries: %lu\n", pIfList->dwNumberOfItems);
+        wprintf(L"Current Index: %lu\n", pIfList->dwIndex);
+
+        // Find the currecntly connected interface
+        PWLAN_INTERFACE_INFO pIfInfo = NULL;
+        BOOLEAN connectedInterfaceFound = false;
+        for (UINT i = 0; i < static_cast<UINT>(pIfList->dwNumberOfItems); i++) {
+            pIfInfo = (WLAN_INTERFACE_INFO *) & pIfList->InterfaceInfo[i];
+            wprintf(L"  Interface Index[%u]:\t %lu\n", i, i);
+
+            // Get the GUID for this interface
+            WCHAR GuidString[39] = {0};
+            INT stringFromGUIDRes = StringFromGUID2(pIfInfo->InterfaceGuid, (LPOLESTR) & GuidString, sizeof(GuidString) / sizeof(*GuidString));
+            if (stringFromGUIDRes == 0)
+                wprintf(L"StringFromGUID2 failed\n");
+            else {
+                wprintf(L"  InterfaceGUID[%d]:\t %ws\n", i, GuidString);
+            }
+
+            wprintf(L"  Interface Description[%d]: %ws", i, pIfInfo->strInterfaceDescription);
+            wprintf(L"\n");
+            wprintf(L"  Interface State[%d]:\t ", i);
+
+            if (pIfInfo->isState == wlan_interface_state_connected) {
+                if (stringFromGUIDRes == 0) {
+                    wprintf(L"ERROR: Connected Interface found, but could not convert GUID.");
+                    return 1;
+                }
+                connectedInterfaceFound = true;
+                wprintf(L"Found connected Interface!");
+                break;
+            }
+            wprintf(L"\n");
+        }
+
+        // If a connected interface wasn't found, return error
+        if (connectedInterfaceFound) {
+            wprintf(L"No connected Interface Found");
+            return 1;
+        }
+
+        // If a connected interface was found,
+        // call WlanQueryInterface and WlanGetNetworkBssList to get current connection attributes and statistics
+
+        // Get WLAN_CONNECTION_ATTRIBUTES structure
+        DWORD connectInfoSize = sizeof(WLAN_CONNECTION_ATTRIBUTES);
+        dwResult = WlanQueryInterface(
+            hClient,
+            &pIfInfo->InterfaceGuid,
+            wlan_intf_opcode_current_connection,
+            NULL,
+            &connectInfoSize,
+            (PVOID *) connectionAttributes, 
+            NULL
+        );
+        if (dwResult != ERROR_SUCCESS) {
+            wprintf(L"WlanQueryInterface [connectionAttributes] failed with error: %u\n", dwResult);
+        }
+
+        // Get WLAN_STATISTICS structure
+        DWORD statisticsSize = sizeof(WLAN_STATISTICS);
+        dwResult = WlanQueryInterface(
+            hClient,
+            &pIfInfo->InterfaceGuid,
+            wlan_intf_opcode_statistics,
+            NULL,
+            &statisticsSize,
+            (PVOID *) statistics, 
+            NULL
+        );
+        if (dwResult != ERROR_SUCCESS) {
+            wprintf(L"WlanQueryInterface [statistics] failed with error: %u\n", dwResult);
+        }
+
+        // Get the available BSS list for the connected interface
+        PWLAN_BSS_LIST pBssList = NULL;
+        dwResult = WlanGetNetworkBssList(
+            hClient,
+            &pIfInfo->InterfaceGuid,
+            &connectionAttributes->wlanAssociationAttributes.dot11Ssid,
+            connectionAttributes->wlanAssociationAttributes.dot11BssType,
+            connectionAttributes->wlanSecurityAttributes.bSecurityEnabled,
+            NULL,
+            &pBssList
+        );
+        if (dwResult != ERROR_SUCCESS) {
+            wprintf(L"WlanGetNetworkBssList failed with error: %u\n", dwResult);
+            return 1;
+        }
+
+        wprintf(L"WLAN_BSS_LIST for this interface\n");
+        wprintf(L"  Num Entries: %lu\n\n", pBssList->dwNumberOfItems);
+
+
+        // Find currently connected BSS entry
+        // Get WLAN_BSS_ENTRY structure
+        BOOLEAN connectedBSSFound = false;
+        for (UINT i = 0; i < pBssList->dwNumberOfItems; i++) {
+            bssEntry = (WLAN_BSS_ENTRY *) & pBssList->wlanBssEntries[i];
+            
+            if (connectionAttributes->wlanAssociationAttributes.dot11Bssid == bssEntry->dot11Bssid) {
+                connectedBSSFound = true;
+                wprintf(L"Connected BSS Found!");
+            }
+        }
+    }
+
+
+    // Class to track and poll WLAN Statistics
+    class WLANDataTracking {
+    public:
+        static LPCWSTR PrintHeader() {
+            return L"";
+        }
+        std::wstring PrintData() {
+            return L"";
+        }
+        std::unordered_map<std::wstring, std::vector<ULONGLONG> *> GetNumericalData()
+        {
+            return {};
+        }
+
+        void UpdateData(const ULONG maxHistoryLength)
+        {
+            WLAN_CONNECTION_ATTRIBUTES connectionAttributes;
+            WLAN_STATISTICS statistics;
+            WLAN_BSS_ENTRY bssEntry;
+            //FillMemory(&Rod, sizeof Rod, -1);
+            if (0 == GetWLANInformation(&connectionAttributes, &statistics, &bssEntry)) {
+
+                // WLAN_ASSOCIATION_ATTRIBUTES
+                dot11Ssid.push_back(connectionAttributes.wlanAssociationAttributes.dot11Ssid);
+                // Enforce the max length of data history vector
+                if (dot11Ssid.size() > maxHistoryLength) {
+                    dot11Ssid.erase(std::begin(dot11Ssid));
+                }
+                dot11Bssid.push_back(connectionAttributes.wlanAssociationAttributes.dot11Bssid);
+                // Enforce the max length of data history vector
+                if (dot11Bssid.size() > maxHistoryLength) {
+                    dot11Bssid.erase(std::begin(dot11Bssid));
+                }
+                wlanSignalQuality.push_back(connectionAttributes.wlanAssociationAttributes.wlanSignalQuality);
+                // Enforce the max length of data history vector
+                if (wlanSignalQuality.size() > maxHistoryLength) {
+                    wlanSignalQuality.erase(std::begin(wlanSignalQuality));
+                }
+                ulRxRate.push_back(connectionAttributes.wlanAssociationAttributes.ulRxRate);
+                // Enforce the max length of data history vector
+                if (ulRxRate.size() > maxHistoryLength) {
+                    ulRxRate.erase(std::begin(ulRxRate));
+                }
+                ulTxRate.push_back(connectionAttributes.wlanAssociationAttributes.ulTxRate);
+                // Enforce the max length of data history vector
+                if (ulTxRate.size() > maxHistoryLength) {
+                    ulTxRate.erase(std::begin(ulTxRate));
+                }
+
+                // WLAN_BSS
+                lRssi.push_back(bssEntry.lRssi);
+                // Enforce the max length of data history vector
+                if (lRssi.size() > maxHistoryLength) {
+                    lRssi.erase(std::begin(lRssi));
+                }
+                uLinkQuality.push_back(bssEntry.uLinkQuality);
+                // Enforce the max length of data history vector
+                if (uLinkQuality.size() > maxHistoryLength) {
+                    uLinkQuality.erase(std::begin(uLinkQuality));
+                }
+                ulChCenterFrequency.push_back(bssEntry.ulChCenterFrequency);
+                // Enforce the max length of data history vector
+                if (ulChCenterFrequency.size() > maxHistoryLength) {
+                    ulChCenterFrequency.erase(std::begin(ulChCenterFrequency));
+                }
+                wlanRateSet.push_back(bssEntry.wlanRateSet);
+                // Enforce the max length of data history vector
+                if (wlanRateSet.size() > maxHistoryLength) {
+                    wlanRateSet.erase(std::begin(wlanRateSet));
+                }
+
+
+                // Sum-based statistics
+                if (initializedCounts) {
+
+                    // WLAN_STATISTICS
+                    fourWayHandshakeFailures.push_back(statistics.ullFourWayHandshakeFailures - fourWayHandshakeFailuresCount);
+                    // Enforce the max length of data history vector
+                    if (fourWayHandshakeFailures.size() > maxHistoryLength) {
+                        fourWayHandshakeFailures.erase(std::begin(fourWayHandshakeFailures));
+                    }
+                    TKIPCounterMeasuresInvoked.push_back(statistics.ullTKIPCounterMeasuresInvoked - TKIPCounterMeasuresInvokedCount);
+                    // Enforce the max length of data history vector
+                    if (TKIPCounterMeasuresInvoked.size() > maxHistoryLength) {
+                        TKIPCounterMeasuresInvoked.erase(std::begin(TKIPCounterMeasuresInvoked));
+                    }
+
+                    // WLAN_MAC_FRAME_STATISTICS
+                    
+                }
+
+                // Update total counts for sum-based stats
+                fourWayHandshakeFailuresCount = statistics.ullFourWayHandshakeFailures;
+                TKIPCounterMeasuresInvokedCount = statistics.ullTKIPCounterMeasuresInvoked;
+            }
+        }
+    private:
+        // WLAN_ASSOCIATION_ATTRIBUTES
+        std::vector<DOT11_SSID> dot11Ssid;
+        //DOT11_BSS_TYPE dot11BssType;
+        std::vector<DOT11_MAC_ADDRESS> dot11Bssid;
+        std::vector<WLAN_SIGNAL_QUALITY> wlanSignalQuality;
+        std::vector<ULONG> ulRxRate;
+        std::vector<ULONG> ulTxRate;
+
+        // WLAN_BSS
+        //std::vector<DOT11_SSID> dot11Ssid;
+        //std::vector<ULONG> uPhyId;
+        //std::vector<DOT11_MAC_ADDRESS> dot11Bssid;
+        //std::vector<DOT11_BSS_TYPE> dot11BssType;
+        //std::vector<DOT11_PHY_TYPE> dot11BssPhyType;
+        std::vector<LONG> lRssi;
+        std::vector<ULONG> uLinkQuality;
+        //std::vector<BOOLEAN> bInRegDomain;
+        //std::vector<USHORT> usBeaconPeriod;
+        //std::vector<ULONGLONG> ullTimestamp;
+        //std::vector<ULONGLONG> ullHostTimestamp;
+        //std::vector<USHORT> usCapabilityInformation;
+        std::vector<ULONG> ulChCenterFrequency;
+        std::vector<WLAN_RATE_SET> wlanRateSet;
+        //std::vector<ULONG> ulIeOffset;
+        //std::vector<ULONG> ulIeSize;
+
+        BOOLEAN initializedCounts = false;
+
+        // WLAN_STATISTICS
+        std::vector<ULONGLONG> fourWayHandshakeFailures;
+        ULONGLONG fourWayHandshakeFailuresCount = 0;
+        std::vector<ULONGLONG> TKIPCounterMeasuresInvoked;
+        ULONGLONG TKIPCounterMeasuresInvokedCount = 0;
+
+        // WLAN_MAC_FRAME_STATISTICS
+        std::vector<ULONGLONG> TransmittedFrames;
+        ULONGLONG TransmittedFramesCount = 0;
+        std::vector<ULONGLONG> ReceivedFrames;
+        ULONGLONG ReceivedFramesCount = 0;
+        std::vector<ULONGLONG> WEPExcludedFrames;
+        ULONGLONG WEPExcludedFramesCount = 0;
+        std::vector<ULONGLONG> TKIPLocalMICFailures;
+        ULONGLONG TKIPLocalMICFailuresCount = 0;
+        std::vector<ULONGLONG> TKIPReplays;
+        ULONGLONG TKIPReplaysCount = 0;
+        std::vector<ULONGLONG> TKIPICVErrors;
+        ULONGLONG TKIPICVErrorsCount = 0;
+        std::vector<ULONGLONG> CCMPReplays;
+        ULONGLONG CCMPReplaysCount = 0;
+        std::vector<ULONGLONG> CCMPDecryptErrors;
+        ULONGLONG CCMPDecryptErrorsCount = 0;
+        std::vector<ULONGLONG> WEPUndecryptablePackets;
+        ULONGLONG WEPUndecryptablePacketsCount = 0;
+        std::vector<ULONGLONG> WEPICVErrors;
+        ULONGLONG WEPICVErrorsCount = 0;
+        std::vector<ULONGLONG> DecryptSuccesses;
+        ULONGLONG DecryptSuccessesCount = 0;
+        std::vector<ULONGLONG> DecryptFailures;
+        ULONGLONG DecryptFailuresCount = 0;
+
+        // WLAN_PHY_FRAME_STATISTICS
+        std::vector<ULONGLONG> ullTransmittedFrames;
+        ULONGLONG ullTransmittedFramesCount = 0;
+        std::vector<ULONGLONG> ullMulticastTransmittedFrames;
+        ULONGLONG ullMulticastTransmittedFramesCount = 0;
+        std::vector<ULONGLONG> ullFailedFrameTransmissions;
+        ULONGLONG ullFailedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> ullRetriedFrameTransmissions;
+        ULONGLONG ullRetriedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> ullMultipleRetriedFrameTransmissions;
+        ULONGLONG ullMultipleRetriedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> ullMaxTXLifetimeExceededFrames;
+        ULONGLONG ullMaxTXLifetimeExceededFramesCount = 0;
+        std::vector<ULONGLONG> ullTransmittedFragments;
+        ULONGLONG ullTransmittedFragmentsCount = 0;
+        std::vector<ULONGLONG> ullRTSSuccesses;
+        ULONGLONG ullRTSSuccessesCount = 0;
+        std::vector<ULONGLONG> ullRTSFailures;
+        ULONGLONG ullRTSFailuresCount = 0;
+        std::vector<ULONGLONG> ullACKFailures;
+        ULONGLONG ullACKFailuresCount = 0;
+        std::vector<ULONGLONG> ullReceivedFrames;
+        ULONGLONG ullReceivedFramesCount = 0;
+        std::vector<ULONGLONG> ullMulticastReceivedFrames;
+        ULONGLONG ullMulticastReceivedFramesCount = 0;
+        std::vector<ULONGLONG> ullPromiscuousReceivedFrames;
+        ULONGLONG ullPromiscuousReceivedFramesCount = 0;
+        std::vector<ULONGLONG> ullMaxRXLifetimeExceededFrames;
+        ULONGLONG ullMaxRXLifetimeExceededFramesCount = 0;
+        std::vector<ULONGLONG> ullFrameDuplicates;
+        ULONGLONG ullFrameDuplicatesCount = 0;
+        std::vector<ULONGLONG> ullReceivedFragments;
+        ULONGLONG ullReceivedFragmentsCount = 0;
+        std::vector<ULONGLONG> ullPromiscuousReceivedFragments;
+        ULONGLONG ullPromiscuousReceivedFragmentsCount = 0;
+        std::vector<ULONGLONG> ullFCSErrors;
+        ULONGLONG ullFCSErrorsCount = 0;
+    };
+
 
     // the root template type that each ESTATS_TYPE will specialize for
     template <TCP_ESTATS_TYPE TcpType>
@@ -370,26 +702,24 @@ namespace details {
         template <typename PTCPROW>
         void UpdateData(const PTCPROW tcpRow, const ctl::ctSockaddr&, const ctl::ctSockaddr&, const ULONG maxHistoryLength)
         {
-            if (MssRcvdCount == 0) {
-                TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
-                FillMemory(&Ros, sizeof Ros, -1);
-                if (0 == GetPerConnectionStaticEstats(tcpRow, &Ros)) {
+            TCP_ESTATS_SYN_OPTS_ROS_v0 Ros;
+            FillMemory(&Ros, sizeof Ros, -1);
+            if (0 == GetPerConnectionStaticEstats(tcpRow, &Ros)) {
 
-                    if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssRcvd", Ros.MssRcvd)) {
-                        MssRcvd.push_back(Ros.MssRcvd - MssRcvdCount);
-                        MssRcvdCount = Ros.MssRcvd;
-                        // Enforce the max length of data history vector
-                        if (MssRcvd.size() > maxHistoryLength) {
-                            MssRcvd.erase(std::begin(MssRcvd));
-                        }
+                if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssRcvd", Ros.MssRcvd)) {
+                    MssRcvd.push_back(Ros.MssRcvd - MssRcvdCount);
+                    MssRcvdCount = Ros.MssRcvd;
+                    // Enforce the max length of data history vector
+                    if (MssRcvd.size() > maxHistoryLength) {
+                        MssRcvd.erase(std::begin(MssRcvd));
                     }
-                    if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssSent", Ros.MssSent)) {
-                        MssSent.push_back(Ros.MssSent - MssSentCount);
-                        MssSentCount = Ros.MssSent;
-                        // Enforce the max length of data history vector                        
-                        if (MssSent.size() > maxHistoryLength) {
-                            MssSent.erase(std::begin(MssSent));
-                        }
+                }
+                if (IsRodValueValid(L"TcpConnectionEstatsSynOpts - MssSent", Ros.MssSent)) {
+                    MssSent.push_back(Ros.MssSent - MssSentCount);
+                    MssSentCount = Ros.MssSent;
+                    // Enforce the max length of data history vector                        
+                    if (MssSent.size() > maxHistoryLength) {
+                        MssSent.erase(std::begin(MssSent));
                     }
                 }
             }
