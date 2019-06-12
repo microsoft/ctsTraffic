@@ -202,8 +202,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     };
     // All WLAN Stats
     std::set<std::wstring> allWlanStats = {
-        L"SSID",
-        L"BSSID",
         L"Rssi",
         L"wlanSignalQuality",
         L"RxRate",
@@ -257,9 +255,9 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     };
 
     // Wether to print each stat type live to console. all on by default
-    auto livePrintGlobalStats = true;
-    auto livePrintWlanStats = true;
-    auto livePrintDetailStats = true;
+    auto livePrintGlobalStats = false;
+    auto livePrintWlanStats = false;
+    auto livePrintDetailStats = false;
 	
 	wstring trackInterfaceDescription;
     wstring trackProcess;
@@ -325,10 +323,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             }
         }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-wlanStats")) {
+            trackEstats = true;
             trackWlanStats = true;
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-maxStatsHistoryLength:"))
-        {
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-maxStatsHistoryLength:")) {
             wstring maxHistString(argv[arg_count - 1]);
 
             // strip off the "maxStatsHistoryLength:" preface to the string
@@ -404,7 +402,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             livePrintGlobalStats = false;    
         }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-hideWLANLive")) {
-            livePrintDetailStats = false;
+            livePrintWlanStats = false;
         }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-hideDetailLive")) {
             livePrintDetailStats = false;
@@ -450,8 +448,13 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
 
     try {
+        // Don't print if not stats are tracked 
+        if (globalTrackedStats.empty()) {livePrintGlobalStats = false;}
+        if (trackedWlanStats.empty()) {livePrintWlanStats = false;}
+        if (detailTrackedStats.empty()) {livePrintDetailStats = false;}
+
         ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, trackWlanStats,
-                                  &globalTrackedStats, &trackedWlanStats, &detailTrackedStats, 
+                                  &globalTrackedStats, &trackedWlanStats, &detailTrackedStats,
                                   livePrintGlobalStats, livePrintWlanStats, livePrintDetailStats);
         if (trackEstats) {
             if (estats.start()) {

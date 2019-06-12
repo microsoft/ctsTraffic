@@ -322,21 +322,10 @@ namespace details {
     }
 
     // Get L2 WLAN data
-    ULONG GetWLANInformation(WLAN_CONNECTION_ATTRIBUTES *connectionAttributes, WLAN_STATISTICS *statistics, WLAN_BSS_ENTRY *bssEntry)
+    ULONG GetWLANInformation(PWLAN_CONNECTION_ATTRIBUTES &connectionAttributes, PWLAN_STATISTICS &statistics, PWLAN_BSS_ENTRY &bssEntry, HANDLE hClient)
     {
         // Reused return code var
         DWORD dwResult = 0;
-
-        // Open handle
-        HANDLE hClient = NULL;
-        DWORD dwMaxClient = 2;  
-        DWORD dwCurVersion = 2;
-        dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
-        if (dwResult != ERROR_SUCCESS) {
-            wprintf(L"WlanOpenHandle failed with error: %u\n", dwResult);
-            return dwResult;
-            // You can use FormatMessage here to find out why the function failed
-        }
 
         // Enumerate WLAN interfaces to find the currently connected one, if there is one
         PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
@@ -347,45 +336,29 @@ namespace details {
             // You can use FormatMessage here to find out why the function failed
         }
 
-
-        wprintf(L"Num Entries: %lu\n", pIfList->dwNumberOfItems);
-        wprintf(L"Current Index: %lu\n", pIfList->dwIndex);
-
         // Find the currecntly connected interface
         PWLAN_INTERFACE_INFO pIfInfo = NULL;
         BOOLEAN connectedInterfaceFound = false;
         for (UINT i = 0; i < static_cast<UINT>(pIfList->dwNumberOfItems); i++) {
             pIfInfo = (WLAN_INTERFACE_INFO *) & pIfList->InterfaceInfo[i];
-            wprintf(L"  Interface Index[%u]:\t %lu\n", i, i);
 
             // Get the GUID for this interface
             WCHAR GuidString[39] = {0};
             INT stringFromGUIDRes = StringFromGUID2(pIfInfo->InterfaceGuid, (LPOLESTR) & GuidString, sizeof(GuidString) / sizeof(*GuidString));
-            if (stringFromGUIDRes == 0)
-                wprintf(L"StringFromGUID2 failed\n");
-            else {
-                wprintf(L"  InterfaceGUID[%d]:\t %ws\n", i, GuidString);
-            }
-
-            wprintf(L"  Interface Description[%d]: %ws", i, pIfInfo->strInterfaceDescription);
-            wprintf(L"\n");
-            wprintf(L"  Interface State[%d]:\t ", i);
 
             if (pIfInfo->isState == wlan_interface_state_connected) {
                 if (stringFromGUIDRes == 0) {
-                    wprintf(L"ERROR: Connected Interface found, but could not convert GUID.");
+                    wprintf(L"ERROR: Connected Interface found, but could not convert GUID.\n");
                     return 1;
                 }
                 connectedInterfaceFound = true;
-                wprintf(L"Found connected Interface!");
                 break;
             }
-            wprintf(L"\n");
         }
 
         // If a connected interface wasn't found, return error
-        if (connectedInterfaceFound) {
-            wprintf(L"No connected Interface Found");
+        if (!connectedInterfaceFound) {
+            wprintf(L"No connected Interface Found.\n");
             return 1;
         }
 
@@ -400,11 +373,12 @@ namespace details {
             wlan_intf_opcode_current_connection,
             NULL,
             &connectInfoSize,
-            (PVOID *) connectionAttributes, 
+            (PVOID *) &connectionAttributes, 
             NULL
         );
         if (dwResult != ERROR_SUCCESS) {
             wprintf(L"WlanQueryInterface [connectionAttributes] failed with error: %u\n", dwResult);
+            return 1;
         }
 
         // Get WLAN_STATISTICS structure
@@ -415,11 +389,12 @@ namespace details {
             wlan_intf_opcode_statistics,
             NULL,
             &statisticsSize,
-            (PVOID *) statistics, 
+            (PVOID *) &statistics, 
             NULL
         );
         if (dwResult != ERROR_SUCCESS) {
             wprintf(L"WlanQueryInterface [statistics] failed with error: %u\n", dwResult);
+            return 1;
         }
 
         // Get the available BSS list for the connected interface
@@ -434,13 +409,9 @@ namespace details {
             &pBssList
         );
         if (dwResult != ERROR_SUCCESS) {
-            wprintf(L"WlanGetNetworkBssList failed with error: %u\n", dwResult);
+            wprintf(L"WlanGetNetworkBssList failed with error: %ld\n", dwResult);
             return 1;
         }
-
-        wprintf(L"WLAN_BSS_LIST for this interface\n");
-        wprintf(L"  Num Entries: %lu\n\n", pBssList->dwNumberOfItems);
-
 
         // Find currently connected BSS entry
         // Get WLAN_BSS_ENTRY structure
@@ -448,9 +419,10 @@ namespace details {
         for (UINT i = 0; i < pBssList->dwNumberOfItems; i++) {
             bssEntry = (WLAN_BSS_ENTRY *) & pBssList->wlanBssEntries[i];
             
-            if (connectionAttributes->wlanAssociationAttributes.dot11Bssid == bssEntry->dot11Bssid) {
+            if (std::strncmp(reinterpret_cast<PCHAR>(connectionAttributes->wlanAssociationAttributes.dot11Bssid), 
+                             reinterpret_cast<PCHAR>(bssEntry->dot11Bssid), 
+                             6) == 0) {
                 connectedBSSFound = true;
-                wprintf(L"Connected BSS Found!");
             }
         }
 
@@ -486,7 +458,11 @@ namespace details {
     // Class to track and poll WLAN Statistics
     class WLANDataTracking {
     public:
+    /**
         std::wstring GetSSID() {
+            if (dot11Ssid == NULL) {
+                return L"";
+            }
             // Handle conversions from UCHAR[] to std::wstring
             std::wstringstream wssSSID;
             for (UINT i = 0; i < dot11Ssid->uSSIDLength; i++) {
@@ -495,16 +471,22 @@ namespace details {
             return std::wstring(wssSSID.str());
         }
         std::wstring GetBSSID() {
+            if (dot11Bssid == NULL) {
+                return L"";
+            }
             // Handle conversions from UCHAR[] to std::wstring
             std::wstringstream wssBSSID;
             for (UINT i = 0; i < 6; i++) {
                 if(i == 5) {
                     wssBSSID << std::hex << *dot11Bssid[i];
                 }
-                wssBSSID << std::hex << *dot11Bssid[i] << L"-";
+                else {
+                    wssBSSID << std::hex << *dot11Bssid[i] << L"-";
+                }
             }
             return std::wstring(wssBSSID.str());
         }
+    **/
         std::vector<LONG> * GetRSSIData() {
             return &Rssi;
         }
@@ -571,8 +553,6 @@ namespace details {
             return L"Statistic,Sum,SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR";
         }
         void WriteConnectionInfoData(ctsWriteDetails &writer) {
-            writer.write_row(L"SSID," + GetSSID() + L",,,,,,,,,");
-            writer.write_row(L"BSSID," + GetBSSID() + L",,,,,,,,,");
             writer.write_row(L"Signal Quality" + ctsPerf::ctsWriteDetails::PrintDetails(wlanSignalQuality));
             writer.write_row(L"RX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(RxRate));
             writer.write_row(L"TX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(TxRate));
@@ -630,18 +610,20 @@ namespace details {
         }
 
 
-        void UpdateData(ULONG tableCounter, const ULONG maxHistoryLength)
+        void UpdateData(ULONG tableCounter, const ULONG maxHistoryLength, HANDLE hClient)
         {
-            WLAN_CONNECTION_ATTRIBUTES connectionAttributes;
-            WLAN_STATISTICS statistics;
-            WLAN_BSS_ENTRY bssEntry;
+            PWLAN_CONNECTION_ATTRIBUTES pconnectionAttributes = NULL;
+            PWLAN_STATISTICS pstatistics = NULL;
+            PWLAN_BSS_ENTRY pbssEntry = NULL;
             //FillMemory(&Rod, sizeof Rod, -1);
-            if (0 == GetWLANInformation(&connectionAttributes, &statistics, &bssEntry)) {
+            if (0 == GetWLANInformation(pconnectionAttributes, pstatistics, pbssEntry, hClient)) {
+
+                WLAN_CONNECTION_ATTRIBUTES connectionAttributes = *pconnectionAttributes;
+                WLAN_STATISTICS statistics = *pstatistics;
+                WLAN_BSS_ENTRY bssEntry = *pbssEntry;
                 // State-based Statistics
 
                 // WLAN_ASSOCIATION_ATTRIBUTES
-                dot11Ssid  = &(connectionAttributes.wlanAssociationAttributes.dot11Ssid);  // SSID not tracked over time
-                dot11Bssid = &(connectionAttributes.wlanAssociationAttributes.dot11Bssid); // BSSID not tracked over time
                 updateStatVector(wlanSignalQuality, connectionAttributes.wlanAssociationAttributes.wlanSignalQuality, maxHistoryLength);
                 updateStatVector(RxRate,            connectionAttributes.wlanAssociationAttributes.ulRxRate, maxHistoryLength);
                 updateStatVector(TxRate,            connectionAttributes.wlanAssociationAttributes.ulTxRate, maxHistoryLength);
@@ -760,9 +742,17 @@ namespace details {
                 }
 
                 latestCounter = tableCounter;
+                // Free memory used to store WLAN data structres
+                WlanFreeMemory(pconnectionAttributes);
+                WlanFreeMemory(pstatistics);
+                //WlanFreeMemory(pbssEntry); // This crashes for some reason?
             }
             else {
                 wprintf(L"Could not get WLAN Information -- Is the WLAN Service running?");
+                // Free memory used to store WLAN data structres                
+                WlanFreeMemory(pconnectionAttributes);
+                WlanFreeMemory(pstatistics);
+                //WlanFreeMemory(pbssEntry); // This crashes for some reason?
                 exit(1);
             }
         }
@@ -775,9 +765,9 @@ namespace details {
         mutable ULONG latestCounter = 0;
 
         // WLAN_ASSOCIATION_ATTRIBUTES
-        PDOT11_SSID dot11Ssid;
+        //PDOT11_SSID dot11Ssid;
         //DOT11_BSS_TYPE dot11BssType;
-        PDOT11_MAC_ADDRESS dot11Bssid;
+        //PDOT11_MAC_ADDRESS dot11Bssid;
         std::vector<WLAN_SIGNAL_QUALITY> wlanSignalQuality;
         std::vector<ULONG> RxRate;
         std::vector<ULONG> TxRate;
@@ -2007,6 +1997,15 @@ public:
                 wlanConnectionInfoWriter.create_file(details::WLANDataTracking::PrintHeader());
                 wlanMACStatsWriter.create_file(details::WLANDataTracking::PrintHeader());
                 wlanPhyStatsWriter.create_file(details::WLANDataTracking::PrintHeader());
+
+                // Initialize client handle
+                DWORD dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
+                if (dwResult != ERROR_SUCCESS)
+                {
+                    wprintf(L"WlanOpenHandle failed with error: %u\n", dwResult);
+                    return dwResult;
+                    // You can use FormatMessage here to find out why the function failed
+                }
             }
 
             started = UpdateEstats();
@@ -2053,8 +2052,11 @@ private:
     ctsWriteDetails wlanMACStatsWriter;
     ctsWriteDetails wlanPhyStatsWriter;
 
+    // WLAN-Specific
     const BOOLEAN trackWlanStats;
-
+    HANDLE hClient = NULL;
+    DWORD dwMaxClient = 2;
+    DWORD dwCurVersion = 0;
 
     // "Live" (per-poll) .csv writers
     ctsWriteDetails globalStatsWriter;
@@ -2076,6 +2078,8 @@ private:
     HANDLE hConsole;
     WORD orig_wAttributes;
     const WORD BACKGROUND_MASK = 0x00F0;
+    const USHORT dataColumnWidth = 12;
+    const USHORT titleColumnWidth = 35;
 
     // Max number of values to keep in history
     const ULONG maxHistoryLength;
@@ -2565,85 +2569,78 @@ private:
             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN);
         }
     }
-    void PrintStat(ULONG64 stat, DOUBLE percentChange, const int& width) {
+    void PrintStat(ULONG64 stat, DOUBLE percentChange) {
         ResetSetConsoleColor();
         std::wcout << L" | ";
 
         SetConsoleColorFromPercentChange(percentChange);
-        std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
+        std::wcout << std::right << std::setw(dataColumnWidth) << std::setfill(L' ') << stat;
     }
-    void PrintStat(LONG stat, DOUBLE percentChange, const int& width) {
-    ResetSetConsoleColor();
-    std::wcout << L" | ";
+    void PrintStat(LONG stat, DOUBLE percentChange) {
+        ResetSetConsoleColor();
+        std::wcout << L" | ";
 
-    SetConsoleColorFromPercentChange(percentChange);
-    std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
+        SetConsoleColorFromPercentChange(percentChange);
+        std::wcout << std::right << std::setw(dataColumnWidth) << std::setfill(L' ') << stat;
     }
-    void PrintStat(DOUBLE stat, DOUBLE percentChange, const int& width) {
+    void PrintStat(DOUBLE stat, DOUBLE percentChange) {
         ResetSetConsoleColor();
         std::wcout << L" | ";
 
         std::wcout.precision(2);
         SetConsoleColorFromPercentChange(percentChange);
-        std::wcout << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
+        std::wcout << std::right << std::setw(dataColumnWidth) << std::setfill(L' ') << std::fixed << stat;
     }
     template<typename T>
-    void PrintGlobalStatSummary(std::wstring title, std::tuple<T, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
+    void PrintGlobalStatSummary(std::wstring title, std::tuple<T, DETAILED_STATS_PERCENT_CHANGE> summary) {
         SetConsoleColorConnectionStatus(std::get<0>(summary).latestCounter == tableCounter);
-        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << title;
+        std::wcout << std::left << std::setw(titleColumnWidth) << std::setfill(L' ') << title;
 
-        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
-        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
-        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
-        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
-        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
-        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
+        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min);
+        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean);
+        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max);
+        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev);
+        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median);
+        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr);
 
         ResetSetConsoleColor();
         std::wcout << L" |" << std::endl;
     }
-    void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
+    void PrintPerConnectionStatSummary(std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary) {
         SetConsoleColorConnectionStatus(std::get<0>(summary).latestCounter == tableCounter);
         std::wcout << L"Samples: ";
-        std::wcout << std::left << std::setw(13) << std::setfill(L' ') << std::to_wstring(std::get<0>(summary).samples) + 
+        std::wcout << std::left << std::setw(titleColumnWidth) << std::setfill(L' ') << std::to_wstring(std::get<0>(summary).samples) + 
                                                                         ((std::get<0>(summary).samples == maxHistoryLength) ? std::wstring(L" (max)") : std::wstring(L""));
 
-        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min, width);
-        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean, width);
-        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max, width);
-        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev, width);
-        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median, width);
-        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
+        PrintStat(std::get<0>(summary).min, std::get<1>(summary).min);
+        PrintStat(std::get<0>(summary).mean, std::get<1>(summary).mean);
+        PrintStat(std::get<0>(summary).max, std::get<1>(summary).max);
+        PrintStat(std::get<0>(summary).stddev, std::get<1>(summary).stddev);
+        PrintStat(std::get<0>(summary).median, std::get<1>(summary).median);
+        PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr);
 
         ResetSetConsoleColor();
-        std::wcout << L" |" << std::endl;
-    }
-    void PrintStringStat(std::wstring statName, std::wstring statValue, const int& width) {
-        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << statName;
-        std::wcout << L" | ";
-        std::wcout << std::left << std::setw((width * 6) + 10) << std::setfill(L' ') << stat;
         std::wcout << L" |" << std::endl;
     }
     
-    void PrintHeaderTitle(std::wstring title, const int& width) {
-        std::wcout << L" | " << std::right << std::setw(width) << std::setfill(L' ') << title;
+    void PrintHeaderTitle(std::wstring title) {
+        std::wcout << L" | " << std::right << std::setw(dataColumnWidth) << std::setfill(L' ') << title;
     }
-    void PrintStdHeader(std::wstring firstColumnName, const int& width) {
-        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
-        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << firstColumnName;
-            PrintHeaderTitle(L"Min", width);
-            PrintHeaderTitle(L"Mean", width);
-            PrintHeaderTitle(L"Max", width);
-            PrintHeaderTitle(L"StdDev", width);
-            PrintHeaderTitle(L"Median", width);
-            PrintHeaderTitle(L"IQR", width);
+    void PrintStdHeader(std::wstring firstColumnName) {
+        PrintStdSeparator();
+        std::wcout << std::left << std::setw(titleColumnWidth) << std::setfill(L' ') << firstColumnName;
+            PrintHeaderTitle(L"Min");
+            PrintHeaderTitle(L"Mean");
+            PrintHeaderTitle(L"Max");
+            PrintHeaderTitle(L"StdDev");
+            PrintHeaderTitle(L"Median");
+            PrintHeaderTitle(L"IQR");
         std::wcout << L" |" << std::endl;
-        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
+        PrintStdSeparator();
     }
-    void PrintStdFooter() {
-        std::wcout << "-----------------------------------------------------------------------------------------------------------------+" << std::endl;
+    void PrintStdSeparator() {
+        std::wcout << std::wstring(titleColumnWidth + (6 * dataColumnWidth) + (6 * 3), L'-') << "-+" << std::endl;
     }
-
 
     void clear_screen() { 
         COORD tl = {0,0};
@@ -2655,62 +2652,55 @@ private:
         FillConsoleOutputAttribute(console, s.wAttributes, cells, tl, &written);
         SetConsoleCursorPosition(console, tl);
     }
+
     void PrintDataUpdate() {
         // Do not do live updates if there are no tracked stats
         if (globalTrackedStats->empty() && detailTrackedStats->empty() && wlanTrackedStats->empty()) {return;}
 
         if (printGlobal || printDetail || printWlan) {
-            //clear_screen();
+            clear_screen();
         }
 
         // -- Global summary table --
         if (!globalTrackedStats->empty()) {
-            if (printGlobal) {PrintStdHeader(L"GLobal Statistics", 12);}
+            if (printGlobal) {PrintStdHeader(L"GLobal Statistics");}
             OpenAndStartGlobalStatSummaryCSV();
             for (std::wstring stat : *globalTrackedStats)
             {
                 auto detailedStatsSummary = GatherGlobalStatisticSummary(stat, trackedStatisticsDataTypes.at(stat));
-                if (printGlobal) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
+                if (printGlobal) {PrintGlobalStatSummary(stat, detailedStatsSummary);}
                 SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary);
             }
 
             if (printGlobal) {
-                PrintStdFooter();
+                PrintStdSeparator();
                 std::wcout << std::endl;
             }
         }
 
         // -- WLAN table --
         if (trackWlanStats && !wlanTrackedStats->empty()) {
-            if (printWlan) {PrintStdHeader(L"WLAN Information", 12);}
+            if (printWlan) {PrintStdHeader(L"WLAN Information");}
             // Open the global stat summary csv if not created by the global stats loop
             if (globalTrackedStats->empty()) {
                 OpenAndStartGlobalStatSummaryCSV();
             }
             for (std::wstring stat : *wlanTrackedStats)
             {
-                if (stat == L"SSID") {
-                    if (printWlan) {PrintStringStat(L"SSID", wlanData.GetSSID(), 22);}
-                    globalStatsWriter.write_row(L"SSID,,," + wlanData.GetSSID());
-                }
-                if (stat == L"BSSID") {
-                    if (printWlan) {PrintStringStat(L"BSSID", wlanData.GetBSSID(), 22);}
-                    globalStatsWriter.write_row(L"BSSID,,," + wlanData.GetBSSID());
-                }
                 if (stat == L"Rssi") {
                     auto detailedStatsSummary = GetWLANRSSISummary();
-                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
+                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary);}
                     SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary);  
                 }
                 else {
                     auto detailedStatsSummary = GatherWLANStatisticSummary(stat);
-                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
+                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary);}
                     SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary); 
                 }
             }
 
             if (printWlan) {
-                PrintStdFooter();
+                PrintStdSeparator();
                 std::wcout << std::endl;
             }
         }
@@ -2720,17 +2710,17 @@ private:
             OpenAndStartDetailStatSummaryCSV();
             for (std::wstring stat : *detailTrackedStats)
             {
-                if (printDetail) {PrintStdHeader(stat, 12);}
+                if (printDetail) {PrintStdHeader(stat);}
                 SaveDetailStatHeaderLineToCSV(stat);
 
                 auto detailedStatsSummaries = GatherPerConnectionStatisticSummaries(stat, trackedStatisticsDataTypes.at(stat));
 
                 for (auto summary : detailedStatsSummaries)
                 {
-                    if (printDetail) {PrintPerConnectionStatSummary(summary, 12);}
+                    if (printDetail) {PrintPerConnectionStatSummary(summary);}
                     SaveDetailStatSummaryLineToCSV(summary);
                 }
-                if (printDetail) {PrintStdFooter();}
+                if (printDetail) {PrintStdSeparator();}
             }
         }
     }
@@ -2799,7 +2789,7 @@ private:
                 }
             }
 
-            wlanData.UpdateData(tableCounter, maxHistoryLength);
+            wlanData.UpdateData(tableCounter, maxHistoryLength, hClient);
 
             RemoveStaleDataPoints();
         }
