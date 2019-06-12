@@ -160,12 +160,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     // Flags to be set by arguments
     auto trackNetworking = false;
     auto trackEstats = false;
+    auto trackWlanStats = false;
     ULONG estatsPollRate = 1000;
 
     ULONG maxStatsHistoryLength = 10; // default to 10 samples
 
-    // Lists of stats to track
+    // Lists of stats to track live
     std::set<std::wstring> globalTrackedStats;
+    std::set<std::wstring> trackedWlanStats;
     std::set<std::wstring> detailTrackedStats;
     // All stats
     std::set<std::wstring> allStats = {
@@ -198,9 +200,65 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         L"outboundInstability",
         L"inboundInstability"
     };
+    // All WLAN Stats
+    std::set<std::wstring> allWlanStats = {
+        L"SSID",
+        L"BSSID",
+        L"Rssi",
+        L"wlanSignalQuality",
+        L"RxRate",
+        L"TxRate",
+        L"LinkQuality",
+        L"ChCenterFrequency",
+        L"FourWayHandshakeFailures",
+        L"TKIPCounterMeasuresInvoked",
+        L"UC_TransmittedFrames",
+        L"UC_ReceivedFrames",
+        L"UC_WEPExcludedFrames",
+        L"UC_TKIPLocalMICFailures",
+        L"UC_TKIPReplays",
+        L"UC_TKIPICVErrors",
+        L"UC_CCMPReplays",
+        L"UC_CCMPDecryptErrors",
+        L"UC_WEPUndecryptablePackets",
+        L"UC_WEPICVErrors",
+        L"UC_DecryptSuccesses",
+        L"UC_DecryptFailures",
+        L"MC_TransmittedFrames",
+        L"MC_ReceivedFrames",
+        L"MC_WEPExcludedFrames",
+        L"MC_TKIPLocalMICFailures",
+        L"MC_TKIPReplays",
+        L"MC_TKIPICVErrors",
+        L"MC_CCMPReplays",
+        L"MC_CCMPDecryptErrors",
+        L"MC_WEPUndecryptablePackets",
+        L"MC_WEPICVErrors",
+        L"MC_DecryptSuccesses",
+        L"MC_DecryptFailures",
+        L"TransmittedFrames",
+        L"MulticastTransmittedFrames",
+        L"FailedFrameTransmissions",
+        L"RetriedFrameTransmissions",
+        L"MultipleRetriedFrameTransmissions",
+        L"MaxTXLifetimeExceededFrames",
+        L"TransmittedFragments",
+        L"RTSSuccesses",
+        L"RTSFailures",
+        L"ACKFailures",
+        L"ReceivedFrames",
+        L"MulticastReceivedFrames",
+        L"PromiscuousReceivedFrames",
+        L"MaxRXLifetimeExceededFrames",
+        L"FrameDuplicates",
+        L"ReceivedFragments",
+        L"PromiscuousReceivedFragments",
+        L"FCSErrors"
+    };
 
-    // Wether to print each stat type live to console. Both on by default
+    // Wether to print each stat type live to console. all on by default
     auto livePrintGlobalStats = true;
+    auto livePrintWlanStats = true;
     auto livePrintDetailStats = true;
 	
 	wstring trackInterfaceDescription;
@@ -265,8 +323,12 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 wprintf(UsageStatement);
                 return 1;
             }
-        } 
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-maxStatsHistoryLength:")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-wlanStats")) {
+            trackWlanStats = true;
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-maxStatsHistoryLength:"))
+        {
             wstring maxHistString(argv[arg_count - 1]);
 
             // strip off the "maxStatsHistoryLength:" preface to the string
@@ -300,6 +362,25 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 }
             }
         }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-trackWLAN:")) {
+            wstring wlanStatsString(argv[arg_count - 1]);
+
+            // strip off the "trackWLAN:" preface to the string
+            const auto endOfToken = find(wlanStatsString.begin(), wlanStatsString.end(), L':');
+            wlanStatsString.erase(wlanStatsString.begin(), endOfToken + 1);
+
+            // Handle "ALL" option
+            if (wlanStatsString == L"ALL") {
+                trackedWlanStats = allWlanStats;
+            }
+            else {
+                std::wstringstream wss(wlanStatsString);
+                std::wstring tmp;
+                while(std::getline(wss, tmp, L';')) {
+                    trackedWlanStats.emplace(tmp);
+                }
+            }
+        }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-trackDetail:")) {
             wstring detailStatsString(argv[arg_count - 1]);
 
@@ -319,47 +400,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 }
             }
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-printGlobalLive:")) {
-            wstring printGlobalString(argv[arg_count - 1]);
-
-            // strip off the "printGlobalLive:" preface to the string
-            const auto endOfToken = find(printGlobalString.begin(), printGlobalString.end(), L':');
-            printGlobalString.erase(printGlobalString.begin(), endOfToken + 1);
-
-            // get true or false from string
-            if (printGlobalString == L"true") {
-                livePrintGlobalStats = true;
-            }
-            else if (printGlobalString == L"false") {
-                livePrintGlobalStats = false;
-            }
-            else {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
-                return 1;
-            }
-            
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-hideGlobalLive")) {
+            livePrintGlobalStats = false;    
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-printDetailLive:")) {
-            wstring printDetailString(argv[arg_count - 1]);
-
-            // strip off the "printDetailLive:" preface to the string
-            const auto endOfToken = find(printDetailString.begin(), printDetailString.end(), L':');
-            printDetailString.erase(printDetailString.begin(), endOfToken + 1);
-
-            // get true or false from string
-            if (printDetailString == L"true") {
-                livePrintDetailStats = true;
-            }
-            else if (printDetailString == L"false") {
-                livePrintDetailStats = false;
-            }
-            else {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
-                return 1;
-            }
-            
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-hideWLANLive")) {
+            livePrintDetailStats = false;
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-hideDetailLive")) {
+            livePrintDetailStats = false;
         } 
         else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
             trackNetworking = true;
@@ -402,12 +450,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
 
     try {
-        ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, &globalTrackedStats, &detailTrackedStats, livePrintGlobalStats, livePrintDetailStats);
+        ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, trackWlanStats,
+                                  &globalTrackedStats, &trackedWlanStats, &detailTrackedStats, 
+                                  livePrintGlobalStats, livePrintWlanStats, livePrintDetailStats);
         if (trackEstats) {
             if (estats.start()) {
                 wprintf(L"-- Enabled ESTATS --\n");
             } else {
-                wprintf(L"ESTATS could not be started - verify running as Administrator\n");
+                wprintf(L"ESTATS could not be started - check above errors and verify running as Administrator\n");
                 return 1;
             }
         }

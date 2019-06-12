@@ -56,6 +56,10 @@ namespace ctsPerf {
         {
             return ctl::ctString::format_string(L",%lu,%lu", _first_value, _second_value);
         }
+        inline std::wstring write(LONG _first_value, LONG _second_value)
+        {
+            return ctl::ctString::format_string(L",%ld,%ld", _first_value, _second_value);
+        }
         inline std::wstring write(double _first_value, double _second_value)
         {
             return ctl::ctString::format_string(L",%.3f,%.3f", _first_value, _second_value);

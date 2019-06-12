@@ -13,6 +13,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// c headers
+#include <wchar.h>
+
 // cpp headers
 #include <iostream>
 #include <iomanip>
@@ -327,7 +330,7 @@ namespace details {
         // Open handle
         HANDLE hClient = NULL;
         DWORD dwMaxClient = 2;  
-        DWORD dwCurVersion = 0;
+        DWORD dwCurVersion = 2;
         dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
         if (dwResult != ERROR_SUCCESS) {
             wprintf(L"WlanOpenHandle failed with error: %u\n", dwResult);
@@ -450,113 +453,334 @@ namespace details {
                 wprintf(L"Connected BSS Found!");
             }
         }
+
+        return 0;
     }
 
+
+    // Helper for handling stat arrays which collect stats in a per-time-slice fashion, 
+    // but pull from values which represent total counts
+    template <typename T>
+    inline void updateTotalCountBasedStatVector(std::vector<T> &vector, T &srcCount, T &trackedCount, const ULONG &maxLength) {
+        vector.push_back(srcCount - trackedCount);
+        // Enforce the max length of data history vector
+        if (vector.size() > maxLength) {
+            vector.erase(std::begin(vector));
+        }
+        trackedCount = srcCount;
+    }
+    // Helper for handling stat arrays
+    template <typename T>
+    inline void updateStatVector(std::vector<T> &vector, T &srcValue, const ULONG &maxLength) {
+        vector.push_back(srcValue);
+        // Enforce the max length of data history vector
+        if (vector.size() > maxLength) {
+            vector.erase(std::begin(vector));
+        }
+    }
+
+    inline ULONGLONG sumULONGLONGVect(std::vector<ULONGLONG> &vect) {
+        return std::accumulate(std::begin(vect), std::end(vect), 0ULL);
+    }
 
     // Class to track and poll WLAN Statistics
     class WLANDataTracking {
     public:
-        static LPCWSTR PrintHeader() {
-            return L"";
+        std::wstring GetSSID() {
+            // Handle conversions from UCHAR[] to std::wstring
+            std::wstringstream wssSSID;
+            for (UINT i = 0; i < dot11Ssid->uSSIDLength; i++) {
+                wssSSID << dot11Ssid->ucSSID[i];
+            }
+            return std::wstring(wssSSID.str());
         }
-        std::wstring PrintData() {
-            return L"";
+        std::wstring GetBSSID() {
+            // Handle conversions from UCHAR[] to std::wstring
+            std::wstringstream wssBSSID;
+            for (UINT i = 0; i < 6; i++) {
+                if(i == 5) {
+                    wssBSSID << std::hex << *dot11Bssid[i];
+                }
+                wssBSSID << std::hex << *dot11Bssid[i] << L"-";
+            }
+            return std::wstring(wssBSSID.str());
         }
-        std::unordered_map<std::wstring, std::vector<ULONGLONG> *> GetNumericalData()
+        std::vector<LONG> * GetRSSIData() {
+            return &Rssi;
+        }
+        std::unordered_map<std::wstring, std::vector<ULONG> *> GetULONGNumericalData() {
+            return {
+                {L"wlanSignalQuality", &wlanSignalQuality},
+                {L"RxRate", &RxRate},
+                {L"TxRate", &TxRate},
+                {L"LinkQuality", &LinkQuality},
+                {L"ChCenterFrequency", &ChCenterFrequency}
+            };
+        }
+        std::unordered_map<std::wstring, std::vector<ULONGLONG> *> GetULONGLONGNumericalData()
         {
-            return {};
+            return {
+                {L"FourWayHandshakeFailures", &FourWayHandshakeFailures},
+                {L"TKIPCounterMeasuresInvoked", &TKIPCounterMeasuresInvoked},
+                {L"UC_TransmittedFrames", &UC_TransmittedFrames},
+                {L"UC_ReceivedFrames", &UC_ReceivedFrames},
+                {L"UC_WEPExcludedFrames", &UC_WEPExcludedFrames},
+                {L"UC_TKIPLocalMICFailures", &UC_TKIPLocalMICFailures},
+                {L"UC_TKIPReplays", &UC_TKIPReplays},
+                {L"UC_TKIPICVErrors", &UC_TKIPICVErrors},
+                {L"UC_CCMPReplays", &UC_CCMPReplays},
+                {L"UC_CCMPDecryptErrors", &UC_CCMPDecryptErrors},
+                {L"UC_WEPUndecryptablePackets", &UC_WEPUndecryptablePackets},
+                {L"UC_WEPICVErrors", &UC_WEPICVErrors},
+                {L"UC_DecryptSuccesses", &UC_DecryptSuccesses},
+                {L"UC_DecryptFailures", &UC_DecryptFailures},
+                {L"MC_TransmittedFrames", &MC_TransmittedFrames},
+                {L"MC_ReceivedFrames", &MC_ReceivedFrames},
+                {L"MC_WEPExcludedFrames", &MC_WEPExcludedFrames},
+                {L"MC_TKIPLocalMICFailures", &MC_TKIPLocalMICFailures},
+                {L"MC_TKIPReplays", &MC_TKIPReplays},
+                {L"MC_TKIPICVErrors", &MC_TKIPICVErrors},
+                {L"MC_CCMPReplays", &MC_CCMPReplays},
+                {L"MC_CCMPDecryptErrors", &MC_CCMPDecryptErrors},
+                {L"MC_WEPUndecryptablePackets", &MC_WEPUndecryptablePackets},
+                {L"MC_WEPICVErrors", &MC_WEPICVErrors},
+                {L"MC_DecryptSuccesses", &MC_DecryptSuccesses},
+                {L"MC_DecryptFailures", &MC_DecryptFailures},
+                {L"TransmittedFrames", &TransmittedFrames},
+                {L"MulticastTransmittedFrames", &MulticastTransmittedFrames},
+                {L"FailedFrameTransmissions", &FailedFrameTransmissions},
+                {L"RetriedFrameTransmissions", &RetriedFrameTransmissions},
+                {L"MultipleRetriedFrameTransmissions", &MultipleRetriedFrameTransmissions},
+                {L"MaxTXLifetimeExceededFrames", &MaxTXLifetimeExceededFrames},
+                {L"TransmittedFragments", &TransmittedFragments},
+                {L"RTSSuccesses", &RTSSuccesses},
+                {L"RTSFailures", &RTSFailures},
+                {L"ACKFailures", &ACKFailures},
+                {L"ReceivedFrames", &ReceivedFrames},
+                {L"MulticastReceivedFrames", &MulticastReceivedFrames},
+                {L"PromiscuousReceivedFrames", &PromiscuousReceivedFrames},
+                {L"MaxRXLifetimeExceededFrames", &MaxRXLifetimeExceededFrames},
+                {L"FrameDuplicates", &FrameDuplicates},
+                {L"ReceivedFragments", &ReceivedFragments},
+                {L"PromiscuousReceivedFragments", &PromiscuousReceivedFragments},
+                {L"FCSErrors", &FCSErrors}
+            };
         }
 
-        void UpdateData(const ULONG maxHistoryLength)
+        static std::wstring PrintHeader() {
+            return L"Statistic,Sum,SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR";
+        }
+        void WriteConnectionInfoData(ctsWriteDetails &writer) {
+            writer.write_row(L"SSID," + GetSSID() + L",,,,,,,,,");
+            writer.write_row(L"BSSID," + GetBSSID() + L",,,,,,,,,");
+            writer.write_row(L"Signal Quality" + ctsPerf::ctsWriteDetails::PrintDetails(wlanSignalQuality));
+            writer.write_row(L"RX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(RxRate));
+            writer.write_row(L"TX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(TxRate));
+            writer.write_row(L"RSSI" + ctsPerf::ctsWriteDetails::PrintDetails(Rssi));
+            writer.write_row(L"Link Quality" + ctsPerf::ctsWriteDetails::PrintDetails(LinkQuality));
+            writer.write_row(L"Four-Way Handshake Failures" + ctsPerf::ctsWriteDetails::PrintDetails(FourWayHandshakeFailures));
+            writer.write_row(L"TKIP Countermeasures Invoked" + ctsPerf::ctsWriteDetails::PrintDetails(TKIPCounterMeasuresInvoked));
+        }
+        void WriteMACStatsData(ctsWriteDetails &writer) {
+            writer.write_row(L"[U] Transmitted Frames," + std::to_wstring(sumULONGLONGVect(UC_TransmittedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_TransmittedFrames));
+            writer.write_row(L"[U] Received Frames," + std::to_wstring(sumULONGLONGVect(UC_ReceivedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_ReceivedFrames));
+            writer.write_row(L"[U] WEP Excluded Frames," + std::to_wstring(sumULONGLONGVect(UC_WEPExcludedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_WEPExcludedFrames));
+            writer.write_row(L"[U] TKIP LocalMIC Failures," + std::to_wstring(sumULONGLONGVect(UC_TKIPLocalMICFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_TKIPLocalMICFailures));
+            writer.write_row(L"[U] TKIP Replays," + std::to_wstring(sumULONGLONGVect(UC_TKIPReplays)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_TKIPReplays));
+            writer.write_row(L"[U] TKIP ICV Errors," + std::to_wstring(sumULONGLONGVect(UC_TKIPICVErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_TKIPICVErrors));
+            writer.write_row(L"[U] CCMP Replays," + std::to_wstring(sumULONGLONGVect(UC_CCMPReplays)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_CCMPReplays));
+            writer.write_row(L"[U] CCMP Decrypt Errors," + std::to_wstring(sumULONGLONGVect(UC_CCMPDecryptErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_CCMPDecryptErrors));
+            writer.write_row(L"[U] WEP Undecryptable Packets," + std::to_wstring(sumULONGLONGVect(UC_WEPUndecryptablePackets)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_WEPUndecryptablePackets));
+            writer.write_row(L"[U] WEP ICV Errors," + std::to_wstring(sumULONGLONGVect(UC_WEPICVErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_WEPICVErrors));
+            writer.write_row(L"[U] Decrypt Successes," + std::to_wstring(sumULONGLONGVect(UC_DecryptSuccesses)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_DecryptSuccesses));
+            writer.write_row(L"[U] Decrypt Failures," + std::to_wstring(sumULONGLONGVect(UC_DecryptFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_DecryptFailures));
+            writer.write_empty_row();
+            writer.write_row(L"[M] Transmitted Frames," + std::to_wstring(sumULONGLONGVect(MC_TransmittedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_TransmittedFrames));
+            writer.write_row(L"[M] Received Frames," + std::to_wstring(sumULONGLONGVect(MC_ReceivedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_ReceivedFrames));
+            writer.write_row(L"[M] WEP Excluded Frames," + std::to_wstring(sumULONGLONGVect(MC_WEPExcludedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_WEPExcludedFrames));
+            writer.write_row(L"[M] TKIP LocalMIC Failures," + std::to_wstring(sumULONGLONGVect(MC_TKIPLocalMICFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_TKIPLocalMICFailures));
+            writer.write_row(L"[M] TKIP Replays," + std::to_wstring(sumULONGLONGVect(MC_TKIPReplays)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_TKIPReplays));
+            writer.write_row(L"[M] TKIP ICV Errors," + std::to_wstring(sumULONGLONGVect(MC_TKIPICVErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_TKIPICVErrors));
+            writer.write_row(L"[M] CCMP Replays," + std::to_wstring(sumULONGLONGVect(MC_CCMPReplays)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_CCMPReplays));
+            writer.write_row(L"[M] CCMP Decrypt Errors," + std::to_wstring(sumULONGLONGVect(MC_CCMPDecryptErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_CCMPDecryptErrors));
+            writer.write_row(L"[M] WEP Undecryptable Packets," + std::to_wstring(sumULONGLONGVect(MC_WEPUndecryptablePackets)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_WEPUndecryptablePackets));
+            writer.write_row(L"[M] WEP ICV Errors," + std::to_wstring(sumULONGLONGVect(MC_WEPICVErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_WEPICVErrors));
+            writer.write_row(L"[M] Decrypt Successes," + std::to_wstring(sumULONGLONGVect(MC_DecryptSuccesses)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_DecryptSuccesses));
+            writer.write_row(L"[M] Decrypt Failures," + std::to_wstring(sumULONGLONGVect(MC_DecryptFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(MC_DecryptFailures));
+        }
+        void WritePhyStatsData(ctsWriteDetails &writer) {
+            writer.write_row(L"Transmitted Frames," + std::to_wstring(sumULONGLONGVect(TransmittedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(TransmittedFrames));
+            writer.write_row(L"Multicast Transmitted Frames," + std::to_wstring(sumULONGLONGVect(MulticastTransmittedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MulticastTransmittedFrames));
+            writer.write_row(L"Failed Frame Transmissions," + std::to_wstring(sumULONGLONGVect(FailedFrameTransmissions)) + ctsPerf::ctsWriteDetails::PrintDetails(FailedFrameTransmissions));
+            writer.write_row(L"Retried Frame Transmissions," + std::to_wstring(sumULONGLONGVect(RetriedFrameTransmissions)) + ctsPerf::ctsWriteDetails::PrintDetails(RetriedFrameTransmissions));
+            writer.write_row(L"Multiple Retried Frame Transmissions," + std::to_wstring(sumULONGLONGVect(MultipleRetriedFrameTransmissions)) + ctsPerf::ctsWriteDetails::PrintDetails(MultipleRetriedFrameTransmissions));
+            writer.write_row(L"Max TX Lifetime Exceeded Frames," + std::to_wstring(sumULONGLONGVect(MaxTXLifetimeExceededFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MaxTXLifetimeExceededFrames));
+            writer.write_row(L"Transmitted Fragments," + std::to_wstring(sumULONGLONGVect(TransmittedFragments)) + ctsPerf::ctsWriteDetails::PrintDetails(TransmittedFragments));
+            writer.write_row(L"RTS Successes," + std::to_wstring(sumULONGLONGVect(RTSSuccesses)) + ctsPerf::ctsWriteDetails::PrintDetails(RTSSuccesses));
+            writer.write_row(L"RTS Failures," + std::to_wstring(sumULONGLONGVect(RTSFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(RTSFailures));
+            writer.write_row(L"ACK Failures," + std::to_wstring(sumULONGLONGVect(ACKFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(ACKFailures));
+            writer.write_row(L"Received Frames," + std::to_wstring(sumULONGLONGVect(ReceivedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(ReceivedFrames));
+            writer.write_row(L"Multicast Received Frames," + std::to_wstring(sumULONGLONGVect(MulticastReceivedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MulticastReceivedFrames));
+            writer.write_row(L"Promiscuous Received Frames," + std::to_wstring(sumULONGLONGVect(PromiscuousReceivedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(PromiscuousReceivedFrames));
+            writer.write_row(L"Max RX Lifetime Exceeded Frames," + std::to_wstring(sumULONGLONGVect(MaxRXLifetimeExceededFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(MaxRXLifetimeExceededFrames));
+            writer.write_row(L"Frame Duplicates," + std::to_wstring(sumULONGLONGVect(FrameDuplicates)) + ctsPerf::ctsWriteDetails::PrintDetails(FrameDuplicates));
+            writer.write_row(L"Received Fragments," + std::to_wstring(sumULONGLONGVect(ReceivedFragments)) + ctsPerf::ctsWriteDetails::PrintDetails(ReceivedFragments));
+            writer.write_row(L"Promiscuous Received Fragments," + std::to_wstring(sumULONGLONGVect(PromiscuousReceivedFragments)) + ctsPerf::ctsWriteDetails::PrintDetails(PromiscuousReceivedFragments));
+            writer.write_row(L"FCS Errors," + std::to_wstring(sumULONGLONGVect(FCSErrors)) + ctsPerf::ctsWriteDetails::PrintDetails(FCSErrors));
+        }
+
+
+        void UpdateData(ULONG tableCounter, const ULONG maxHistoryLength)
         {
             WLAN_CONNECTION_ATTRIBUTES connectionAttributes;
             WLAN_STATISTICS statistics;
             WLAN_BSS_ENTRY bssEntry;
             //FillMemory(&Rod, sizeof Rod, -1);
             if (0 == GetWLANInformation(&connectionAttributes, &statistics, &bssEntry)) {
+                // State-based Statistics
 
                 // WLAN_ASSOCIATION_ATTRIBUTES
-                dot11Ssid.push_back(connectionAttributes.wlanAssociationAttributes.dot11Ssid);
-                // Enforce the max length of data history vector
-                if (dot11Ssid.size() > maxHistoryLength) {
-                    dot11Ssid.erase(std::begin(dot11Ssid));
-                }
-                dot11Bssid.push_back(connectionAttributes.wlanAssociationAttributes.dot11Bssid);
-                // Enforce the max length of data history vector
-                if (dot11Bssid.size() > maxHistoryLength) {
-                    dot11Bssid.erase(std::begin(dot11Bssid));
-                }
-                wlanSignalQuality.push_back(connectionAttributes.wlanAssociationAttributes.wlanSignalQuality);
-                // Enforce the max length of data history vector
-                if (wlanSignalQuality.size() > maxHistoryLength) {
-                    wlanSignalQuality.erase(std::begin(wlanSignalQuality));
-                }
-                ulRxRate.push_back(connectionAttributes.wlanAssociationAttributes.ulRxRate);
-                // Enforce the max length of data history vector
-                if (ulRxRate.size() > maxHistoryLength) {
-                    ulRxRate.erase(std::begin(ulRxRate));
-                }
-                ulTxRate.push_back(connectionAttributes.wlanAssociationAttributes.ulTxRate);
-                // Enforce the max length of data history vector
-                if (ulTxRate.size() > maxHistoryLength) {
-                    ulTxRate.erase(std::begin(ulTxRate));
-                }
+                dot11Ssid  = &(connectionAttributes.wlanAssociationAttributes.dot11Ssid);  // SSID not tracked over time
+                dot11Bssid = &(connectionAttributes.wlanAssociationAttributes.dot11Bssid); // BSSID not tracked over time
+                updateStatVector(wlanSignalQuality, connectionAttributes.wlanAssociationAttributes.wlanSignalQuality, maxHistoryLength);
+                updateStatVector(RxRate,            connectionAttributes.wlanAssociationAttributes.ulRxRate, maxHistoryLength);
+                updateStatVector(TxRate,            connectionAttributes.wlanAssociationAttributes.ulTxRate, maxHistoryLength);
 
                 // WLAN_BSS
-                lRssi.push_back(bssEntry.lRssi);
-                // Enforce the max length of data history vector
-                if (lRssi.size() > maxHistoryLength) {
-                    lRssi.erase(std::begin(lRssi));
-                }
-                uLinkQuality.push_back(bssEntry.uLinkQuality);
-                // Enforce the max length of data history vector
-                if (uLinkQuality.size() > maxHistoryLength) {
-                    uLinkQuality.erase(std::begin(uLinkQuality));
-                }
-                ulChCenterFrequency.push_back(bssEntry.ulChCenterFrequency);
-                // Enforce the max length of data history vector
-                if (ulChCenterFrequency.size() > maxHistoryLength) {
-                    ulChCenterFrequency.erase(std::begin(ulChCenterFrequency));
-                }
-                wlanRateSet.push_back(bssEntry.wlanRateSet);
-                // Enforce the max length of data history vector
-                if (wlanRateSet.size() > maxHistoryLength) {
-                    wlanRateSet.erase(std::begin(wlanRateSet));
-                }
-
+                updateStatVector(Rssi,              bssEntry.lRssi, maxHistoryLength);
+                updateStatVector(LinkQuality,       bssEntry.uLinkQuality, maxHistoryLength);
+                updateStatVector(ChCenterFrequency, bssEntry.ulChCenterFrequency, maxHistoryLength);
 
                 // Sum-based statistics
-                if (initializedCounts) {
+                if (initializedCounts) { // If total counts are initialized (previous counts populated by an earlier poll), update the stats
+                    // WLAN_STATISTICS
+                    updateTotalCountBasedStatVector(FourWayHandshakeFailures,   statistics.ullFourWayHandshakeFailures, FourWayHandshakeFailuresCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(TKIPCounterMeasuresInvoked, statistics.ullTKIPCounterMeasuresInvoked, TKIPCounterMeasuresInvokedCount, maxHistoryLength);
+
+                    // WLAN_MAC_FRAME_STATISTICS (Unicast)
+                    updateTotalCountBasedStatVector(UC_TransmittedFrames,       statistics.MacUcastCounters.ullTransmittedFrameCount, UC_TransmittedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_ReceivedFrames,          statistics.MacUcastCounters.ullReceivedFrameCount, UC_ReceivedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_WEPExcludedFrames,       statistics.MacUcastCounters.ullWEPExcludedCount, UC_WEPExcludedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_TKIPLocalMICFailures,    statistics.MacUcastCounters.ullTKIPLocalMICFailures, UC_TKIPLocalMICFailuresCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_TKIPReplays,             statistics.MacUcastCounters.ullTKIPReplays, UC_TKIPReplaysCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_TKIPICVErrors,           statistics.MacUcastCounters.ullTKIPICVErrorCount, UC_TKIPICVErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_CCMPReplays,             statistics.MacUcastCounters.ullCCMPReplays, UC_CCMPReplaysCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_CCMPDecryptErrors,       statistics.MacUcastCounters.ullCCMPDecryptErrors, UC_CCMPDecryptErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_WEPUndecryptablePackets, statistics.MacUcastCounters.ullWEPUndecryptableCount, UC_WEPUndecryptablePacketsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_WEPICVErrors,            statistics.MacUcastCounters.ullWEPICVErrorCount, UC_WEPICVErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_DecryptSuccesses,        statistics.MacUcastCounters.ullDecryptSuccessCount, UC_DecryptSuccessesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(UC_DecryptFailures,         statistics.MacUcastCounters.ullDecryptFailureCount, UC_DecryptFailuresCount, maxHistoryLength);
+                    // WLAN_MAC_FRAME_STATISTICS (Multicast)
+                    updateTotalCountBasedStatVector(MC_TransmittedFrames,       statistics.MacUcastCounters.ullTransmittedFrameCount, MC_TransmittedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_ReceivedFrames,          statistics.MacUcastCounters.ullReceivedFrameCount, MC_ReceivedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_WEPExcludedFrames,       statistics.MacUcastCounters.ullWEPExcludedCount, MC_WEPExcludedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_TKIPLocalMICFailures,    statistics.MacUcastCounters.ullTKIPLocalMICFailures, MC_TKIPLocalMICFailuresCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_TKIPReplays,             statistics.MacUcastCounters.ullTKIPReplays, MC_TKIPReplaysCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_TKIPICVErrors,           statistics.MacUcastCounters.ullTKIPICVErrorCount, MC_TKIPICVErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_CCMPReplays,             statistics.MacUcastCounters.ullCCMPReplays, MC_CCMPReplaysCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_CCMPDecryptErrors,       statistics.MacUcastCounters.ullCCMPDecryptErrors, MC_CCMPDecryptErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_WEPUndecryptablePackets, statistics.MacUcastCounters.ullWEPUndecryptableCount, MC_WEPUndecryptablePacketsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_WEPICVErrors,            statistics.MacUcastCounters.ullWEPICVErrorCount, MC_WEPICVErrorsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_DecryptSuccesses,        statistics.MacUcastCounters.ullDecryptSuccessCount, MC_DecryptSuccessesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MC_DecryptFailures,         statistics.MacUcastCounters.ullDecryptFailureCount, MC_DecryptFailuresCount, maxHistoryLength);
+
+                    // WLAN_PHY_FRAME_STATISTICS
+                    updateTotalCountBasedStatVector(TransmittedFrames,                 statistics.PhyCounters[0].ullTransmittedFrameCount, TransmittedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MulticastTransmittedFrames,        statistics.PhyCounters[0].ullMulticastTransmittedFrameCount, MulticastTransmittedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(FailedFrameTransmissions,          statistics.PhyCounters[0].ullFailedCount, FailedFrameTransmissionsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(RetriedFrameTransmissions,         statistics.PhyCounters[0].ullRetryCount, RetriedFrameTransmissionsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MultipleRetriedFrameTransmissions, statistics.PhyCounters[0].ullMultipleRetryCount, MultipleRetriedFrameTransmissionsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MaxTXLifetimeExceededFrames,       statistics.PhyCounters[0].ullMaxTXLifetimeExceededCount, MaxTXLifetimeExceededFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(TransmittedFragments,              statistics.PhyCounters[0].ullTransmittedFragmentCount, TransmittedFragmentsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(RTSSuccesses,                      statistics.PhyCounters[0].ullRTSSuccessCount, RTSSuccessesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(RTSFailures,                       statistics.PhyCounters[0].ullRTSFailureCount, RTSFailuresCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(ACKFailures,                       statistics.PhyCounters[0].ullACKFailureCount, ACKFailuresCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(ReceivedFrames,                    statistics.PhyCounters[0].ullReceivedFrameCount, ReceivedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MulticastReceivedFrames,           statistics.PhyCounters[0].ullMulticastReceivedFrameCount, MulticastReceivedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(PromiscuousReceivedFrames,         statistics.PhyCounters[0].ullPromiscuousReceivedFrameCount, PromiscuousReceivedFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(MaxRXLifetimeExceededFrames,       statistics.PhyCounters[0].ullMaxRXLifetimeExceededCount, MaxRXLifetimeExceededFramesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(FrameDuplicates,                   statistics.PhyCounters[0].ullFrameDuplicateCount, FrameDuplicatesCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(ReceivedFragments,                 statistics.PhyCounters[0].ullReceivedFragmentCount, ReceivedFragmentsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(PromiscuousReceivedFragments,      statistics.PhyCounters[0].ullPromiscuousReceivedFragmentCount, PromiscuousReceivedFragmentsCount, maxHistoryLength);
+                    updateTotalCountBasedStatVector(FCSErrors,                         statistics.PhyCounters[0].ullFCSErrorCount, FCSErrorsCount, maxHistoryLength);
+                }
+                else { // Just Update the inital total counts for sum-based stats
 
                     // WLAN_STATISTICS
-                    fourWayHandshakeFailures.push_back(statistics.ullFourWayHandshakeFailures - fourWayHandshakeFailuresCount);
-                    // Enforce the max length of data history vector
-                    if (fourWayHandshakeFailures.size() > maxHistoryLength) {
-                        fourWayHandshakeFailures.erase(std::begin(fourWayHandshakeFailures));
-                    }
-                    TKIPCounterMeasuresInvoked.push_back(statistics.ullTKIPCounterMeasuresInvoked - TKIPCounterMeasuresInvokedCount);
-                    // Enforce the max length of data history vector
-                    if (TKIPCounterMeasuresInvoked.size() > maxHistoryLength) {
-                        TKIPCounterMeasuresInvoked.erase(std::begin(TKIPCounterMeasuresInvoked));
-                    }
+                    FourWayHandshakeFailuresCount          = statistics.ullFourWayHandshakeFailures;
+                    TKIPCounterMeasuresInvokedCount        = statistics.ullTKIPCounterMeasuresInvoked;
+                    // WLAN_MAC_FRAME_STATISTICS (Unicast)                
+                    UC_TransmittedFramesCount              = statistics.MacUcastCounters.ullTransmittedFrameCount;
+                    UC_ReceivedFramesCount                 = statistics.MacUcastCounters.ullReceivedFrameCount;
+                    UC_WEPExcludedFramesCount              = statistics.MacUcastCounters.ullWEPExcludedCount;
+                    UC_TKIPLocalMICFailuresCount           = statistics.MacUcastCounters.ullTKIPLocalMICFailures;
+                    UC_TKIPReplaysCount                    = statistics.MacUcastCounters.ullTKIPReplays;
+                    UC_TKIPICVErrorsCount                  = statistics.MacUcastCounters.ullTKIPICVErrorCount;
+                    UC_CCMPReplaysCount                    = statistics.MacUcastCounters.ullCCMPReplays;
+                    UC_CCMPDecryptErrorsCount              = statistics.MacUcastCounters.ullCCMPDecryptErrors;
+                    UC_WEPUndecryptablePacketsCount        = statistics.MacUcastCounters.ullWEPUndecryptableCount;
+                    UC_WEPICVErrorsCount                   = statistics.MacUcastCounters.ullWEPICVErrorCount;
+                    UC_DecryptSuccessesCount               = statistics.MacUcastCounters.ullDecryptSuccessCount;
+                    UC_DecryptFailuresCount                = statistics.MacUcastCounters.ullDecryptFailureCount;
+                    // WLAN_MAC_FRAME_STATISTICS (Multicast)
+                    MC_TransmittedFramesCount              = statistics.MacUcastCounters.ullTransmittedFrameCount;
+                    MC_ReceivedFramesCount                 = statistics.MacUcastCounters.ullReceivedFrameCount;
+                    MC_WEPExcludedFramesCount              = statistics.MacUcastCounters.ullWEPExcludedCount;
+                    MC_TKIPLocalMICFailuresCount           = statistics.MacUcastCounters.ullTKIPLocalMICFailures;
+                    MC_TKIPReplaysCount                    = statistics.MacUcastCounters.ullTKIPReplays;
+                    MC_TKIPICVErrorsCount                  = statistics.MacUcastCounters.ullTKIPICVErrorCount;
+                    MC_CCMPReplaysCount                    = statistics.MacUcastCounters.ullCCMPReplays;
+                    MC_CCMPDecryptErrorsCount              = statistics.MacUcastCounters.ullCCMPDecryptErrors;
+                    MC_WEPUndecryptablePacketsCount        = statistics.MacUcastCounters.ullWEPUndecryptableCount;
+                    MC_WEPICVErrorsCount                   = statistics.MacUcastCounters.ullWEPICVErrorCount;
+                    MC_DecryptSuccessesCount               = statistics.MacUcastCounters.ullDecryptSuccessCount;
+                    MC_DecryptFailuresCount                = statistics.MacUcastCounters.ullDecryptFailureCount;
+                    // WLAN_PHY_FRAME_STATISTICS                
+                    TransmittedFramesCount                 = statistics.PhyCounters[0].ullTransmittedFrameCount;
+                    MulticastTransmittedFramesCount        = statistics.PhyCounters[0].ullMulticastTransmittedFrameCount;
+                    FailedFrameTransmissionsCount          = statistics.PhyCounters[0].ullFailedCount;
+                    RetriedFrameTransmissionsCount         = statistics.PhyCounters[0].ullRetryCount;
+                    MultipleRetriedFrameTransmissionsCount = statistics.PhyCounters[0].ullMultipleRetryCount;
+                    MaxTXLifetimeExceededFramesCount       = statistics.PhyCounters[0].ullMaxTXLifetimeExceededCount;
+                    TransmittedFragmentsCount              = statistics.PhyCounters[0].ullTransmittedFragmentCount;
+                    RTSSuccessesCount                      = statistics.PhyCounters[0].ullRTSSuccessCount;
+                    RTSFailuresCount                       = statistics.PhyCounters[0].ullRTSFailureCount;
+                    ACKFailuresCount                       = statistics.PhyCounters[0].ullACKFailureCount;
+                    ReceivedFramesCount                    = statistics.PhyCounters[0].ullReceivedFrameCount;
+                    MulticastReceivedFramesCount           = statistics.PhyCounters[0].ullMulticastReceivedFrameCount;
+                    PromiscuousReceivedFramesCount         = statistics.PhyCounters[0].ullPromiscuousReceivedFrameCount;
+                    MaxRXLifetimeExceededFramesCount       = statistics.PhyCounters[0].ullMaxRXLifetimeExceededCount;
+                    FrameDuplicatesCount                   = statistics.PhyCounters[0].ullFrameDuplicateCount;
+                    ReceivedFragmentsCount                 = statistics.PhyCounters[0].ullReceivedFragmentCount;
+                    PromiscuousReceivedFragmentsCount      = statistics.PhyCounters[0].ullPromiscuousReceivedFragmentCount;
+                    FCSErrorsCount                         = statistics.PhyCounters[0].ullFCSErrorCount;
 
-                    // WLAN_MAC_FRAME_STATISTICS
-                    
+                    // Set counts as initialized
+                    initializedCounts = true;
                 }
 
-                // Update total counts for sum-based stats
-                fourWayHandshakeFailuresCount = statistics.ullFourWayHandshakeFailures;
-                TKIPCounterMeasuresInvokedCount = statistics.ullTKIPCounterMeasuresInvoked;
+                latestCounter = tableCounter;
+            }
+            else {
+                wprintf(L"Could not get WLAN Information -- Is the WLAN Service running?");
+                exit(1);
             }
         }
+
+        ULONG LatestCounter() {
+            return latestCounter;
+        }
+
     private:
+        mutable ULONG latestCounter = 0;
+
         // WLAN_ASSOCIATION_ATTRIBUTES
-        std::vector<DOT11_SSID> dot11Ssid;
+        PDOT11_SSID dot11Ssid;
         //DOT11_BSS_TYPE dot11BssType;
-        std::vector<DOT11_MAC_ADDRESS> dot11Bssid;
+        PDOT11_MAC_ADDRESS dot11Bssid;
         std::vector<WLAN_SIGNAL_QUALITY> wlanSignalQuality;
-        std::vector<ULONG> ulRxRate;
-        std::vector<ULONG> ulTxRate;
+        std::vector<ULONG> RxRate;
+        std::vector<ULONG> TxRate;
 
         // WLAN_BSS
         //std::vector<DOT11_SSID> dot11Ssid;
@@ -564,89 +788,113 @@ namespace details {
         //std::vector<DOT11_MAC_ADDRESS> dot11Bssid;
         //std::vector<DOT11_BSS_TYPE> dot11BssType;
         //std::vector<DOT11_PHY_TYPE> dot11BssPhyType;
-        std::vector<LONG> lRssi;
-        std::vector<ULONG> uLinkQuality;
+        std::vector<LONG> Rssi;
+        std::vector<ULONG> LinkQuality;
         //std::vector<BOOLEAN> bInRegDomain;
         //std::vector<USHORT> usBeaconPeriod;
         //std::vector<ULONGLONG> ullTimestamp;
         //std::vector<ULONGLONG> ullHostTimestamp;
         //std::vector<USHORT> usCapabilityInformation;
-        std::vector<ULONG> ulChCenterFrequency;
-        std::vector<WLAN_RATE_SET> wlanRateSet;
+        std::vector<ULONG> ChCenterFrequency;
         //std::vector<ULONG> ulIeOffset;
         //std::vector<ULONG> ulIeSize;
 
         BOOLEAN initializedCounts = false;
 
         // WLAN_STATISTICS
-        std::vector<ULONGLONG> fourWayHandshakeFailures;
-        ULONGLONG fourWayHandshakeFailuresCount = 0;
+        std::vector<ULONGLONG> FourWayHandshakeFailures;
+        ULONGLONG FourWayHandshakeFailuresCount = 0;
         std::vector<ULONGLONG> TKIPCounterMeasuresInvoked;
         ULONGLONG TKIPCounterMeasuresInvokedCount = 0;
 
-        // WLAN_MAC_FRAME_STATISTICS
-        std::vector<ULONGLONG> TransmittedFrames;
-        ULONGLONG TransmittedFramesCount = 0;
-        std::vector<ULONGLONG> ReceivedFrames;
-        ULONGLONG ReceivedFramesCount = 0;
-        std::vector<ULONGLONG> WEPExcludedFrames;
-        ULONGLONG WEPExcludedFramesCount = 0;
-        std::vector<ULONGLONG> TKIPLocalMICFailures;
-        ULONGLONG TKIPLocalMICFailuresCount = 0;
-        std::vector<ULONGLONG> TKIPReplays;
-        ULONGLONG TKIPReplaysCount = 0;
-        std::vector<ULONGLONG> TKIPICVErrors;
-        ULONGLONG TKIPICVErrorsCount = 0;
-        std::vector<ULONGLONG> CCMPReplays;
-        ULONGLONG CCMPReplaysCount = 0;
-        std::vector<ULONGLONG> CCMPDecryptErrors;
-        ULONGLONG CCMPDecryptErrorsCount = 0;
-        std::vector<ULONGLONG> WEPUndecryptablePackets;
-        ULONGLONG WEPUndecryptablePacketsCount = 0;
-        std::vector<ULONGLONG> WEPICVErrors;
-        ULONGLONG WEPICVErrorsCount = 0;
-        std::vector<ULONGLONG> DecryptSuccesses;
-        ULONGLONG DecryptSuccessesCount = 0;
-        std::vector<ULONGLONG> DecryptFailures;
-        ULONGLONG DecryptFailuresCount = 0;
+        // WLAN_MAC_FRAME_STATISTICS (Unicast)
+        std::vector<ULONGLONG> UC_TransmittedFrames;
+        ULONGLONG UC_TransmittedFramesCount = 0;
+        std::vector<ULONGLONG> UC_ReceivedFrames;
+        ULONGLONG UC_ReceivedFramesCount = 0;
+        std::vector<ULONGLONG> UC_WEPExcludedFrames;
+        ULONGLONG UC_WEPExcludedFramesCount = 0;
+        std::vector<ULONGLONG> UC_TKIPLocalMICFailures;
+        ULONGLONG UC_TKIPLocalMICFailuresCount = 0;
+        std::vector<ULONGLONG> UC_TKIPReplays;
+        ULONGLONG UC_TKIPReplaysCount = 0;
+        std::vector<ULONGLONG> UC_TKIPICVErrors;
+        ULONGLONG UC_TKIPICVErrorsCount = 0;
+        std::vector<ULONGLONG> UC_CCMPReplays;
+        ULONGLONG UC_CCMPReplaysCount = 0;
+        std::vector<ULONGLONG> UC_CCMPDecryptErrors;
+        ULONGLONG UC_CCMPDecryptErrorsCount = 0;
+        std::vector<ULONGLONG> UC_WEPUndecryptablePackets;
+        ULONGLONG UC_WEPUndecryptablePacketsCount = 0;
+        std::vector<ULONGLONG> UC_WEPICVErrors;
+        ULONGLONG UC_WEPICVErrorsCount = 0;
+        std::vector<ULONGLONG> UC_DecryptSuccesses;
+        ULONGLONG UC_DecryptSuccessesCount = 0;
+        std::vector<ULONGLONG> UC_DecryptFailures;
+        ULONGLONG UC_DecryptFailuresCount = 0;
+        // WLAN_MAC_FRAME_STATISTICS (Multicast)
+        std::vector<ULONGLONG> MC_TransmittedFrames;
+        ULONGLONG MC_TransmittedFramesCount = 0;
+        std::vector<ULONGLONG> MC_ReceivedFrames;
+        ULONGLONG MC_ReceivedFramesCount = 0;
+        std::vector<ULONGLONG> MC_WEPExcludedFrames;
+        ULONGLONG MC_WEPExcludedFramesCount = 0;
+        std::vector<ULONGLONG> MC_TKIPLocalMICFailures;
+        ULONGLONG MC_TKIPLocalMICFailuresCount = 0;
+        std::vector<ULONGLONG> MC_TKIPReplays;
+        ULONGLONG MC_TKIPReplaysCount = 0;
+        std::vector<ULONGLONG> MC_TKIPICVErrors;
+        ULONGLONG MC_TKIPICVErrorsCount = 0;
+        std::vector<ULONGLONG> MC_CCMPReplays;
+        ULONGLONG MC_CCMPReplaysCount = 0;
+        std::vector<ULONGLONG> MC_CCMPDecryptErrors;
+        ULONGLONG MC_CCMPDecryptErrorsCount = 0;
+        std::vector<ULONGLONG> MC_WEPUndecryptablePackets;
+        ULONGLONG MC_WEPUndecryptablePacketsCount = 0;
+        std::vector<ULONGLONG> MC_WEPICVErrors;
+        ULONGLONG MC_WEPICVErrorsCount = 0;
+        std::vector<ULONGLONG> MC_DecryptSuccesses;
+        ULONGLONG MC_DecryptSuccessesCount = 0;
+        std::vector<ULONGLONG> MC_DecryptFailures;
+        ULONGLONG MC_DecryptFailuresCount = 0;
 
         // WLAN_PHY_FRAME_STATISTICS
-        std::vector<ULONGLONG> ullTransmittedFrames;
-        ULONGLONG ullTransmittedFramesCount = 0;
-        std::vector<ULONGLONG> ullMulticastTransmittedFrames;
-        ULONGLONG ullMulticastTransmittedFramesCount = 0;
-        std::vector<ULONGLONG> ullFailedFrameTransmissions;
-        ULONGLONG ullFailedFrameTransmissionsCount = 0;
-        std::vector<ULONGLONG> ullRetriedFrameTransmissions;
-        ULONGLONG ullRetriedFrameTransmissionsCount = 0;
-        std::vector<ULONGLONG> ullMultipleRetriedFrameTransmissions;
-        ULONGLONG ullMultipleRetriedFrameTransmissionsCount = 0;
-        std::vector<ULONGLONG> ullMaxTXLifetimeExceededFrames;
-        ULONGLONG ullMaxTXLifetimeExceededFramesCount = 0;
-        std::vector<ULONGLONG> ullTransmittedFragments;
-        ULONGLONG ullTransmittedFragmentsCount = 0;
-        std::vector<ULONGLONG> ullRTSSuccesses;
-        ULONGLONG ullRTSSuccessesCount = 0;
-        std::vector<ULONGLONG> ullRTSFailures;
-        ULONGLONG ullRTSFailuresCount = 0;
-        std::vector<ULONGLONG> ullACKFailures;
-        ULONGLONG ullACKFailuresCount = 0;
-        std::vector<ULONGLONG> ullReceivedFrames;
-        ULONGLONG ullReceivedFramesCount = 0;
-        std::vector<ULONGLONG> ullMulticastReceivedFrames;
-        ULONGLONG ullMulticastReceivedFramesCount = 0;
-        std::vector<ULONGLONG> ullPromiscuousReceivedFrames;
-        ULONGLONG ullPromiscuousReceivedFramesCount = 0;
-        std::vector<ULONGLONG> ullMaxRXLifetimeExceededFrames;
-        ULONGLONG ullMaxRXLifetimeExceededFramesCount = 0;
-        std::vector<ULONGLONG> ullFrameDuplicates;
-        ULONGLONG ullFrameDuplicatesCount = 0;
-        std::vector<ULONGLONG> ullReceivedFragments;
-        ULONGLONG ullReceivedFragmentsCount = 0;
-        std::vector<ULONGLONG> ullPromiscuousReceivedFragments;
-        ULONGLONG ullPromiscuousReceivedFragmentsCount = 0;
-        std::vector<ULONGLONG> ullFCSErrors;
-        ULONGLONG ullFCSErrorsCount = 0;
+        std::vector<ULONGLONG> TransmittedFrames;
+        ULONGLONG TransmittedFramesCount = 0;
+        std::vector<ULONGLONG> MulticastTransmittedFrames;
+        ULONGLONG MulticastTransmittedFramesCount = 0;
+        std::vector<ULONGLONG> FailedFrameTransmissions;
+        ULONGLONG FailedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> RetriedFrameTransmissions;
+        ULONGLONG RetriedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> MultipleRetriedFrameTransmissions;
+        ULONGLONG MultipleRetriedFrameTransmissionsCount = 0;
+        std::vector<ULONGLONG> MaxTXLifetimeExceededFrames;
+        ULONGLONG MaxTXLifetimeExceededFramesCount = 0;
+        std::vector<ULONGLONG> TransmittedFragments;
+        ULONGLONG TransmittedFragmentsCount = 0;
+        std::vector<ULONGLONG> RTSSuccesses;
+        ULONGLONG RTSSuccessesCount = 0;
+        std::vector<ULONGLONG> RTSFailures;
+        ULONGLONG RTSFailuresCount = 0;
+        std::vector<ULONGLONG> ACKFailures;
+        ULONGLONG ACKFailuresCount = 0;
+        std::vector<ULONGLONG> ReceivedFrames;
+        ULONGLONG ReceivedFramesCount = 0;
+        std::vector<ULONGLONG> MulticastReceivedFrames;
+        ULONGLONG MulticastReceivedFramesCount = 0;
+        std::vector<ULONGLONG> PromiscuousReceivedFrames;
+        ULONGLONG PromiscuousReceivedFramesCount = 0;
+        std::vector<ULONGLONG> MaxRXLifetimeExceededFrames;
+        ULONGLONG MaxRXLifetimeExceededFramesCount = 0;
+        std::vector<ULONGLONG> FrameDuplicates;
+        ULONGLONG FrameDuplicatesCount = 0;
+        std::vector<ULONGLONG> ReceivedFragments;
+        ULONGLONG ReceivedFragmentsCount = 0;
+        std::vector<ULONGLONG> PromiscuousReceivedFragments;
+        ULONGLONG PromiscuousReceivedFragmentsCount = 0;
+        std::vector<ULONGLONG> FCSErrors;
+        ULONGLONG FCSErrorsCount = 0;
     };
 
 
@@ -1635,20 +1883,29 @@ class ctsEstats
 public:
     ctsEstats(
         ULONG pollRateMS,
-        ULONG maxHistoryLength, 
-        std::set<std::wstring>* globalTrackedStats, 
-        std::set<std::wstring>* detailTrackedStats, 
-        BOOLEAN livePrintGlobalStats, 
+        ULONG maxHistoryLength,
+        BOOLEAN trackWlanStats,
+        std::set<std::wstring> *globalTrackedStats,
+        std::set<std::wstring> *wlanTrackedStats,
+        std::set<std::wstring> *detailTrackedStats,
+        BOOLEAN livePrintGlobalStats,
+        BOOLEAN printWlan,
         BOOLEAN livePrintDetailStats)
         : pollRateMS(pollRateMS),
           maxHistoryLength(maxHistoryLength),
+          trackWlanStats(trackWlanStats),
           globalTrackedStats(globalTrackedStats),
+          wlanTrackedStats(wlanTrackedStats),
           detailTrackedStats(detailTrackedStats),
           printGlobal(livePrintGlobalStats),
+          printWlan(printWlan),
           printDetail(livePrintDetailStats),
           pathInfoWriter(L"EstatsPathInfo.csv"),
           receiveWindowWriter(L"EstatsReceiveWindow.csv"),
           senderCongestionWriter(L"EstatsSenderCongestion.csv"),
+          wlanConnectionInfoWriter(L"WlanConnectionInfo.csv"),
+          wlanMACStatsWriter(L"WlanMACStats.csv"),
+          wlanPhyStatsWriter(L"WlanPhyStats.csv"),
           globalStatsWriter(L"LiveData\\GlobalSummary_0.csv"),
           perConnectionStatsWriter(L"LiveData\\DetailSummary_0.csv"),
           tcpTable(StartingTableSize)
@@ -1702,6 +1959,12 @@ public:
                         ((foundBandwidthEntry != bandwidthData.end()) ? foundBandwidthEntry->PrintData() : L",,,,,,,,,"));
                 }
             }
+
+            if(trackWlanStats) {
+                wlanData.WriteConnectionInfoData(wlanConnectionInfoWriter);
+                wlanData.WriteMACStatsData(wlanMACStatsWriter);
+                wlanData.WritePhyStatsData(wlanPhyStatsWriter);
+            }
         }
         catch (const std::exception& e) {
             wprintf(L"~Estats exception: %ws\n", ctl::ctString::format_exception(e).c_str());
@@ -1740,6 +2003,12 @@ public:
                 L"," + details::EstatsDataPoint<TcpConnectionEstatsData>::PrintHeader() +
                 L"," + details::EstatsDataPoint<TcpConnectionEstatsBandwidth>::PrintHeader());
 
+            if(trackWlanStats) {
+                wlanConnectionInfoWriter.create_file(details::WLANDataTracking::PrintHeader());
+                wlanMACStatsWriter.create_file(details::WLANDataTracking::PrintHeader());
+                wlanPhyStatsWriter.create_file(details::WLANDataTracking::PrintHeader());
+            }
+
             started = UpdateEstats();
         }
         catch (const std::exception& e) {
@@ -1763,6 +2032,7 @@ public:
 private:
     ctl::ctThreadpoolTimer timer;
 
+    // TCP Estats Tracking
     std::set<details::EstatsDataPoint<TcpConnectionEstatsSynOpts>> synOptsData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsData>> byteTrackingData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsPath>> pathInfoData;
@@ -1770,16 +2040,26 @@ private:
     std::set<details::EstatsDataPoint<TcpConnectionEstatsObsRec>> remoteReceiveWindowData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsSndCong>> senderCongestionData;
     std::set<details::EstatsDataPoint<TcpConnectionEstatsBandwidth>> bandwidthData;
+    // WLAN Tracking
+    details::WLANDataTracking wlanData;
 
     // Old-style full-run-scope .csv writers
+    // Estats
     ctsWriteDetails pathInfoWriter;
     ctsWriteDetails receiveWindowWriter;
     ctsWriteDetails senderCongestionWriter;
+    // WLAN
+    ctsWriteDetails wlanConnectionInfoWriter;
+    ctsWriteDetails wlanMACStatsWriter;
+    ctsWriteDetails wlanPhyStatsWriter;
+
+    const BOOLEAN trackWlanStats;
+
 
     // "Live" (per-poll) .csv writers
     ctsWriteDetails globalStatsWriter;
     ctsWriteDetails perConnectionStatsWriter;
-    // Counters for filenames
+    // Counters for live csv filenames
     ULONG globalFileNumber = 0;
     ULONG detailFileNumber = 0;
 
@@ -1832,17 +2112,14 @@ private:
         {L"inboundInstability",               TcpConnectionEstatsBandwidth}
     };
 
-    enum TRACKING_TYPE {
-        UNTRACKED,
-        GLOBAL,
-        DETAIL
-    };
 
-    // List of enabled global stats
+    // Lists of enabled live-tracked stats
     std::set<std::wstring>* globalTrackedStats;
+    std::set<std::wstring>* wlanTrackedStats;
     std::set<std::wstring>* detailTrackedStats;
 
     const BOOLEAN printGlobal;
+    const BOOLEAN printWlan;
     const BOOLEAN printDetail;
 
     // Statistics summary data structure
@@ -1856,6 +2133,17 @@ private:
         DOUBLE median = -0.00001;
         DOUBLE iqr = -0.00001;
     } DETAILED_STATS;
+    // Statistics summary data structure for special-case signed data
+    typedef struct detailedSignedStats {
+        ULONG latestCounter = 0;
+        size_t  samples = 0;
+        LONG min = LONG_MAX;
+        LONG max = LONG_MAX;
+        DOUBLE mean = -0.00001;
+        DOUBLE stddev = -0.00001;
+        DOUBLE median = -0.00001;
+        DOUBLE iqr = -0.00001;
+    } DETAILED_SIGNED_STATS;
     // Representation of the %change of each statistic since the last poll
     typedef struct detailedStatsChange {
         DOUBLE samples = 1.0;
@@ -1869,6 +2157,7 @@ private:
 
     std::map<std::tuple<std::wstring, ctl::ctSockaddr, ctl::ctSockaddr>, DETAILED_STATS> previousPerConnectionStatsSummaries;
     std::map<std::wstring, DETAILED_STATS> previousGlobalStatsSummaries;
+    DETAILED_SIGNED_STATS previousRSSISummary = {}; // Special case, RSSI is the only signed statistic
 
     template<typename T>
     DOUBLE PercentChange(T oldVal, T newVal) {
@@ -2076,13 +2365,131 @@ private:
         return perConnectionSatisticSummaries;
     }
 
+    // Get stats summaries for WLAN stats
+    std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> GatherWLANStatisticSummary(std::wstring statName) {
+        DETAILED_STATS s;
+
+        // Handle ULONG stats
+        std::vector<std::wstring> ulongStats = {L"wlanSignalQuality", L"RxRate", L"TxRate", L"LinkQuality", L"ChCenterFrequency"};
+        if (std::find(std::begin(ulongStats), std::end(ulongStats), statName) != std::end(ulongStats)) {
+            std::vector<ULONG> values = *(wlanData.GetULONGNumericalData().at(statName));
+
+            if (values.empty()) {return {};} // Ignore empty stats
+
+            sort(std::begin(values), std::end(values));
+            auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(values), std::end(values));
+            auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(values), std::end(values));
+
+            s = {
+                wlanData.LatestCounter(),
+                std::size(values),
+                *std::min_element(std::begin(values), std::end(values)),
+                *std::max_element(std::begin(values), std::end(values)),
+                std::get<0>(mstddev_tuple),
+                std::get<1>(mstddev_tuple),
+                std::get<1>(interquartile_tuple),
+                std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
+            };
+        }
+        // Handle ULONGLONG stats (all others)
+        else {
+            std::vector<ULONGLONG> values = *(wlanData.GetULONGLONGNumericalData().at(statName));
+
+            if (values.empty()) {return {};} // Ignore empty stats
+
+            sort(std::begin(values), std::end(values));
+            auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(values), std::end(values));
+            auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(values), std::end(values));
+
+            s = {
+                wlanData.LatestCounter(),
+                std::size(values),
+                *std::min_element(std::begin(values), std::end(values)),
+                *std::max_element(std::begin(values), std::end(values)),
+                std::get<0>(mstddev_tuple),
+                std::get<1>(mstddev_tuple),
+                std::get<1>(interquartile_tuple),
+                std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)};
+        }
+
+        
+        // Build a struct marking %change of each value
+        // Handle case where no previous summary exists
+        DETAILED_STATS_PERCENT_CHANGE c;
+        try {
+            DETAILED_STATS s_prev = previousGlobalStatsSummaries.at(statName);
+            c = {
+                PercentChange(s_prev.samples, s.samples),
+                PercentChange(s_prev.min, s.min),
+                PercentChange(s_prev.max, s.max),
+                PercentChange(s_prev.mean, s.mean),
+                PercentChange(s_prev.stddev, s.stddev),
+                PercentChange(s_prev.median, s.median),
+                PercentChange(s_prev.iqr, s.iqr)
+            };
+        }
+        catch (std::out_of_range&) {
+            c = {};
+        }
+
+        // Update previous tracked with this new summary
+        previousGlobalStatsSummaries.insert_or_assign(statName, s);
+
+        return std::make_tuple(s, c);
+    }
+
+    // Handle RSSI stat case (only one which is s signed type)
+    std::tuple<DETAILED_SIGNED_STATS, DETAILED_STATS_PERCENT_CHANGE> GetWLANRSSISummary() {
+        std::vector<LONG> values = *(wlanData.GetRSSIData());
+
+        if (values.empty()) {return {};} // Ignore empty stats
+
+        sort(std::begin(values), std::end(values));
+        auto mstddev_tuple = ctl::ctSampledStandardDeviation(std::begin(values), std::end(values));
+        auto interquartile_tuple = ctl::ctInterquartileRange(std::begin(values), std::end(values));
+
+        DETAILED_SIGNED_STATS s = {
+            wlanData.LatestCounter(),
+            std::size(values),
+            *std::min_element(std::begin(values), std::end(values)),
+            *std::max_element(std::begin(values), std::end(values)),
+            std::get<0>(mstddev_tuple),
+            std::get<1>(mstddev_tuple),
+            std::get<1>(interquartile_tuple),
+            std::get<2>(interquartile_tuple) - std::get<0>(interquartile_tuple)
+        };
+
+        // Build a struct marking %change of each value
+        DETAILED_STATS_PERCENT_CHANGE c;
+        // Check for default values on both min/max fields to determine if there is a valid first previous summary
+        if ((previousRSSISummary.min != LONG_MAX) || (previousRSSISummary.max != LONG_MAX)) {
+            c = {
+                PercentChange(previousRSSISummary.samples, s.samples),
+                PercentChange(previousRSSISummary.min, s.min),
+                PercentChange(previousRSSISummary.max, s.max),
+                PercentChange(previousRSSISummary.mean, s.mean),
+                PercentChange(previousRSSISummary.stddev, s.stddev),
+                PercentChange(previousRSSISummary.median, s.median),
+                PercentChange(previousRSSISummary.iqr, s.iqr)
+            };
+        }
+        else {
+            c = {};
+        }
+
+        // Update previous tracked with this new summary
+        previousRSSISummary = s;
+
+        return std::make_tuple(s, c);
+    }
 
     void OpenAndStartGlobalStatSummaryCSV() {
         globalStatsWriter.setFilename(L"LiveData\\GlobalSummary_" + std::to_wstring(globalFileNumber) + L".csv");
         globalFileNumber++;
         globalStatsWriter.create_file(std::wstring(L"GLobal Statistic,Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change"));
     }
-    void SaveGlobalStatSummaryLineToCSV(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary) {
+    template<typename T>
+    void SaveGlobalStatSummaryLineToCSV(std::wstring title, std::tuple<T, DETAILED_STATS_PERCENT_CHANGE> summary) {
         globalStatsWriter.write_row(
             title + L"," +
             std::to_wstring(std::get<0>(summary).min) + L"," + std::to_wstring(std::get<1>(summary).min * 100) + L"," +
@@ -2165,6 +2572,13 @@ private:
         SetConsoleColorFromPercentChange(percentChange);
         std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
     }
+    void PrintStat(LONG stat, DOUBLE percentChange, const int& width) {
+    ResetSetConsoleColor();
+    std::wcout << L" | ";
+
+    SetConsoleColorFromPercentChange(percentChange);
+    std::wcout << std::right << std::setw(width) << std::setfill(L' ') << stat;
+    }
     void PrintStat(DOUBLE stat, DOUBLE percentChange, const int& width) {
         ResetSetConsoleColor();
         std::wcout << L" | ";
@@ -2173,7 +2587,8 @@ private:
         SetConsoleColorFromPercentChange(percentChange);
         std::wcout << std::right << std::setw(width) << std::setfill(L' ') << std::fixed << stat;
     }
-    void PrintGlobalStatSummary(std::wstring title, std::tuple<DETAILED_STATS, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
+    template<typename T>
+    void PrintGlobalStatSummary(std::wstring title, std::tuple<T, DETAILED_STATS_PERCENT_CHANGE> summary, const int& width) {
         SetConsoleColorConnectionStatus(std::get<0>(summary).latestCounter == tableCounter);
         std::wcout << std::left << std::setw(22) << std::setfill(L' ') << title;
 
@@ -2201,6 +2616,12 @@ private:
         PrintStat(std::get<0>(summary).iqr, std::get<1>(summary).iqr, width);
 
         ResetSetConsoleColor();
+        std::wcout << L" |" << std::endl;
+    }
+    void PrintStringStat(std::wstring statName, std::wstring statValue, const int& width) {
+        std::wcout << std::left << std::setw(22) << std::setfill(L' ') << statName;
+        std::wcout << L" | ";
+        std::wcout << std::left << std::setw((width * 6) + 10) << std::setfill(L' ') << stat;
         std::wcout << L" |" << std::endl;
     }
     
@@ -2236,10 +2657,10 @@ private:
     }
     void PrintDataUpdate() {
         // Do not do live updates if there are no tracked stats
-        if (globalTrackedStats->empty() && detailTrackedStats->empty()) {return;}
+        if (globalTrackedStats->empty() && detailTrackedStats->empty() && wlanTrackedStats->empty()) {return;}
 
-        if (printGlobal || printDetail) {
-            clear_screen();
+        if (printGlobal || printDetail || printWlan) {
+            //clear_screen();
         }
 
         // -- Global summary table --
@@ -2248,7 +2669,6 @@ private:
             OpenAndStartGlobalStatSummaryCSV();
             for (std::wstring stat : *globalTrackedStats)
             {
-
                 auto detailedStatsSummary = GatherGlobalStatisticSummary(stat, trackedStatisticsDataTypes.at(stat));
                 if (printGlobal) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
                 SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary);
@@ -2260,7 +2680,42 @@ private:
             }
         }
 
-        // -- Detailed Pre-Statistic Results --
+        // -- WLAN table --
+        if (trackWlanStats && !wlanTrackedStats->empty()) {
+            if (printWlan) {PrintStdHeader(L"WLAN Information", 12);}
+            // Open the global stat summary csv if not created by the global stats loop
+            if (globalTrackedStats->empty()) {
+                OpenAndStartGlobalStatSummaryCSV();
+            }
+            for (std::wstring stat : *wlanTrackedStats)
+            {
+                if (stat == L"SSID") {
+                    if (printWlan) {PrintStringStat(L"SSID", wlanData.GetSSID(), 22);}
+                    globalStatsWriter.write_row(L"SSID,,," + wlanData.GetSSID());
+                }
+                if (stat == L"BSSID") {
+                    if (printWlan) {PrintStringStat(L"BSSID", wlanData.GetBSSID(), 22);}
+                    globalStatsWriter.write_row(L"BSSID,,," + wlanData.GetBSSID());
+                }
+                if (stat == L"Rssi") {
+                    auto detailedStatsSummary = GetWLANRSSISummary();
+                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
+                    SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary);  
+                }
+                else {
+                    auto detailedStatsSummary = GatherWLANStatisticSummary(stat);
+                    if (printWlan) {PrintGlobalStatSummary(stat, detailedStatsSummary, 12);}
+                    SaveGlobalStatSummaryLineToCSV(stat, detailedStatsSummary); 
+                }
+            }
+
+            if (printWlan) {
+                PrintStdFooter();
+                std::wcout << std::endl;
+            }
+        }
+
+        // -- Detailed Per-Connection Results --
         if (!detailTrackedStats->empty()) {
             OpenAndStartDetailStatSummaryCSV();
             for (std::wstring stat : *detailTrackedStats)
@@ -2343,6 +2798,8 @@ private:
                     }
                 }
             }
+
+            wlanData.UpdateData(tableCounter, maxHistoryLength);
 
             RemoveStaleDataPoints();
         }
