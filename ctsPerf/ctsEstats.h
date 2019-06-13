@@ -553,13 +553,13 @@ namespace details {
             return L"Statistic,Sum,SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR";
         }
         void WriteConnectionInfoData(ctsWriteDetails &writer) {
-            writer.write_row(L"Signal Quality" + ctsPerf::ctsWriteDetails::PrintDetails(wlanSignalQuality));
-            writer.write_row(L"RX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(RxRate));
-            writer.write_row(L"TX Rate" + ctsPerf::ctsWriteDetails::PrintDetails(TxRate));
-            writer.write_row(L"RSSI" + ctsPerf::ctsWriteDetails::PrintDetails(Rssi));
-            writer.write_row(L"Link Quality" + ctsPerf::ctsWriteDetails::PrintDetails(LinkQuality));
-            writer.write_row(L"Four-Way Handshake Failures" + ctsPerf::ctsWriteDetails::PrintDetails(FourWayHandshakeFailures));
-            writer.write_row(L"TKIP Countermeasures Invoked" + ctsPerf::ctsWriteDetails::PrintDetails(TKIPCounterMeasuresInvoked));
+            writer.write_row(L"Signal Quality," + ctsPerf::ctsWriteDetails::PrintDetails(wlanSignalQuality));
+            writer.write_row(L"RX Rate," + ctsPerf::ctsWriteDetails::PrintDetails(RxRate));
+            writer.write_row(L"TX Rate," + ctsPerf::ctsWriteDetails::PrintDetails(TxRate));
+            writer.write_row(L"RSSI," + ctsPerf::ctsWriteDetails::PrintDetails(Rssi));
+            writer.write_row(L"Link Quality," + ctsPerf::ctsWriteDetails::PrintDetails(LinkQuality));
+            writer.write_row(L"Four-Way Handshake Failures," + std::to_wstring(sumULONGLONGVect(FourWayHandshakeFailures)) + ctsPerf::ctsWriteDetails::PrintDetails(FourWayHandshakeFailures));
+            writer.write_row(L"TKIP Countermeasures Invoked," + std::to_wstring(sumULONGLONGVect(TKIPCounterMeasuresInvoked)) + ctsPerf::ctsWriteDetails::PrintDetails(TKIPCounterMeasuresInvoked));
         }
         void WriteMACStatsData(ctsWriteDetails &writer) {
             writer.write_row(L"[U] Transmitted Frames," + std::to_wstring(sumULONGLONGVect(UC_TransmittedFrames)) + ctsPerf::ctsWriteDetails::PrintDetails(UC_TransmittedFrames));
@@ -1879,7 +1879,7 @@ public:
         std::set<std::wstring> *wlanTrackedStats,
         std::set<std::wstring> *detailTrackedStats,
         BOOLEAN livePrintGlobalStats,
-        BOOLEAN printWlan,
+        BOOLEAN livePrintWlanStats,
         BOOLEAN livePrintDetailStats)
         : pollRateMS(pollRateMS),
           maxHistoryLength(maxHistoryLength),
@@ -1888,7 +1888,7 @@ public:
           wlanTrackedStats(wlanTrackedStats),
           detailTrackedStats(detailTrackedStats),
           printGlobal(livePrintGlobalStats),
-          printWlan(printWlan),
+          printWlan(livePrintWlanStats),
           printDetail(livePrintDetailStats),
           pathInfoWriter(L"EstatsPathInfo.csv"),
           receiveWindowWriter(L"EstatsReceiveWindow.csv"),
@@ -1966,20 +1966,6 @@ public:
         // ReSharper disable once CppInitializedValueIsAlwaysRewritten
         auto started = false;
         try {
-            // Verify that all given stats are valid stat names to track
-            for (std::wstring statName : *globalTrackedStats) {
-                if (trackedStatisticsDataTypes.find(statName) == trackedStatisticsDataTypes.end()) {
-                    wprintf(L"ERROR: No statistic called %ws\n", statName.c_str());
-                    throw std::exception("Invalid stat name");
-                }
-            }
-            for (std::wstring statName : *detailTrackedStats) {
-                if (trackedStatisticsDataTypes.find(statName) == trackedStatisticsDataTypes.end()) {
-                    wprintf(L"ERROR: No statistic called %ws\n", statName.c_str());
-                    throw std::exception("Invalid stat name");
-                }
-            }
-
             pathInfoWriter.create_file(
                 std::wstring(details::EstatsDataPoint<TcpConnectionEstatsPath>::PrintAddressHeader()) +
                 L"," + details::EstatsDataPoint<TcpConnectionEstatsPath>::PrintHeader());
@@ -2639,7 +2625,7 @@ private:
         PrintStdSeparator();
     }
     void PrintStdSeparator() {
-        std::wcout << std::wstring(titleColumnWidth + (6 * dataColumnWidth) + (6 * 3), L'-') << "-+" << std::endl;
+        std::wcout << std::wstring(titleColumnWidth + (6 * (dataColumnWidth + 3)), L'-') << "-+" << std::endl;
     }
 
     void clear_screen() { 
@@ -2660,6 +2646,9 @@ private:
         if (printGlobal || printDetail || printWlan) {
             clear_screen();
         }
+
+        // Print counter
+        std::wcout << " / " << std::to_wstring(tableCounter - 1) << " \\" << std::endl;
 
         // -- Global summary table --
         if (!globalTrackedStats->empty()) {
@@ -2802,7 +2791,7 @@ private:
 
         if (!accessDenied) {
             // schedule timer from this moment
-            timer.schedule_singleton([this]() { UpdateEstats(); }, 1000);
+            timer.schedule_singleton([this]() { UpdateEstats(); }, pollRateMS);
         }
 
         return !accessDenied;

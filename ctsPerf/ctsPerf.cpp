@@ -255,9 +255,9 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     };
 
     // Wether to print each stat type live to console. all on by default
-    auto livePrintGlobalStats = false;
-    auto livePrintWlanStats = false;
-    auto livePrintDetailStats = false;
+    auto livePrintGlobalStats = true;
+    auto livePrintWlanStats = true;
+    auto livePrintDetailStats = true;
 	
 	wstring trackInterfaceDescription;
     wstring trackProcess;
@@ -304,10 +304,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 }
             }
 
-        } 
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
-            trackEstats = true;
-        } 
+        }
         else if (ctString::istarts_with(argv[arg_count - 1], L"-estatsPollRate:")) {
             wstring pollrateString(argv[arg_count - 1]);
 
@@ -322,6 +319,9 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 return 1;
             }
         }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
+            trackEstats = true;
+        } 
         else if (ctString::istarts_with(argv[arg_count - 1], L"-wlanStats")) {
             trackEstats = true;
             trackWlanStats = true;
@@ -355,7 +355,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             else {
                 std::wstringstream wss(globalStatsString);
                 std::wstring tmp;
-                while(std::getline(wss, tmp, L';')) {
+                while(std::getline(wss, tmp, L':')) {
                     globalTrackedStats.emplace(tmp);
                 }
             }
@@ -374,7 +374,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             else {
                 std::wstringstream wss(wlanStatsString);
                 std::wstring tmp;
-                while(std::getline(wss, tmp, L';')) {
+                while(std::getline(wss, tmp, L':')) {
                     trackedWlanStats.emplace(tmp);
                 }
             }
@@ -393,7 +393,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             else {
                 std::wstringstream wss(detailStatsString);
                 std::wstring tmp;
-                while(std::getline(wss, tmp, L';')) {
+                while(std::getline(wss, tmp, L':')) {
                     detailTrackedStats.emplace(tmp);
                 }
             }
@@ -447,7 +447,28 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return 1;
     }
 
+
     try {
+        // Verify that all given stats are valid stat names to track
+        for (std::wstring statName : globalTrackedStats) {
+            if (allStats.find(statName) == allStats.end()) {
+                wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
+                throw std::exception("Invalid stat name");
+            }
+        }
+        for (std::wstring statName : trackedWlanStats) {
+            if (allWlanStats.find(statName) == allWlanStats.end()) {
+                wprintf(L"ERROR: No WLAN stat called %ws\n", statName.c_str());
+                throw std::exception("Invalid stat name");
+            }
+        }
+        for (std::wstring statName : detailTrackedStats) {
+            if (allStats.find(statName) == allStats.end()) {
+                wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
+                throw std::exception("Invalid stat name");
+            }
+        }
+
         // Don't print if not stats are tracked 
         if (globalTrackedStats.empty()) {livePrintGlobalStats = false;}
         if (trackedWlanStats.empty()) {livePrintWlanStats = false;}
