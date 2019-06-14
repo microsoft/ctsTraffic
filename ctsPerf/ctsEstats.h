@@ -748,12 +748,11 @@ namespace details {
                 //WlanFreeMemory(pbssEntry); // This crashes for some reason?
             }
             else {
-                wprintf(L"Could not get WLAN Information -- Is the WLAN Service running?");
+                wprintf(L"Could not get WLAN information this poll, WiFi may not be connected.\n");
                 // Free memory used to store WLAN data structres                
                 WlanFreeMemory(pconnectionAttributes);
                 WlanFreeMemory(pstatistics);
                 //WlanFreeMemory(pbssEntry); // This crashes for some reason?
-                exit(1);
             }
         }
 
@@ -1390,7 +1389,7 @@ namespace details {
                 ctl::ctString::format_string(L"%lu,", calculatedMin);
 
             formattedString += (calculatedMax == InvalidLongEstatsValue) ?
-                L"(bad)," :
+                L"(bad)" :
                 ctl::ctString::format_string(L"%lu", calculatedMax);
 
             return formattedString +
@@ -1489,13 +1488,13 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?                
-                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back())
-                : L"(bad),";
+            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
+                L"(bad)," :
+                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back());
 
-            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?                
-                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back())
-                : L"(bad),";
+            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
+                L"(bad)," :
+                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back());
 
             ULONG64 calculatedMin = InvalidLongEstatsValue;
             ULONG64 calculatedMax = InvalidLongEstatsValue;
@@ -1515,12 +1514,12 @@ namespace details {
             }
 
             formattedString += (calculatedMin == InvalidLongEstatsValue) ?
-                ctl::ctString::format_string(L"%lu,", minReceiveWindow.back())
-                : L"(bad),";
+                L"(bad)," :
+                ctl::ctString::format_string(L"%lu,", calculatedMin);
 
             formattedString += (calculatedMax == InvalidLongEstatsValue) ?
-                ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back())
-                : L"(bad),";
+                L"(bad)" :
+                ctl::ctString::format_string(L"%lu", calculatedMax);
 
             return formattedString +
                    ctsWriteDetails::PrintMeanStdDev(curReceiveWindow);
@@ -1872,6 +1871,7 @@ class ctsEstats
 {
 public:
     ctsEstats(
+        std::wstring dataDirectory,
         ULONG pollRateMS,
         ULONG maxHistoryLength,
         BOOLEAN trackWlanStats,
@@ -1881,7 +1881,8 @@ public:
         BOOLEAN livePrintGlobalStats,
         BOOLEAN livePrintWlanStats,
         BOOLEAN livePrintDetailStats)
-        : pollRateMS(pollRateMS),
+        : dataDirectory(dataDirectory),
+          pollRateMS(pollRateMS),
           maxHistoryLength(maxHistoryLength),
           trackWlanStats(trackWlanStats),
           globalTrackedStats(globalTrackedStats),
@@ -1890,14 +1891,14 @@ public:
           printGlobal(livePrintGlobalStats),
           printWlan(livePrintWlanStats),
           printDetail(livePrintDetailStats),
-          pathInfoWriter(L"EstatsPathInfo.csv"),
-          receiveWindowWriter(L"EstatsReceiveWindow.csv"),
-          senderCongestionWriter(L"EstatsSenderCongestion.csv"),
-          wlanConnectionInfoWriter(L"WlanConnectionInfo.csv"),
-          wlanMACStatsWriter(L"WlanMACStats.csv"),
-          wlanPhyStatsWriter(L"WlanPhyStats.csv"),
-          globalStatsWriter(L"LiveData\\GlobalSummary_0.csv"),
-          perConnectionStatsWriter(L"LiveData\\DetailSummary_0.csv"),
+          pathInfoWriter(std::wstring(dataDirectory + L"EstatsPathInfo.csv").c_str()),
+          receiveWindowWriter(std::wstring(dataDirectory + L"EstatsReceiveWindow.csv").c_str()),
+          senderCongestionWriter(std::wstring(dataDirectory + L"EstatsSenderCongestion.csv").c_str()),
+          wlanConnectionInfoWriter(std::wstring(dataDirectory + L"WlanConnectionInfo.csv").c_str()),
+          wlanMACStatsWriter(std::wstring(dataDirectory + L"WlanMACStats.csv").c_str()),
+          wlanPhyStatsWriter(std::wstring(dataDirectory + L"WlanPhyStats.csv").c_str()),
+          globalStatsWriter(std::wstring(dataDirectory + L"LiveData\\GlobalSummary_0.csv").c_str()),
+          perConnectionStatsWriter(std::wstring(dataDirectory + L"LiveData\\DetailSummary_0.csv").c_str()),
           tcpTable(StartingTableSize)
     {}
 
@@ -2027,6 +2028,9 @@ private:
     std::set<details::EstatsDataPoint<TcpConnectionEstatsBandwidth>> bandwidthData;
     // WLAN Tracking
     details::WLANDataTracking wlanData;
+
+    // Directory to save files in
+    const std::wstring dataDirectory;
 
     // Old-style full-run-scope .csv writers
     // Estats
@@ -2474,7 +2478,7 @@ private:
     }
 
     void OpenAndStartGlobalStatSummaryCSV() {
-        globalStatsWriter.setFilename(L"LiveData\\GlobalSummary_" + std::to_wstring(globalFileNumber) + L".csv");
+        globalStatsWriter.setFilename(dataDirectory + L"LiveData\\GlobalSummary_" + std::to_wstring(globalFileNumber) + L".csv");
         globalFileNumber++;
         globalStatsWriter.create_file(std::wstring(L"GLobal Statistic,Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change"));
     }
@@ -2492,7 +2496,7 @@ private:
     }
 
     void OpenAndStartDetailStatSummaryCSV() {
-        globalStatsWriter.setFilename(L"LiveData\\DetailSummary_" + std::to_wstring(detailFileNumber) + L".csv");
+        globalStatsWriter.setFilename(dataDirectory + L"LiveData\\DetailSummary_" + std::to_wstring(detailFileNumber) + L".csv");
         detailFileNumber++;
         globalStatsWriter.create_file(std::wstring(L"Samples,Min,Min %change,Mean,Mean %change,Max,Max %change,StdDev,StdDev %change,Median,Median %change,IQR,IQR %change"));
     }
@@ -2645,10 +2649,10 @@ private:
 
         if (printGlobal || printDetail || printWlan) {
             clear_screen();
+            // Print counter
+            std::wcout << " / " << std::to_wstring(tableCounter - 1) << " \\" << std::endl;
         }
 
-        // Print counter
-        std::wcout << " / " << std::to_wstring(tableCounter - 1) << " \\" << std::endl;
 
         // -- Global summary table --
         if (!globalTrackedStats->empty()) {

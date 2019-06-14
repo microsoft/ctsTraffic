@@ -139,7 +139,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     WSADATA wsadata;
     const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
-        ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
+        std::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 
@@ -147,13 +147,13 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     g_hBreak = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (g_hBreak == nullptr) {
         const auto gle = ::GetLastError();
-        wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
+        std::wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
         return gle;
     }
 
     if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE)) {
         const auto gle = ::GetLastError();
-        wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
+        std::wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
         return gle;
     }
 
@@ -264,6 +264,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     auto processId = UninitializedProcessId;
     DWORD timeToRunMs = 60000; // default to 60 seconds
 
+    std::wstring dataDirectory = L"";
+
 
     // Parse Arguments
 	for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
@@ -279,8 +281,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 trackProcess.erase(trackProcess.end() - 4, trackProcess.end());
             }
             if (trackProcess.empty()) {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
+                std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                std::wprintf(UsageStatement);
                 return 1;
             }
         } 
@@ -298,8 +300,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             } else {
                 processId = ::wcstoul(pidString.c_str(), nullptr, 10);
                 if (processId == 0 || processId == ULONG_MAX) {
-                    wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                    wprintf(UsageStatement);
+                    std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                    std::wprintf(UsageStatement);
                     return 1;
                 }
             }
@@ -314,8 +316,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
             estatsPollRate = ::wcstoul(pollrateString.c_str(), nullptr, 10);
             if (estatsPollRate == 0 || estatsPollRate == ULONG_MAX) {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
+                std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                std::wprintf(UsageStatement);
                 return 1;
             }
         }
@@ -335,8 +337,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
             maxStatsHistoryLength = ::wcstoul(maxHistString.c_str(), nullptr, 10);
             if (maxStatsHistoryLength == 0 || maxStatsHistoryLength == ULONG_MAX) {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
+                std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                std::wprintf(UsageStatement);
                 return 1;
             }
 
@@ -421,19 +423,26 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         } 
         else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
             g_MeanOnly = true;
-        } 
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-DataDirectory:")) {
+            dataDirectory = argv[arg_count - 1];
+
+            // strip off the "-DataDirectory:" preface to the string
+            const auto endOfToken = find(dataDirectory.begin(), dataDirectory.end(), L':');
+            dataDirectory.erase(dataDirectory.begin(), endOfToken + 1);
+        }
         else {
             const auto timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
             if (timeToRun == 0 || timeToRun == ULONG_MAX) {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
+                std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                std::wprintf(UsageStatement);
                 return 1;
             }
             timeToRunMs = timeToRun * 1000;
             if (timeToRunMs < timeToRun)
             {
-                wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
-                wprintf(UsageStatement);
+                std::wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
+                std::wprintf(UsageStatement);
                 return 1;
             }
         }
@@ -442,8 +451,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     const auto trackPerProcess = !trackProcess.empty() || processId != UninitializedProcessId;
 
     if (timeToRunMs <= 5000) {
-        wprintf(L"ERROR: Must run over 5 seconds to have enough samples for analysis\n");
-        wprintf(UsageStatement);
+        std::wprintf(L"ERROR: Must run over 5 seconds to have enough samples for analysis\n");
+        std::wprintf(UsageStatement);
         return 1;
     }
 
@@ -452,19 +461,19 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         // Verify that all given stats are valid stat names to track
         for (std::wstring statName : globalTrackedStats) {
             if (allStats.find(statName) == allStats.end()) {
-                wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
+                std::wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
                 throw std::exception("Invalid stat name");
             }
         }
         for (std::wstring statName : trackedWlanStats) {
             if (allWlanStats.find(statName) == allWlanStats.end()) {
-                wprintf(L"ERROR: No WLAN stat called %ws\n", statName.c_str());
+                std::wprintf(L"ERROR: No WLAN stat called %ws\n", statName.c_str());
                 throw std::exception("Invalid stat name");
             }
         }
         for (std::wstring statName : detailTrackedStats) {
             if (allStats.find(statName) == allStats.end()) {
-                wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
+                std::wprintf(L"ERROR: No Estat called %ws\n", statName.c_str());
                 throw std::exception("Invalid stat name");
             }
         }
@@ -474,19 +483,20 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         if (trackedWlanStats.empty()) {livePrintWlanStats = false;}
         if (detailTrackedStats.empty()) {livePrintDetailStats = false;}
 
-        ctsPerf::ctsEstats estats(estatsPollRate, maxStatsHistoryLength, trackWlanStats,
+        ctsPerf::ctsEstats estats(dataDirectory, estatsPollRate, maxStatsHistoryLength, trackWlanStats,
                                   &globalTrackedStats, &trackedWlanStats, &detailTrackedStats,
                                   livePrintGlobalStats, livePrintWlanStats, livePrintDetailStats);
         if (trackEstats) {
             if (estats.start()) {
-                wprintf(L"-- Enabled ESTATS --\n");
+                std::wprintf(L"-- Enabled ESTATS --\n");
             } else {
-                wprintf(L"ESTATS could not be started - check above errors and verify running as Administrator\n");
+                std::wprintf(L"ESTATS could not be started - check above errors and verify running as Administrator\n");
                 return 1;
             }
         }
 
-        wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
+        std::wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
+        std::wprintf(L"-------------------------------------------------------+\n");
         ctComInitialize coinit;
         ctWmiService wmi(L"root\\cimv2");
         g_wmi = &wmi;
@@ -496,7 +506,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsPerf::ctsWriteDetails cpuwriter(g_FileName);
 		cpuwriter.create_file(g_MeanOnly);
 
-		ctsPerf::ctsWriteDetails networkWriter(g_NetworkingFilename);
+		ctsPerf::ctsWriteDetails networkWriter(std::wstring(dataDirectory + g_NetworkingFilename).c_str());
 		if (trackNetworking) {
 			networkWriter.create_file(g_MeanOnly);
 		}
@@ -507,7 +517,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 			processWriter.create_file(g_MeanOnly);
 		}
 
-        wprintf(L".");
+        std::wprintf(L".");
 
         // create a perf counter objects to maintain these counters
         std::vector<ctWmiPerformance> performance_vector;
@@ -530,14 +540,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             performance_vector.emplace_back(InstantiatePerProcessByPIDCounters(processId));
         }
 
-        wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
+        std::wprintf(L"+\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
         for (auto& perf_object : performance_vector) {
             perf_object.start_all_counters(1000);
         }
 
         ::WaitForSingleObject(g_hBreak, timeToRunMs);
 
-        wprintf(L"Stopping counters ....\n\n");
+        std::wprintf(L"Stopping counters ....\n\n");
         for (auto& perf_object : performance_vector) {
             perf_object.stop_all_counters();
         }
@@ -559,7 +569,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 		}
     }
     catch (const exception& e) {
-        wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
+        std::wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
         return 1;
     }
 
@@ -588,42 +598,42 @@ ctWmiPerformance InstantiateProcessorCounters()
         L"PercentProcessorTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(processor_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     processor_percent_of_max = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Processor,
         L"PercentofMaximumFrequency",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(processor_percent_of_max);
-    wprintf(L".");
+    std::wprintf(L".");
 
 	processor_percent_dpc_time = ctCreatePerfCounter<ULONGLONG>(
 		ctWmiClassName::Processor,
 		L"PercentDPCTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_dpc_time);
-	wprintf(L".");
+	std::wprintf(L".");
 
 	processor_dpcs_queued_per_second = ctCreatePerfCounter<ULONG>(
 		ctWmiClassName::Processor,
 		L"DPCsQueuedPersec",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_dpcs_queued_per_second);
-	wprintf(L".");
+	std::wprintf(L".");
 	
 	processor_percent_privileged_time = ctCreatePerfCounter<ULONGLONG>(
 		ctWmiClassName::Processor,
 		L"PercentPrivilegedTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_privileged_time);
-	wprintf(L".");
+	std::wprintf(L".");
 	
 	processor_percent_user_time = ctCreatePerfCounter<ULONGLONG>(
 		ctWmiClassName::Processor,
 		L"PercentUserTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_user_time);
-	wprintf(L".");
+	std::wprintf(L".");
 
     return performance_counter;
 }
@@ -776,14 +786,14 @@ ctWmiPerformance InstantiateMemoryCounters()
         L"PoolPagedBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(paged_pool_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     non_paged_pool_bytes = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Memory,
         L"PoolNonpagedBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(non_paged_pool_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
     
     return performance_counter;
 }
@@ -848,7 +858,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_total_bytes->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_total_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_offloaded_connections = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -858,7 +868,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_offloaded_connections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_offloaded_connections);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -868,7 +878,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_packets_outbound_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_outbound_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -878,7 +888,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_packets_outbound_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_outbound_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -888,7 +898,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_packets_received_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_received_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -898,7 +908,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_packets_received_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_received_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_packets_per_second = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -908,7 +918,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_packets_per_second->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_packets_per_second);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_adapter_active_rsc_connections = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkAdapter,
@@ -918,7 +928,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         network_adapter_active_rsc_connections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_adapter_active_rsc_connections);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1065,7 +1075,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_total_bytes->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_total_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_interface_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkInterface,
@@ -1075,7 +1085,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_packets_outbound_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_outbound_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_interface_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkInterface,
@@ -1085,7 +1095,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_packets_outbound_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_outbound_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_interface_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkInterface,
@@ -1095,7 +1105,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_packets_received_discarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_received_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_interface_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkInterface,
@@ -1105,7 +1115,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_packets_received_errors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_received_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     network_interface_packets_received_unknown = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::NetworkInterface,
@@ -1115,7 +1125,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         network_interface_packets_received_unknown->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performance_counter.add_counter(network_interface_packets_received_unknown);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1243,112 +1253,112 @@ ctWmiPerformance InstantiateIPCounters()
         L"DatagramsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_outbound_no_route = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"DatagramsOutboundNoRoute",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_no_route);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_received_address_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"DatagramsReceivedAddressErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_address_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_received_discarded = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"DatagramsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_received_header_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"DatagramsReceivedHeaderErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_header_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_received_unknown_protocol = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"DatagramsReceivedUnknownProtocol",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_unknown_protocol);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"FragmentReassemblyFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragment_reassembly_failures);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv4_fragmentation_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv4,
         L"FragmentationFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragmentation_failures);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_outbound_discarded = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_outbound_no_route = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsOutboundNoRoute",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_no_route);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_received_address_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsReceivedAddressErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_address_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_received_discarded = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_discarded);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_received_header_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsReceivedHeaderErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_header_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_received_unknown_protocol = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"DatagramsReceivedUnknownProtocol",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_unknown_protocol);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"FragmentReassemblyFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragment_reassembly_failures);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_ipv6_fragmentation_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_Ipv6,
         L"FragmentationFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragmentation_failures);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1515,56 +1525,56 @@ ctWmiPerformance InstantiateTCPCounters()
         L"ConnectionsEstablished",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv4_connections_established);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_tcpv6_connections_established = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv6,
         L"ConnectionsEstablished",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv6_connections_established);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_tcpv4_connection_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv4,
         L"ConnectionFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connection_failures);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_tcpv6_connection_failures = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv6,
         L"ConnectionFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connection_failures);
-    wprintf(L".");
+    std::wprintf(L".");
     
     tcpip_tcpv4_connections_reset = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv4,
         L"ConnectionsReset",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connections_reset);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_tcpv6_connections_reset = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_TCPv6,
         L"ConnectionsReset",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connections_reset);
-    wprintf(L".");
+    std::wprintf(L".");
 
     winsock_bsp_rejected_connections = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::WinsockBSP,
         L"RejectedConnections",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_rejected_connections);
-    wprintf(L".");
+    std::wprintf(L".");
 
     winsock_bsp_rejected_connections_per_sec = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::WinsockBSP,
         L"RejectedConnectionsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(winsock_bsp_rejected_connections_per_sec);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1687,56 +1697,56 @@ ctWmiPerformance InstantiateUDPCounters()
         L"DatagramsNoPortPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv4_noport_per_sec);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_udpv4_received_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_UDPv4,
         L"DatagramsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv4_received_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_udpv4_datagrams_per_sec = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_UDPv4,
         L"DatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv4_datagrams_per_sec);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_udpv6_noport_per_sec = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_UDPv6,
         L"DatagramsNoPortPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv6_noport_per_sec);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_udpv6_received_errors = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_UDPv6,
         L"DatagramsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv6_received_errors);
-    wprintf(L".");
+    std::wprintf(L".");
 
     tcpip_udpv6_datagrams_per_sec = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::Tcpip_UDPv6,
         L"DatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv6_datagrams_per_sec);
-    wprintf(L".");
+    std::wprintf(L".");
 
     winsock_bsp_dropped_datagrams = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::WinsockBSP,
         L"DroppedDatagrams",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_dropped_datagrams);
-    wprintf(L".");
+    std::wprintf(L".");
 
     winsock_bsp_dropped_datagrams_per_second = ctCreatePerfCounter<ULONG>(
         ctWmiClassName::WinsockBSP,
         L"DroppedDatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(winsock_bsp_dropped_datagrams_per_second);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1875,7 +1885,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_privileged_time->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_privileged_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_processor_time = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1883,7 +1893,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_processor_time->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_processor_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_user_time = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1891,7 +1901,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_user_time->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_user_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_private_bytes = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1899,7 +1909,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_private_bytes->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_private_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_virtual_bytes = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1907,7 +1917,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_virtual_bytes->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_virtual_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_working_set = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1915,7 +1925,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_working_set->add_filter(L"Name", trackProcess.c_str());
     performance_counter.add_counter(per_process_working_set);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
@@ -1930,7 +1940,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_privileged_time->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_privileged_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_processor_time = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1938,7 +1948,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_processor_time->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_processor_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_user_time = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1946,7 +1956,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_user_time->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_user_time);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_private_bytes = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1954,7 +1964,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_private_bytes->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_private_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_virtual_bytes = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1962,7 +1972,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_virtual_bytes->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_virtual_bytes);
-    wprintf(L".");
+    std::wprintf(L".");
 
     per_process_working_set = ctCreatePerfCounter<ULONGLONG>(
         ctWmiClassName::Process,
@@ -1970,7 +1980,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_working_set->add_filter(L"IDProcess", processId);
     performance_counter.add_counter(per_process_working_set);
-    wprintf(L".");
+    std::wprintf(L".");
 
     return performance_counter;
 }
