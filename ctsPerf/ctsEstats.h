@@ -1360,11 +1360,11 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
+            formattedString += ((minReceiveWindow.empty()) || (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow.back());
 
-            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
+            formattedString += ((maxReceiveWindow.empty()) || (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back());
 
@@ -1488,11 +1488,11 @@ namespace details {
         std::wstring PrintData() const
         {
             std::wstring formattedString(L",");
-            formattedString += ((!minReceiveWindow.empty()) && (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
+            formattedString += ((minReceiveWindow.empty()) || (minReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", minReceiveWindow.back());
 
-            formattedString += ((!maxReceiveWindow.empty()) && (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
+            formattedString += ((maxReceiveWindow.empty()) || (maxReceiveWindow.back() == InvalidLongEstatsValue)) ?
                 L"(bad)," :
                 ctl::ctString::format_string(L"%lu,", maxReceiveWindow.back());
 
