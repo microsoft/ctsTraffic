@@ -24,27 +24,28 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <Windows.h>
 
+#include <wil/resource.h>
+
 #include <ctThreadPoolTimer.hpp>
 #include <ctException.hpp>
 #include <ctWmiInitialize.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctString.hpp>
 #include <ctLocks.hpp>
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// 
+///
 /// Concepts for this class:
 /// - WMI Classes expose performance counters through hi-performance WMI interfaces
 /// - ctWmiPerformanceCounter exposes one counter within one WMI performance counter class
 /// - Every performance counter object contains a 'Name' key field, uniquely identifying a 'set' of data points for that counter
 /// - Counters are 'snapped' every one second, with the timeslot tracked with the data
-/// 
+///
 /// ctWmiPerformanceCounter is exposed to the user through factory functions defined per-counter class (ctShared<class>PerfCounter)
 /// - the factory functions takes in the counter name that the user wants to capture data for
 /// - the factory function has a template type matching the data type of the counter data for that counter name
-/// 
+///
 /// Internally, the factory function instantiates a ctWmiPerformanceCounterImpl:
 /// - has 3 template arguments:
 /// 1. The IWbem* interface used to enumerate instances of this performance class (either IWbemHiPerfEnum or IWbemClassObject)
@@ -53,29 +54,29 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// - has 2 function arguments
 /// 1. The string value of the WMI class to be used
 /// 2. The string value of the counter name to be recorded
-/// 
+///
 /// Methods exposed publicly off of ctWmiPerformanceCounter:
 /// - add_filter(): allows the caller to only capture instances which match the parameter/value combination for that object
 /// - reference_range() : takes an Instance Name by which to return values
 /// -- returns begin/end iterators to reference the data
-/// 
+///
 /// ctWmiPerformanceCounter populates data by invoking a pure virtual function (update_counter_data) every one second.
 /// - update_counter_data takes a boolean parameter: true will invoke the virtual function to update the data, false will clear the data.
 /// That pure virtual function (ctWmiPerformanceCounterImpl::update_counter_data) refreshes its counter (through its template accessor interface)
 /// - then iterates through each instance recorded for that counter and invokes add_instance() in the base class.
-/// 
+///
 /// add_instance() takes a WMI* of teh Accessor type: if that instance wasn't explicitly filtered out (through an instance_filter object),
 /// - it looks to see if this is a new instance or if we have already been tracking that instance
 /// - if new, we create a new ctWmiPerformanceCounterData object and add it to our counter_data
 /// - if not new, we just add this object to the counter_data object that we already created
-/// 
+///
 /// There are 2 possible sets of WMI interfaces to access and enumerate performance data, these are defined in ctWmiPerformanceDataAccessor
 /// - this is instantiated in ctWmiPerformanceCounterImpl as it knows the Access and Enum template types
-/// 
+///
 /// ctWmiPerformanceCounterData encapsulates the data points for one instance of one counter.
 /// - exposes match() taking a string to check if it matches the instance it contains
 /// - exposes add() taking both types of Access objects + a ULONGLONG time parameter to retrieve the data and add it to the internal map
-/// 
+///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -683,8 +684,8 @@ namespace ctl {
     ///
     /// class ctWmiPerformanceCounter
     /// - The abstract base class contains the WMI-specific code which all templated instances will derive from
-    /// - Using public inheritance + protected members over composition as we need a common type which we can pass to 
-    ///   ctWmiPerformance 
+    /// - Using public inheritance + protected members over composition as we need a common type which we can pass to
+    ///   ctWmiPerformance
     /// - Exposes the iterator class for users to traverse the data points gathered
     ///
     /// Note: callers *MUST* guarantee connections with the WMI service stay connected
@@ -1131,7 +1132,7 @@ namespace ctl {
         void add_counter(const std::shared_ptr<ctWmiPerformanceCounter<T>>& _wmi_perf)
         {
             callbacks.push_back(_wmi_perf->register_callback());
-            ctlScopeGuard(revert_callback, { callbacks.pop_back(); });
+            auto revert_callback = wil::scope_exit([&]() { callbacks.pop_back(); });
 
             const HRESULT hr = config_refresher->AddRefresher(_wmi_perf->refresher.get(), 0, nullptr);
             if (FAILED(hr)) {
@@ -1139,7 +1140,7 @@ namespace ctl {
             }
 
             // dismiss scope-guard - successfully added refresher
-            revert_callback.dismiss();
+            revert_callback.release();
         }
 
         void start_all_counters(unsigned _interval)
@@ -1231,7 +1232,7 @@ namespace ctl {
                 }
 
                 this_ptr->timer->schedule_singleton(
-                    [this_ptr, _interval] () { TimerCallback(this_ptr, _interval); }, 
+                    [this_ptr, _interval] () { TimerCallback(this_ptr, _interval); },
                     _interval);
             }
             catch (const std::exception& e) {
@@ -1247,7 +1248,7 @@ namespace ctl {
         Static, // ctMakeStaticPerfCounter
         Instance // created with ctMakeInstancePerfCounter
     };
-    
+
     enum class ctWmiClassName {
         Uninitialized,
         Process,
@@ -1282,7 +1283,7 @@ namespace ctl {
         template <typename T> bool PropertyNameExists(LPCWSTR name) const noexcept;
     };
 
-    template <> 
+    template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(LPCWSTR name) const noexcept
     {
         for (unsigned counter = 0; counter < this->ulongFieldNameCount; ++counter) {
@@ -1590,7 +1591,7 @@ namespace ctl {
             L"RejectedConnectionsPersec"
         };
 
-        // this patterns (const array of wchar_t* pointers) 
+        // this patterns (const array of wchar_t* pointers)
         // allows for compile-time construction of the array of properties
         const ctWmiPerformanceCounterProperties PerformanceCounterPropertiesArray[] = {
 

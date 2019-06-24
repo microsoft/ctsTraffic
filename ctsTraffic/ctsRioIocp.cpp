@@ -17,10 +17,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <winsock2.h>
 #include <mswsock.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctSockaddr.hpp>
-#include <ctScopeGuard.hpp>
 #include <ctLocks.hpp>
 #include <utility>
 // local headers
@@ -257,14 +258,14 @@ namespace ctsTraffic {
     static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) noexcept
     {
         // delete all cq's on error
-        ctlScopeGuard(deleteAllCqsOnError, { s_delete_all_cqs(); });
+        auto deleteAllCqsOnError = wil::scope_exit([&]() { s_delete_all_cqs(); });
 
         s_prioritized_cs = new (std::nothrow) ctl::ctPrioritizedCriticalSection;
         if (nullptr == s_prioritized_cs) {
             return FALSE;
         }
         // delete the prioritized cs on error
-        ctlScopeGuard(deletePrioritzedCsOnError, { delete s_prioritized_cs; });
+        auto deletePrioritzedCsOnError = wil::scope_exit([&]() { delete s_prioritized_cs; });
 
         ::ZeroMemory(&s_rio_notify_setttings, sizeof s_rio_notify_setttings);
         // completion key for RioNotify IOCP is the ctsRioIocpImpl*
@@ -280,7 +281,7 @@ namespace ctsTraffic {
             return FALSE;
         }
         // free the OVERLAPPED on error
-        ctlScopeGuard(freeOverlappedOnError, { ::free(s_rio_notify_setttings.Iocp.Overlapped); });
+        auto freeOverlappedOnError = wil::scope_exit([&]() { ::free(s_rio_notify_setttings.Iocp.Overlapped); });
 
         s_rio_notify_setttings.Iocp.IocpHandle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
         if (!s_rio_notify_setttings.Iocp.IocpHandle) {
@@ -290,7 +291,7 @@ namespace ctsTraffic {
             return FALSE;
         }
         // close the IOCP handle on error
-        ctlScopeGuard(deleteIoCPOnError, { ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
+        auto deleteIoCPOnError = wil::scope_exit([&]() { ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
 
         // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
         // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
@@ -308,7 +309,7 @@ namespace ctsTraffic {
             return FALSE;
         }
         // close the RIO CQ on error
-        ctlScopeGuard(closeCQOnError, { ctl::ctRIOCloseCompletionQueue(s_rio_cq); });
+        auto closeCQOnError = wil::scope_exit([&]() { ctl::ctRIOCloseCompletionQueue(s_rio_cq); });
 
         // now that the CQ is created, update info
         s_rio_cq_size = new_queue_size;
@@ -324,7 +325,7 @@ namespace ctsTraffic {
             return FALSE;
         }
         // free the handle array on error
-        ctlScopeGuard(freeHandleArrayOnError, { ::free(s_rio_worker_threads); });
+        auto freeHandleArrayOnError = wil::scope_exit([&]() { ::free(s_rio_worker_threads); });
 
         s_rio_worker_thread_count = system_info.dwNumberOfProcessors;
 
@@ -349,12 +350,12 @@ namespace ctsTraffic {
         }
 
         // dismiss all scope guards - successfully initialized
-        freeHandleArrayOnError.dismiss();
-        closeCQOnError.dismiss();
-        deleteIoCPOnError.dismiss();
-        freeOverlappedOnError.dismiss();
-        deletePrioritzedCsOnError.dismiss();
-        deleteAllCqsOnError.dismiss();
+        freeHandleArrayOnError.release();
+        closeCQOnError.release();
+        deleteIoCPOnError.release();
+        freeOverlappedOnError.release();
+        deletePrioritzedCsOnError.release();
+        deleteAllCqsOnError.release();
         return TRUE;
     }
 
@@ -391,7 +392,7 @@ namespace ctsTraffic {
                 if (new_rqueue_used > this->rqueue_reserved) {
                     // making room in the CQ for these next 2 slots in the RQ - can throw
                     s_make_room_in_cq(RioRQGrowthFactor);
-                    ctlScopeGuard(releaseCqSlotsOnFailure, { s_release_room_in_cq(RioRQGrowthFactor); });
+                    auto releaseCqSlotsOnFailure = wil::scope_exit([&]() { s_release_room_in_cq(RioRQGrowthFactor); });
 
                     // guarantee room in the RQ for this next IO
                     PrintDebugInfo(
@@ -406,7 +407,7 @@ namespace ctsTraffic {
                     // since it succeeded, update reserved with the new size
                     this->rqueue_reserved = new_rqueue_used;
                     // RQ was updated successfully, dismiss the scope guard
-                    releaseCqSlotsOnFailure.dismiss();
+                    releaseCqSlotsOnFailure.release();
                 }
 
                 // everything succeeded - update rqueue_used with the new slots being used for this next IO
@@ -450,7 +451,7 @@ namespace ctsTraffic {
             }
 
             s_make_room_in_cq(RioRQGrowthFactor);
-            ctlScopeGuard(releaseRoomInCqOnFailure, { s_release_room_in_cq(RioRQGrowthFactor); });
+            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() { s_release_room_in_cq(RioRQGrowthFactor); });
 
             // create the RQ for this socket
             // don't need a scope guard to close the RQ on error - the RQ is freed when the RIO socket is closed
@@ -480,7 +481,7 @@ namespace ctsTraffic {
             }
 
             // no failures
-            releaseRoomInCqOnFailure.dismiss();
+            releaseRoomInCqOnFailure.release();
         }
         ~RioSocketContext() noexcept
         {

@@ -20,9 +20,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 // os headers
 #include <Windows.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include "ctException.hpp"
-#include "ctScopeGuard.hpp"
 #include "ctTimer.hpp"
 #include "ctLocks.hpp"
 
@@ -216,18 +217,18 @@ namespace ctl
 				//
 				this->callback_objects.emplace_back(std::move(_new_request));
 				// ensure this is exception safe with a scope guard
-				ctlScopeGuard(removeCallbackObjectOnFailure, { this->callback_objects.pop_back(); });
+				auto removeCallbackObjectOnFailure = wil::scope_exit([&]() { this->callback_objects.pop_back(); });
 
 				PTP_TIMER temp_timer = this->create_tp();
 				// ensure the timer is closed (is exception safe) with a scope guard
-				ctlScopeGuard(deleteTemporaryTimerOnFailure, { ::CloseThreadpoolTimer(temp_timer); });
+				auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() { ::CloseThreadpoolTimer(temp_timer); });
 
 				// now attempt to store the new timer
 				this->tp_timers.push_back(temp_timer);
 
 				// all succeeded : dismiss the scope guards
-				deleteTemporaryTimerOnFailure.dismiss();
-				removeCallbackObjectOnFailure.dismiss();
+				deleteTemporaryTimerOnFailure.release();
+				removeCallbackObjectOnFailure.release();
 
 				unused_callback = this->callback_objects.end() - 1;
 			} else {

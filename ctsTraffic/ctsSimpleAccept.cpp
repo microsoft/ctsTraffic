@@ -18,6 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 #include <winsock2.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
@@ -80,7 +82,7 @@ namespace ctsTraffic {
                 // listen to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                     SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
-                    ctlScopeGuard(closeSocketOnError, { ::closesocket(listening); });
+                    auto closeSocketOnError = wil::scope_exit([&]() { ::closesocket(listening); });
 
                     auto gle = ctsConfig::SetPreBindOptions(listening, addr);
                     if (gle != NO_ERROR) {
@@ -102,7 +104,7 @@ namespace ctsTraffic {
 
                     listening_sockets.push_back(listening);
                     // socket is now being tracked in listening_sockets, dismiss the scope guard
-                    closeSocketOnError.dismiss();
+                    closeSocketOnError.release();
 
                     PrintDebugInfo(
                         L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
@@ -157,7 +159,7 @@ namespace ctsTraffic {
 
                 // get an accept-socket off the vector (protected with its cs)
                 ::EnterCriticalSection(&pimpl->accepting_cs);
-                ctlScopeGuard(leaveCriticalSectionOnExit, { ::LeaveCriticalSection(&pimpl->accepting_cs); });
+                auto leaveCriticalSectionOnExit = wil::scope_exit([&]() { ::LeaveCriticalSection(&pimpl->accepting_cs); });
 
                 const std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
                 pimpl->accepting_sockets.pop_back();
@@ -186,7 +188,7 @@ namespace ctsTraffic {
                 }
 
                 // now leave the CS before making the blocking call to accept()
-                leaveCriticalSectionOnExit.run_once();
+                leaveCriticalSectionOnExit.reset();
 
                 // increment the listening socket before calling accept on the blocking socket
                 ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);
@@ -196,7 +198,7 @@ namespace ctsTraffic {
                 DWORD gle = ::WSAGetLastError();
                 ::InterlockedDecrement(&pimpl->listening_sockets_refcount[listener_position]);
 
-                // if failed complete the ctsSocket and return 
+                // if failed complete the ctsSocket and return
                 if (new_socket == INVALID_SOCKET) {
                     ctsConfig::PrintErrorIfFailed(L"accept", gle);
                     accept_socket->complete_state(gle);

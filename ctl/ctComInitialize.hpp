@@ -23,9 +23,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <Objbase.h>
 #include <OleAuto.h>
+// wil headers
+#include <wil/resource.h>
 // local headers
 #include "ctException.hpp"
-#include "ctScopeGuard.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,7 +273,7 @@ namespace ctl
 		/// - This getter retrieves an IUnknown* from the encapsulated COM ptr.
 		///   Note that all COM ptrs derive from IUnknown.
 		///   This is provided for type-safety and clarity.
-		/// 
+		///
 		/// T** get_addr_of()
 		/// - This directly exposes the address of the encapsulated interface pointer
 		///   This break of encapsulation is required as COM will return interface
@@ -726,7 +727,7 @@ namespace ctl
 		////////////////////////////////////////////////////////////////////////////////
 		///
 		/// c'tor and d'tor
-		/// 
+		///
 		/// Guarantees initialization and cleanup of the encapsulated VARIANT
 		/// The template constructor directly constructs a VARIANT based off the
 		///  input type, streamlining coding requirements from the caller.
@@ -1663,7 +1664,7 @@ namespace ctl
 			}
 
 			// scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-			ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+			auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
 			// don't modify the out param should an exception be thrown - don't leave the user with bogus data
 			std::vector<std::wstring> tempData;
@@ -1693,7 +1694,7 @@ namespace ctl
 			}
 
 			// scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-			ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+			auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
 			// don't modify the out param should an exception be thrown - don't leave the user with bogus data
 			std::vector<unsigned long> tempData;
@@ -1739,7 +1740,7 @@ namespace ctl
 			}
 
 			// scope guard will guarantee SafeArrayUnaccessData is called on variant.parray even in the face of an exception
-			ctlScopeGuard(unaccessArray, {::SafeArrayUnaccessData(variant.parray); });
+			auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
 			// don't modify the out param should an exception be thrown - don't leave the user with bogus data
 			std::vector<ctComPtr<T>> tempData;
@@ -1870,7 +1871,7 @@ namespace ctl
 				throw std::bad_alloc();
 			}
 			// store the SAFEARRY in an exception safe container
-			ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+			auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
 			for (size_t loop = 0; loop < _data.size(); ++loop) {
 				//
@@ -1887,7 +1888,7 @@ namespace ctl
 				}
 			}
 			// don't free the SAFEARRAY on success - its lifetime is transferred to this->variant
-			guard_array.dismiss();
+			guard_array.release();
 			variant.parray = temp_safe_array;
 			variant.vt = VT_BSTR | VT_ARRAY;
 		}
@@ -1899,7 +1900,7 @@ namespace ctl
 				throw std::bad_alloc();
 			}
 			// store the SAFEARRY in an exception safe container
-			ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+			auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
 			for (size_t loop = 0; loop < _data.size(); ++loop) {
 				//
@@ -1914,7 +1915,7 @@ namespace ctl
 				}
 			}
 			// don't free the SAFEARRAY on success - its lifetime is transferred to this->variant
-			guard_array.dismiss();
+			guard_array.release();
 			variant.parray = temp_safe_array;
 			variant.vt = VT_UI4 | VT_ARRAY;
 		}
@@ -1927,7 +1928,7 @@ namespace ctl
 				throw std::bad_alloc();
 			}
 			// store the SAFEARRY in an exception safe container
-			ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+			auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
 			for (size_t loop = 0; loop < _data.size(); ++loop) {
 				//
@@ -1943,7 +1944,7 @@ namespace ctl
 				}
 			}
 			// don't free the SAFEARRAY on success - its lifetime is transferred to this->variant
-			guard_array.dismiss();
+			guard_array.release();
 			variant.parray = temp_safe_array;
 			variant.vt = VT_I4 | VT_ARRAY;
 		}
@@ -1955,7 +1956,7 @@ namespace ctl
 				throw std::bad_alloc();
 			}
 			// store the SAFEARRY in an exception safe container
-			ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+			auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
 			for (size_t loop = 0; loop < _data.size(); ++loop) {
 				//
@@ -1970,7 +1971,7 @@ namespace ctl
 				}
 			}
 			// don't free the SAFEARRAY on success - its lifetime is transferred to this->variant
-			guard_array.dismiss();
+			guard_array.release();
 			variant.parray = temp_safe_array;
 			variant.vt = VT_UI1 | VT_ARRAY;
 		}
@@ -1991,14 +1992,14 @@ namespace ctl
 				throw std::bad_alloc();
 			}
 			// store the SAFEARRY in an exception safe container
-			ctlScopeGuard(guard_array, {::SafeArrayDestroy(temp_safe_array); });
+			auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
 			// to be exception safe, AddRef every object before trying to add them to the safe-array
 			// - on exception, the ScopeGuard will Release these extra references
 			for (auto& ptr : _data) {
 				ptr->AddRef();
 			}
-			ctlScopeGuard(guard_comptr, {
+			auto guard_comptr = wil::scope_exit([&]() {
 				for (auto& ptr : _data) {
 					ptr->Release();
 				}
@@ -2017,10 +2018,10 @@ namespace ctl
 				}
 			}
 
-			// don't free the SAFEARRAY or Release the IUnknown* on success 
+			// don't free the SAFEARRAY or Release the IUnknown* on success
 			// - the lifetime of both are now transferred to this->variant
-			guard_comptr.dismiss();
-			guard_array.dismiss();
+			guard_comptr.release();
+			guard_array.release();
 
 			variant.parray = temp_safe_array;
 			variant.vt = VT_UNKNOWN | VT_ARRAY;

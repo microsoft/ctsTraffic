@@ -20,8 +20,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 
+// wil headers
+#include <wil/resource.h>
+
 // ctl headers
-#include <ctScopeGuard.hpp>
 #include <ctException.hpp>
 #include <ctString.hpp>
 
@@ -44,7 +46,7 @@ namespace ctsPerf {
                 ctl::ctString::format_string(L"CreateFile(%ws)", file_name.c_str()).c_str(),
                 true);
         }
-        ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
+        auto closeHandleOnError = wil::scope_exit([&]() { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
 
         // write the UTF16 Byte order mark
         static const WCHAR BOM_UTF16 = 0xFEFF;
@@ -69,7 +71,7 @@ namespace ctsPerf {
         }
 
         // everything succeeded, dismiss the scope guards
-        closeHandleOnError.dismiss();
+        closeHandleOnError.release();
     }
     void ctsWriteDetails::create_file(const std::wstring& _banner_text)
     {
@@ -87,7 +89,7 @@ namespace ctsPerf {
                 ctl::ctString::format_string(L"CreateFile(%ws)", file_name.c_str()).c_str(),
                 true);
         }
-        ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
+        auto closeHandleOnError = wil::scope_exit([&]() { ::CloseHandle(file_handle); file_handle = INVALID_HANDLE_VALUE; });
 
         // write the UTF16 Byte order mark
         static const WCHAR BOM_UTF16 = 0xFEFF;
@@ -105,7 +107,7 @@ namespace ctsPerf {
         end_row();
 
         // everything succeeded, dismiss the scope guards
-        closeHandleOnError.dismiss();
+        closeHandleOnError.release();
     }
 
     void ctsWriteDetails::write_row(const std::wstring& text) const noexcept

@@ -17,10 +17,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <windows.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctException.hpp>
 #include <ctString.hpp>
-#include <ctScopeGuard.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsPrintStatus.hpp"
@@ -108,7 +109,7 @@ namespace ctsTraffic {
             if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
                 throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsTextLogger", false);
             }
-            ctlScopeGuard(deleteCSOnError, { ::DeleteCriticalSection(&file_cs); });
+            auto deleteCSOnError = wil::scope_exit([&]() { ::DeleteCriticalSection(&file_cs); });
 
             file_handle = ::CreateFileW(
                 _file_name,
@@ -126,7 +127,7 @@ namespace ctsTraffic {
                     L"ctsTextLogger",
                     true);
             }
-            ctlScopeGuard(closeHandleOnError, { ::CloseHandle(file_handle); });
+            auto closeHandleOnError = wil::scope_exit([&]() { ::CloseHandle(file_handle); });
 
             // write the UTF16 Byte order mark
             static const WCHAR BOM_UTF16 = 0xFEFF;
@@ -143,8 +144,8 @@ namespace ctsTraffic {
             }
 
             // everything succeeded, dismiss the scope guards
-            closeHandleOnError.dismiss();
-            deleteCSOnError.dismiss();
+            closeHandleOnError.release();
+            deleteCSOnError.release();
         }
         ~ctsTextLogger() noexcept
         {

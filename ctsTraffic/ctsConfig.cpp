@@ -24,6 +24,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // multimedia timer
 #include <Mmsystem.h>
 
+// wil headers
+#include <wil/resource.h>
+
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctString.hpp>
@@ -3093,7 +3096,7 @@ namespace ctsTraffic
 
                     if (TryEnterCriticalSection(&s_StatusUpdateLock))
                     {
-                        ctlScopeGuard(leaveCSOnExit, { ::LeaveCriticalSection(&s_StatusUpdateLock); });
+                        auto leaveCSOnExit = wil::scope_exit([&]() { ::LeaveCriticalSection(&s_StatusUpdateLock); });
 
                         // capture the timeslices
                         const ctsSignedLongLong l_previoutimeslice = s_PreviousPrintTimeslice;

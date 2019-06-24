@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <stdexcept>
 #include <vector>
 #include <functional>
+#include <memory>
 // os headers
 #include <windows.h>
 // ctl headers

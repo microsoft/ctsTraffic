@@ -18,9 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <winsock2.h>
 #include <mswsock.h>
 #include <rpc.h> // for GUID
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include "ctException.hpp"
-#include "ctScopeGuard.hpp"
 
 
 namespace ctl
@@ -56,7 +57,7 @@ namespace ctl
 				*static_cast<int*>(perror) = wsError;
 				return FALSE;
 			}
-			ctlScopeGuard(WSACleanupOnExit, { ::WSACleanup(); });
+			auto WSACleanupOnExit = wil::scope_exit([&]() { ::WSACleanup(); });
 
 			// check to see if need to create a temp socket
 			SOCKET local_socket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
@@ -65,7 +66,7 @@ namespace ctl
 				*static_cast<int*>(perror) = ::WSAGetLastError();
 				return FALSE;
 			}
-			ctlScopeGuard(closesocketOnExit, { ::closesocket(local_socket); });
+			auto closesocketOnExit = wil::scope_exit([&]() { ::closesocket(local_socket); });
 
 			// control code and the size to fetch the extension function pointers
 			for (unsigned fn_loop = 0; fn_loop < fn_ptr_count; ++fn_loop)

@@ -27,7 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctLocks.hpp>
 #include <ctThreadPoolTimer.hpp>
-#include <ctScopeGuard.hpp>
 
 // project headers
 #include "ctsConfig.h"
@@ -70,16 +69,15 @@ namespace ctsTraffic {
         if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
             throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketBroker", false);
         }
-        ctlScopeGuard(deleteCsOnExit, { ::DeleteCriticalSection(&this->cs); });
+        auto deleteCsOnExit = wil::scope_exit([&]() { ::DeleteCriticalSection(&this->cs); });
 
         // create our manual-reset notification event
-        done_event.reset(::CreateEvent(nullptr, TRUE, FALSE, nullptr));
-        if (nullptr == done_event.get()) {
+        if (!done_event.try_create(wil::EventOptions::ManualReset, nullptr)) {
             throw ctException(::GetLastError(), L"CreateEvent", L"ctsSocketBroker", false);
         }
 
         // no failures, dismiss the scope guards
-        deleteCsOnExit.dismiss();
+        deleteCsOnExit.release();
     }
 
     ctsSocketBroker::~ctsSocketBroker() noexcept
@@ -107,7 +105,7 @@ namespace ctsTraffic {
 
         // only loop to pending_limit
         while (total_connections_remaining > 0 && pending_sockets < pending_limit) {
-            // for outgoing connections, limit to ConnectionThrottleLimit 
+            // for outgoing connections, limit to ConnectionThrottleLimit
             // - to prevent killing the box with DPCs with too many concurrent connect attempts
             // checking first since TimerCallback might have already established connections
             if (!ctsConfig::Settings->AcceptFunction &&

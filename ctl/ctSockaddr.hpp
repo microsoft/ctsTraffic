@@ -21,8 +21,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
-#include "ctScopeGuard.hpp"
 #include "ctException.hpp"
 
 #pragma prefast(push)
@@ -49,7 +50,7 @@ namespace ctl
 		std::vector<ctSockaddr> ResolveName(LPCWSTR _name)
 		{
 			ADDRINFOW* addr_result = nullptr;
-			ctlScopeGuard(freeAddrOnExit, { if (addr_result) ::FreeAddrInfoW(addr_result); });
+			auto freeAddrOnExit = wil::scope_exit([&]() { if (addr_result) ::FreeAddrInfoW(addr_result); });
 
 			std::vector<ctSockaddr> return_addrs;
 			if (0 == ::GetAddrInfoW(_name, nullptr, nullptr, &addr_result)) {
