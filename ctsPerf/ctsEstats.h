@@ -415,18 +415,19 @@ namespace details {
 
         // Find currently connected BSS entry
         // Get WLAN_BSS_ENTRY structure
-        BOOLEAN connectedBSSFound = false;
         for (UINT i = 0; i < pBssList->dwNumberOfItems; i++) {
             bssEntry = (WLAN_BSS_ENTRY *) & pBssList->wlanBssEntries[i];
             
             if (std::strncmp(reinterpret_cast<PCHAR>(connectionAttributes->wlanAssociationAttributes.dot11Bssid), 
                              reinterpret_cast<PCHAR>(bssEntry->dot11Bssid), 
                              6) == 0) {
-                connectedBSSFound = true;
+                return 0;
             }
         }
 
-        return 0;
+        // If this point is reached, then no connected BSS entry was found
+        wprintf(L"No connected BSS entry found.\n");
+        return 1;
     }
 
 
