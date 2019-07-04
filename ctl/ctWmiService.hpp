@@ -13,195 +13,109 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// cpp headers
-#include <exception>
 // os headers
 #include <windows.h>
+#include <OleAuto.h>
 #include <Wbemidl.h>
-// local headers
-#include "ctException.hpp"
-#include "ctWmiException.hpp"
-#include "ctComInitialize.hpp"
+// wil headers
+#include <wil/resource.h>
+#include <wil/com.h>
 
 namespace ctl
 {
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// class ctWmiService
-	///
-	/// Callers must instantiate a ctWmiService instance in order to use any ctWmi* class.  This class
-	///   tracks the WMI initialization of the IWbemLocator and IWbemService interfaces - which
-	///   maintain a connection to the specified WMI Service through which WMI calls are made.
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Callers must instantiate a ctWmiService instance in order to use any of the ctWmi* classes
+    // This class tracks the WMI initialization of the IWbemLocator and IWbemService interfaces
+    //   which maintain a connection to the specified WMI Service through which WMI calls are made
 	class ctWmiService
 	{
 	public:
-		/////////////////////////////////////////////////////////////////////////////////////
-		///
-		/// Note: current only connecting to the local machine.
-		///
-		/// Note: CoInitializeSecurity is not called by the ctWmi* classes. This security
-		///   policy should be defined by the code consuming these libraries, as these
-		///   libraries cannot assume the security context to apply to the process.
-		///
-		/// Argument:
-		/// LPCWSTR _path: this is the WMI namespace path to connect with
-		///
-		/////////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiService(LPCWSTR _path)
+		// CoInitializeSecurity is not called by the ctWmi* classes. This security
+		//   policy should be defined by the code consuming these libraries, as these
+		//   libraries cannot assume the security context to apply to the process.
+		explicit ctWmiService(PCWSTR path)
 		{
-			this->wbemLocator = ctComPtr<IWbemLocator>::createInstance(CLSID_WbemLocator, IID_IWbemLocator);
+            m_wbemLocator = wil::CoCreateInstance<WbemLocator, IWbemLocator>();
 
-			ctComBstr path(_path);
-			auto hr = this->wbemLocator->ConnectServer(
-				path.get(), // Object path of WMI namespace
+			THROW_IF_FAILED(m_wbemLocator->ConnectServer(
+				wil::make_bstr(path).get(), // Object path of WMI namespace
 				nullptr, // User name. NULL = current user
 				nullptr, // User password. NULL = current
 				nullptr, // Locale. NULL indicates current
 				0, // Security flags.
 				nullptr, // Authority (e.g. Kerberos)
 				nullptr, // Context object 
-				this->wbemServices.get_addr_of()); // receive pointer to IWbemServices proxy
-			if (FAILED(hr)) {
-				throw ctException(hr, L"IWbemLocator::ConnectServer", L"ctWmiService::connect", false);
-			}
+				m_wbemServices.put())); // receive pointer to IWbemServices proxy
 
-			hr = CoSetProxyBlanket(
-				this->wbemServices.get_IUnknown(), // Indicates the proxy to set
-				RPC_C_AUTHN_WINNT, // RPC_C_AUTHN_xxx
-				RPC_C_AUTHZ_NONE, // RPC_C_AUTHZ_xxx
-				nullptr, // Server principal name 
-				RPC_C_AUTHN_LEVEL_CALL, // RPC_C_AUTHN_LEVEL_xxx 
-				RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
-				nullptr, // client identity
-				EOAC_NONE // proxy capabilities 
-			);
-			if (FAILED(hr)) {
-				throw ctException(hr, L"CoSetProxyBlanket", L"ctWmiService::connect", false);
-			}
+            THROW_IF_FAILED(CoSetProxyBlanket(
+                m_wbemServices.get(), // Indicates the proxy to set
+                RPC_C_AUTHN_WINNT, // RPC_C_AUTHN_xxx
+                RPC_C_AUTHZ_NONE, // RPC_C_AUTHZ_xxx
+                nullptr, // Server principal name 
+                RPC_C_AUTHN_LEVEL_CALL, // RPC_C_AUTHN_LEVEL_xxx 
+                RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
+                nullptr, // client identity
+                EOAC_NONE)); // proxy capabilities 
 		}
 
 		~ctWmiService() = default;
+        ctWmiService(const ctWmiService& service) noexcept = default;
+        ctWmiService& operator=(const ctWmiService& service) noexcept = default;
+        ctWmiService(ctWmiService&& rhs) noexcept = default;
+        ctWmiService& operator=(ctWmiService&& rhs) noexcept = default;
 
-		ctWmiService(const ctWmiService& _service) noexcept
-		: wbemLocator(_service.wbemLocator),
-		  wbemServices(_service.wbemServices)
-		{
-			// empty
-		}
-
-		ctWmiService& operator=(const ctWmiService& _service) noexcept
-		{
-			ctWmiService temp(_service);
-			using std::swap;
-			swap(this->wbemLocator, temp.wbemLocator);
-			swap(this->wbemServices, temp.wbemServices);
-			return *this;
-		}
-
-		ctWmiService(ctWmiService&& rhs) noexcept
-		: wbemLocator(std::move(rhs.wbemLocator)),
-		  wbemServices(std::move(rhs.wbemServices))
-		{
-		}
-		ctWmiService& operator=(ctWmiService&& rhs) noexcept
-		{
-			wbemLocator = std::move(rhs.wbemLocator);
-			wbemServices = std::move(rhs.wbemServices);
-			return *this;
-		}
-
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// operator ->
-		/// - exposes the underlying IWbemServices* 
-		///
-		/// A no-fail/no-throw operation
-		////////////////////////////////////////////////////////////////////////////////
 		IWbemServices* operator->() noexcept
 		{
-			return this->wbemServices.get();
+			return m_wbemServices.get();
 		}
-
 		const IWbemServices* operator ->() const noexcept
 		{
-			return this->wbemServices.get();
+			return m_wbemServices.get();
 		}
 
-		bool operator ==(const ctWmiService& _service) const noexcept
+		bool operator ==(const ctWmiService& service) const noexcept
 		{
-			return this->wbemLocator == _service.wbemLocator &&
-				   this->wbemServices == _service.wbemServices;
+			return m_wbemLocator == service.m_wbemLocator &&
+				   m_wbemServices == service.m_wbemServices;
 		}
-
-		bool operator !=(const ctWmiService& _service) const noexcept
+		bool operator !=(const ctWmiService& service) const noexcept
 		{
-			return !(*this == _service);
+			return !(*this == service);
 		}
 
 		IWbemServices* get() noexcept
 		{
-			return this->wbemServices.get();
+			return m_wbemServices.get();
 		}
-
 		const IWbemServices* get() const noexcept
 		{
-			return this->wbemServices.get();
+			return m_wbemServices.get();
 		}
 
-		void delete_path(LPCWSTR _objPath, const ctComPtr<IWbemContext>& _context)
-		{
-			ctComBstr bstrObjectPath(_objPath);
-			ctComPtr<IWbemCallResult> result;
-			auto hr = this->wbemServices->DeleteInstance(
-				bstrObjectPath.get(),
+		void delete_path(PCWSTR objPath, const wil::com_ptr<IWbemContext>& context) const
+        {
+			wil::com_ptr<IWbemCallResult> result;
+            THROW_IF_FAILED(m_wbemServices->DeleteInstance(
+				wil::make_bstr(objPath).get(),
 				WBEM_FLAG_RETURN_IMMEDIATELY,
-				const_cast<IWbemContext*>(_context.get()),
-				result.get_addr_of());
-			if (FAILED(hr))
-			{
-				throw ctWmiException(hr, L"IWbemServices::DeleteInstance", L"ctWmiService::delete_path", false);
-			}
-
+				const_cast<IWbemContext*>(context.get()),
+				result.addressof()));
 			// wait for the call to complete
 			HRESULT status;
-			hr = result->GetCallStatus(WBEM_INFINITE, &status);
-			if (FAILED(hr))
-			{
-				throw ctWmiException(hr, L"IWbemCallResult::GetCallStatus", L"ctWmiService::delete_path", false);
-			}
-			if (FAILED(status))
-			{
-				throw ctWmiException(status, L"IWbemServices::DeleteInstance", L"ctWmiService::delete_path", false);
-			}
+            THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
+            THROW_IF_FAILED(status);
 		}
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// void delete_path(LPCWSTR)
-		/// - Deletes the WMI object based off the object path specified in the input
-		/// - Throws ctWmiException on failures
-		///
-		/// The object path takes the form of:
-		///    MyClass.MyProperty1='33',MyProperty2='value'
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		void delete_path(LPCWSTR _objPath)
-		{
-			const ctComPtr<IWbemContext> null_context;
-			delete_path(_objPath, null_context);
+		// Deletes the WMI object based off the object path specified in the input
+		// The object path takes the form of:
+		//    MyClass.MyProperty1='33',MyProperty2='value'
+		void delete_path(PCWSTR objPath) const
+        {
+			const wil::com_ptr<IWbemContext> nullcontext;
+			delete_path(objPath, nullcontext.get());
 		}
 
 	private:
-		//
-		// TODO: tracking CoInitialize should not be occuring within these objects
-		// - as this is a per-thread call the caller should be enforcing
-		//
-		ctComInitialize coinit{};
-		ctComPtr<IWbemLocator> wbemLocator{};
-		ctComPtr<IWbemServices> wbemServices{};
+        wil::com_ptr<IWbemLocator> m_wbemLocator;
+		wil::com_ptr<IWbemServices> m_wbemServices;
 	};
 } // namespace ctl

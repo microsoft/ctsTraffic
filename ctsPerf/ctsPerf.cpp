@@ -37,8 +37,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace std;
 using namespace ctl;
 
-static HANDLE g_hBreak = nullptr;
-static ctWmiService* g_wmi = nullptr;
+HANDLE g_hBreak = nullptr;
+const ctWmiService* g_wmi = nullptr;
 
 BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 {
@@ -132,20 +132,23 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
     const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
-    if (wsError != 0) {
+    if (wsError != 0)
+    {
         ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 
     // create a notification event to signal if the user wants to exit early
     g_hBreak = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (g_hBreak == nullptr) {
+    if (g_hBreak == nullptr)
+    {
         const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
         return gle;
     }
 
-    if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE)) {
+    if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE))
+    {
         const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
         return gle;
@@ -154,13 +157,15 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     auto trackNetworking = false;
     auto trackEstats = false;
 
-	wstring trackInterfaceDescription;
+    wstring trackInterfaceDescription;
     wstring trackProcess;
     auto processId = UninitializedProcessId;
     DWORD timeToRunMs = 60000; // default to 60 seconds
 
-	for (DWORD arg_count = argc; arg_count > 1; --arg_count) {
-        if (ctString::istarts_with(argv[arg_count - 1], L"-process:")) {
+    for (DWORD arg_count = argc; arg_count > 1; --arg_count)
+    {
+        if (ctString::istarts_with(argv[arg_count - 1], L"-process:"))
+        {
             trackProcess = argv[arg_count - 1];
 
             // strip off the "process:" preface to the string
@@ -168,16 +173,20 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackProcess.erase(trackProcess.begin(), endOfToken + 1);
 
             // the performance counter does not look at the extension, so remove .exe if it's there
-            if (ctString::iends_with(trackProcess, L".exe")) {
+            if (ctString::iends_with(trackProcess, L".exe"))
+            {
                 trackProcess.erase(trackProcess.end() - 4, trackProcess.end());
             }
-            if (trackProcess.empty()) {
+            if (trackProcess.empty())
+            {
                 wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
                 wprintf(UsageStatement);
                 return 1;
             }
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:"))
+        {
             wstring pidString(argv[arg_count - 1]);
 
             // strip off the "pid:" preface to the string
@@ -185,37 +194,52 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             pidString.erase(pidString.begin(), endOfToken + 1);
 
             // the user could have specified zero, which happens to be what is returned from wcstoul on error
-            if (pidString == L"0") {
+            if (pidString == L"0")
+            {
                 processId = 0;
 
-            } else {
+            }
+            else
+            {
                 processId = ::wcstoul(pidString.c_str(), nullptr, 10);
-                if (processId == 0 || processId == ULONG_MAX) {
+                if (processId == 0 || processId == ULONG_MAX)
+                {
                     wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
                     wprintf(UsageStatement);
                     return 1;
                 }
             }
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-estats")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-estats"))
+        {
             trackEstats = true;
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking"))
+        {
             trackNetworking = true;
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:"))
+        {
             trackInterfaceDescription = argv[arg_count - 1];
 
             // strip off the "-InterfaceDescription:" preface to the string
             const auto endOfToken = find(trackInterfaceDescription.begin(), trackInterfaceDescription.end(), L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
 
-        } else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly")) {
+        }
+        else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly"))
+        {
             g_MeanOnly = true;
 
-        } else {
+        }
+        else
+        {
             const auto timeToRun = wcstoul(argv[arg_count - 1], nullptr, 10);
-            if (timeToRun == 0 || timeToRun == ULONG_MAX) {
+            if (timeToRun == 0 || timeToRun == ULONG_MAX)
+            {
                 wprintf(L"Incorrect option: %ws\n", argv[arg_count - 1]);
                 wprintf(UsageStatement);
                 return 1;
@@ -232,43 +256,50 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     const auto trackPerProcess = !trackProcess.empty() || processId != UninitializedProcessId;
 
-    if (timeToRunMs <= 5000) {
+    if (timeToRunMs <= 5000)
+    {
         wprintf(L"ERROR: Must run over 5 seconds to have enough samples for analysis\n");
         wprintf(UsageStatement);
         return 1;
     }
 
-    try {
+    try
+    {
         ctsPerf::ctsEstats estats;
-        if (trackEstats) {
-            if (estats.start()) {
+        if (trackEstats)
+        {
+            if (estats.start())
+            {
                 wprintf(L"Enabling ESTATS\n");
-            } else {
+            }
+            else
+            {
                 wprintf(L"ESTATS cannot be started - verify running as Administrator\n");
-				return 1;
+                return 1;
             }
         }
 
         wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
-        ctComInitialize coinit;
-        ctWmiService wmi(L"root\\cimv2");
+        const ctComInitialize coinit;
+        const ctWmiService wmi(L"root\\cimv2");
         g_wmi = &wmi;
 
         auto deleteAllCounters = wil::scope_exit([&]() { DeleteAllCounters(); });
 
         ctsPerf::ctsWriteDetails cpuwriter(g_FileName);
-		cpuwriter.create_file(g_MeanOnly);
+        cpuwriter.create_file(g_MeanOnly);
 
-		ctsPerf::ctsWriteDetails networkWriter(g_NetworkingFilename);
-		if (trackNetworking) {
-			networkWriter.create_file(g_MeanOnly);
-		}
+        ctsPerf::ctsWriteDetails networkWriter(g_NetworkingFilename);
+        if (trackNetworking)
+        {
+            networkWriter.create_file(g_MeanOnly);
+        }
 
-		ctsPerf::ctsWriteDetails processWriter(g_ProcessFilename);
-		if (trackPerProcess)
-		{
-			processWriter.create_file(g_MeanOnly);
-		}
+        ctsPerf::ctsWriteDetails processWriter(g_ProcessFilename);
+        if (trackPerProcess)
+        {
+            processWriter.create_file(g_MeanOnly);
+        }
 
         wprintf(L".");
 
@@ -276,9 +307,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         std::vector<ctWmiPerformance> performance_vector;
 
         performance_vector.emplace_back(InstantiateProcessorCounters());
-		performance_vector.emplace_back(InstantiateMemoryCounters());
+        performance_vector.emplace_back(InstantiateMemoryCounters());
 
-        if (trackNetworking) {
+        if (trackNetworking)
+        {
             performance_vector.emplace_back(InstantiateNetworkAdapterCounters(trackInterfaceDescription));
             performance_vector.emplace_back(InstantiateNetworkInterfaceCounters(trackInterfaceDescription));
             performance_vector.emplace_back(InstantiateIPCounters());
@@ -286,29 +318,35 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             performance_vector.emplace_back(InstantiateUDPCounters());
         }
 
-        if (!trackProcess.empty()) {
+        if (!trackProcess.empty())
+        {
             performance_vector.emplace_back(InstantiatePerProcessByNameCounters(trackProcess));
 
-        } else if (processId != UninitializedProcessId) {
+        }
+        else if (processId != UninitializedProcessId)
+        {
             performance_vector.emplace_back(InstantiatePerProcessByPIDCounters(processId));
         }
 
         wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
-        for (auto& perf_object : performance_vector) {
+        for (auto& perf_object : performance_vector)
+        {
             perf_object.start_all_counters(1000);
         }
 
         ::WaitForSingleObject(g_hBreak, timeToRunMs);
 
         wprintf(L"Stopping counters ....\n\n");
-        for (auto& perf_object : performance_vector) {
+        for (auto& perf_object : performance_vector)
+        {
             perf_object.stop_all_counters();
         }
 
         ProcessProcessorCounters(cpuwriter);
         ProcessMemoryCounters(cpuwriter);
 
-		if (trackNetworking) {
+        if (trackNetworking)
+        {
             ProcessNetworkAdapterCounters(networkWriter);
             ProcessNetworkInterfaceCounters(networkWriter);
             ProcessIPCounters(networkWriter);
@@ -316,12 +354,13 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             ProcessUDPCounters(networkWriter);
         }
 
-		if (trackPerProcess)
-		{
-			ProcessPerProcessCounters(trackProcess, processId, processWriter);
-		}
+        if (trackPerProcess)
+        {
+            ProcessPerProcessCounters(trackProcess, processId, processWriter);
+        }
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
         return 1;
     }
