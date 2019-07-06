@@ -23,931 +23,1097 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <windows.h>
+#include <OleAuto.h>
 #include <Wbemidl.h>
+// wil headers
+#include <wil/resource.h>
+#include <wil/com.h>
 // local headers
-#include "ctComInitialize.hpp"
 #include "ctWmiService.hpp"
 #include "ctWmiClassObject.hpp"
-#include "ctWmiException.hpp"
 
 namespace ctl
 {
-	class ctWmiInstance
-	{
-	public:
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// Constructors:
-		/// - requires a IWbemServices object already connected to WMI
-		///   
-		/// - one c'tor creates an empty instance (if set later)
-		/// - one c'tor takes the WMI class name to instantiate a new instance
-		/// - one c'tor takes an existing IWbemClassObject instance
-		///
-		/// Default d'tor, copy c'tor, and copy assignment operator
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		explicit ctWmiInstance(ctWmiService _wbemServices) noexcept :
-			wbemServices(std::move(_wbemServices))
-		{
-		}
+    namespace details
+    {
+        inline wil::unique_variant create_variant_array(const std::vector<std::wstring>& data)
+        {
+            const auto temp_safe_array = ::SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
+            THROW_IF_NULL_ALLOC(temp_safe_array);
+            auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
-		ctWmiInstance(ctWmiService _wbemServices, LPCWSTR _className) :
-			wbemServices(std::move(_wbemServices))
-		{
-			create_instance(_className);
-		}
+            for (size_t loop = 0; loop < data.size(); ++loop)
+            {
+                // SafeArrayPutElement requires an array of indexes for each dimension of the array
+                // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
+                long index[1] = { static_cast<long>(loop) };
 
-		ctWmiInstance(ctWmiService _wbemServices, ctComPtr<IWbemClassObject> _instance) noexcept :
-			wbemServices(std::move(_wbemServices)),
-			instanceObject(std::move(_instance))
-		{
-		}
+                const auto bstr = ::SysAllocString(data[loop].c_str());
+                THROW_IF_NULL_ALLOC(bstr);
+                THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, bstr));
+            }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// comparison operators
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		bool operator ==(const ctWmiInstance& _obj) const noexcept
-		{
-			return ((this->wbemServices == _obj.wbemServices) &&
-				    (this->instanceObject == _obj.instanceObject));
-		}
+            wil::unique_variant variant;
+            variant.parray = temp_safe_array;
+            variant.vt = VT_BSTR | VT_ARRAY;
 
-		bool operator !=(const ctWmiInstance& _obj) const noexcept
-		{
-			return !(*this == _obj);
-		}
+            // don't free the SAFEARRAY on success - its lifetime is transferred to variant
+            guard_array.release();
+            return variant;
+        }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// Accessor to retrieve the encapsulated IWbemClassObject
-		///
-		/// - returns the IWbemClassObject holding the instantiated class instance
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		ctComPtr<IWbemClassObject> get_instance() const noexcept
-		{
-			return this->instanceObject;
-		}
+        inline wil::unique_variant create_variant_array(const std::vector<unsigned long>& data)
+        {
+            const auto temp_safe_array = ::SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
+            THROW_IF_NULL_ALLOC(temp_safe_array);
+            auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
-		ctComBstr path() const
-		{
-			ctComVariant object_path_var;
-			ctComBstr object_path_bstr;
+            for (size_t loop = 0; loop < data.size(); ++loop)
+            {
+                // SafeArrayPutElement requires an array of indexes for each dimension of the array
+                // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
+                long index[1] = { static_cast<long>(loop) };
 
-			this->get(L"__RELPATH", &object_path_var);
-			if (!object_path_var.is_empty() && !object_path_var.is_null()) {
-				(void)object_path_var.retrieve(&object_path_bstr);
-			}
+                unsigned long value = data[loop];
+                THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            }
 
-			return object_path_bstr;
-		}
+            wil::unique_variant variant;
+            variant.parray = temp_safe_array;
+            variant.vt = VT_UI4 | VT_ARRAY;
 
-		ctWmiService get_service() const noexcept
-		{
-			return this->wbemServices;
-		}
+            // don't free the SAFEARRAY on success - its lifetime is transferred to variant
+            guard_array.release();
+            return variant;
+        }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Retrieves the class name this ctWmiInstance is representing if any
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		ctComBstr get_class_name() const
-		{
-			ctComVariant class_var;
-			ctComBstr class_name;
+        inline wil::unique_variant create_variant_array(const std::vector<unsigned short>& data)
+        {
+            // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
+            const auto temp_safe_array = ::SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
+            THROW_IF_NULL_ALLOC(temp_safe_array);
+            auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
-			this->get(L"__CLASS", &class_var);
-			if (!class_var.is_empty() && !class_var.is_null()) {
-				(void)class_var.retrieve(&class_name);
-			}
+            for (size_t loop = 0; loop < data.size(); ++loop)
+            {
+                // SafeArrayPutElement requires an array of indexes for each dimension of the array
+                // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
+                long index[1] = { static_cast<long>(loop) };
 
-			return class_name;
-		}
+                // Expand unsigned short to long because the SAFEARRAY created assumes VT_I4 elements
+                long value = data[loop];
+                THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Returns a class object for the class represented by this instance
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		ctWmiClassObject get_class_object() const noexcept
-		{
-			return ctWmiClassObject(this->wbemServices, this->instanceObject);
-		}
+            wil::unique_variant variant;
+            variant.parray = temp_safe_array;
+            variant.vt = VT_I4 | VT_ARRAY;
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Writes the instantiated object to the WMI repository
-		///
-		/// - supported _wbemFlags:
-		///   WBEM_FLAG_CREATE_OR_UPDATE
-		///   WBEM_FLAG_UPDATE_ONLY
-		///   WBEM_FLAG_CREATE_ONLY
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		void write_instance(const ctComPtr<IWbemContext>& _context, LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
-		{
-			ctComPtr<IWbemCallResult> result;
-			// forced to const-cast to make this const-correct as COM does not have
-			//   an expression for saying a method call is const
-			auto hr = this->wbemServices->PutInstance(
-				this->instanceObject.get(),
-				_wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
-				const_cast<IWbemContext*>(_context.get()),
-				result.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::PutInstance", L"ctWmiInstance::write_instance", false);
-			}
+            // don't free the SAFEARRAY on success - its lifetime is transferred to variant
+            guard_array.release();
+            return variant;
+        }
 
-			// wait for the call to complete
-			HRESULT status;
-			hr = result->GetCallStatus(WBEM_INFINITE, &status);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemCallResult::GetCallStatus", L"ctWmiInstance::write_instance", false);
-			}
-			if (FAILED(status)) {
-				throw ctWmiException(status, this->instanceObject.get(), L"IWbemServices::PutInstance", L"ctWmiInstance::write_instance", false);
-			}
-		}
+        inline wil::unique_variant create_variant_array(const std::vector<unsigned char>& data)
+        {
+            const auto temp_safe_array = ::SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
+            THROW_IF_NULL_ALLOC(temp_safe_array);
+            auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
 
-		void write_instance(LONG _wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
-		{
-			const ctComPtr<IWbemContext> null_context;
-			write_instance(null_context, _wbemFlags);
-		}
+            for (size_t loop = 0; loop < data.size(); ++loop)
+            {
+                // SafeArrayPutElement requires an array of indexes for each dimension of the array
+                // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
+                long index[1] = { static_cast<long>(loop) };
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Deletes the WMI object matching the instantiated IWbemClassObject
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		void delete_instance()
-		{
-			ctComBstr bstrObjectPath(this->path());
-			//
-			// delete the instance based off the __REPATH property
-			//
-			ctComPtr<IWbemCallResult> result;
-			auto hr = this->wbemServices->DeleteInstance(
-				bstrObjectPath.get(),
-				WBEM_FLAG_RETURN_IMMEDIATELY,
-				nullptr,
-				result.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::DeleteInstance", L"ctWmiInstance::delete_instance", false);
-			}
+                unsigned char value = data[loop];
+                THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            }
 
-			// wait for the call to complete
-			HRESULT status;
-			hr = result->GetCallStatus(WBEM_INFINITE, &status);
-			if (FAILED(hr)) {
-				// semi-sync call aborted - can't get status of the call
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemCallResult::GetCallStatus", L"ctWmiInstance::delete_instance", false);
-			}
-			if (FAILED(status)) {
-				throw ctWmiException(status, this->instanceObject.get(), L"IWbemServices::DeleteInstance", L"ctWmiInstance::delete_instance", false);
-			}
-		}
+            wil::unique_variant variant;
+            variant.parray = temp_safe_array;
+            variant.vt = VT_UI1 | VT_ARRAY;
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with zero arguments
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		ctWmiInstance execute_method(LPCWSTR _method)
-		{
-			return this->execute_method_private(_method, nullptr);
-		}
+            // don't free the SAFEARRAY on success - its lifetime is transferred to variant
+            guard_array.release();
+            return variant;
+        }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with one argument
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		template <typename Arg1>
-		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1)
-		{
-			//
-			// establish the class object for the [in] params to the method
-			//
-			ctComPtr<IWbemClassObject> inParamsDefinition;
-			auto hr = this->instanceObject->GetMethod(
-				_method, 0, inParamsDefinition.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// spawn an instance to store the params
-			//
-			ctComPtr<IWbemClassObject> inParamsInstance;
-			hr = inParamsDefinition->SpawnInstance(0, inParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// Instantiate a class object to iterate through each property
-			//
-            const ctWmiClassObject property_object(this->wbemServices, inParamsDefinition);
-			auto property_iter = property_object.property_begin();
-			//
-			// write each property
-			//
-			ctWmiInstance property_instance(this->wbemServices, inParamsInstance);
-			property_instance.set(property_iter->get(), _arg1);
-			//
-			// execute the method with the properties set
-			//
-			return this->execute_method_private(_method, inParamsInstance.get());
-		}
+        inline std::vector<std::wstring> retrieve_from_BSTR_array(const wil::unique_variant& variant)
+        {
+            FAIL_FAST_IF(variant.vt != (VT_BSTR | VT_ARRAY));
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with two arguments
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		template <typename Arg1, typename Arg2>
-		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2)
-		{
-			//
-			// establish the class object for the [in] params to the method
-			//
-			ctComPtr<IWbemClassObject> inParamsDefinition;
-			auto hr = this->instanceObject->GetMethod(
-				_method, 0, inParamsDefinition.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// spawn an instance to store the params
-			//
-			ctComPtr<IWbemClassObject> inParamsInstance;
-			hr = inParamsDefinition->SpawnInstance(0, inParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// Instantiate a class object to iterate through each property
-			//
-            const ctWmiClassObject property_object(this->wbemServices, inParamsDefinition);
-			auto property_iter = property_object.property_begin();
-			//
-			// write each property
-			//
-			ctWmiInstance property_instance(this->wbemServices, inParamsInstance);
-			property_instance.set(property_iter->get(), _arg1);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg2);
-			//
-			// execute the method with the properties set
-			//
-			return this->execute_method_private(_method, inParamsInstance.get());
-		}
+            BSTR* stringArray{};
+            THROW_IF_FAILED(::SafeArrayAccessData(variant.parray, reinterpret_cast<void**>(&stringArray)));
+            auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with three arguments
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		template <typename Arg1, typename Arg2, typename Arg3>
-		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3)
-		{
-			//
-			// establish the class object for the [in] params to the method
-			//
-			ctComPtr<IWbemClassObject> inParamsDefinition;
-			auto hr = this->instanceObject->GetMethod(
-				_method, 0, inParamsDefinition.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// spawn an instance to store the params
-			//
-			ctComPtr<IWbemClassObject> inParamsInstance;
-			hr = inParamsDefinition->SpawnInstance(0, inParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// Instantiate a class object to iterate through each property
-			//
-            const ctWmiClassObject property_object(this->wbemServices, inParamsDefinition);
-			auto property_iter = property_object.property_begin();
-			//
-			// write each property
-			//
-			ctWmiInstance property_instance(this->wbemServices, inParamsInstance);
-			property_instance.set(property_iter->get(), _arg1);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg2);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg3);
-			//
-			// execute the method with the properties set
-			//
-			return this->execute_method_private(_method, inParamsInstance.get());
-		}
+            std::vector<std::wstring> returnData;
+            for (unsigned loop = 0; loop < variant.parray->rgsabound[0].cElements; ++loop)
+            {
+                returnData.emplace_back(stringArray[loop]);
+            }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with four arguments
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
-		{
-			//
-			// establish the class object for the [in] params to the method
-			//
-			ctComPtr<IWbemClassObject> inParamsDefinition;
-			auto hr = this->instanceObject->GetMethod(
-				_method, 0, inParamsDefinition.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// spawn an instance to store the params
-			//
-			ctComPtr<IWbemClassObject> inParamsInstance;
-			hr = inParamsDefinition->SpawnInstance(0, inParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// Instantiate a class object to iterate through each property
-			//
-            const ctWmiClassObject property_object(this->wbemServices, inParamsDefinition);
-			auto property_iter = property_object.property_begin();
-			//
-			// write each property
-			//
-			ctWmiInstance property_instance(this->wbemServices, inParamsInstance);
-			property_instance.set(property_iter->get(), _arg1);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg2);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg3);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg4);
-			//
-			// execute the method with the properties set
-			//
-			return this->execute_method_private(_method, inParamsInstance.get());
-		}
+            return returnData;
+        }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// - Executes an instance method from the WMI object matching the 
-		///   instantiated IWbemClassObject
-		///
-		/// - Invokes method with five arguments
-		///
-		/// - Returns a ctWmiInstace containing the [out] parameters
-		///   The property "ReturnValue" contains the return value of the method
-		///
-		/// execute_method is *not* a const method as this class cannot guarantee
-		///    any method executed won't have other modifying side-effects
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-		ctWmiInstance execute_method(LPCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
-		{
-			//
-			// establish the class object for the [in] params to the method
-			//
-			ctComPtr<IWbemClassObject> inParamsDefinition;
-			auto hr = this->instanceObject->GetMethod(
-				_method, 0, inParamsDefinition.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::GetMethod", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// spawn an instance to store the params
-			//
-			ctComPtr<IWbemClassObject> inParamsInstance;
-			hr = inParamsDefinition->SpawnInstance(0, inParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::exec_method", false);
-			}
-			//
-			// Instantiate a class object to iterate through each property
-			//
-            const ctWmiClassObject property_object(this->wbemServices, inParamsDefinition);
-			auto property_iter = property_object.property_begin();
-			//
-			// write each property
-			//
-			ctWmiInstance property_instance(this->wbemServices, inParamsInstance);
-			property_instance.set(property_iter->get(), _arg1);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg2);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg3);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg4);
-			++property_iter;
-			property_instance.set(property_iter->get(), _arg5);
-			//
-			// execute the method with the properties set
-			//
-			return this->execute_method_private(_method, inParamsInstance.get());
-		}
+        std::vector<unsigned long> retrieve_from_UI4_array(const wil::unique_variant& variant)
+        {
+            FAIL_FAST_IF(variant.vt != (VT_UI4 | VT_ARRAY));
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// get() - exposes the properties of the WMI object instantiated
-		///       - accepts types that can be passed to ctComVariant::retrieve
-		///       - WMI instances don't use all VARIANT types - some special get specializations
-		///         exist because, for example, 64-bit integers actually get passed through
-		///         WMI as BSTRs (even though variants support 64-bit integers directly).
-		///         See the MSDN documentation for WMI MOF Data Types (Numbers):
-		///         http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
-		///       - can throw under low resources of the type copied into needs allocation
-		///       - can throw if the VARIANT conversion fails after the WMI call succeeds
-		///       - a const method - as the only side-effect known is incrementing 
-		///         a refcount of an embedded COM object in the VARIANT
-		///
-		////////////////////////////////////////////////////////////////////////////////
+            unsigned long* intArray{};
+            THROW_IF_FAILED(::SafeArrayAccessData(variant.parray, reinterpret_cast<void**>(&intArray)));
+            auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
-		bool is_null(LPCWSTR _propname) const
-		{
-			ctComVariant vtProp;
-			this->get_impl(_propname, vtProp.get());
-			return vtProp.is_null();
-		}
+            std::vector<unsigned long> returnData;
+            for (unsigned loop = 0; loop < variant.parray->rgsabound[0].cElements; ++loop)
+            {
+                returnData.push_back(intArray[loop]);
+            }
 
-		/// this has a complex annotation as T* can be a POD (like an int*) which must be _Out_
-		/// or T* could be a non-POD (like a std::wstring*) which must be _Inout_
-		template <typename T>
-		void get(LPCWSTR _propname, _Out_ T* _t) const
-		{
-			ctComVariant vtProp;
-			this->get_impl(_propname, vtProp.get());
-			///
-			/// if Get succeeds but the resulting VARIANT is NULL or Empty,
-			/// - will throw with e.why() == S_FALSE
-			///
-			if (vtProp.is_empty() || vtProp.is_null()) {
-				wchar_t propName[128];
-				_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
-				throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
-			}
-			// suppressing the 'Using uninitialized memory' warning since T* must be an _Out_ 
-			// but retrieve can be _Inout_. This is an artifact in how retrieve works with 
-			// both POD (_Out_) and non-POD (_Inout_) types
-#pragma warning( suppress : 6001 )
-			vtProp.retrieve(_t);
-		}
+            return returnData;
+        }
 
-		///
-		/// Overriding the get() function template for retrieving VARIANT values directly
-		/// - requires a properly initialized VARIANT
-		///
-		void get(LPCWSTR _propname, _Inout_ VARIANT* _variant) const
-		{
-			::VariantClear(_variant);
-			this->get_impl(_propname, _variant);
-		}
+        inline std::vector<unsigned short> retrieve_from_I4_array(const wil::unique_variant& variant)
+        {
+            // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
+            FAIL_FAST_IF(variant.vt != (VT_I4 | VT_ARRAY));
 
-		void get(LPCWSTR _propname, _Inout_ ctComVariant* _variant) const
-		{
-			ctComVariant vtProp;
-			this->get_impl(_propname, vtProp.get());
-			_variant->swap(vtProp);
-		}
+            long* intArray{};
+            THROW_IF_FAILED(::SafeArrayAccessData(variant.parray, reinterpret_cast<void**>(&intArray)));
+            auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
-		///
-		/// Overriding the get() function template to marshal a WMI instance from the underlying variant
-		///
-		void get(LPCWSTR _propname, _Inout_ ctComPtr<IWbemClassObject>* _instance) const
-		{
-			ctComVariant vtProp;
-			this->get_impl(_propname, vtProp.get());
-			///
-			/// if Get succeeds but the resulting VARIANT is NULL or Empty,
-			/// - will throw with e.why() == S_FALSE
-			///
-			if (vtProp.is_empty() || vtProp.is_null()) {
-				wchar_t propName[128];
-				_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
-				throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
-			}
+            std::vector<unsigned short> returnData;
+            for (unsigned loop = 0; loop < variant.parray->rgsabound[0].cElements; ++loop)
+            {
+                THROW_HR_IF(E_INVALIDARG, intArray[loop] > MAXUINT16);
+                returnData.push_back(static_cast<unsigned short>(intArray[loop]));
+            }
 
-			(void)vtProp.retrieve<IWbemClassObject>(_instance);
-		}
+            return returnData;
+        }
 
-		void get(LPCWSTR _propname, _Inout_ ctWmiInstance* _instance) const
-		{
-			ctComPtr<IWbemClassObject> instance_ptr(_instance->get_instance());
-			this->get(_propname, &instance_ptr);
+        inline std::vector<unsigned char> retrieve_from_UI1_array(const wil::unique_variant& variant)
+        {
+            FAIL_FAST_IF(variant.vt != (VT_UI1 | VT_ARRAY));
 
-			*_instance = ctWmiInstance(_instance->get_service(), instance_ptr);
-		}
+            unsigned char* charArray{};
+            THROW_IF_FAILED(::SafeArrayAccessData(variant.parray, reinterpret_cast<void**>(&charArray)));
+            auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
-		void get(LPCWSTR _propname, _Inout_ std::vector<ctComPtr<IWbemClassObject>>* _instance) const
-		{
-			ctComVariant vtProp;
-			this->get_impl(_propname, vtProp.get());
-			///
-			/// if Get succeeds but the resulting VARIANT is NULL or Empty,
-			/// - will throw with e.why() == S_FALSE
-			///
-			if (vtProp.is_empty() || vtProp.is_null()) {
-				wchar_t propName[128];
-				_snwprintf_s(propName, 128, _TRUNCATE, L"Requested property %ws is empty or null", _propname);
-				throw ctWmiException(S_FALSE, this->instanceObject.get(), propName, L"ctWmiInstance::get", true);
-			}
+            std::vector<unsigned char> returnData;
+            for (unsigned loop = 0; loop < variant.parray->rgsabound[0].cElements; ++loop)
+            {
+                returnData.push_back(charArray[loop]);
+            }
 
-			(void)vtProp.retrieve<IWbemClassObject>(_instance);
-		}
+            return returnData;
+        }
 
-		///
-		/// Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
-		///
-		/// This does NOT do any checks to see whether the underlying BSTR is a valid number -
-		/// if it's a BSTR but it didn't come from the relevant type of 64-bit integer, these
-		/// getters will appear to succeed (the output value will be whatever _wcstoi64/_wcstoui64
-		/// on the BSTR returns, normally the appropriate MAX or MIN value on overflow and 0 on other
-		/// errors).
-		///
-		void get(LPCWSTR _propname, _Out_ UINT64* _t) const
-		{
-			ctComBstr intermediaryStr;
-			this->get(_propname, &intermediaryStr);
-			*_t = _wcstoui64(intermediaryStr.get(), nullptr, 10);
-		}
+        template <typename T>
+        wil::com_ptr<T> retrieve_from_comptr(const wil::unique_variant& variant)
+        {
+            FAIL_FAST_IF(variant.vt != VT_UNKNOWN);
 
-		void get(LPCWSTR _propname, _Out_ INT64* _t) const
-		{
-			ctComBstr intermediaryStr;
-			this->get(_propname, &intermediaryStr);
-			*_t = _wcstoi64(intermediaryStr.get(), nullptr, 10);
-		}
+            wil::com_ptr<T> returnComPtr;
+            THROW_IF_FAILED(variant.punkVal->QueryInterface(__uuidof(T), reinterpret_cast<void**>(returnComPtr.put())));
+            return returnComPtr;
+        }
 
-		///
-		/// Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
-		/// around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
-		/// correctly through WMI directly.
-		///
-		/// The ctComVariant::retrieve method will correctly convert the 32-bit case, but not the
-		/// 16-bit case (since it would normally risk losing information).
-		///
-		/// This method does NOT do any overflow checking whatsoever. Be sure not to use this
-		/// specialization on anything that actually is an INT32.
-		///
-		void get(LPCWSTR _propname, _Out_ UINT16* _t) const
-		{
-			INT32 intermediaryInt32;
-			this->get(_propname, &intermediaryInt32);
-			*_t = static_cast<UINT16>(intermediaryInt32);
-		}
+        template <typename T>
+        std::vector<wil::com_ptr<T>> retrieve_from_comptr_array(const wil::unique_variant& variant)
+        {
+            FAIL_FAST_IF(variant.vt != (VT_UNKNOWN | VT_ARRAY));
 
-		////////////////////////////////////////////////////////////////////////////////////
-		///
-		/// set() - allows writing to the WMI object instantiated
-		///       - accepts types that are convertable to a ctComVariant
-		///       - only specific VARIANT Types are supported through WMI
-		///         this template provides that filter
-		///       - *not* a const method
-		///       - WMI also supports VT_NULL, VT_DISPATCH and VT_UNKNOWN
-		///         - these are not yet implemented.
-		///
-		////////////////////////////////////////////////////////////////////////////////////
-		void set(LPCWSTR _propname, const VARIANT* _vtProp)
-		{
-			// IWbemClassObject::Put should have declared the VARIANT member const
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, const_cast<VARIANT*>(_vtProp), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            IUnknown** iUnknownArray;
+            THROW_IF_FAILED(::SafeArrayAccessData(variant.parray, reinterpret_cast<void**>(&iUnknownArray)));
+            auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant.parray); });
 
-		void set(LPCWSTR _propname, const bool _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_BOOL>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            std::vector<wil::com_ptr<T>> returnData;
+            for (unsigned loop = 0; loop < variant.parray->rgsabound[0].cElements; ++loop)
+            {
+                wil::com_ptr<T> tempPtr;
+                THROW_IF_FAILED(iUnknownArray[loop]->QueryInterface(__uuidof(T), reinterpret_cast<void**>(tempPtr.put())));
+                returnData.push_back(tempPtr);
+            }
 
-		void set(LPCWSTR _propname, const char _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_UI1>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            return returnData;
+        }
+    }
+    
+    class ctWmiInstance
+    {
+    public:
+        ////////////////////////////////////////////////////////////////////////////////
+        ///
+        /// Constructors:
+        /// - requires a IWbemServices object already connected to WMI
+        ///   
+        /// - one c'tor creates an empty instance (if set later)
+        /// - one c'tor takes the WMI class name to instantiate a new instance
+        /// - one c'tor takes an existing IWbemClassObject instance
+        ///
+        /// Default d'tor, copy c'tor, and copy assignment operator
+        ///
+        ////////////////////////////////////////////////////////////////////////////////
+        explicit ctWmiInstance(ctWmiService service) noexcept :
+            m_wbemServices(std::move(service))
+        {
+        }
 
-		void set(LPCWSTR _propname, const unsigned char _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_UI1>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        ctWmiInstance(ctWmiService service, PCWSTR className) :
+            m_wbemServices(std::move(service))
+        {
+            // get the object from the WMI service
+            wil::com_ptr<IWbemClassObject> classObject;
+            THROW_IF_FAILED(m_wbemServices->GetObject(
+                wil::make_bstr(className).get(),
+                0,
+                nullptr,
+                classObject.addressof(),
+                nullptr));
+            // spawn an instance of this object
+            THROW_IF_FAILED(classObject->SpawnInstance(
+                0,
+                m_instanceObject.put()));
+        }
 
-		void set(LPCWSTR _propname, const short _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I2>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        ctWmiInstance(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) noexcept :
+            m_wbemServices(std::move(service)),
+            m_instanceObject(std::move(classObject))
+        {
+        }
 
-		void set(LPCWSTR _propname, const unsigned short _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I2>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        bool operator ==(const ctWmiInstance& _obj) const noexcept
+        {
+            return m_wbemServices == _obj.m_wbemServices &&
+                m_instanceObject == _obj.m_instanceObject;
+        }
 
-		void set(LPCWSTR _propname, const long _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I4>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        bool operator !=(const ctWmiInstance& _obj) const noexcept
+        {
+            return !(*this == _obj);
+        }
 
-		void set(LPCWSTR _propname, const unsigned long _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I4>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        wil::unique_bstr get_path() const
+        {
+            wil::unique_variant object_path_variant;
+            get(L"__RELPATH", object_path_variant.addressof());
 
-		void set(LPCWSTR _propname, const int _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I4>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            if (V_VT(&object_path_variant) == VT_EMPTY || V_VT(&object_path_variant) == VT_NULL)
+            {
+                return nullptr;
+            }
+            if (V_VT(&object_path_variant) == VT_BSTR)
+            {
+                return wil::make_bstr(V_BSTR(&object_path_variant));
+            }
 
-		void set(LPCWSTR _propname, const unsigned int _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_I4>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            THROW_HR(E_INVALIDARG);
+        }
 
-		void set(LPCWSTR _propname, const float _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_R4>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        ctWmiService get_service() const noexcept
+        {
+            return m_wbemServices;
+        }
 
-		void set(LPCWSTR _propname, const double _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_R8>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        // Retrieves the class name this ctWmiInstance is representing if any
+        wil::unique_bstr get_class_name() const
+        {
+            wil::unique_variant class_variant;
+            get(L"__CLASS", class_variant.addressof());
 
-		void set(LPCWSTR _propname, const SYSTEMTIME _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_DATE>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            if (V_VT(&class_variant) == VT_EMPTY || V_VT(&class_variant) == VT_NULL)
+            {
+                return nullptr;
+            }
+            if (V_VT(&class_variant) == VT_BSTR)
+            {
+                return wil::make_bstr(V_BSTR(&class_variant));
+            }
 
-		void set(LPCWSTR _propname, BSTR const _vtProp)  // NOLINT
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_BSTR>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+            THROW_HR(E_INVALIDARG);
+        }
 
-		void set(LPCWSTR _propname, LPCWSTR _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_BSTR>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        wil::com_ptr<IWbemClassObject> get_instance_object() const noexcept
+        {
+            return m_instanceObject;
+        }
 
-		void set(LPCWSTR _propname, const std::vector<std::wstring>& _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_BSTR | VT_ARRAY>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctWmiInstance::set", false);
-			}
-		}
+        // Returns a class object for the class represented by this instance
+        ctWmiClassObject get_class_object() const noexcept
+        {
+            return { m_wbemServices, m_instanceObject };
+        }
 
-		void set(LPCWSTR _propname, const std::vector<unsigned long>& _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_UI4 | VT_ARRAY>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
-			}
-		}
+        /// Writes the instantiated object to the WMI repository
+        // Supported wbemFlags:
+        //   WBEM_FLAG_CREATE_OR_UPDATE
+        //   WBEM_FLAG_UPDATE_ONLY
+        //   WBEM_FLAG_CREATE_ONLY
+        void write_class_object(const wil::com_ptr<IWbemContext>& context, const LONG wbem_flags = WBEM_FLAG_CREATE_OR_UPDATE)
+        {
+            wil::com_ptr<IWbemCallResult> result;
+            THROW_IF_FAILED(m_wbemServices->PutInstance(
+                m_instanceObject.get(),
+                wbem_flags | WBEM_FLAG_RETURN_IMMEDIATELY,
+                const_cast<IWbemContext*>(context.get()),
+                result.addressof()));
 
-		void set(LPCWSTR _propname, const std::vector<unsigned char>& _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_UI1 | VT_ARRAY>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
-			}
-		}
+            // wait for the call to complete
+            HRESULT status;
+            THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
+            THROW_IF_FAILED(status);
+        }
 
-		void set(LPCWSTR _propname, const std::vector<unsigned short>& _vtProp)
-		{
-			ctComVariant local_variant;
-			local_variant.assign<VT_UI2 | VT_ARRAY>(_vtProp);
-			const auto hr = this->instanceObject->Put(
-				_propname, 0, local_variant.get(), 0);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Put", L"ctl::ctWmiInstance::set", false);
-			}
-		}
+        void write_class_object(LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
+        {
+            const wil::com_ptr<IWbemContext> null_context;
+            write_class_object(null_context, wbemFlags);
+        }
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// void set_default(LPCWSTR)
-		///
-		/// - Calling IWbemClassObject::Delete on a property of an instance resets
-		///   to the default value.
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		void set_default(LPCWSTR _propname)
-		{
-			const auto hr = this->instanceObject->Delete(_propname);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Delete", L"ctWmiInstance::set_default", false);
-			}
-		}
+        void delete_class_object()
+        {
+            // delete the instance based off the __REPATH property
+            wil::com_ptr<IWbemCallResult> result;
+            THROW_IF_FAILED(m_wbemServices->DeleteInstance(
+                get_path().get(),
+                WBEM_FLAG_RETURN_IMMEDIATELY,
+                nullptr,
+                result.addressof()));
 
-	private:
-		ctWmiService wbemServices;
-		ctComPtr<IWbemClassObject> instanceObject;
+            // wait for the call to complete
+            HRESULT status;
+            THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
+            THROW_IF_FAILED(status);
+        }
 
-		void get_impl(LPCWSTR _propname, _Inout_ VARIANT* _variant) const
-		{
-			// since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
-			const auto hr = const_cast<IWbemClassObject*>(this->instanceObject.get())->Get(
-				_propname, 0, _variant, nullptr, nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::Get", L"ctWmiInstance::get", false);
-			}
-		}
+        // Invokes an instance method with zero arguments from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        ctWmiInstance execute_method(_In_ PCWSTR _method)
+        {
+            return execute_method_impl(_method, nullptr);
+        }
 
-		void create_instance(LPCWSTR _className)
-		{
-			ctComBstr classBstr(_className);
-			ctComPtr<IWbemClassObject> classObject;
-			// get the object from the WMI service
-			auto hr = this->wbemServices->GetObject(
-				classBstr.get(), 0, nullptr, classObject.get_addr_of(), nullptr);
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemServices::GetObject", L"ctWmiInstance::ctWmiInstance", false);
-			}
+        // Invokes an instance method with one argument from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        template <typename Arg1>
+        ctWmiInstance execute_method(_In_ PCWSTR _method, Arg1 _arg1)
+        {
+            // establish the class object for the [in] params to the method
+            wil::com_ptr<IWbemClassObject> inParamsDefinition;
+            THROW_IF_FAILED(m_instanceObject->GetMethod(
+                _method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
-			// spawn an instance of this object
-			hr = classObject->SpawnInstance(
-				0, this->instanceObject.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, this->instanceObject.get(), L"IWbemClassObject::SpawnInstance", L"ctWmiInstance::ctWmiInstance", false);
-			}
-		}
+            // spawn an instance to store the params
+            wil::com_ptr<IWbemClassObject> inParamsInstance;
+            THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
-		ctWmiInstance execute_method_private(LPCWSTR _method, _In_opt_ IWbemClassObject* _inParams)
-		{
-			auto bstrObjectPath(this->path());
-			//
-			// exec the method semi-synchronously from this instance based off the __REPATH property
-			//
-			ctComPtr<IWbemCallResult> result;
-			auto hr = this->wbemServices->ExecMethod(
-				bstrObjectPath.get(),
-				ctComBstr(_method).get(),
-				WBEM_FLAG_RETURN_IMMEDIATELY,
-				nullptr,
-				_inParams,
-				nullptr,
-				result.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemServices::ExecMethod", L"ctWmiInstance::execute_method", false);
-			}
-			//
-			// wait for the call to complete - and get the [out] param object
-			//
-			ctComPtr<IWbemClassObject> outParamsInstance;
-			hr = result->GetResultObject(WBEM_INFINITE, outParamsInstance.get_addr_of());
-			if (FAILED(hr)) {
-				throw ctWmiException(hr, L"IWbemCallResult::GetResultObject", L"ctWmiInstance::execute_method", false);
-			}
-			//
-			// the call went through - return the [out] params
-			//
-			return ctWmiInstance(this->wbemServices, outParamsInstance);
-		}
-	};
+            // Instantiate a class object to iterate through each property
+            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
+            auto property_iter = property_object.property_begin();
+
+            // write the property
+            ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
+            propertyclassObject.set(*property_iter, _arg1);
+
+            // execute the method with the properties set
+            return execute_method_impl(_method, inParamsInstance.get());
+        }
+
+        // Invokes an instance method with two arguments from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        template <typename Arg1, typename Arg2>
+        ctWmiInstance execute_method(_In_ PCWSTR _method, Arg1 _arg1, Arg2 _arg2)
+        {
+            // establish the class object for the [in] params to the method
+            wil::com_ptr<IWbemClassObject> inParamsDefinition;
+            THROW_IF_FAILED(m_instanceObject->GetMethod(
+                _method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
+
+            // spawn an instance to store the params
+            wil::com_ptr<IWbemClassObject> inParamsInstance;
+            THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
+
+            // Instantiate a class object to iterate through each property
+            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
+            auto property_iter = property_object.property_begin();
+
+            // write each property
+            ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
+            propertyclassObject.set(*property_iter, _arg1);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg2);
+
+            // execute the method with the properties set
+            return execute_method_impl(_method, inParamsInstance.get());
+        }
+
+        // Invokes an instance method with three arguments from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        template <typename Arg1, typename Arg2, typename Arg3>
+        ctWmiInstance execute_method(_In_ PCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3)
+        {
+            // establish the class object for the [in] params to the method
+            wil::com_ptr<IWbemClassObject> inParamsDefinition;
+            THROW_IF_FAILED(m_instanceObject->GetMethod(
+                _method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
+
+            // spawn an instance to store the params
+            wil::com_ptr<IWbemClassObject> inParamsInstance;
+            THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
+
+            // Instantiate a class object to iterate through each property
+            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
+            auto property_iter = property_object.property_begin();
+
+            // write each property
+            ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
+            propertyclassObject.set(*property_iter, _arg1);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg2);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg3);
+
+            // execute the method with the properties set
+            return execute_method_impl(_method, inParamsInstance.get());
+        }
+
+        // Invokes an instance method with four arguments from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+        ctWmiInstance execute_method(_In_ PCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
+        {
+            // establish the class object for the [in] params to the method
+            wil::com_ptr<IWbemClassObject> inParamsDefinition;
+            THROW_IF_FAILED(m_instanceObject->GetMethod(
+                _method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
+
+            // spawn an instance to store the params
+            wil::com_ptr<IWbemClassObject> inParamsInstance;
+            THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
+
+            // Instantiate a class object to iterate through each property
+            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
+            auto property_iter = property_object.property_begin();
+
+            // write each property
+            ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
+            propertyclassObject.set(*property_iter, _arg1);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg2);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg3);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg4);
+
+            // execute the method with the properties set
+            return execute_method_impl(_method, inParamsInstance.get());
+        }
+
+        // Invokes an instance method with four arguments from the instantiated IWbemClassObject
+        // Returns a ctWmiInstace containing the [out] parameters from the method call
+        //   (the property "ReturnValue" contains the return value)
+        template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
+        ctWmiInstance execute_method(_In_ PCWSTR _method, Arg1 _arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
+        {
+            // establish the class object for the [in] params to the method
+            wil::com_ptr<IWbemClassObject> inParamsDefinition;
+            THROW_IF_FAILED(m_instanceObject->GetMethod(
+                _method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
+
+            // spawn an instance to store the params
+            wil::com_ptr<IWbemClassObject> inParamsInstance;
+            THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
+
+            // Instantiate a class object to iterate through each property
+            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
+            auto property_iter = property_object.property_begin();
+
+            // write each property
+            ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
+            propertyclassObject.set(*property_iter, _arg1);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg2);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg3);
+            ++property_iter;
+            propertyclassObject.set(*property_iter, _arg4);
+
+            // execute the method with the properties set
+            return execute_method_impl(_method, inParamsInstance.get());
+        }
+
+        bool is_null(_In_ PCWSTR propname) const
+        {
+            wil::unique_variant local_variant;
+            get_property(propname, local_variant.addressof());
+            return V_VT(&local_variant) == VT_NULL;
+        }
+
+        // Calling IWbemClassObject::Delete on a property of an instance resets to the default value.
+        void set_default(_In_ PCWSTR propname) const
+        {
+            THROW_IF_FAILED(m_instanceObject->Delete(propname));
+        }
+
+        // get() and set()
+        //
+        //   Exposes the properties of the WMI object instantiated
+        //   WMI instances don't use all VARIANT types - some specializations
+        //   exist because, for example, 64-bit integers actually get passed through
+        //   WMI as BSTRs (even though variants support 64-bit integers directly).
+        //   See the MSDN documentation for WMI MOF Data Types (Numbers):
+        //   http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
+        //
+        //   Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
+        //   around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
+        //   correctly through WMI directly.
+
+        bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
+        {
+            ::VariantClear(value);
+            return get_property(propname, value);
+        }
+        void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
+        {
+            set_property(propname, const_cast<VARIANT*>(value));
+        }
+
+        // bool
+        bool get(_In_ PCWSTR propname, _Out_ bool* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_BOOL);
+            *value = V_BOOL(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const bool value) const
+        {
+            wil::unique_variant local_variant;
+            V_BOOL(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_BOOL;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // char
+        bool get(_In_ PCWSTR propname, _Out_ char* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_UI1);
+            *value = V_UI1(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const char value) const
+        {
+            wil::unique_variant local_variant;
+            V_UI1(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_UI1;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // unsigned char
+        bool get(_In_ PCWSTR propname, _Out_ unsigned char* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_UI1);
+            *value = V_UI1(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const unsigned char value) const
+        {
+            wil::unique_variant local_variant;
+            V_UI1(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_UI1;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // short
+        bool get(_In_ PCWSTR propname, _Out_ short* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I2);
+            *value = V_I2(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const short value) const
+        {
+            wil::unique_variant local_variant;
+            V_I2(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I2;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // unsigned short
+        bool get(_In_ PCWSTR propname, _Out_ unsigned short* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I4);
+            *value = static_cast<unsigned short>(V_I4(local_variant.addressof()));
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const unsigned short value) const
+        {
+            wil::unique_variant local_variant;
+            V_I2(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I2;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // long
+        bool get(_In_ PCWSTR propname, _Out_ long* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I4);
+            *value = V_I4(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const long value) const
+        {
+            wil::unique_variant local_variant;
+            V_I4(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I4;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // unsigned long
+        bool get(_In_ PCWSTR propname, _Out_ unsigned long* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I4);
+            *value = V_I4(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const unsigned long value) const
+        {
+            wil::unique_variant local_variant;
+            V_I4(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I4;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // int
+        bool get(_In_ PCWSTR propname, _Out_ int* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I4);
+            *value = V_I4(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const int value) const
+        {
+            wil::unique_variant local_variant;
+            V_I4(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I4;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // unsigned int
+        bool get(_In_ PCWSTR propname, _Out_ unsigned int* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_I4);
+            *value = V_I4(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const unsigned int value) const
+        {
+            wil::unique_variant local_variant;
+            V_I4(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_I4;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // float
+        bool get(_In_ PCWSTR propname, _Out_ float* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_R4);
+            *value = V_R4(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const float value) const
+        {
+            wil::unique_variant local_variant;
+            V_R4(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_R4;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // double
+        bool get(_In_ PCWSTR propname, _Out_ double* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_R8);
+            *value = V_R8(local_variant.addressof());
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const double value) const
+        {
+            wil::unique_variant local_variant;
+            V_R8(local_variant.addressof()) = value;
+            V_VT(local_variant.addressof()) = VT_R8;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // SYSTEMTIME
+        bool get(_In_ PCWSTR propname, _Out_ SYSTEMTIME* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_DATE);
+            THROW_LAST_ERROR_IF(!::VariantTimeToSystemTime(V_DATE(local_variant.addressof()), value));
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const SYSTEMTIME& value) const
+        {
+            DOUBLE time;
+            THROW_LAST_ERROR_IF(!::SystemTimeToVariantTime(const_cast<SYSTEMTIME*>(&value), &time));
+
+            wil::unique_variant local_variant;
+            V_DATE(local_variant.addressof()) = time;
+            V_VT(local_variant.addressof()) = VT_DATE;
+            set_property(propname, local_variant.addressof());
+        }
+
+        // BSTR
+        bool get(_In_ PCWSTR propname, _Out_ wil::unique_bstr* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_BSTR);
+            auto released_variant = local_variant.release();
+            (*value).reset(V_BSTR(&released_variant));
+            return true;
+        }
+        void set(_In_ PCWSTR propname, _In_ BSTR value) const
+        {
+            // using a raw VARIANT as to not free the caller's BSTR on exit
+            VARIANT local_variant;
+            V_BSTR(&local_variant) = value;
+            V_VT(&local_variant) = VT_BSTR;
+            set_property(propname, &local_variant);
+        }
+        bool get(_In_ PCWSTR propname, _Out_ std::wstring* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_BSTR);
+            (*value).assign(V_BSTR(local_variant.addressof()));
+            return true;
+        }
+        void set(_In_ PCWSTR propname, _In_ PCWSTR value) const
+        {
+            wil::unique_variant local_variant;
+            V_VT(local_variant.addressof()) = VT_BSTR;
+            V_BSTR(local_variant.addressof()) = ::SysAllocString(value);
+            THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
+            set_property(propname, local_variant.addressof());
+        }
+
+        // vector<wstring>
+        bool get(_In_ PCWSTR propname, _Out_ std::vector<std::wstring>* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != (VT_BSTR | VT_ARRAY));
+            *value = details::retrieve_from_BSTR_array(local_variant);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const std::vector<std::wstring>& value) const
+        {
+            wil::unique_variant local_variant(details::create_variant_array(value));
+            set_property(propname, local_variant.addressof());
+        }
+
+        // vector<unsigned long>
+        bool get(_In_ PCWSTR propname, _Out_ std::vector<unsigned long>* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != (VT_UI4 | VT_ARRAY));
+            *value = details::retrieve_from_UI4_array(local_variant);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const std::vector<unsigned long>& value) const
+        {
+            wil::unique_variant local_variant(details::create_variant_array(value));
+            set_property(propname, local_variant.addressof());
+        }
+
+        // vector<unsigned short>
+        bool get(_In_ PCWSTR propname, _Out_ std::vector<unsigned short>* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != (VT_I4 | VT_ARRAY));
+            *value = details::retrieve_from_I4_array(local_variant);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const std::vector<unsigned short>& value) const
+        {
+            wil::unique_variant local_variant(details::create_variant_array(value));
+            set_property(propname, local_variant.addressof());
+        }
+
+        // vector<unsigned char>
+        bool get(_In_ PCWSTR propname, _Out_ std::vector<unsigned char>* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != (VT_UI1 | VT_ARRAY));
+            *value = details::retrieve_from_UI1_array(local_variant);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const std::vector<unsigned char>& value) const
+        {
+            wil::unique_variant local_variant(details::create_variant_array(value));
+            set_property(propname, local_variant.addressof());
+        }
+
+        // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
+        //
+        // This does NOT do any checks to see whether the underlying BSTR is a valid number
+        // if it's a BSTR but it didn't come from the relevant type of 64-bit integer, these getters will appear to succeed
+        // 
+        // The output value will be whatever _wcstoi64/_wcstoui64 on the BSTR returns
+        // normally the appropriate MAX or MIN value on overflow and 0 on other errors
+        bool get(_In_ PCWSTR propname, _Out_ UINT64* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_BSTR);
+
+            *value = _wcstoui64(V_BSTR(local_variant.addressof()), nullptr, 10);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const UINT64 value) const
+        {
+            const auto bstr = wil::make_bstr(std::to_wstring(value).c_str());
+            // the bstr will be freed with wil::unique_btr, thus not using a unique_variant
+            VARIANT local_variant;
+            ::VariantInit(&local_variant);
+            V_VT(&local_variant) = VT_BSTR;
+            V_BSTR(&local_variant) = bstr.get();
+            set_property(propname, &local_variant);
+        }
+
+        bool get(_In_ PCWSTR propname, _Out_ INT64* value) const
+        {
+            wil::unique_variant local_variant;
+            if (!get(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_BSTR);
+
+            *value = _wcstoi64(V_BSTR(local_variant.addressof()), nullptr, 10);
+            return true;
+        }
+        void set(_In_ PCWSTR propname, const INT64 value) const
+        {
+            const auto bstr = wil::make_bstr(std::to_wstring(value).c_str());
+            // the bstr will be freed with wil::unique_btr, thus not using a unique_variant
+            VARIANT local_variant;
+            ::VariantInit(&local_variant);
+            V_VT(&local_variant) = VT_BSTR;
+            V_BSTR(&local_variant) = bstr.get();
+            set_property(propname, &local_variant);
+        }
+
+        // com_ptr
+        template <typename T>
+        bool get(_In_ PCWSTR propname, _Inout_ wil::com_ptr<T>* comptr) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != VT_UNKNOWN);
+
+            *comptr = details::retrieve_from_comptr<T>(local_variant);
+            return true;
+        }
+        template <typename T>
+        void set(_In_ PCWSTR propname, const wil::com_ptr<T>& value) const
+        {
+            wil::unique_variant local_variant;
+            V_VT(&local_variant) = VT_UNKNOWN;
+            V_UNKNOWN(local_variant.addressof()) = value.get();
+            // Need at AddRef the raw pointer assigned to punkVal in the variant
+            V_UNKNOWN(local_variant.addressof())->AddRef();
+            set_property(propname, &local_variant);
+        }
+
+        // vector<com_ptr>
+        template <typename T>
+        bool get(_In_ PCWSTR propname, _Inout_ std::vector<wil::com_ptr<T>>* classObjects) const
+        {
+            wil::unique_variant local_variant;
+            if (!get_property(propname, local_variant.addressof()))
+            {
+                return false;
+            }
+            THROW_HR_IF(E_INVALIDARG, V_VT(local_variant.addressof()) != (VT_UNKNOWN | VT_ARRAY));
+
+            *classObjects = details::retrieve_from_comptr_array<T>(local_variant);
+            return true;
+        }
+
+
+    private:
+        // returns true if not empty or null
+        bool get_property(_In_ PCWSTR propertyName, _Inout_ VARIANT* pVariant) const
+        {
+            // since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
+            auto pInstance = const_cast<IWbemClassObject*>(m_instanceObject.get());
+            THROW_IF_FAILED(pInstance->Get(
+                propertyName,
+                0,
+                pVariant,
+                nullptr,
+                nullptr));
+            const auto isEmptyOrNull = V_VT(pVariant) == VT_EMPTY || V_VT(pVariant) == VT_NULL;
+            return !isEmptyOrNull;
+        }
+
+        void set_property(_In_ PCWSTR propname, _In_ VARIANT* pVariant) const
+        {
+            THROW_IF_FAILED(m_instanceObject->Put(
+                propname,
+                0,
+                pVariant,
+                0));
+        }
+
+        ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* _inParams)
+        {
+            // exec the method semi-synchronously from this instance based off the __REPATH property
+            wil::com_ptr<IWbemCallResult> result;
+            THROW_IF_FAILED(m_wbemServices->ExecMethod(
+                get_path().get(),
+                wil::make_bstr(method).get(),
+                WBEM_FLAG_RETURN_IMMEDIATELY,
+                nullptr,
+                _inParams,
+                nullptr,
+                result.addressof()));
+
+            // wait for the call to complete - and get the [out] param object
+            wil::com_ptr<IWbemClassObject> outParamsInstance;
+            THROW_IF_FAILED(result->GetResultObject(WBEM_INFINITE, outParamsInstance.addressof()));
+
+            // the call went through - return a ctWmiInstance from this retrieved instance
+            return { m_wbemServices, outParamsInstance };
+        }
+
+        ctWmiService m_wbemServices;
+        wil::com_ptr<IWbemClassObject> m_instanceObject;
+    };
 } // namespace ctl

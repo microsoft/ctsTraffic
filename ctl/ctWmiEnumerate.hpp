@@ -337,11 +337,11 @@ namespace ctl
 		}
 
 		ULONG uReturn;
-		ctComPtr<IWbemClassObject> wbemTarget;
+		wil::com_ptr<IWbemClassObject> wbemTarget;
 		const auto hr = this->wbemEnumerator->Next(
 			WBEM_INFINITE,
 			1,
-			wbemTarget.get_addr_of(),
+			wbemTarget.put(),
 			&uReturn);
 		if (FAILED(hr)) {
 			throw ctWmiException(hr, L"IEnumWbemClassObject::Next", L"ctWmiEnumerate::iterator::increment", false);

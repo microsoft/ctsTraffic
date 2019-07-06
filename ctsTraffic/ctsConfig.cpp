@@ -195,23 +195,23 @@ namespace ctsTraffic
                 for (const auto& instance : tcpSettings)
                 {
                     // ctl::ctWmiInstance& instance
-                    ctComVariant var_value;
+                    wil::unique_variant var_value;
                     instance.get(L"AutoReusePortRangeNumberOfPorts", &var_value);
-                    if (!var_value.is_empty() && !var_value.is_null())
+                    if (V_VT(var_value.addressof()) == VT_I4)
                     {
-                        if (var_value.retrieve<long>() != 0)
+                        if (V_I4(var_value.addressof()) != 0)
                         {
                             Settings->Options |= REUSE_UNICAST_PORT;
                         }
                     }
                 }
             }
-            catch (const exception& e)
+            catch (...)
             {
                 // will assume is not configured if any exception is thrown
                 // - could be the class doesn't exist (Win7)
                 //   or the property doesn't exist (Win8 and 8.1)
-                PrintExceptionOverride(e);
+                PrintDebugInfo(L"Not using SO_REUSE_UNICASTPORT as AutoReusePortRangeNumberOfPorts is not supported or not configured");
             }
         }
 

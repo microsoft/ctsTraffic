@@ -28,15 +28,15 @@ namespace ctl
 {
 	namespace details
 	{
-		static const unsigned fn_ptr_count = 9;
-		static LPFN_TRANSMITFILE transmitfile = nullptr; // WSAID_TRANSMITFILE
-		static LPFN_ACCEPTEX acceptex = nullptr; // WSAID_ACCEPTEX
-		static LPFN_GETACCEPTEXSOCKADDRS getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
-		static LPFN_TRANSMITPACKETS transmitpackets = nullptr; // WSAID_TRANSMITPACKETS
-		static LPFN_CONNECTEX connectex = nullptr; // WSAID_CONNECTEX
-		static LPFN_DISCONNECTEX disconnectex = nullptr; // WSAID_DISCONNECTEX
-		static LPFN_WSARECVMSG wsarecvmsg = nullptr; // WSAID_WSARECVMSG
-		static LPFN_WSASENDMSG wsasendmsg = nullptr; // WSAID_WSASENDMSG
+        static const unsigned fn_ptr_count = 9;
+        static LPFN_TRANSMITFILE transmitfile = nullptr; // WSAID_TRANSMITFILE
+        static LPFN_ACCEPTEX acceptex = nullptr; // WSAID_ACCEPTEX
+        static LPFN_GETACCEPTEXSOCKADDRS getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
+        static LPFN_TRANSMITPACKETS transmitpackets = nullptr; // WSAID_TRANSMITPACKETS
+        static LPFN_CONNECTEX connectex = nullptr; // WSAID_CONNECTEX
+        static LPFN_DISCONNECTEX disconnectex = nullptr; // WSAID_DISCONNECTEX
+        static LPFN_WSARECVMSG wsarecvmsg = nullptr; // WSAID_WSARECVMSG
+        static LPFN_WSASENDMSG wsasendmsg = nullptr; // WSAID_WSASENDMSG
 		static RIO_EXTENSION_FUNCTION_TABLE rioextensionfunctiontable; // WSAID_MULTIPLE_RIO
 
 		//
@@ -45,16 +45,12 @@ namespace ctl
 		// InitOnce function only to be called locally to ensure WSAStartup is held
 		// for the function pointers to remain accurate
 		//
-		// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-		static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
-
-		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID perror, _In_ PVOID*) noexcept
+		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
 		{
 			WSADATA wsadata;
 			const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
 			if (wsError != 0)
 			{
-				*static_cast<int*>(perror) = wsError;
 				return FALSE;
 			}
 			auto WSACleanupOnExit = wil::scope_exit([&]() { ::WSACleanup(); });
@@ -63,7 +59,6 @@ namespace ctl
 			SOCKET local_socket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 			if (INVALID_SOCKET == local_socket)
 			{
-				*static_cast<int*>(perror) = ::WSAGetLastError();
 				return FALSE;
 			}
 			auto closesocketOnExit = wil::scope_exit([&]() { ::closesocket(local_socket); });
@@ -76,7 +71,7 @@ namespace ctl
 				auto bytes = static_cast<DWORD>(sizeof(VOID*));
 				// must declare GUID explicitly at a global scope as some commonly used test libraries
 				// - incorrectly pull it into their own namespace
-				GUID guid;
+				GUID guid{};
 
 				switch (fn_loop) {
 					case 0: {
@@ -150,14 +145,12 @@ namespace ctl
 					bytes,
 					&bytes,
 					nullptr, // lpOverlapped
-					nullptr  // lpCompletionRoutine
-				))
+					nullptr))  // lpCompletionRoutine
 				{
 					const auto errorCode = ::WSAGetLastError();
 					if (8 == fn_loop && errorCode == WSAEOPNOTSUPP) {
 						// ignore not-supported errors for RIO APIs to support Win7
 					} else {
-						*static_cast<int*>(perror) = errorCode;
 						return FALSE;
 					}
 				}
@@ -168,10 +161,9 @@ namespace ctl
 
 		static void s_InitSocketExtensions()
 		{
-			DWORD error = 0;
-			if (!::InitOnceExecuteOnce(&s_ctSocketExtensionInitOnce, s_ctSocketExtensionInitFn, &error, nullptr)) {
-				throw ctException(error, L"ctl::ctSocketExtensions", false);
-			}
+            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+            static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
+            FAIL_FAST_IF(!::InitOnceExecuteOnce(&s_ctSocketExtensionInitOnce, s_ctSocketExtensionInitFn, nullptr, nullptr));
 		}
 	}; // anonymous namespace
 
@@ -194,10 +186,9 @@ namespace ctl
 		_In_ DWORD nNumberOfBytesPerSend,
 		_Inout_opt_ LPOVERLAPPED lpOverlapped,
 		_In_opt_ LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers,
-		_In_  DWORD dwReserved
-	)
+		_In_  DWORD dwReserved) noexcept
 	{
-		details::s_InitSocketExtensions();
+        details::s_InitSocketExtensions();
 		return details::transmitfile(
 			hSocket,
 			hFile,
@@ -205,8 +196,7 @@ namespace ctl
 			nNumberOfBytesPerSend,
 			lpOverlapped,
 			lpTransmitBuffers,
-			dwReserved
-		);
+			dwReserved);
 	}
 
 	//
@@ -218,8 +208,7 @@ namespace ctl
 		_In_ DWORD nElementCount,
 		_In_ DWORD nSendSize,
 		_Inout_opt_ LPOVERLAPPED lpOverlapped,
-		_In_ DWORD dwFlags
-	)
+		_In_ DWORD dwFlags) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::transmitpackets(
@@ -243,8 +232,7 @@ namespace ctl
 		_In_ DWORD dwLocalAddressLength,
 		_In_ DWORD dwRemoteAddressLength,
 		_Out_ LPDWORD lpdwBytesReceived,
-		_Inout_ LPOVERLAPPED lpOverlapped
-	)
+		_Inout_ LPOVERLAPPED lpOverlapped) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::acceptex(
@@ -270,8 +258,7 @@ namespace ctl
 		_Outptr_result_bytebuffer_(*LocalSockaddrLength) struct sockaddr **LocalSockaddr,
 		_Out_ LPINT LocalSockaddrLength,
 		_Outptr_result_bytebuffer_(*RemoteSockaddrLength) struct sockaddr **RemoteSockaddr,
-		_Out_ LPINT RemoteSockaddrLength
-	)
+		_Out_ LPINT RemoteSockaddrLength) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::getacceptexsockaddrs(
@@ -296,8 +283,7 @@ namespace ctl
 		_In_reads_bytes_opt_(dwSendDataLength) PVOID lpSendBuffer,
 		_In_ DWORD dwSendDataLength,
 		_When_(lpSendBuffer, _Out_) LPDWORD lpdwBytesSent, // optional if lpSendBuffer is null
-		_Inout_ LPOVERLAPPED lpOverlapped
-	)
+		_Inout_ LPOVERLAPPED lpOverlapped) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::connectex(
@@ -318,8 +304,7 @@ namespace ctl
 		_In_ SOCKET s,
 		_Inout_opt_ LPOVERLAPPED lpOverlapped,
 		_In_ DWORD  dwFlags,
-		_In_ DWORD  dwReserved
-	)
+		_In_ DWORD  dwReserved) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::disconnectex(
@@ -338,8 +323,7 @@ namespace ctl
 		_Inout_ LPWSAMSG lpMsg,
 		_Out_opt_ LPDWORD lpdwNumberOfBytesRecvd,
 		_Inout_opt_ LPWSAOVERLAPPED lpOverlapped,
-		_In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-	)
+		_In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::wsarecvmsg(
@@ -360,8 +344,7 @@ namespace ctl
 		_In_ DWORD dwFlags,
 		_Out_opt_ LPDWORD lpNumberOfBytesSent,
 		_Inout_opt_ LPWSAOVERLAPPED lpOverlapped,
-		_In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-	)
+		_In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::wsasendmsg(
@@ -382,8 +365,7 @@ namespace ctl
 		_In_reads_(dataBufferCount) PRIO_BUF pData,
 		_In_ ULONG dataBufferCount,
 		_In_ DWORD dwFlags,
-		_In_ PVOID requestContext
-	)
+		_In_ PVOID requestContext) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOReceive(
@@ -407,8 +389,7 @@ namespace ctl
 		_In_opt_ PRIO_BUF pControlContext,
 		_In_opt_ PRIO_BUF pdwFlags,
 		_In_ DWORD dwFlags,
-		_In_ PVOID requestContext
-	)
+		_In_ PVOID requestContext) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOReceiveEx(
@@ -432,8 +413,7 @@ namespace ctl
 		_In_reads_(dataBufferCount) PRIO_BUF pData,
 		_In_ ULONG dataBufferCount,
 		_In_ DWORD dwFlags,
-		_In_ PVOID requestContext
-	)
+		_In_ PVOID requestContext) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOSend(
@@ -457,8 +437,7 @@ namespace ctl
 		_In_opt_ PRIO_BUF pControlContext,
 		_In_opt_ PRIO_BUF pdwFlags,
 		_In_ DWORD dwFlags,
-		_In_ PVOID requestContext
-	)
+		_In_ PVOID requestContext) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOSendEx(
@@ -478,8 +457,7 @@ namespace ctl
 	// RioCloseCompletionQueue
 	//
 	inline void ctRIOCloseCompletionQueue(
-		_In_ RIO_CQ cq
-	)
+		_In_ RIO_CQ cq) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOCloseCompletionQueue(
@@ -492,8 +470,7 @@ namespace ctl
 	//
 	inline RIO_CQ ctRIOCreateCompletionQueue(
 		_In_ DWORD queueSize,
-		_In_opt_ PRIO_NOTIFICATION_COMPLETION pNotificationCompletion
-	)
+		_In_opt_ PRIO_NOTIFICATION_COMPLETION pNotificationCompletion) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOCreateCompletionQueue(
@@ -513,8 +490,7 @@ namespace ctl
 		_In_ ULONG maxSendDataBuffers,
 		_In_ RIO_CQ receiveCq,
 		_In_ RIO_CQ sendCq,
-		_In_ PVOID socketContext
-	)
+		_In_ PVOID socketContext) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOCreateRequestQueue(
@@ -535,8 +511,7 @@ namespace ctl
 	inline ULONG ctRIODequeueCompletion(
 		_In_ RIO_CQ cq,
 		_Out_writes_to_(arraySize, return) PRIORESULT array,
-		_In_ ULONG arraySize
-	)
+		_In_ ULONG arraySize) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIODequeueCompletion(
@@ -550,8 +525,7 @@ namespace ctl
 	// RioDeregisterBuffer
 	//
 	inline void ctRIODeregisterBuffer(
-		_In_ RIO_BUFFERID bufferId
-	)
+		_In_ RIO_BUFFERID bufferId) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIODeregisterBuffer(
@@ -563,8 +537,7 @@ namespace ctl
 	// RioNotify
 	//
 	inline int ctRIONotify(
-		_In_ RIO_CQ cq
-	)
+		_In_ RIO_CQ cq) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIONotify(
@@ -577,8 +550,7 @@ namespace ctl
 	//
 	inline RIO_BUFFERID ctRIORegisterBuffer(
 		_In_ PCHAR dataBuffer,
-		_In_ DWORD dataLength
-	)
+		_In_ DWORD dataLength) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIORegisterBuffer(
@@ -592,8 +564,7 @@ namespace ctl
 	//
 	inline BOOL ctRIOResizeCompletionQueue(
 		_In_ RIO_CQ cq,
-		_In_ DWORD queueSize
-	)
+		_In_ DWORD queueSize) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOResizeCompletionQueue(
@@ -608,8 +579,7 @@ namespace ctl
 	inline BOOL ctRIOResizeRequestQueue(
 		_In_ RIO_RQ rq,
 		_In_ DWORD maxOutstandingReceive,
-		_In_ DWORD maxOutstandingSend
-	)
+		_In_ DWORD maxOutstandingSend) noexcept
 	{
 		details::s_InitSocketExtensions();
 		return details::rioextensionfunctiontable.RIOResizeRequestQueue(

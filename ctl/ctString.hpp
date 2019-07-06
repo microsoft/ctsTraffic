@@ -186,9 +186,6 @@ namespace ctl
 		///    std::wstring wshello (L"hello");
 		///    if (iordinal_equals(hello, wshello)) { printf(L"Correct!"); }
 		///
-		///    ctl::ctComBstr comhello (L"HELLO");
-		///    if (!ordinal_equals(wshello, comhello)) { printf(L"Correct!"); }
-		///
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 
 

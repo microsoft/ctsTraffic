@@ -304,7 +304,7 @@ namespace ctl {
             LONG lid;
             const auto hr = _config->AddObjectByTemplate(
                 wmi.get(),
-                instance.get_instance().get(),
+                instance.get_instance_object().get(),
                 0,
                 nullptr,
                 enumeration_object.get_addr_of(),
@@ -865,9 +865,9 @@ namespace ctl {
             auto found_instance = std::find_if(
                 std::begin(counter_data),
                 std::end(counter_data),
-                [&] (const std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _instance) {
-                return _instance->match(_instance_name);
-            });
+                [&] (const std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _instance) noexcept {
+                    return _instance->match(_instance_name);
+                });
             if (std::end(counter_data) == found_instance) {
                 // nothing matching that instance name
                 // return the end iterator (default c'tor == end)
@@ -1016,8 +1016,8 @@ namespace ctl {
                     std::begin(counter_data),
                     std::end(counter_data),
                     [&] (std::unique_ptr<details::ctWmiPeformanceCounterData<T>>& _counter_data) noexcept {
-                    return _counter_data->match(instance_name->bstrVal);
-                });
+                        return _counter_data->match(instance_name->bstrVal);
+                    });
 
                 // if this instance of this counter is new [new unique instance for this counter]
                 // - we must add a new ctWmiPeformanceCounterData to the parent's counter_data vector

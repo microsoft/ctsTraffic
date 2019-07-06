@@ -146,20 +146,4 @@ namespace ctl
 		ctComVariant local_variant;
 		return local_variant.assign<VT_UI1 | VT_ARRAY>(_vtProp);
 	}
-
-	inline ctComVariant ctWmiMakeVariant(ctWmiInstance& _vtProp)
-	{
-		ctComVariant local_variant;
-		return local_variant.assign(_vtProp.get_instance());
-	}
-
-	inline ctComVariant ctWmiMakeVariant(std::vector<ctWmiInstance>& _vtProp)
-	{
-		ctComVariant local_variant;
-		std::vector<ctComPtr<IWbemClassObject>> local_prop;
-		for (const auto& prop : _vtProp) {
-			local_prop.push_back(prop.get_instance());
-		}
-		return local_variant.assign(local_prop);
-	}
 }
