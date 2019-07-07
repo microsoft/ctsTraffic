@@ -188,15 +188,6 @@ namespace ctl
                 return m_propertyType;
             }
 
-            ////////////////////////////////////////////////////////////////////////////////
-            ///
-            /// comparison and arithmatic operators
-            /// 
-            /// comparison operators are no-throw/no-fail
-            /// arithmatic operators can fail 
-            /// - throwing a ctWmiException object capturing the WMI failures
-            ///
-            ////////////////////////////////////////////////////////////////////////////////
             bool operator==(const property_iterator& _iter) const noexcept
             {
                 if (m_index != END_ITERATOR_INDEX)

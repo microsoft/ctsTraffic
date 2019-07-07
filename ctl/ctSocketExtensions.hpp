@@ -127,7 +127,7 @@ namespace ctl
 						GUID tmp_guid = WSAID_MULTIPLE_RIO;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
-						bytes = static_cast<DWORD>(sizeof(rioextensionfunctiontable));
+						bytes = static_cast<DWORD>(sizeof rioextensionfunctiontable);
 						::ZeroMemory(&rioextensionfunctiontable, bytes);
 						rioextensionfunctiontable.cbSize = bytes;
 						break;
@@ -140,7 +140,7 @@ namespace ctl
 					local_socket,
 					controlCode,
 					&guid,
-					static_cast<DWORD>(sizeof(guid)),
+					static_cast<DWORD>(sizeof guid),
 					function_ptr,
 					bytes,
 					&bytes,
@@ -173,7 +173,7 @@ namespace ctl
 	inline bool ctSocketIsRioAvailable() noexcept
 	{
 		details::s_InitSocketExtensions();
-		return (nullptr != details::rioextensionfunctiontable.RIOReceive);
+		return nullptr != details::rioextensionfunctiontable.RIOReceive;
 	}
 
 	//

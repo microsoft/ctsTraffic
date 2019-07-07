@@ -189,8 +189,6 @@ namespace ctl
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-		// These helpers are in a named namespace so that ctComBStr can define its own version in ctComInitialize.hpp
-		//
 		// Note: wcslen(convert_to_ptr(x)) == get_string_length(x) is strictly required for any pair of
 		// convert_to_ptr/get_string_length implementations, but can't be cleanly expressed in OACR annotations
 
@@ -238,7 +236,7 @@ namespace ctl
 			{
 				switch (::CompareStringA(
 					LOCALE_INVARIANT,
-					(_case_insensitive) ? NORM_IGNORECASE : 0,
+					_case_insensitive ? NORM_IGNORECASE : 0,
 					_lhs,
 					static_cast<int>(_lhs_size),
 					_rhs,
@@ -363,7 +361,7 @@ namespace ctl
 		bool starts_with(const std::wstring& haystack, const std::wstring& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				ordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 		}
 
@@ -371,7 +369,7 @@ namespace ctl
 		bool istarts_with(const std::wstring& haystack, const std::wstring& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				iordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 		}
 
@@ -379,7 +377,7 @@ namespace ctl
 		bool ends_with(const std::wstring& haystack, const std::wstring& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				ordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 		}
 
@@ -387,7 +385,7 @@ namespace ctl
 		bool iends_with(const std::wstring& haystack, const std::wstring& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				iordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 		}
 
@@ -395,7 +393,7 @@ namespace ctl
 		bool starts_with(const std::string& haystack, const std::string& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				ordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 		}
 
@@ -403,7 +401,7 @@ namespace ctl
 		bool istarts_with(const std::string& haystack, const std::string& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				iordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 		}
 
@@ -411,7 +409,7 @@ namespace ctl
 		bool ends_with(const std::string& haystack, const std::string& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				ordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 		}
 
@@ -419,7 +417,7 @@ namespace ctl
 		bool iends_with(const std::string& haystack, const std::string& needle)
 		{
 			return
-				(haystack.size() >= needle.size()) &&
+				haystack.size() >= needle.size() &&
 				iordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 		}
 
@@ -534,8 +532,8 @@ namespace ctl
 		{
 			if (_unescaped_string.size() > 1) {
 				// greater than one as we need begin *and* end quotes before trimming
-				if (((*_unescaped_string.begin() == L'\'') && (*_unescaped_string.rbegin() == L'\'')) ||
-					((*_unescaped_string.begin() == L'"') && (*_unescaped_string.rbegin() == L'"'))) {
+				if ((*_unescaped_string.begin() == L'\'' && *_unescaped_string.rbegin() == L'\'') ||
+					(*_unescaped_string.begin() == L'"' && *_unescaped_string.rbegin() == L'"')) {
 					// trim off single quotes or double before replacing
 					_unescaped_string.erase(_unescaped_string.begin());
 					_unescaped_string.pop_back();
@@ -589,7 +587,7 @@ namespace ctl
 
 				auto size_to_grow = static_cast<size_t>(formatted_string.size() * 1.5);
 				// overflow comparison so we don't overflow MAXINT32
-				if (size_to_grow > (MAXINT32 - formatted_string.size())) {
+				if (size_to_grow > MAXINT32 - formatted_string.size()) {
 					// can't grow any larger - take off the null at the end wherever it is
 					formatted_string.resize(formatted_string.find(L'\0'));
 					break;

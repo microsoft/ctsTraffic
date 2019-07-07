@@ -34,6 +34,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSocketExtensions.hpp>
 #include <ctTimer.hpp>
 #include <ctRandom.hpp>
+#include <ctComInitialize.hpp>
 #include <ctWmiInitialize.hpp>
 
 // project headers
@@ -196,7 +197,7 @@ namespace ctsTraffic
                 {
                     // ctl::ctWmiInstance& instance
                     wil::unique_variant var_value;
-                    instance.get(L"AutoReusePortRangeNumberOfPorts", &var_value);
+                    instance.get(L"AutoReusePortRangeNumberOfPorts", var_value.addressof());
                     if (V_VT(var_value.addressof()) == VT_I4)
                     {
                         if (V_I4(var_value.addressof()) != 0)

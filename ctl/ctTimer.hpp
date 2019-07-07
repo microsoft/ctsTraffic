@@ -172,7 +172,7 @@ namespace ctl
 			LARGE_INTEGER qpc;
 			::QueryPerformanceCounter(&qpc);
 			// multiplying by 1000 as (qpc / qpf) == seconds
-			return static_cast<long long>((qpc.QuadPart * 1000LL) / details::s_Qpf.QuadPart);
+			return static_cast<long long>(qpc.QuadPart * 1000LL / details::s_Qpf.QuadPart);
 		}
 #endif
 		///

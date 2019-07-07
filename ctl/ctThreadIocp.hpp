@@ -223,7 +223,7 @@ namespace ctl
 				delete _request;
 			}
 				// ReSharper disable once CppAssignedValueIsNeverUsed (exr is used in the except handler)
-			__except ((exr = GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
+			__except (exr = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER)
 			{
 				__try {
 					::RaiseFailFastException(exr->ExceptionRecord, exr->ContextRecord, 0);

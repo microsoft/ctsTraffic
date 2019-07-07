@@ -7,9 +7,6 @@
     <ClInclude Include="..\ctl\ctException.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctHandle.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctLocks.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -22,12 +19,6 @@
     <ClInclude Include="..\ctl\ctRandom.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctscopedt.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctScopeGuard.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -35,9 +26,6 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctString.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="ctsWriteDetails.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctThreadIocp.hpp">
@@ -64,9 +52,6 @@
     <ClInclude Include="..\ctl\ctWmiInstance.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiMakeVariant.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiPerformance.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -85,6 +70,7 @@
     <ClInclude Include="ctsWriteDetails.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiVariant.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ctl">

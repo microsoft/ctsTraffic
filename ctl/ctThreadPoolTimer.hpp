@@ -265,7 +265,7 @@ namespace ctl
 					[_timer](PTP_TIMER _callback_timer) noexcept
 					{
 						// returns if a null callback (not being used)
-						return (_timer == _callback_timer);
+						return _timer == _callback_timer;
 					});
 				ctFatalCondition(
 					found_timer == std::end(this_ptr->tp_timers),
