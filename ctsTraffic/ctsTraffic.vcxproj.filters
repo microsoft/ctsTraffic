@@ -142,12 +142,6 @@
     <ClInclude Include="..\ctl\ctRandom.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctscopedt.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctScopeGuard.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -161,9 +155,6 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctTimer.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctHandle.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctSockaddr.hpp">
@@ -186,9 +177,6 @@
     </ClInclude>
     <ClInclude Include="ctsIOPatternRateLimitPolicy.hpp">
       <Filter>FutureIOPattern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctVersionConversion.hpp">
-      <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
@@ -238,9 +226,6 @@
     <ClInclude Include="..\ctl\ctWmiInstance.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiMakeVariant.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiProperties.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -255,6 +240,12 @@
     </ClInclude>
     <ClInclude Include="ctsTCPFunctions.h">
       <Filter>TCPFunctions</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiPerformance.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctWmiVariant.hpp">
+      <Filter>ctl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

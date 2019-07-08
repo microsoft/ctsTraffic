@@ -385,10 +385,10 @@
     <ClInclude Include="..\ctl\ctWmiException.hpp" />
     <ClInclude Include="..\ctl\ctWmiInitialize.hpp" />
     <ClInclude Include="..\ctl\ctWmiInstance.hpp" />
-    <ClInclude Include="..\ctl\ctWmiVariant.hpp" />
     <ClInclude Include="..\ctl\ctWmiPerformance.hpp" />
     <ClInclude Include="..\ctl\ctWmiProperties.hpp" />
     <ClInclude Include="..\ctl\ctWmiService.hpp" />
+    <ClInclude Include="..\ctl\ctWmiVariant.hpp" />
     <ClInclude Include="ctsEstats.h" />
     <ClInclude Include="ctsWriteDetails.h" />
     <ClInclude Include="resource.h" />
