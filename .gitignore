@@ -24,3 +24,6 @@
 /MSTest/Release
 /ctsPerf/ARM/Release
 /ctsTraffic/ARM/Release
+/ARM
+/ctsPerf/ARM/Debug
+/ctsTraffic/ARM/Debug
