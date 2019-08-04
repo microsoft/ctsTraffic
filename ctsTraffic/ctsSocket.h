@@ -143,8 +143,7 @@ namespace ctsTraffic {
 
         // ctsSocketGuard is given friend-access to call lock & unlock
         friend class ctsSocketGuard <std::shared_ptr<ctsSocket>>;
-        _Acquires_lock_(socket_cs) void lock_socket() const noexcept;
-        _Releases_lock_(socket_cs) void unlock_socket() const noexcept;
+        wil::cs_leave_scope_exit lock_socket() const noexcept;
 
         void initiate_isb_notification()  noexcept;
         void process_isb_notification() noexcept;
@@ -152,8 +151,8 @@ namespace ctsTraffic {
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
-        mutable CRITICAL_SECTION socket_cs{};
-        _Guarded_by_(socket_cs) SOCKET socket = INVALID_SOCKET;
+        mutable wil::critical_section socket_cs;
+        _Guarded_by_(socket_cs) wil::unique_socket socket;
         _Interlocked_ long io_count = 0L;
 
         // maintain a weak-reference to the parent and child

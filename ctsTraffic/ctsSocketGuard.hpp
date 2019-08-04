@@ -15,6 +15,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <WinSock2.h>
+#include <windows.h>
+// wil headers
+#include <wil/resource.h>
 
 namespace ctsTraffic {
     //
@@ -48,26 +51,18 @@ namespace ctsTraffic {
         // _Releases_lock_
         ~ctsSocketGuard() noexcept
         {
-            // will be null if moved-from
-            if (!movedFrom) {
-                t->unlock_socket();
-            }
+            cs_tracking.reset();
         }
 
         // movable
-        ctsSocketGuard(ctsSocketGuard&& _rvalue) noexcept
-        : t(std::move(_rvalue.t)), movedFrom(false)
-        {
-            _rvalue.movedFrom = true;
-        }
-        ctsSocketGuard& operator=(ctsSocketGuard&& _rvalue) noexcept = delete;
+        ctsSocketGuard(ctsSocketGuard&&) noexcept = default;
+        ctsSocketGuard& operator=(ctsSocketGuard&&) noexcept = default;
 
-        SOCKET get() const noexcept
+        [[nodiscard]] SOCKET get() const noexcept
         {
-            return t->socket;
+            return t->socket.get();
         }
 
-        // no default c'tor
         // not copyable
         ctsSocketGuard() = delete;
         ctsSocketGuard(const ctsSocketGuard&) = delete;
@@ -78,15 +73,13 @@ namespace ctsTraffic {
         friend ctsSocketGuard<G> ctsGuardSocket(const G&) noexcept;
 
         const T& t;
-        // tracking moved from by hand, as we cannot modify the const ref
-        bool movedFrom;
+        wil::cs_leave_scope_exit cs_tracking;
 
         // private c'tor guarded by the factory function
         // _Acquires_lock_
         explicit ctsSocketGuard(const T& _t) noexcept 
-        : t(_t), movedFrom(false)
+        : t(_t), cs_tracking(_t->lock_socket())
         {
-            t->lock_socket();
         }
     };
 }

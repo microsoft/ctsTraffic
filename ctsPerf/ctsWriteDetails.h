@@ -17,10 +17,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <vector>
 #include <tuple>
-
 // os headers
 #include <Windows.h>
-
+// wil headers
+#include <wil/resource.h>
 // project headers
 #include "ctException.hpp"
 #include "ctString.hpp"
@@ -80,7 +80,7 @@ namespace ctsPerf {
         void end_row() const noexcept;
 
         std::wstring file_name;
-        HANDLE file_handle = INVALID_HANDLE_VALUE;
+        wil::unique_hfile file_handle;
 
     public:
         template <typename T>
@@ -113,34 +113,13 @@ namespace ctsPerf {
         explicit ctsWriteDetails(LPCWSTR _file_name) : file_name(_file_name)
         {
         }
-        ~ctsWriteDetails() noexcept
-        {
-            if (file_handle != INVALID_HANDLE_VALUE) {
-                ::CloseHandle(file_handle);
-            }
-        }
+        ~ctsWriteDetails() noexcept = default;
+
         ctsWriteDetails(const ctsWriteDetails&) = delete;
         ctsWriteDetails& operator=(const ctsWriteDetails&) = delete;
 
-        ctsWriteDetails(ctsWriteDetails&& rhs) noexcept
-        : file_name(std::move(rhs.file_name)),
-          file_handle(rhs.file_handle)
-        {
-            // don't let the moved-from object close the handle
-            rhs.file_handle = INVALID_HANDLE_VALUE;
-        }
-        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) noexcept
-        {
-            if (file_handle != INVALID_HANDLE_VALUE) {
-                ::CloseHandle(file_handle);
-            }
-
-            file_name = std::move(rhs.file_name);
-            file_handle = rhs.file_handle;
-            // don't let the moved-from object close the handle
-            rhs.file_handle = INVALID_HANDLE_VALUE;
-            return *this;
-        }
+        ctsWriteDetails(ctsWriteDetails&& rhs) noexcept = default;
+        ctsWriteDetails& operator=(ctsWriteDetails&& rhs) noexcept = default;
 
         void create_file(bool _mean_only = false);
         void create_file(const std::wstring& _banner_text);
@@ -163,7 +142,7 @@ namespace ctsPerf {
             const std::wstring formattedData(PrintDetails(_data));
             const auto length = static_cast<DWORD>(formattedData.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, formattedData.c_str(), length, &written, nullptr)) {
+            if (!::WriteFile(file_handle.get(), formattedData.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
@@ -184,7 +163,7 @@ namespace ctsPerf {
             const std::wstring difference = details::write(_data[0], _data[2] - _data[1]);
             const auto length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, difference.c_str(), length, &written, nullptr)) {
+            if (!::WriteFile(file_handle.get(), difference.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 
@@ -207,7 +186,7 @@ namespace ctsPerf {
             const std::wstring meanString = details::write(_data[0], _data[1]) + details::write(_data[2], _data[3]);
             const auto length = static_cast<DWORD>(meanString.length() * sizeof(wchar_t));
             DWORD written;
-            if (!::WriteFile(file_handle, meanString.c_str(), length, &written, nullptr)) {
+            if (!::WriteFile(file_handle.get(), meanString.c_str(), length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
 

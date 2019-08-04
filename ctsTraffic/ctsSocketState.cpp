@@ -13,18 +13,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsSocketState.h"
-
 // cpp headers
 #include <exception>
 #include <memory>
-
 // os headers
 #include <Windows.h>
-
 // ctl headers
-#include <ctLocks.hpp>
 #include <ctException.hpp>
-
 // project headers
 #include "ctsSocket.h"
 #include "ctsSocketBroker.h"
@@ -32,22 +27,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     using namespace ctl;
     using namespace std;
 
-    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) 
-    : broker(move(_broker))
+    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker)
+        : broker(move(_broker))
     {
-        if (!::InitializeCriticalSectionEx(&state_guard, 4000, 0)) {
-            throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSocketState", false);
-        }
-
         thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
-        if (nullptr == thread_pool_worker) {
+        if (nullptr == thread_pool_worker)
+        {
             const auto gle = ::GetLastError();
-            ::DeleteCriticalSection(&state_guard);
             throw ctException(gle, L"CreateThreadpoolWork", L"ctsSocketState", false);
         }
     }
@@ -62,14 +54,12 @@ namespace ctsTraffic {
         //    - and must wait for any of those TP callbacks to complete
         // - then can close the TP
         //
-        if (socket) {
+        if (socket)
+        {
             this->socket->shutdown();
         }
-
         ::WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
         ::CloseThreadpoolWork(thread_pool_worker);
-
-        ::DeleteCriticalSection(&state_guard);
     }
 
     void ctsSocketState::start() noexcept
@@ -86,15 +76,21 @@ namespace ctsTraffic {
         //
         // must guard the entire switch statement with a state guard
         //
-        ::EnterCriticalSection(&this->state_guard);
-        if (NO_ERROR == _error) {
-            switch (this->state) {
-                case InternalState::Created: {
+        auto lock = this->state_guard.lock();
+        if (NO_ERROR == _error)
+        {
+            switch (this->state)
+            {
+                case InternalState::Created:
+                {
                     // if no connectFunction specified, go straight to IO
-                    if (ctsConfig::Settings->ConnectFunction) {
+                    if (ctsConfig::Settings->ConnectFunction)
+                    {
                         this->state = InternalState::Connecting;
 
-                    } else {
+                    }
+                    else
+                    {
                         initiating_io = true;
                         this->state = InternalState::InitiatingIO;
                         ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.increment();
@@ -102,7 +98,8 @@ namespace ctsTraffic {
                     break;
                 }
 
-                case InternalState::Connected: {
+                case InternalState::Connected:
+                {
                     initiating_io = true;
                     this->state = InternalState::InitiatingIO;
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.increment();
@@ -120,7 +117,7 @@ namespace ctsTraffic {
                     // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
                     // deliberately not changing any internal values these since the socket is already being close
                     PrintDebugInfo(
-                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n", 
+                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n",
                         static_cast<unsigned long>(this->state));
                     break;
 
@@ -136,8 +133,11 @@ namespace ctsTraffic {
                         this->state);
             }
 
-        } else {
-            if (InternalState::InitiatedIO == this->state) {
+        }
+        else
+        {
+            if (InternalState::InitiatedIO == this->state)
+            {
                 this->initiated_io = true;
             }
             this->last_error = _error;
@@ -146,14 +146,16 @@ namespace ctsTraffic {
         //
         // release the state lock now that transitions were performed
         //
-        ::LeaveCriticalSection(&this->state_guard);
+        lock.reset();
         //
         // updates to ctsSocketBroker must be made outside the state_guard
         //
-        if (initiating_io) {
+        if (initiating_io)
+        {
             // always notify the broker
             auto parent = broker.lock();
-            if (parent) {
+            if (parent)
+            {
                 parent->initiating_io();
             }
         }
@@ -165,7 +167,7 @@ namespace ctsTraffic {
 
     ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
     {
-        const ctAutoReleaseCriticalSection lock_state(&this->state_guard);
+        const auto lock = this->state_guard.lock();
         return this->state;
     }
 
@@ -179,111 +181,130 @@ namespace ctsTraffic {
         // - since this could complete inline if it fails, and complete_state
         //   needs to know that we already tried to run the functor for this state
         //
-        auto context = static_cast<ctsSocketState*>(_context);
-        switch (context->state) {
-            case InternalState::Creating: {
+        auto this_ptr = static_cast<ctsSocketState*>(_context);
+        switch (this_ptr->state)
+        {
+            case InternalState::Creating:
+            {
                 unsigned long error = 0;
-                try { context->socket = make_shared<ctsSocket>(context->shared_from_this()); }
+                try { this_ptr->socket = make_shared<ctsSocket>(this_ptr->shared_from_this()); }
                 catch (const exception& e) { error = ctl::ctErrorCode(e); }
 
-                if (error != 0) {
-                    context->complete_state(error);
+                if (error != 0)
+                {
+                    this_ptr->complete_state(error);
 
-                } else {
-                    ::EnterCriticalSection(&context->state_guard);
-                    context->state = InternalState::Created;
-                    ::LeaveCriticalSection(&context->state_guard);
+                }
+                else
+                {
+                    auto lock = this_ptr->state_guard.lock();
+                    this_ptr->state = InternalState::Created;
+                    lock.reset();
 
-                    ctsConfig::Settings->CreateFunction(context->socket);
+                    ctsConfig::Settings->CreateFunction(this_ptr->socket);
                     PrintDebugInfo(L"\t\tctsSocketState Created\n");
                 }
                 break;
             }
 
-            case InternalState::Connecting: {
-                ::EnterCriticalSection(&context->state_guard);
-                context->state = InternalState::Connected;
-                ::LeaveCriticalSection(&context->state_guard);
+            case InternalState::Connecting:
+            {
+                auto lock = this_ptr->state_guard.lock();
+                this_ptr->state = InternalState::Connected;
+                lock.reset();
 
-                ctsConfig::Settings->ConnectFunction(context->socket);
+                ctsConfig::Settings->ConnectFunction(this_ptr->socket);
                 PrintDebugInfo(L"\t\tctsSocketState Connected\n");
                 break;
             }
 
-            case InternalState::InitiatingIO: {
+            case InternalState::InitiatingIO:
+            {
                 unsigned long error = 0;
-                try { context->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
+                try { this_ptr->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
                 catch (const exception& e) { error = ctl::ctErrorCode(e); }
 
-                if (error != 0) {
-                    context->complete_state(error);
+                if (error != 0)
+                {
+                    this_ptr->complete_state(error);
 
-                } else {
-                    ::EnterCriticalSection(&context->state_guard);
-                    context->state = InternalState::InitiatedIO;
-                    ::LeaveCriticalSection(&context->state_guard);
+                }
+                else
+                {
+                    auto lock = this_ptr->state_guard.lock();
+                    this_ptr->state = InternalState::InitiatedIO;
+                    lock.reset();
 
-                    ctsConfig::Settings->IoFunction(context->socket);
+                    ctsConfig::Settings->IoFunction(this_ptr->socket);
                     PrintDebugInfo(L"\t\tctsSocketState InitiatedIO\n");
                 }
                 break;
             }
 
-            ///
-            /// Processing all closing tasks on a separate threadpool thread
-            /// - this guarantees no other locks are taken
-            /// - this guarantess ctsSocket won't hold the final reference to the ctsSocketState
-            ///   on a threadpool thread - in which case it would deadlock on itself
-            ///
-            case InternalState::Closing: {
-                if (context->initiated_io) {
+            // Processing all closing tasks on a separate threadpool thread
+            // - this guarantees no other locks are taken
+            // - this guarantess ctsSocket won't hold the final reference to the ctsSocketState
+            //   on a threadpool thread - in which case it would deadlock on itself
+            case InternalState::Closing:
+            {
+                if (this_ptr->initiated_io)
+                {
                     // Update the status counter if we previously tracked this connection as active
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.decrement();
 
                     // Update the historic stats for this connection
-                    if (0 == context->last_error) {
+                    if (0 == this_ptr->last_error)
+                    {
                         ctsConfig::Settings->ConnectionStatusDetails.successful_completion_count.increment();
 
-                    } else if (ctsIOPattern::IsProtocolError(context->last_error)) {
+                    }
+                    else if (ctsIOPattern::IsProtocolError(this_ptr->last_error))
+                    {
                         ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.increment();
 
-                    } else {
+                    }
+                    else
+                    {
                         ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                     }
-                } else {
-                    // if this socket never started IO, it never created an io_pattern to track stats
-                    // - in this case, directly track the failures in the global stats
+                }
+                else
+                {
+                             // if this socket never started IO, it never created an io_pattern to track stats
+                             // - in this case, directly track the failures in the global stats
                     ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                 }
 
-                context->socket->close_socket(context->last_error);
-                context->socket->print_pattern_results(context->last_error);
+                this_ptr->socket->close_socket(this_ptr->last_error);
+                this_ptr->socket->print_pattern_results(this_ptr->last_error);
 
-                if (ctsConfig::Settings->ClosingFunction) {
-                    ctsConfig::Settings->ClosingFunction(context->socket);
+                if (ctsConfig::Settings->ClosingFunction)
+                {
+                    ctsConfig::Settings->ClosingFunction(this_ptr->socket);
                 }
 
                 // update the state last, since ctsBroker looks for this state value
                 // - to know when to delete the ctsSocketState instance
-                ::EnterCriticalSection(&context->state_guard);
-                context->state = InternalState::Closed;
-                ::LeaveCriticalSection(&context->state_guard);
+                auto lock = this_ptr->state_guard.lock();
+                this_ptr->state = InternalState::Closed;
+                lock.reset();
 
-                auto parent = context->broker.lock();
-                if (parent) {
-                    parent->closing(context->initiated_io);
+                auto parent = this_ptr->broker.lock();
+                if (parent)
+                {
+                    parent->closing(this_ptr->initiated_io);
                 }
-                
+
                 PrintDebugInfo(L"\t\tctsSocketState Closed\n");
                 break;
             }
 
-            default: {
+            default:
+            {
                 // the callback should never see any other states
                 ctAlwaysFatalCondition(
                     L"ctsSocketState::ThreadPoolWorker - invalid socket state [%d]",
-                    context->state);
-                ::LeaveCriticalSection(&context->state_guard);
+                    this_ptr->state);
                 break;
             }
         }

@@ -14,13 +14,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <SDKDDKVer.h>
 #include "CppUnitTest.h"
 
-#include <cstdio>
+// cpp headers
 #include <vector>
 #include <memory>
-
+// os headers
+#include <windows.h>
+// wil headers
+#include <wil/resource.h>
+// ctl headers
 #include <ctString.hpp>
-#include <ctLocks.hpp>
-
+// project headers
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"
 #include "ctsConfig.h"
@@ -114,25 +117,19 @@ using namespace ctsTraffic;
 /// class used to communicate between the test and the created ctsSocketState objects
 class SocketStatePool {
 public:
-    SocketStatePool()
-    {
-        ::InitializeCriticalSectionAndSpinCount(&cs, 2000);
-    }
-    ~SocketStatePool() noexcept
-    {
-        ::DeleteCriticalSection(&cs);
-    }
+    SocketStatePool() = default;
+    ~SocketStatePool() noexcept = default;
 
     /// Add/remove ctsSocketState objects
     void add_object(const std::shared_ptr<ctsSocketState>& _state_object)
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         state_objects.push_back(_state_object);
     }
     void remove_deleted_objects() noexcept
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         state_objects.erase(
             std::remove_if(
@@ -143,7 +140,7 @@ public:
     }
     void reset() noexcept
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         state_objects.clear();
     }
@@ -151,7 +148,7 @@ public:
     /// Interact with states of contained ctsSocketState objects
     void complete_state(DWORD _error_code)
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         for (auto& socket_state : state_objects) {
             auto shared_state(socket_state.lock());
@@ -163,13 +160,13 @@ public:
     }
     void validate_expected_count(size_t _count)
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         Assert::AreEqual(_count, state_objects.size());
     }
     void validate_expected_count(size_t _count, ctsSocketState::InternalState _state)
     {
-        const ctl::ctAutoReleaseCriticalSection hold_lock(&cs);
+        const auto hold_lock = cs.lock();
 
         size_t matched_state = 0;
         for (auto& socket_state : state_objects) {
@@ -190,7 +187,7 @@ public:
     SocketStatePool& operator=(const SocketStatePool&) = delete;
 
 private:
-    CRITICAL_SECTION cs;
+    wil::critical_section cs;
     std::vector<std::weak_ptr<ctsSocketState>> state_objects;
 };
 

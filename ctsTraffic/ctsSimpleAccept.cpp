@@ -23,7 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
-#include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -49,7 +48,7 @@ namespace ctsTraffic {
             PTP_WORK thread_pool_worker = nullptr;
             TP_CALLBACK_ENVIRON thread_pool_environment{};
             // CS guards access to the accepting_sockets vector
-            CRITICAL_SECTION accepting_cs{};
+            wil::critical_section accepting_cs;
 
             std::vector<LONG> listening_sockets_refcount;
 
@@ -61,15 +60,8 @@ namespace ctsTraffic {
         public:
             ctsSimpleAcceptImpl()
             {
-                ::ZeroMemory(&thread_pool_environment, sizeof thread_pool_environment);
-                ::ZeroMemory(&accepting_cs, sizeof accepting_cs);
-
-                // need a CS to guard access to our vectors
-                if (!::InitializeCriticalSectionEx(&accepting_cs, 4000, 0)) {
-                    throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsSimpleAccept", false);
-                }
-
                 // will use the global threadpool, but will mark these work-items as running long
+                ::ZeroMemory(&thread_pool_environment, sizeof thread_pool_environment);
                 ::InitializeThreadpoolEnvironment(&thread_pool_environment);
                 ::SetThreadpoolCallbackRunsLong(&thread_pool_environment);
 
@@ -117,7 +109,7 @@ namespace ctsTraffic {
             }
             ~ctsSimpleAcceptImpl()
             {
-                ::EnterCriticalSection(&accepting_cs);
+                auto lock = accepting_cs.lock();
                 /// close all listening sockets to release any pended accept's
                 for (auto& listening_socket : listening_sockets) {
                     if (listening_socket != INVALID_SOCKET) {
@@ -125,15 +117,13 @@ namespace ctsTraffic {
                         listening_socket = INVALID_SOCKET;
                     }
                 }
-                ::LeaveCriticalSection(&accepting_cs);
+                lock.reset();
 
                 if (thread_pool_worker != nullptr) {
                     // ctsSimpleAccept object was initialized
                     ::WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
                     ::CloseThreadpoolWork(thread_pool_worker);
                 }
-
-                ::DeleteCriticalSection(&accepting_cs);
             }
 
             //
@@ -141,7 +131,7 @@ namespace ctsTraffic {
             //
             void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
             {
-                const ctl::ctAutoReleaseCriticalSection lock(&accepting_cs);
+                const auto lock = accepting_cs.lock();
                 accepting_sockets.push_back(_weak_socket);
                 ::SubmitThreadpoolWork(thread_pool_worker);
             }
@@ -158,8 +148,7 @@ namespace ctsTraffic {
                 auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(_context);
 
                 // get an accept-socket off the vector (protected with its cs)
-                ::EnterCriticalSection(&pimpl->accepting_cs);
-                auto leaveCriticalSectionOnExit = wil::scope_exit([&]() { ::LeaveCriticalSection(&pimpl->accepting_cs); });
+                auto lock = pimpl->accepting_cs.lock();
 
                 const std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
                 pimpl->accepting_sockets.pop_back();
@@ -188,7 +177,7 @@ namespace ctsTraffic {
                 }
 
                 // now leave the CS before making the blocking call to accept()
-                leaveCriticalSectionOnExit.reset();
+                lock.reset();
 
                 // increment the listening socket before calling accept on the blocking socket
                 ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);

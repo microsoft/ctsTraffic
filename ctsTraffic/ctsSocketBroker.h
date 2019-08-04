@@ -59,15 +59,15 @@ namespace ctsTraffic {
 
     private:
         // CS to guard access to the vector socket_pool
-        CRITICAL_SECTION cs{};
+        wil::critical_section cs;
         // notification event when we're done
-        wil::unique_event_nothrow done_event{};
+        wil::unique_event_nothrow done_event;
         // vector of currently active sockets
         // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
         // - and thus there must be at least one refcount on that object to call shared_from_this()
-        std::vector<std::shared_ptr<ctsSocketState>> socket_pool{};
+        std::vector<std::shared_ptr<ctsSocketState>> socket_pool;
         // timer to initiate the savenge routine TimerCallback()
-        std::unique_ptr<ctl::ctThreadpoolTimer> wakeup_timer{};
+        ctl::ctThreadpoolTimer wakeup_timer;
         // keep a burn-down count as connections are made to know when to be 'done'
         ULONGLONG total_connections_remaining = 0ULL;
         // track what's pended and what's active

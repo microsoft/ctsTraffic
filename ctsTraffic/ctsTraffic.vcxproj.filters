@@ -133,9 +133,6 @@
     <ClInclude Include="..\ctl\ctException.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctLocks.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -245,6 +242,9 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
   </ItemGroup>

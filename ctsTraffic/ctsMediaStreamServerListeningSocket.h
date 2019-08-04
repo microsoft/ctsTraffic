@@ -13,27 +13,28 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// cpp headers
 #include <array>
 #include <memory>
-
+// os headers
 #include <windows.h>
-
+// wil headers
 #include <wil/resource.h>
-
-#include "ctSockaddr.hpp"
-#include "ctThreadIocp.hpp"
+// ctl headers
+#include <ctSockaddr.hpp>
+#include <ctThreadIocp.hpp>
 
 namespace ctsTraffic {
     class ctsMediaStreamServerListeningSocket {
     private:
         static const size_t RecvBufferSize = 1024;
-        mutable CRITICAL_SECTION object_guard{};
+        mutable wil::critical_section object_guard;
 
         /// members must have access protected
         _Guarded_by_(object_guard)
         std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
         _Guarded_by_(object_guard)
-        std::array<char, RecvBufferSize> recv_buffer{};
+        std::array<char, RecvBufferSize> recv_buffer;
         _Guarded_by_(object_guard)
         wil::unique_socket socket;
         _Guarded_by_(object_guard)

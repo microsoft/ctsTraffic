@@ -19,8 +19,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <rpc.h>
 // ctl headers
 #include <ctTimer.hpp>
-#include <ctLocks.hpp>
 #include <ctException.hpp>
+#include <ctMemoryGuard.hpp>
 
 namespace ctsTraffic
 {
@@ -90,7 +90,7 @@ namespace ctsTraffic
             previous_value(_initial_value)
         {
         }
-        explicit ctStatsTracking(const ctStatsTracking& _in) noexcept :
+        ctStatsTracking(const ctStatsTracking& _in) noexcept :
             current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
             previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
         {

@@ -17,12 +17,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
+// wil headers
+#include <wil/resource.h>
 
-namespace ctsTraffic {
-    //
-    // forward declare ctsSocketBroker
-    // - can't include ctsSocketBroker.h in this header to avoid circular declarations
-    //
+namespace ctsTraffic
+{
+//
+// forward declare ctsSocketBroker
+// - can't include ctsSocketBroker.h in this header to avoid circular declarations
+//
     class ctsSocketBroker;
 
     //
@@ -37,7 +40,8 @@ namespace ctsTraffic {
     // Encapsulates a ctsSocket instance
     // - tracking socket state and corresponding statistics
     //
-    class ctsSocketState : public std::enable_shared_from_this<ctsSocketState> {
+    class ctsSocketState : public std::enable_shared_from_this<ctsSocketState>
+    {
     public:
         enum class InternalState
         {
@@ -88,19 +92,18 @@ namespace ctsTraffic {
         // private members of ctsSocketState
         // - CS's are mutable to allow taking a CS in a const function
         //
-        PTP_WORK                       thread_pool_worker = nullptr;
-        mutable CRITICAL_SECTION       state_guard{};
+        PTP_WORK thread_pool_worker = nullptr;
+        mutable wil::critical_section state_guard{};
         std::weak_ptr<ctsSocketBroker> broker{};
-        std::shared_ptr<ctsSocket>     socket{};
-        InternalState                  state = InternalState::Creating;
-        int                            last_error = 0UL;
-        bool                           initiated_io = false;
+        std::shared_ptr<ctsSocket> socket{};
+        InternalState state = InternalState::Creating;
+        int last_error = 0UL;
+        bool initiated_io = false;
 
         //
         // static threadpool callback function
         //
-        static
-        VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) noexcept;
+        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) noexcept;
     };
 
 } // namespace

@@ -14,26 +14,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <exception>
 #include <memory>
-
+#include <utility>
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-
 // wil headers
 #include <wil/resource.h>
-
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
-#include <utility>
-
 // project headers
 #include "ctsMediaStreamServerListeningSocket.h"
 #include "ctsMediaStreamServer.h"
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsConfig.h"
-
 
 namespace ctsTraffic {
 
@@ -45,10 +40,6 @@ namespace ctsTraffic {
         ctl::ctFatalCondition(
             !!(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP),
             L"ctsMediaStream sockets must not have HANDLE_INLINE_IOCP set on its datagram sockets");
-
-        if (!::InitializeCriticalSectionEx(&object_guard, 4000, 0)) {
-            throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
-        }
     }
 
     ctsMediaStreamServerListeningSocket::~ctsMediaStreamServerListeningSocket() noexcept
@@ -56,24 +47,23 @@ namespace ctsTraffic {
         // close the socket, then end the TP
         this->reset();
         this->thread_iocp.reset();
-        ::DeleteCriticalSection(&object_guard);
     }
 
     SOCKET ctsMediaStreamServerListeningSocket::get_socket() const noexcept
     {
-        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const auto object_lock = object_guard.lock();
         return this->socket.get();
     }
 
     ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const noexcept
     {
-        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const auto object_lock = object_guard.lock();
         return this->listening_addr;
     }
 
     void ctsMediaStreamServerListeningSocket::reset() noexcept
     {
-        const ctl::ctAutoReleaseCriticalSection object_lock(&this->object_guard);
+        const auto object_lock = object_guard.lock();
         this->socket.reset();
     }
 
@@ -84,8 +74,8 @@ namespace ctsTraffic {
         unsigned long failure_counter = 0;
         while (error != NO_ERROR) {
             try {
-                const ctl::ctAutoReleaseCriticalSection lock_socket(&this->object_guard);
-                if (this->socket.get() != INVALID_SOCKET) {
+                const auto lock = object_guard.lock();
+                if (this->socket) {
                     WSABUF wsabuf;
                     wsabuf.buf = this->recv_buffer.data();
                     wsabuf.len = static_cast<ULONG>(this->recv_buffer.size());
@@ -166,9 +156,9 @@ namespace ctsTraffic {
             // scope to the object lock
             {
                 // must take the object lock before touching this->socket
-                const ctl::ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const auto lock = object_guard.lock();
 
-                if (INVALID_SOCKET == this->socket.get()) {
+                if (!this->socket) {
                     // the listening socket was closed - just exit
                     return;
                 }
@@ -205,7 +195,7 @@ namespace ctsTraffic {
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods
                             pimpl_operation = [this] () {
-                                ctsMediaStreamServerImpl::start(this->socket, this->listening_addr, this->remote_addr);
+                                ctsMediaStreamServerImpl::start(this->socket.get(), this->listening_addr, this->remote_addr);
                             };
 #endif
                             break;

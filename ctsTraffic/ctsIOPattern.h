@@ -18,9 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 // os headers
 #include <windows.h>
-// ctl header
-#include <ctLocks.hpp>
-#include <ctString.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
@@ -99,24 +96,24 @@ namespace ctsTraffic {
         ///
         virtual void register_callback(std::function<void(const ctsIOTask&)> _callback) noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection local_cs(&cs);
+            const auto lock = cs.lock();
             this->callback = std::move(_callback);
         }
 
         virtual int get_last_error() const noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto lock = cs.lock();
             return this->last_error;
         }
 
         ctsUnsignedLong get_ideal_send_backlog() const noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto lock = cs.lock();
             return this->pattern_state.get_ideal_send_backlog();
         }
         void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto lock = cs.lock();
             this->pattern_state.set_ideal_send_backlog(_new_isb);
         }
 
@@ -192,7 +189,7 @@ namespace ctsTraffic {
 
         // CS memory guard for data within this object
         // - it's mutable to allow us to take the CS in const methods
-        mutable CRITICAL_SECTION cs{};
+        mutable wil::critical_section cs;
 
         // recv buffers to return to the caller
         // - tracking sending buffers separate from receiving buffers
@@ -303,7 +300,7 @@ namespace ctsTraffic {
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         unsigned long update_last_error(DWORD _error) noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto lock = cs.lock();
             if (ctsStatusIORunning == this->last_error) {
                 const auto status_error = this->pattern_state.update_error(_error);
                 if (NO_ERROR == _error) {
@@ -355,15 +352,9 @@ namespace ctsTraffic {
         ///    class.
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        _Acquires_lock_(cs)
-        void base_lock() const noexcept
+        auto base_lock() const noexcept
         {
-            ::EnterCriticalSection(&this->cs);
-        }
-        _Releases_lock_(cs)
-        void base_unlock() const noexcept
-        {
-            ::LeaveCriticalSection(&this->cs);
+            return cs.lock();
         }
     };
     ///////////////////////////////////////////////////////////////////////////////////////////////////

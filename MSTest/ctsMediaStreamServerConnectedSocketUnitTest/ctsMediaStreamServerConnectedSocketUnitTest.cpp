@@ -205,25 +205,25 @@ namespace ctsTraffic {
     ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker>)
     {
     }
-    ctsSocketState::~ctsSocketState()
-    = default;
+    ctsSocketState::~ctsSocketState() noexcept
+    {
+    }
     // ctsSocket fakes
     ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>)
     {
         this->pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
     }
-    ctsSocket::~ctsSocket()
-    = default;
+    ctsSocket::~ctsSocket() noexcept
+    {
+    }
 
     void ctsSocket::set_socket(SOCKET _s) noexcept
     {
-        this->socket = _s;
+        this->socket.reset(_s);
     }
-    void ctsSocket::lock_socket() const noexcept
+    wil::cs_leave_scope_exit ctsSocket::lock_socket() const noexcept
     {
-    }
-    void ctsSocket::unlock_socket() const noexcept
-    {
+        return this->socket_cs.lock();
     }
     void ctsSocket::complete_state(unsigned long) noexcept
     {

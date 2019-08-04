@@ -18,6 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 // project headers
@@ -40,7 +42,7 @@ namespace ctsTraffic {
         friend class ctsSocketGuard<std::shared_ptr<ctsMediaStreamServerConnectedSocket>>;
 
         // the CS is mutable so we can take a lock / release a lock in const methods
-        mutable CRITICAL_SECTION object_guard{};
+        mutable wil::critical_section object_guard;
         PTP_TIMER task_timer = nullptr;
 
         // this weak_socket is the weak reference to the ctsSocket tracked by ctsSocketState & ctsSocketBroker
@@ -53,17 +55,13 @@ namespace ctsTraffic {
         // sending_socket is a shared socket from the datagram server
         // that (potentially) many connected datagram sockets will send from
         // thus it's not owned by this class
-        _Guarded_by_(object_guard) SOCKET socket;
+        _Guarded_by_(object_guard) SOCKET sending_socket;
         _Guarded_by_(object_guard) ctsIOTask next_task;
 
         const ctl::ctSockaddr remote_addr;
 
         _Interlocked_ long long sequence_number = 0LL;
         const long long connect_time = 0LL;
-
-        // called by ctsSocketGuard
-        _Acquires_lock_(object_guard) void lock_socket() const noexcept;
-        _Releases_lock_(object_guard) void unlock_socket() const noexcept;
 
     public:
         ctsMediaStreamServerConnectedSocket(
@@ -76,6 +74,11 @@ namespace ctsTraffic {
 
         const ctl::ctSockaddr& get_address() const noexcept;
 
+        wil::cs_leave_scope_exit lock_socket() const noexcept;
+        SOCKET get_sending_socket() const noexcept
+        {
+            return sending_socket;
+        }
         long long get_startTime() const noexcept;
 
         ctsIOTask get_nextTask() const noexcept;

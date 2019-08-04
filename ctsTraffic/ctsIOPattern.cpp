@@ -13,18 +13,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsIOPattern.h"
-
 // cpp headers
 #include <vector>
-
 // wil headers
 #include <wil/resource.h>
-
 // ctl headers
 #include <ctSocketExtensions.hpp>
-#include <ctLocks.hpp>
 #include <ctTimer.hpp>
-
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsIOBuffers.hpp"
@@ -180,11 +175,6 @@ namespace ctsTraffic {
         // this init-once call is no-fail
         (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
 
-        if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
-            throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
-        }
-        auto deleteCSonError = wil::scope_exit([&]() { ::DeleteCriticalSection(&cs); });
-
         // if TCP, will always need a recv buffer for the final FIN 
         if ((_recv_count > 0) || (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)) {
             // recv will only use the same shared buffer when the user specified to do so on the cmdline
@@ -223,9 +213,6 @@ namespace ctsTraffic {
                 }
             }
         }
-
-        // init was successful - don't delete
-        deleteCSonError.release();
     }
 
 
@@ -234,8 +221,6 @@ namespace ctsTraffic {
         if (recv_rio_bufferid != RIO_INVALID_BUFFERID && recv_rio_bufferid != s_SharedBufferId) {
             ctRIODeregisterBuffer(recv_rio_bufferid);
         }
-
-        ::DeleteCriticalSection(&cs);
     }
 
     ctsIOTask ctsIOPattern::initiate_io() noexcept
@@ -243,7 +228,7 @@ namespace ctsTraffic {
         // make sure stats starts tracking IO at the first IO request
         this->start_stats();
 
-        const ctAutoReleaseCriticalSection local_cs(&this->cs);
+        const auto local_cs = this->cs.lock();
         ctsIOTask return_task;
         switch (this->pattern_state.get_next_task()) {
         case ctsIOPatternProtocolTask::MoreIo:
@@ -368,10 +353,7 @@ namespace ctsTraffic {
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) noexcept
     {
-        //
-        // Take the object lock before touching internal values
-        //
-        const ctAutoReleaseCriticalSection local_cs(&this->cs);
+        const auto lock = this->cs.lock();
 
         // Only add the recv buffer back if it was one of our listed recv buffers
         if (ctsIOTask::BufferType::Tracked == _original_task.buffer_type) {
@@ -521,7 +503,7 @@ namespace ctsTraffic {
 
     ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
     {
-        const ctAutoReleaseCriticalSection local_cs(&this->cs);
+        const auto lock = this->cs.lock();
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
         return_task.track_io = true;
         return return_task;
@@ -529,7 +511,7 @@ namespace ctsTraffic {
 
     ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
     {
-        const ctAutoReleaseCriticalSection local_cs(&this->cs);
+        const auto lock = this->cs.lock();
         ctsIOTask return_task(this->new_task(_action, _max_transfer));
         return_task.track_io = false;
         return return_task;

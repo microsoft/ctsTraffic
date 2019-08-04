@@ -11,9 +11,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// parent header
+#include "ctsMediaStreamServerConnectedSocket.h"
 // cpp headers
 #include <memory>
 #include <functional>
+#include <utility>
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
@@ -21,10 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctSockaddr.hpp>
 #include <ctTimer.hpp>
-#include <ctLocks.hpp>
-#include <utility>
+#include <ctMemoryGuard.hpp>
 // project headers
-#include "ctsMediaStreamServerConnectedSocket.h"
 #include "ctsWinsockLayer.h"
 
 using namespace ctl;
@@ -38,18 +39,13 @@ namespace ctsTraffic {
         :
         weak_socket(std::move(_weak_socket)),
         io_functor(std::move(_io_functor)),
-        socket(_sending_socket),
+        sending_socket(_sending_socket),
         remote_addr(std::move(_remote_addr)),
         connect_time(ctTimer::snap_qpc_as_msec())
     {
-        if (!::InitializeCriticalSectionEx(&object_guard, 4000, 0)) {
-            throw ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsMediaStreamServer", false);
-        }
-
         task_timer = ::CreateThreadpoolTimer(ctsMediaStreamTimerCallback, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == task_timer) {
             const auto gle = ::GetLastError();
-            ::DeleteCriticalSection(&object_guard);
             throw ctException(gle, L"CreateThreadpoolTimer", L"ctsMediaStreamServer", false);
         }
     }
@@ -60,20 +56,11 @@ namespace ctsTraffic {
         ::SetThreadpoolTimer(task_timer, nullptr, 0, 0);
         ::WaitForThreadpoolTimerCallbacks(task_timer, TRUE);
         ::CloseThreadpoolTimer(task_timer);
-
-        ::DeleteCriticalSection(&object_guard);
     }
 
-    _Acquires_lock_(object_guard)
-    void ctsMediaStreamServerConnectedSocket::lock_socket() const noexcept
+    wil::cs_leave_scope_exit ctsMediaStreamServerConnectedSocket::lock_socket() const noexcept
     {
-        ::EnterCriticalSection(&object_guard);
-    }
-
-    _Releases_lock_(object_guard)
-    void ctsMediaStreamServerConnectedSocket::unlock_socket() const noexcept
-    {
-        ::LeaveCriticalSection(&object_guard);
+        return object_guard.lock();
     }
 
     const ctSockaddr& ctsMediaStreamServerConnectedSocket::get_address() const noexcept
@@ -88,7 +75,7 @@ namespace ctsTraffic {
 
     ctsIOTask ctsMediaStreamServerConnectedSocket::get_nextTask() const noexcept
     {
-        const ctAutoReleaseCriticalSection object_lock(&object_guard);
+        const auto lock = object_guard.lock();
         return next_task;
     }
 
@@ -103,14 +90,14 @@ namespace ctsTraffic {
         if (shared_socket) {
             if (_task.time_offset_milliseconds < 1) {
                 // in this case, immediately schedule the WSASendTo
-                const ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const auto lock = object_guard.lock();
                 this->next_task = _task;
                 ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(nullptr, this, nullptr);
 
             } else {
                 FILETIME ftDueTime(ctTimer::convert_msec_relative_filetime(_task.time_offset_milliseconds));
                 // assign the next task *and* schedule the timer while in *this object lock
-                const ctAutoReleaseCriticalSection lock_object(&this->object_guard);
+                const auto lock = object_guard.lock();
                 this->next_task = _task;
                 ::SetThreadpoolTimer(this->task_timer, &ftDueTime, 0, 0);
             }
@@ -137,7 +124,7 @@ namespace ctsTraffic {
         // hold a reference on the iopattern
         auto shared_pattern(shared_socket->io_pattern());
 
-        const ctAutoReleaseCriticalSection object_lock(&this_ptr->object_guard);
+        const auto lock = this_ptr->object_guard.lock();
         ctsIOTask current_task = this_ptr->get_nextTask();
 
         // post the queued IO, then loop sending/scheduling as necessary

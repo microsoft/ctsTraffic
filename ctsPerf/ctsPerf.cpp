@@ -17,19 +17,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <string>
 #include <memory>
-
 // os headers
 #include <windows.h>
 #include <WinSock2.h>
-
 // wil headers
 #include <wil/resource.h>
-
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
 #include <ctWmiPerformance.hpp>
-
 // project headers
 #include "ctsWriteDetails.h"
 #include "ctsEstats.h"
@@ -37,17 +33,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace std;
 using namespace ctl;
 
-HANDLE g_hBreak = nullptr;
-const ctWmiService* g_wmi = nullptr;
+HANDLE g_Break = nullptr;
+const ctWmiService* g_Wmi = nullptr;
 
 BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 {
     // regardless of the break type, signal to exit
-    ::SetEvent(g_hBreak);
+    ::SetEvent(g_Break);
     return TRUE;
 }
 
-static const WCHAR UsageStatement[] =
+static const PCWSTR UsageStatement =
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
 	L" -Networking [will enable performance and reliability related Network counters]\n"
@@ -139,8 +135,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
 
     // create a notification event to signal if the user wants to exit early
-    g_hBreak = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (g_hBreak == nullptr)
+    g_Break = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    if (g_Break == nullptr)
     {
         const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
@@ -282,7 +278,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
         const ctComInitialize coinit;
         const ctWmiService wmi(L"root\\cimv2");
-        g_wmi = &wmi;
+        g_Wmi = &wmi;
 
         auto deleteAllCounters = wil::scope_exit([&]() { DeleteAllCounters(); });
 
@@ -334,7 +330,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             perf_object.start_all_counters(1000);
         }
 
-        ::WaitForSingleObject(g_hBreak, timeToRunMs);
+        ::WaitForSingleObject(g_Break, timeToRunMs);
 
         wprintf(L"Stopping counters ....\n\n");
         for (auto& perf_object : performance_vector)
@@ -365,7 +361,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         return 1;
     }
 
-    CloseHandle(g_hBreak);
+    CloseHandle(g_Break);
 
     return 0;
 }
@@ -440,7 +436,7 @@ void DeleteProcessorCounters() noexcept
 }
 void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 {
-    ctWmiEnumerate enumProcessors(*g_wmi);
+    ctWmiEnumerate enumProcessors(*g_Wmi);
     enumProcessors.query(L"SELECT * FROM Win32_PerfFormattedData_Counters_ProcessorInformation");
     if (enumProcessors.begin() == enumProcessors.end()) {
         throw exception("Unable to find any processors to report on - querying Win32_PerfFormattedData_Counters_ProcessorInformation returned nothing");
@@ -742,7 +738,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
     // there is no great way to find the 'Name' for each network interface tracked
     // - it is not guaranteed to match anything from NetAdapter or NetIPInteface
     // - making a single query directly here to at least get the names
-    ctWmiEnumerate enumAdapter(*g_wmi);
+    ctWmiEnumerate enumAdapter(*g_Wmi);
     enumAdapter.query(L"SELECT * FROM Win32_PerfFormattedData_Tcpip_NetworkAdapter");
     if (enumAdapter.begin() == enumAdapter.end()) {
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkAdapter returned nothing");
@@ -937,7 +933,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
     // there is no great way to find the 'Name' for each network interface tracked
     // - it is not guaranteed to match anything from NetAdapter or NetIPInterface
     // - making a single query directly here to at least get the names
-    ctWmiEnumerate enumAdapter(*g_wmi);
+    ctWmiEnumerate enumAdapter(*g_Wmi);
     enumAdapter.query(L"SELECT * FROM Win32_PerfFormattedData_Tcpip_NetworkInterface");
     if (enumAdapter.begin() == enumAdapter.end()) {
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkInterface returned nothing");

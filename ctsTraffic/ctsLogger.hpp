@@ -26,34 +26,37 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsPrintStatus.hpp"
 
-namespace ctsTraffic {
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Base class for all ctsTraffic Loggers
-    ///
-    ///
-    /// - all concrete types must implement:
-    ///     message_impl(LPCWSTR)
-    ///     error_impl(LPCWSTR)
-    ///
-    ///   Note: all logging functions are no-throw
-    ///         only the c'tor can throw
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+namespace ctsTraffic
+{
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// Base class for all ctsTraffic Loggers
+///
+///
+/// - all concrete types must implement:
+///     message_impl(LPCWSTR)
+///     error_impl(LPCWSTR)
+///
+///   Note: all logging functions are no-throw
+///         only the c'tor can throw
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    class ctsLogger {
+    class ctsLogger
+    {
     public:
         explicit ctsLogger(ctsConfig::StatusFormatting _format) noexcept :
             format(_format)
         {
         }
         virtual ~ctsLogger() noexcept
-        = default;
+            = default;
 
         void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
             LPCWSTR const message = _status_info->print_legend(this->format);
-            if (message != nullptr) {
+            if (message != nullptr)
+            {
                 log_message_impl(message);
             }
         }
@@ -61,7 +64,8 @@ namespace ctsTraffic {
         void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
             LPCWSTR const message = _status_info->print_header(this->format);
-            if (message != nullptr) {
+            if (message != nullptr)
+            {
                 log_message_impl(message);
             }
         }
@@ -69,7 +73,8 @@ namespace ctsTraffic {
         void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
         {
             LPCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
-            if (message != nullptr) {
+            if (message != nullptr)
+            {
                 log_message_impl(message);
             }
         }
@@ -101,25 +106,22 @@ namespace ctsTraffic {
         virtual void log_error_impl(LPCWSTR _message) noexcept = 0;
     };
 
-    class ctsTextLogger : public ctsLogger {
+    class ctsTextLogger : public ctsLogger
+    {
     public:
         ctsTextLogger(LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
             ctsLogger(_format)
         {
-            if (!::InitializeCriticalSectionEx(&file_cs, 4000, 0)) {
-                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsTextLogger", false);
-            }
-            auto deleteCSOnError = wil::scope_exit([&]() { ::DeleteCriticalSection(&file_cs); });
-
-            file_handle = ::CreateFileW(
+            file_handle.reset(::CreateFileW(
                 _file_name,
                 GENERIC_WRITE,
                 FILE_SHARE_READ, // allow others to read the file while we write to it
                 nullptr,
                 CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL,
-                nullptr);
-            if (INVALID_HANDLE_VALUE == file_handle) {
+                nullptr));
+            if (!file_handle)
+            {
                 const auto gle = ::GetLastError();
                 throw ctl::ctException(
                     gle,
@@ -127,31 +129,22 @@ namespace ctsTraffic {
                     L"ctsTextLogger",
                     true);
             }
-            auto closeHandleOnError = wil::scope_exit([&]() { ::CloseHandle(file_handle); });
 
             // write the UTF16 Byte order mark
-            static const WCHAR BOM_UTF16 = 0xFEFF;
-            DWORD BytesWritten;
+            const WCHAR bom_utf16 = 0xFEFF;
+            DWORD bytesWritten;
             if (!::WriteFile(
-                file_handle,
-                &BOM_UTF16,
+                file_handle.get(),
+                &bom_utf16,
                 static_cast<DWORD>(sizeof WCHAR),
-                &BytesWritten,
-                nullptr)) 
+                &bytesWritten,
+                nullptr))
             {
                 const auto gle = ::GetLastError();
                 throw ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false);
             }
-
-            // everything succeeded, dismiss the scope guards
-            closeHandleOnError.release();
-            deleteCSOnError.release();
         }
-        ~ctsTextLogger() noexcept
-        {
-            ::CloseHandle(file_handle);
-            ::DeleteCriticalSection(&file_cs);
-        }
+        ~ctsTextLogger() noexcept override = default;
 
         void log_message_impl(LPCWSTR _message) noexcept override
         {
@@ -169,25 +162,24 @@ namespace ctsTraffic {
         ctsTextLogger& operator=(ctsTextLogger&&) = delete;
 
     private:
-        CRITICAL_SECTION file_cs{};
-        HANDLE file_handle = INVALID_HANDLE_VALUE;
+        wil::critical_section file_cs;
+        wil::unique_hfile file_handle;
 
         void write_impl(LPCWSTR _message) noexcept
         {
-            ::EnterCriticalSection(&file_cs);
-            DWORD BytesWritten;
+            const auto lock = file_cs.lock();
+            DWORD bytesWritten;
             if (!::WriteFile(
-                file_handle,
+                file_handle.get(),
                 _message,
                 static_cast<DWORD>(::wcslen(_message) * sizeof(WCHAR)),
-                &BytesWritten,
-                nullptr)) 
+                &bytesWritten,
+                nullptr))
             {
                 const auto gle = ::GetLastError();
                 ctsConfig::PrintException(
                     ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false));
             }
-            ::LeaveCriticalSection(&file_cs);
         }
     };
 

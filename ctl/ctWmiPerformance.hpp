@@ -13,6 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
+// cpp headers
 #include <iterator>
 #include <functional>
 #include <memory>
@@ -21,16 +22,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <tuple>
 #include <algorithm>
-
+// os headers
 #include <Windows.h>
 #include <Objbase.h>
 #include <OleAuto.h>
-
+// wil headers
 // ReSharper disable once CppUnusedIncludeDirective
 #include <wil/resource.h>
-
+// ctl headers
 #include <ctString.hpp>
-#include <ctLocks.hpp>
 #include <ctException.hpp>
 #include <ctThreadPoolTimer.hpp>
 #include <ctComInitialize.hpp>
@@ -412,7 +412,7 @@ namespace ctl
         class ctWmiPeformanceCounterData
         {
         private:
-            mutable CRITICAL_SECTION guard_data{};
+            mutable wil::critical_section guard_data;
             const ctWmiPerformanceCollectionType collection_type = ctWmiPerformanceCollectionType::Detailed;
             const std::wstring instance_name;
             const std::wstring counter_name;
@@ -421,7 +421,7 @@ namespace ctl
 
             void add_data(const T& instance_data)
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 switch (collection_type)
                 {
                     case ctWmiPerformanceCollectionType::Detailed:
@@ -485,7 +485,7 @@ namespace ctl
 
             typename std::vector<T>::const_iterator access_begin() noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 // when accessing data, calculate the mean
                 if (ctWmiPerformanceCollectionType::MeanOnly == collection_type)
                 {
@@ -496,7 +496,7 @@ namespace ctl
 
             typename std::vector<T>::const_iterator access_end() const noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 return counter_data.cend();
             }
 
@@ -509,14 +509,6 @@ namespace ctl
                 instance_name(V_BSTR(ReadCounterFromWbemObjectAccess(_instance, L"Name").addressof())),
                 counter_name(_counter)
             {
-                if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0))
-                {
-                    const auto gle = ::GetLastError();
-                    ctAlwaysFatalCondition(
-                        ctString::format_string(
-                            L"InitializeCriticalSectionEx failed with error %ul",
-                            gle).c_str());
-                }
             }
             ctWmiPeformanceCounterData(
                 const ctWmiPerformanceCollectionType _collection_type,
@@ -525,15 +517,6 @@ namespace ctl
                 : collection_type(_collection_type),
                 counter_name(_counter)
             {
-                if (!::InitializeCriticalSectionEx(&guard_data, 4000, 0))
-                {
-                    const auto gle = ::GetLastError();
-                    ctAlwaysFatalCondition(
-                        ctString::format_string(
-                            L"InitializeCriticalSectionEx failed with error %ul",
-                            gle).c_str());
-                }
-
                 wil::unique_variant value;
                 const auto hr = _instance->Get(L"Name", 0, value.addressof(), nullptr, nullptr);
                 if (FAILED(hr))
@@ -553,10 +536,7 @@ namespace ctl
                         true);
                 }
             }
-            ~ctWmiPeformanceCounterData() noexcept
-            {
-                ::DeleteCriticalSection(&guard_data);
-            }
+            ~ctWmiPeformanceCounterData() noexcept = default;
 
             /// _instance_name == nullptr means match everything
             /// - allows for the caller to not have to pass Name filters multiple times
@@ -608,24 +588,24 @@ namespace ctl
 
             typename std::vector<T>::const_iterator begin() noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 return access_begin();
             }
             typename std::vector<T>::const_iterator end() const noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 return access_end();
             }
 
             size_t count() noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 return access_end() - access_begin();
             }
 
             void clear() noexcept
             {
-                const ctAutoReleaseCriticalSection auto_guard(&guard_data);
+                const auto auto_guard = guard_data.lock();
                 counter_data.clear();
                 counter_sum = 0;
             }
@@ -822,14 +802,9 @@ namespace ctl
         {
             refresher = wil::CoCreateInstance<WbemRefresher, IWbemRefresher>();
             config_refresher = refresher.query<IWbemConfigureRefresher>();
-
-            ::InitializeCriticalSectionEx(&guard_counter_data, 4000, 0);
         }
 
-        virtual ~ctWmiPerformanceCounter() noexcept
-        {
-            ::DeleteCriticalSection(&guard_counter_data);
-        }
+        virtual ~ctWmiPerformanceCounter() noexcept = default;
 
         ctWmiPerformanceCounter(const ctWmiPerformanceCounter&) = delete;
         ctWmiPerformanceCounter& operator=(const ctWmiPerformanceCounter&) = delete;
@@ -858,7 +833,7 @@ namespace ctl
                 !data_stopped,
                 L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
 
-            const ctAutoReleaseCriticalSection lock(&guard_counter_data);
+            const auto lock = guard_counter_data.lock();
             auto found_instance = std::find_if(
                 std::begin(counter_data),
                 std::end(counter_data),
@@ -949,7 +924,7 @@ namespace ctl
         wil::com_ptr<IWbemConfigureRefresher> config_refresher;
         std::vector<ctWmiPerformanceInstanceFilter> instance_filter;
         // Must lock access to counter_data
-        mutable CRITICAL_SECTION guard_counter_data{};
+        mutable wil::critical_section guard_counter_data;
         std::vector<std::unique_ptr<details::ctWmiPeformanceCounterData<T>>> counter_data;
         bool data_stopped = true;
 
@@ -983,7 +958,7 @@ namespace ctl
                             !data_stopped,
                             L"ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
                         {
-                            const ctAutoReleaseCriticalSection lock(&guard_counter_data);
+                            const auto lock = guard_counter_data.lock();
                             for (auto& _counter_data : counter_data)
                             {
                                 _counter_data->clear();
@@ -1025,7 +1000,7 @@ namespace ctl
             {
                 wil::unique_variant instance_name = details::ctQueryInstanceName(_instance);
 
-                const ctAutoReleaseCriticalSection lock(&guard_counter_data);
+                const auto lock = guard_counter_data.lock();
 
                 auto tracked_instance = std::find_if(
                     std::begin(counter_data),

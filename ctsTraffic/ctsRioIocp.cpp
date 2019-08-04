@@ -13,6 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
+#include <utility>
 // os headers
 #include <Windows.h>
 #include <winsock2.h>
@@ -22,8 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctSockaddr.hpp>
-#include <ctLocks.hpp>
-#include <utility>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -61,7 +60,7 @@ namespace ctsTraffic {
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE s_sharedbuffer_initializer = INIT_ONCE_STATIC_INIT;
 
-    static ctl::ctPrioritizedCriticalSection* s_prioritized_cs = nullptr;
+    static wil::critical_section s_queue_cs;
     static RIO_NOTIFICATION_COMPLETION s_rio_notify_setttings;
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static RIO_CQ  s_rio_cq = RIO_INVALID_CQ;
@@ -76,17 +75,14 @@ namespace ctsTraffic {
     /// Make room in the CQ for a new IO
     ///
     /// - check if there is room in the CQ for the new IO
-    ///   - if not, take a writer lock around the CS to halt readers and to write to cq_used
-    ///     then take the CS over the CQ, and resize the CQ by 1.5 times current size
+    ///   - if not, take the CS over the CQ, and resize the CQ by 1.5 times current size
     ///
     /// - can throw under low resources or failure to resize
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static void s_make_room_in_cq(ULONG _new_slots)
     {
-        // taking an priority lock to interrupt the general lock taken by the deque IO path
-        // - we want to interrupt the IO path so we can initiate more IO if we need to grow the CQ
-        ctl::ctAutoReleasePriorityCriticalSection priority_lock_on_static_cs(*s_prioritized_cs);
+        const auto lock = s_queue_cs.lock();
 
         const ULONG new_cq_used = s_rio_cq_used + _new_slots;
         ULONG new_cq_size = s_rio_cq_size; // not yet resized
@@ -129,7 +125,7 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static void s_release_room_in_cq(ULONG _slots) noexcept
     {
-        ctl::ctAutoReleasePriorityCriticalSection priority_lock_on_static_cs(*s_prioritized_cs);
+        const auto lock = s_queue_cs.lock();
 
         ctl::ctFatalCondition(
             s_rio_cq_used < _slots,
@@ -152,9 +148,7 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) noexcept
     {
-        // taking a lower-priority lock, to allow the priority lock to interrupt dequeing
-        // - so it can add space to the CQ
-        ctl::ctAutoReleaseDefaultCriticalSection default_lock_on_cs(*s_prioritized_cs);
+        const auto lock = s_queue_cs.lock();
 
         const auto deque_result = ctl::ctRIODequeueCompletion(s_rio_cq, _rio_results, RioResultArrayLength);
         // We were notified there were completions, but we can't dequeue any IO
@@ -242,9 +236,6 @@ namespace ctsTraffic {
         ::free(s_rio_notify_setttings.Iocp.Overlapped);
         s_rio_notify_setttings.Iocp.Overlapped = nullptr;
 
-        delete s_prioritized_cs;
-        s_prioritized_cs = nullptr;
-
         s_rio_cq_size = 0;
         s_rio_cq_used = 0;
     }
@@ -259,13 +250,6 @@ namespace ctsTraffic {
     {
         // delete all cq's on error
         auto deleteAllCqsOnError = wil::scope_exit([&]() { s_delete_all_cqs(); });
-
-        s_prioritized_cs = new (std::nothrow) ctl::ctPrioritizedCriticalSection;
-        if (nullptr == s_prioritized_cs) {
-            return FALSE;
-        }
-        // delete the prioritized cs on error
-        auto deletePrioritzedCsOnError = wil::scope_exit([&]() { delete s_prioritized_cs; });
 
         ::ZeroMemory(&s_rio_notify_setttings, sizeof s_rio_notify_setttings);
         // completion key for RioNotify IOCP is the ctsRioIocpImpl*
@@ -354,7 +338,6 @@ namespace ctsTraffic {
         closeCQOnError.release();
         deleteIoCPOnError.release();
         freeOverlappedOnError.release();
-        deletePrioritzedCsOnError.release();
         deleteAllCqsOnError.release();
         return TRUE;
     }

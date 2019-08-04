@@ -25,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include "ctException.hpp"
 #include "ctTimer.hpp"
-#include "ctLocks.hpp"
 
 
 namespace ctl
@@ -103,35 +102,23 @@ namespace ctl
 	class ctThreadpoolTimer
 	{
 	public:
-		//
-		// These c'tors can fail under low resources
-		// - ctl::ctException (from the ThreadPool APIs)
-		//
 		explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON _ptp_env = nullptr) noexcept :  // NOLINT
 			tp_environment(_ptp_env)
 		{
-			if (!::InitializeCriticalSectionEx(&timer_lock, 4000, 0))
-			{
-				const auto gle = ::GetLastError();
-				ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed unexpectedly: %u\n", gle);
-			}
 		}
 
 		~ctThreadpoolTimer() noexcept
 		{
-			// wait for all callbacks
-			::EnterCriticalSection(&timer_lock);
-			// block any more items being scheduled
-			exiting = true;
-			::LeaveCriticalSection(&timer_lock);
-
+            // wait for all callbacks
+            auto lock_timer = this->timer_lock.lock();
+            // block any more items being scheduled
+            exiting = true;
+            lock_timer.reset();
 			stop_all_timers();
 
 			for (const auto& timer : tp_timers) {
 				::CloseThreadpoolTimer(timer);
 			}
-
-			::DeleteCriticalSection(&timer_lock);
 		}
 
 		// non-copyable
@@ -161,11 +148,11 @@ namespace ctl
 
 		void stop_all_timers() noexcept
 		{
-			::EnterCriticalSection(&timer_lock);
-			for (const auto& timer : tp_timers) {
+            auto lock_timer = this->timer_lock.lock();
+            for (const auto& timer : tp_timers) {
 				::SetThreadpoolTimer(timer, nullptr, 0, 0);
 			}
-			::LeaveCriticalSection(&timer_lock);
+            lock_timer.reset();
 
 			for (const auto& timer : tp_timers) {
 				::WaitForThreadpoolTimerCallbacks(timer, TRUE);
@@ -176,7 +163,7 @@ namespace ctl
 		//
 		// Private members
 		//
-		CRITICAL_SECTION timer_lock{};
+		wil::critical_section timer_lock;
 		const PTP_CALLBACK_ENVIRON tp_environment = nullptr;  // NOLINT
 		std::vector<PTP_TIMER> tp_timers;
 		std::vector<details::ctThreadpoolTimerCallbackInfo> callback_objects;
@@ -196,7 +183,7 @@ namespace ctl
 		//
 		void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& _new_request)
 		{
-            const ctAutoReleaseCriticalSection lock_timer(&this->timer_lock);
+            const auto lock_timer = this->timer_lock.lock();
 
 			if (exiting) {
 				return;
@@ -257,8 +244,9 @@ namespace ctl
 
 			// scope for the CS lock
 			{
-                const ctAutoReleaseCriticalSection lock_timer(&this_ptr->timer_lock);
-				// find the timer that was fired to run its callback
+                const auto lock_timer = this_ptr->timer_lock.lock();
+                
+			    // find the timer that was fired to run its callback
 				const auto found_timer = std::find_if(
 					std::begin(this_ptr->tp_timers),
 					std::end(this_ptr->tp_timers),

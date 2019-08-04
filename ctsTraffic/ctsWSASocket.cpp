@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <winsock2.h>
 // ctl headers
-#include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"

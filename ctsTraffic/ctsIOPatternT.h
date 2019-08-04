@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctLocks.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
@@ -83,12 +82,7 @@ namespace ctsTraffic {
     class ctsIOPatternT : public ctsIOPattern
     {
     public:
-        ctsIOPatternT()
-        {
-            if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
-                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsIOPattern", false);
-            }
-        }
+        ctsIOPatternT() = default;
 
         void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept override final
         {
@@ -106,13 +100,13 @@ namespace ctsTraffic {
 
         void register_callback(std::function<void(const ctsIOTask&)> _callback) override final
         {
-            const ctl::ctAutoReleaseCriticalSection take_lock(&this->cs);
+            const auto take_lock = cs.lock();
             this->callback = std::move(_callback);
         }
 
         unsigned long get_last_error() const noexcept override final
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto auto_lock = cs.lock();
             return this->protocol_policy.get_last_error();
         }
 
@@ -121,8 +115,7 @@ namespace ctsTraffic {
         ctsIOPatternT& operator= (const ctsIOPatternT&) = delete;
 
     private:
-        // callers can use ctl::ctAutoReleaseCriticalSection on this class-wide lock
-        CRITICAL_SECTION cs;
+        mutable wil::critical_section cs;
         // optional callback for protocols which need to communicate OOB to the IO function
         std::function<void(const ctsIOTask&)> callback = nullptr;
 

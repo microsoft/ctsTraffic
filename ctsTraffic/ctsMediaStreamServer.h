@@ -69,7 +69,7 @@ namespace ctsTraffic {
         /// - else we'll queue it to awaiting_endpoints
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void start(const wil::unique_socket& _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr);
+        void start(SOCKET _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr);
     }
 
 

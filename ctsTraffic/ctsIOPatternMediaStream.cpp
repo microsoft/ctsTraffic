@@ -111,12 +111,12 @@ namespace ctsTraffic {
     
     ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() noexcept
     {
-        this->base_lock();
+        PTP_TIMER original_timer = nullptr;
+        auto lock = this->base_lock();
         // ReSharper disable once CppLocalVariableMayBeConst
-        PTP_TIMER original_timer = this->renderer_timer;
+        original_timer = this->renderer_timer;
         this->renderer_timer = nullptr;
-        this->base_unlock();
-
+        lock.reset();
         // stop both timers
         ::SetThreadpoolTimer(this->start_timer, nullptr, 0, 0);
         ::WaitForThreadpoolTimerCallbacks(this->start_timer, FALSE);
@@ -424,10 +424,9 @@ namespace ctsTraffic {
         static const char StartBuffer[] = "START";
 
         ctsIOPatternMediaStreamClient* this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(_context);
+
         // take the base lock before touching any internal members
-        this_ptr->base_lock();
-        // guarantee the lock is released on exit
-        auto unlockBaseLockOnExit = wil::scope_exit([&]() {this_ptr->base_unlock();});
+        const auto lock = this_ptr->base_lock();
 
         if (this_ptr->finished_stream) {
             return;
@@ -459,9 +458,7 @@ namespace ctsTraffic {
         bool timer_scheduled = false;
         while (!timer_scheduled) {
             // take the base lock before touching any internal members
-            this_ptr->base_lock();
-            // guarantee the lock is released on exit
-            auto unlockBaseLockOnExit = wil::scope_exit([&]() { this_ptr->base_unlock(); });
+            const auto lock = this_ptr->base_lock();
 
             if (this_ptr->finished_stream) {
                 return;

@@ -19,9 +19,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctException.hpp>
-#include <ctLocks.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"
@@ -47,17 +48,13 @@ namespace ctsTraffic {
         static char* ConnectionIdBuffer = nullptr;
         static ::std::vector<char*>* ConnectionIdVector = nullptr;
         static ::RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
-        static ::CRITICAL_SECTION ConnectionIdLock;
+        static wil::critical_section ConnectionIdLock;
 
         static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
         {
             using ::ctsTraffic::ctsConfig::Settings;
             using ::ctsTraffic::ctsConfig::IsListening;
             using ::ctsTraffic::ctsStatistics::ConnectionIdLength;
-
-            if (!::InitializeCriticalSectionEx(&statics::ConnectionIdLock, 4000, 0)) {
-                ::ctl::ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %d", ::WSAGetLastError());
-            }
 
             ::SYSTEM_INFO sysInfo;         // Useful information about the system
             ::GetSystemInfo(&sysInfo);     // Initialize the structure.
@@ -195,7 +192,7 @@ namespace ctsTraffic {
             ::ctsTraffic::ctsIOTask return_task;
             char* next_buffer;
             {
-                const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
+                const auto connection_id_lock = statics::ConnectionIdLock.lock();
                 if (statics::ConnectionIdVector->empty()) {
                     ::ctl::ctFatalCondition(
                         !::ctsTraffic::ctsConfig::IsListening(),
@@ -241,7 +238,7 @@ namespace ctsTraffic {
 
         inline void ReleaseConnectionIdBuffer(const ::ctsTraffic::ctsIOTask& _task) noexcept
         {
-            const ::ctl::ctAutoReleaseCriticalSection connection_id_lock(&statics::ConnectionIdLock);
+            const auto connection_id_lock = statics::ConnectionIdLock.lock();
             try {
                 // the vector was initially reserved to be large enough to hold all possible buffers
                 // - push-back() is no-throw in these cases

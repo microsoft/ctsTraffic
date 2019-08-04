@@ -40,10 +40,10 @@ namespace ctl
 			switch (hr) {
 				case S_OK:
 				case S_FALSE:
-					uninit_required = true;
+					m_uninitRequired = true;
 					break;
 				case RPC_E_CHANGED_MODE:
-					uninit_required = false;
+					m_uninitRequired = false;
 					break;
 				default:
 					throw ctException(hr, L"CoInitializeEx", L"ctComInitialize::ctComInitialize", false);
@@ -52,7 +52,7 @@ namespace ctl
 
 		~ctComInitialize() noexcept
 		{
-			if (uninit_required) {
+			if (m_uninitRequired) {
 				::CoUninitialize();
 			}
 		}
@@ -63,7 +63,7 @@ namespace ctl
 		ctComInitialize& operator =(ctComInitialize&&) = delete;
 
 	private:
-		bool uninit_required = false;
+		bool m_uninitRequired = false;
 	};
 
     inline bool operator ==(const wil::unique_variant& rhs, const wil::unique_variant& lhs) noexcept

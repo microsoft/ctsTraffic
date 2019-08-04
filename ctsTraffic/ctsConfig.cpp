@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <string>
 #include <algorithm>
-
 // os headers
 #include <windows.h>
 #include <winsock2.h>
@@ -23,10 +22,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <iphlpapi.h>
 // multimedia timer
 #include <Mmsystem.h>
-
 // wil headers
 #include <wil/resource.h>
-
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctString.hpp>
@@ -36,13 +33,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctRandom.hpp>
 #include <ctComInitialize.hpp>
 #include <ctWmiInitialize.hpp>
-
 // project headers
 #include "ctsConfig.h"
 #include "ctsLogger.hpp"
 #include "ctsIOPattern.h"
 #include "ctsPrintStatus.hpp"
-
 // project functors
 #include "ctsTCPFunctions.h"
 #include "ctsMediaStreamClient.h"
@@ -72,8 +67,8 @@ namespace ctsTraffic
         /// This design avoids having to pass a "config" object all over to share this information
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        static CRITICAL_SECTION s_StatusUpdateLock;
-        static CRITICAL_SECTION s_ShutdownLock;
+        static wil::critical_section s_StatusUpdateLock;
+        static wil::critical_section s_ShutdownLock;
 
         static const WORD s_DefaultPort = 4444;
 
@@ -141,15 +136,6 @@ namespace ctsTraffic
         static INIT_ONCE InitImpl = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK InitOncectsConfigImpl(PINIT_ONCE, PVOID, PVOID*)
         {
-            if (!InitializeCriticalSectionEx(&s_StatusUpdateLock, 4000, 0))
-            {
-                ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %u", GetLastError());
-            }
-            if (!InitializeCriticalSectionEx(&s_ShutdownLock, 4000, 0))
-            {
-                ctAlwaysFatalCondition(L"InitializeCriticalSectionEx failed: %u", GetLastError());
-            }
-
             Settings = new ctsConfigSettings;
             Settings->Port = s_DefaultPort;
             Settings->SocketFlags = WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT;
@@ -2768,7 +2754,7 @@ namespace ctsTraffic
         {
             ctsConfigInitOnce();
 
-            const ctAutoReleaseCriticalSection lock(&s_ShutdownLock);
+            const auto lock = s_ShutdownLock.lock();
             s_ShutdownCalled = true;
             if (Settings->CtrlCHandle)
             {
@@ -3095,10 +3081,9 @@ namespace ctsTraffic
                         }
                     }
 
-                    if (TryEnterCriticalSection(&s_StatusUpdateLock))
+                    const auto lock = s_StatusUpdateLock.try_lock();
+                    if (lock)
                     {
-                        auto leaveCSOnExit = wil::scope_exit([&]() { ::LeaveCriticalSection(&s_StatusUpdateLock); });
-
                         // capture the timeslices
                         const ctsSignedLongLong l_previoutimeslice = s_PreviousPrintTimeslice;
                         const ctsSignedLongLong l_current_timeslice = ctTimer::snap_qpc_as_msec() - Settings->StartTimeMilliseconds;

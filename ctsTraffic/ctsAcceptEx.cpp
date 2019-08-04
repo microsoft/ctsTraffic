@@ -26,7 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctLocks.hpp>
 // project headers
 #include "ctsSocket.h"
 
@@ -118,7 +117,7 @@ namespace ctsTraffic {
         public:
             // c'tor throws ctException on failure
             explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket);
-            ~ctsAcceptSocketInfo() noexcept;
+            ~ctsAcceptSocketInfo() noexcept = default;
 
             // attempts to post a new AcceptEx - internally tracks if succeeds or fails
             void InitatiateAcceptEx();
@@ -137,7 +136,7 @@ namespace ctsTraffic {
             static const size_t SingleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
 
             // the lock to guard access to the SOCKET
-            CRITICAL_SECTION cs{};
+            wil::critical_section cs;
             wil::unique_socket socket;
             // the OVERLAPPED* for the AcceptEx request
             OVERLAPPED* pov = nullptr;
@@ -153,7 +152,7 @@ namespace ctsTraffic {
         //
         struct ctsAcceptExImpl : public std::enable_shared_from_this<ctsAcceptExImpl> {
             // must guard access to internal containers
-            CRITICAL_SECTION cs{};
+            wil::critical_section cs;
             std::vector<std::shared_ptr<ctsListenSocketInfo>> listeners;
             std::queue<std::weak_ptr<ctsSocket>> pended_accept_requests;
             std::queue<ctsAcceptedConnection> accepted_connections;
@@ -166,10 +165,6 @@ namespace ctsTraffic {
             //
             ctsAcceptExImpl()
             {
-                if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
-                    throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
-                }
-
                 // swap in the listen vector only if fully created
                 // - if anything fails, this temp vector will go out of scope and safely be destroyed
                 std::vector<std::shared_ptr<ctsListenSocketInfo>> temp_listeners;
@@ -218,8 +213,6 @@ namespace ctsTraffic {
                 while (!accepted_connections.empty()) {
                     accepted_connections.pop();
                 }
-
-                ::DeleteCriticalSection(&cs);
             }
 
             // non-copyable
@@ -270,19 +263,11 @@ namespace ctsTraffic {
         ctsAcceptSocketInfo::ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket)
             : listening_socket_info(std::move(_listen_socket))
         {
-            if (!::InitializeCriticalSectionEx(&cs, 4000, 0)) {
-                throw ctl::ctException(::GetLastError(), L"InitializeCriticalSectionEx", L"ctsAcceptEx", false);
-            }
-        }
-
-        ctsAcceptSocketInfo::~ctsAcceptSocketInfo() noexcept
-        {
-            ::DeleteCriticalSection(&cs);
         }
 
         void ctsAcceptSocketInfo::InitatiateAcceptEx()
         {
-            const ctl::ctAutoReleaseCriticalSection lock(&cs);
+            const auto lock = cs.lock();
 
             if (this->socket.get() != INVALID_SOCKET) {
                 // no need to post another AcceptEx
@@ -344,7 +329,8 @@ namespace ctsTraffic {
 
         ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() noexcept
         {
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&this->cs);
+            const auto lock = cs.lock();
+
             SOCKET listening_socket = listening_socket_info->socket.get();
             ctsAcceptedConnection return_details;
 
@@ -427,7 +413,8 @@ namespace ctsTraffic {
         {
             ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
 
-            const ctl::ctAutoReleaseCriticalSection auto_lock(&s_pimpl->cs);
+            const auto lock = s_pimpl->cs.lock();
+
             if (!s_pimpl->pended_accept_requests.empty()) {
                 //
                 // we have unfulfilled requests for more connections
@@ -508,7 +495,7 @@ namespace ctsTraffic {
 
         // scoped to the auto-release CS object
         {
-            const ctl::ctAutoReleaseCriticalSection csLock(&details::s_pimpl->cs);
+            const auto lock = details::s_pimpl->cs.lock();
             // guard access to internal queues
             if (details::s_pimpl->accepted_connections.empty()) {
                 // no accepted connections yet -- save the weak_ptr, *not* the shared_ptr
