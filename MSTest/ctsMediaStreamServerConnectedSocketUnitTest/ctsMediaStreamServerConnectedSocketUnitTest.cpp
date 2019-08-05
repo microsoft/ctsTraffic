@@ -24,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSafeInt.hpp"
 #include "ctsSocket.h"
 #include "ctsSocketState.h"
-#include "ctsSocketGuard.hpp"
 
 #include "ctsMediaStreamServer.h"
 #include "ctsMediaStreamServerConnectedSocket.h"
@@ -34,12 +33,12 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 namespace Microsoft {
     namespace VisualStudio {
         namespace CppUnitTestFramework {
-            template<> static std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+            template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
             {
                 return std::to_wstring(static_cast<unsigned long long>(_value));
             }
 
-            template<> static std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
+            template<> inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
             {
                 return _value.writeCompleteAddress();
             }
@@ -56,25 +55,25 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) noexcept
+        void PrintException(const std::exception& ) noexcept
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) noexcept
+        void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
 
@@ -144,7 +143,7 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) noexcept
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& , unsigned long , unsigned long _status_code) noexcept
     {
         Assert::AreEqual(s_IOStatusCode, _status_code);
         Logger::WriteMessage(L"ctsIOPattern::complete_io\n");
@@ -165,7 +164,7 @@ namespace ctsTraffic {
         }
 
         // none of these are called - required to be defined
-        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept
+        virtual void print_stats(const ctl::ctSockaddr& , const ctl::ctSockaddr& ) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
             Assert::IsFalse(true);
@@ -176,7 +175,7 @@ namespace ctsTraffic {
             Assert::IsFalse(true);
             return ctsIOTask();
         }
-        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long _current_transfer) noexcept
+        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long ) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::completed_task\n");
             Assert::IsFalse(true);
@@ -208,11 +207,13 @@ namespace ctsTraffic {
     ctsSocketState::~ctsSocketState() noexcept
     {
     }
+
     // ctsSocket fakes
     ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>)
     {
         this->pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
     }
+
     ctsSocket::~ctsSocket() noexcept
     {
     }
@@ -221,10 +222,7 @@ namespace ctsTraffic {
     {
         this->socket.reset(_s);
     }
-    wil::cs_leave_scope_exit ctsSocket::lock_socket() const noexcept
-    {
-        return this->socket_cs.lock();
-    }
+
     void ctsSocket::complete_state(unsigned long) noexcept
     {
         ::SetEvent(s_RemovedSocketEvent);
@@ -295,11 +293,11 @@ namespace ctsUnitTest {
             {
                 ++callback_invoked;
 
-                auto socket_guard(ctsGuardSocket(test_socket));
-                SOCKET cts_socket = socket_guard.get();
+                auto socket_guard(test_socket->socket_reference());
+                SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(ctsGuardSocket(_socket_object));
-                SOCKET connected_socket = connected_socket_guard.get();
+                auto connected_socket_guard(_socket_object->lock_socket());
+                SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -343,11 +341,11 @@ namespace ctsUnitTest {
             {
                 ++callback_invoked;
 
-                auto socket_guard(ctsGuardSocket(test_socket));
-                SOCKET cts_socket = socket_guard.get();
+                auto socket_guard(test_socket->socket_reference());
+                SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(ctsGuardSocket(_socket_object));
-                SOCKET connected_socket = connected_socket_guard.get();
+                auto connected_socket_guard(_socket_object->lock_socket());
+                SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -390,11 +388,11 @@ namespace ctsUnitTest {
                 [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
-                auto socket_guard(ctsGuardSocket(test_socket));
-                SOCKET cts_socket = socket_guard.get();
+                auto socket_guard(test_socket->socket_reference());
+                SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(ctsGuardSocket(_socket_object));
-                SOCKET connected_socket = connected_socket_guard.get();
+                auto connected_socket_guard(_socket_object->lock_socket());
+                SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -441,11 +439,11 @@ namespace ctsUnitTest {
             {
                 ++callback_invoked;
 
-                auto socket_guard(ctsGuardSocket(test_socket));
-                SOCKET cts_socket = socket_guard.get();
+                auto socket_guard(test_socket->socket_reference());
+                SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(ctsGuardSocket(_socket_object));
-                SOCKET connected_socket = connected_socket_guard.get();
+                auto connected_socket_guard(_socket_object->lock_socket());
+                SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -489,11 +487,11 @@ namespace ctsUnitTest {
                 [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
-                auto socket_guard(ctsGuardSocket(test_socket));
-                SOCKET cts_socket = socket_guard.get();
+                auto socket_guard(test_socket->socket_reference());
+                SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(ctsGuardSocket(_socket_object));
-                SOCKET connected_socket = connected_socket_guard.get();
+                auto connected_socket_guard(_socket_object->lock_socket());
+                SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);

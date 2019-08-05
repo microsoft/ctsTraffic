@@ -34,9 +34,7 @@ namespace Microsoft {
     namespace VisualStudio {
         namespace CppUnitTestFramework {
 
-            // Test writer must define specialization of ToString<const Q& q> types used in Assert
-
-            template <> static std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& _state)
+            template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& _state)
             {
                 switch (_state) {
                     case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
@@ -72,15 +70,15 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }

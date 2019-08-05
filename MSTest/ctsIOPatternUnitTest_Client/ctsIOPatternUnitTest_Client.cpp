@@ -19,6 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <windows.h>
 // ctl headers
 #include <ctTimer.hpp>
+#include <ctString.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
@@ -92,25 +93,25 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(unsigned long ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) noexcept
+        void PrintException(const std::exception& ) noexcept
         {
         }
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept
+        void PrintJitterUpdate(const JitterFrameEntry& , const JitterFrameEntry& , const JitterFrameEntry& ) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
 

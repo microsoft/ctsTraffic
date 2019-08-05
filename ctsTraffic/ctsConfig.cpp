@@ -3248,6 +3248,131 @@ namespace ctsTraffic
             }
         }
 
+        void PrintConnectionResults(unsigned long _error) noexcept
+        {
+            ctsConfigInitOnce();
+
+            // write even after shutdown so can print the final summaries
+            bool write_to_console = false;
+            switch (s_ConsoleVerbosity)
+            {
+                // case 0: // nothing
+                // case 1: // status updates
+                // case 2: // error info
+                case 3: // connection info
+                case 4: // connection info + error info
+                case 5: // connection info + error info + status updates
+                case 6: // above + debug info
+                {
+                    write_to_console = true;
+                }
+            }
+
+            enum class ErrorType
+            {
+                Success,
+                NetworkError,
+                ProtocolError
+            } error_type;
+
+            if (0 == _error)
+            {
+                error_type = ErrorType::Success;
+            }
+            else if (ctsIOPattern::IsProtocolError(_error))
+            {
+                error_type = ErrorType::ProtocolError;
+            }
+            else
+            {
+                error_type = ErrorType::NetworkError;
+            }
+
+            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
+            static LPCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
+
+            const float current_time = GetStatusTimeStamp();
+
+            try
+            {
+                wstring csv_string;
+                wstring text_string;
+                wstring error_string;
+                if (ErrorType::ProtocolError != error_type)
+                {
+                    if (0 == _error)
+                    {
+                        error_string = L"Succeeded";
+                    }
+                    else
+                    {
+                        error_string = ctString::format_string(
+                            L"%lu: %ws",
+                            _error,
+                            ctException(_error).translation_w());
+                        // remove any commas from the formatted string - since that will mess up csv files
+                        ctString::replace_all(error_string, L",", L" ");
+                    }
+                }
+
+                if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat())
+                {
+                    csv_string = ctString::format_string(
+                        TCPResultCsvFormat,
+                        current_time,
+                        ctSockaddr().writeCompleteAddress().c_str(),
+                        ctSockaddr().writeCompleteAddress().c_str(),
+                        0LL,
+                        0LL,
+                        0LL,
+                        0LL,
+                        0LL,
+                        error_string.c_str(),
+                        L"");
+                }
+                // we'll never write csv format to the console so we'll need a text string in that case
+                // - and/or in the case the s_ConnectionLogger isn't writing to csv
+                if (write_to_console || (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()))
+                {
+                    text_string = ctString::format_string(
+                        TCPNetworkFailureResultTextFormat,
+                        current_time,
+                        error_string.c_str(),
+                        ctSockaddr().writeCompleteAddress().c_str(),
+                        ctSockaddr().writeCompleteAddress().c_str(),
+                        L"",
+                        0LL,
+                        0LL,
+                        0LL,
+                        0LL,
+                        0LL);
+                }
+
+                if (write_to_console)
+                {
+                    // text strings always go to the console
+                    wprintf(L"%ws\n", text_string.c_str());
+                }
+
+                if (s_ConnectionLogger)
+                {
+                    if (s_ConnectionLogger->IsCsvFormat())
+                    {
+                        s_ConnectionLogger->LogMessage(csv_string.c_str());
+                    }
+                    else
+                    {
+                        s_ConnectionLogger->LogMessage(
+                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
+                    }
+                }
+            }
+            catch (const exception&)
+            {
+            }
+        }
+
         void PrintConnectionResults(const ctSockaddr& _local_addr, const ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
         {
             ctsConfigInitOnce();

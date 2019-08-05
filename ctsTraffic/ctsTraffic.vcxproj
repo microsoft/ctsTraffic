@@ -449,7 +449,6 @@
     <ClInclude Include="ctsSocket.h" />
     <ClInclude Include="ctsSocketBroker.h" />
     <ClInclude Include="ctsTCPFunctions.h" />
-    <ClInclude Include="ctsSocketGuard.hpp" />
     <ClInclude Include="ctsSocketState.h" />
     <ClInclude Include="ctsStatistics.hpp" />
     <ClInclude Include="ctsWinsockLayer.h" />

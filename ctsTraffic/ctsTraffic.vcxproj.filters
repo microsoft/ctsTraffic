@@ -199,9 +199,6 @@
     <ClInclude Include="ctsWinsockLayer.h">
       <Filter>WinsockCallouts</Filter>
     </ClInclude>
-    <ClInclude Include="ctsSocketGuard.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctComInitialize.hpp">
       <Filter>ctl</Filter>
     </ClInclude>

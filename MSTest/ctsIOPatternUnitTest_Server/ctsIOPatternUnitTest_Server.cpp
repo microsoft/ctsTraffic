@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // ctl headers
 #include <ctTimer.hpp>
+#include <ctString.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
@@ -30,7 +31,7 @@ namespace Microsoft {
         namespace CppUnitTestFramework {
 
             // Test writer must define specialization of ToString<const Q& q> types used in Assert
-            template <> static std::wstring ToString<ctsTraffic::ctsIOTask>(const ctsTraffic::ctsIOTask& _task)
+            template <> inline std::wstring ToString<ctsTraffic::ctsIOTask>(const ctsTraffic::ctsIOTask& _task)
             {
                 return ctl::ctString::format_string(
                     L"ctsIOTask:\n"
@@ -51,12 +52,12 @@ namespace Microsoft {
                     _task.time_offset_milliseconds,
                     _task.track_io ? L"true" : L"false");
             }
-            template <> static std::wstring ToString<ctsTraffic::IOTaskAction>(const ctsTraffic::IOTaskAction& _action)
+            template <> inline std::wstring ToString<ctsTraffic::IOTaskAction>(const ctsTraffic::IOTaskAction& _action)
             {
                 return ctsTraffic::ctsIOTask::PrintIOAction(_action);
             }
                 
-            template <> static std::wstring ToString<ctsTraffic::ctsIOStatus>(const ctsTraffic::ctsIOStatus& _status)
+            template <> inline std::wstring ToString<ctsTraffic::ctsIOStatus>(const ctsTraffic::ctsIOStatus& _status)
             {
                 switch (_status) {
                     case ctsTraffic::ctsIOStatus::ContinueIo: return L"ContinueIo";
@@ -87,25 +88,25 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(unsigned long ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) noexcept
+        void PrintException(const std::exception& ) noexcept
         {
         }
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept
+        void PrintJitterUpdate(const JitterFrameEntry& , const JitterFrameEntry& , const JitterFrameEntry& ) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
 

@@ -24,7 +24,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 namespace Microsoft {
     namespace VisualStudio {
         namespace CppUnitTestFramework {
-            template<> static std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+            template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
             {
                 return std::to_wstring(static_cast<unsigned long long>(_value));
             }
@@ -49,7 +49,7 @@ namespace Microsoft {
                 SuccessfullyCompleted
                 };
             */
-            template<> static std::wstring ToString<ctsTraffic::ctsIOPatternProtocolTask>(const ctsTraffic::ctsIOPatternProtocolTask& _value)
+            template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolTask>(const ctsTraffic::ctsIOPatternProtocolTask& _value)
             {
                 switch (_value) {
                     case ctsTraffic::ctsIOPatternProtocolTask::NoIo: return L"NoIo";
@@ -64,10 +64,9 @@ namespace Microsoft {
                 }
 
                 Assert::Fail(L"Unknown ctsIOPatternProtocolTask");
-                return L"Unknown ctsIOPatternProtocolTask";
             }
 
-            template<> static std::wstring ToString<ctsTraffic::ctsIOPatternProtocolError>(const ctsTraffic::ctsIOPatternProtocolError& _value)
+            template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolError>(const ctsTraffic::ctsIOPatternProtocolError& _value)
             {
                 switch (_value) {
                     case ctsTraffic::ctsIOPatternProtocolError::NotProtocolError: return L"NotProtocolError";
@@ -79,7 +78,6 @@ namespace Microsoft {
                 }
 
                 Assert::Fail(L"Unknown ctsIOPatternProtocolError");
-                return L"Unknown ctsIOPatternProtocolError";
             }
         }
     }
@@ -94,25 +92,25 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
-        void PrintException(const std::exception& e) noexcept
+        void PrintException(const std::exception& ) noexcept
         {
         }
-        void PrintJitterUpdate(long long _sequence_number, long long _sender_qpc, long long _sender_qpf, long long _recevier_qpc, long long _receiver_qpf) noexcept
+        void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
         {
         }
 

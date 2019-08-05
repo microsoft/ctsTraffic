@@ -26,8 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
 #include "ctsWinsockLayer.h"
-#include "ctsSocketGuard.hpp"
-
 
 namespace ctsTraffic {
     class ctsMediaStreamServerConnectedSocket;
@@ -35,12 +33,6 @@ namespace ctsTraffic {
 
     class ctsMediaStreamServerConnectedSocket {
     private:
-        //
-        // ctsSocketGuard is given friend-access to call lock_socket and unlock_socket
-        //
-        friend class ctsSocketGuard<ctsMediaStreamServerConnectedSocket*>;
-        friend class ctsSocketGuard<std::shared_ptr<ctsMediaStreamServerConnectedSocket>>;
-
         // the CS is mutable so we can take a lock / release a lock in const methods
         mutable wil::critical_section object_guard;
         PTP_TIMER task_timer = nullptr;

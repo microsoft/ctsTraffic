@@ -72,7 +72,6 @@ namespace ctsTraffic
 
     void ctsSocketState::complete_state(DWORD _error) noexcept
     {
-        bool initiating_io = false;
         //
         // must guard the entire switch statement with a state guard
         //
@@ -91,7 +90,6 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        initiating_io = true;
                         this->state = InternalState::InitiatingIO;
                         ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.increment();
                     }
@@ -100,7 +98,6 @@ namespace ctsTraffic
 
                 case InternalState::Connected:
                 {
-                    initiating_io = true;
                     this->state = InternalState::InitiatingIO;
                     ctsConfig::Settings->ConnectionStatusDetails.active_connection_count.increment();
                     break;
@@ -142,22 +139,6 @@ namespace ctsTraffic
             }
             this->last_error = _error;
             this->state = InternalState::Closing;
-        }
-        //
-        // release the state lock now that transitions were performed
-        //
-        lock.reset();
-        //
-        // updates to ctsSocketBroker must be made outside the state_guard
-        //
-        if (initiating_io)
-        {
-            // always notify the broker
-            auto parent = broker.lock();
-            if (parent)
-            {
-                parent->initiating_io();
-            }
         }
         //
         // schedule the next functor to run when not closing down the socket
@@ -220,6 +201,13 @@ namespace ctsTraffic
 
             case InternalState::InitiatingIO:
             {
+                // notify the broker when initiating IO
+                auto parent = this_ptr->broker.lock();
+                if (parent)
+                {
+                    parent->initiating_io();
+                }
+
                 unsigned long error = 0;
                 try { this_ptr->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
                 catch (const exception& e) { error = ctl::ctErrorCode(e); }
@@ -270,8 +258,8 @@ namespace ctsTraffic
                 }
                 else
                 {
-                             // if this socket never started IO, it never created an io_pattern to track stats
-                             // - in this case, directly track the failures in the global stats
+                     // if this socket never started IO, it never created an io_pattern to track stats
+                     // - in this case, directly track the failures in the global stats
                     ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                 }
 

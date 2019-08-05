@@ -20,21 +20,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
 // project headers
+#include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
-#include "ctsSocketGuard.hpp"
 #include "ctsWinsockLayer.h"
 #include "ctsIOTask.hpp"
 #include "ctsIOPattern.h"
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-#include "ctsMediaStreamProtocol.hpp"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     struct IoImplStatus
     {
-        int error_code = 0;
-        bool continue_io = false;
+        int errorCode = 0;
+        bool continueIo = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,25 +50,26 @@ namespace ctsTraffic {
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctsIOTask& _io_task
-        ) noexcept;
+    ) noexcept;
 
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctl::ctSockaddr& _target_address
-        ) noexcept;
+    ) noexcept;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
-    /// - with the specified ctsSocket
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
+/// - with the specified ctsSocket
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
-        if (!shared_socket) {
+        if (!shared_socket)
+        {
             return;
         }
         // hold a reference on the iopattern
@@ -77,10 +78,11 @@ namespace ctsTraffic {
         // always register our ctsIOPattern callback since it's necessary for this IO Pattern
         // this callback can be invoked out-of-band directly from the IO Pattern class
         shared_pattern->register_callback(
-            [_weak_socket] (const ctsIOTask& _task) noexcept {
+            [_weak_socket](const ctsIOTask& _task) noexcept {
             // attempt to get a reference to the socket
             auto lambda_shared_socket(_weak_socket.lock());
-            if (!lambda_shared_socket) {
+            if (!lambda_shared_socket)
+            {
                 return;
             }
 
@@ -97,17 +99,21 @@ namespace ctsTraffic {
             //
 
             // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
-            if (lambda_shared_socket->increment_io() > 1) {
+            if (lambda_shared_socket->increment_io() > 1)
+            {
                 // only running this one task in the OOB callback
                 const IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
                 // decrement the IO count that we added before calling the Impl
                 // - complete_state if this happened to be the final IO refcount
-                if (lambda_shared_socket->decrement_io() == 0) {
-                    lambda_shared_socket->complete_state(status.error_code);
+                if (lambda_shared_socket->decrement_io() == 0)
+                {
+                    lambda_shared_socket->complete_state(status.errorCode);
                 }
-            } else {
-                // in this case, the io_count in the ctsSocket was zero, so no IO was in flight to interrupt
-                // just decrement the IO count that we added before calling the Impl (no IO attempted)
+            }
+            else
+            {
+                 // in this case, the io_count in the ctsSocket was zero, so no IO was in flight to interrupt
+                 // just decrement the IO count that we added before calling the Impl (no IO attempted)
                 lambda_shared_socket->decrement_io();
             }
         });
@@ -115,12 +121,14 @@ namespace ctsTraffic {
         // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
         shared_socket->increment_io();
         IoImplStatus status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
-        while (status.continue_io) {
+        while (status.continueIo)
+        {
             // invoke the new IO call while holding a refcount to the prior IO in a tight loop
             status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
         }
-        if (0 == shared_socket->decrement_io()) {
-            shared_socket->complete_state(status.error_code);
+        if (0 == shared_socket->decrement_io())
+        {
+            shared_socket->complete_state(status.errorCode);
         }
     }
 
@@ -134,22 +142,25 @@ namespace ctsTraffic {
     {
         // attempt to get a reference to the socket
         auto shared_socket(_weak_socket.lock());
-        if (!shared_socket) {
+        if (!shared_socket)
+        {
             return;
         }
 
         // scope to lock
         {
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            const SOCKET socket = socket_lock.get();
-            if (INVALID_SOCKET == socket) {
+            const auto socket_ref(shared_socket->socket_reference());
+            const SOCKET socket = socket_ref.socket();
+            if (INVALID_SOCKET == socket)
+            {
                 shared_socket->complete_state(WSAECONNABORTED);
                 return;
             }
 
             const auto error = ctsConfig::SetPreConnectOptions(socket);
             ctsConfig::PrintErrorIfFailed(L"SetPreConnectOptions", error);
-            if (error != NO_ERROR) {
+            if (error != NO_ERROR)
+            {
                 shared_socket->complete_state(error);
                 return;
             }
@@ -162,14 +173,16 @@ namespace ctsTraffic {
         const auto response = ctsWSASendTo(
             shared_socket,
             start_task,
-            [_weak_socket, targetAddress] (OVERLAPPED* ov) noexcept {
+            [_weak_socket, targetAddress](OVERLAPPED* ov) noexcept {
             ctsMediaStreamClientConnectionCompletionCallback(ov, _weak_socket, targetAddress);
         });
 
-        if (NO_ERROR == response.error_code) {
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            const SOCKET socket = socket_lock.get();
-            if (INVALID_SOCKET == socket) {
+        if (NO_ERROR == response.error_code)
+        {
+            const auto socket_ref(shared_socket->socket_reference());
+            const SOCKET socket = socket_ref.socket();
+            if (INVALID_SOCKET == socket)
+            {
                 shared_socket->complete_state(WSAECONNABORTED);
                 return;
             }
@@ -177,25 +190,26 @@ namespace ctsTraffic {
             // set the local and remote addresses on the socket object
             const ctl::ctSockaddr local_addr;
             auto local_addr_len = local_addr.length();
-            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
+            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+            {
                 shared_socket->set_local_address(local_addr);
             }
             shared_socket->set_target_address(targetAddress);
 
             ctsConfig::PrintNewConnection(local_addr, targetAddress);
 
-            try {
+            try
+            {
                 PrintDebugInfo(
                     L"\t\tctsMediaStreamClient sent its START message to %ws\n",
                     targetAddress.writeCompleteAddress().c_str());
             }
-            catch (const std::exception&) {
-                // best-effort
-            }
+            catch (...) {}
         }
 
         // complete only on failure or successfully completed inline (otherwise will complete in the IOCP callback)
-        if (response.error_code != WSA_IO_PENDING) {
+        if (response.error_code != WSA_IO_PENDING)
+        {
             shared_socket->complete_state(response.error_code);
         }
     }
@@ -209,37 +223,45 @@ namespace ctsTraffic {
     {
         IoImplStatus return_status;
 
-        switch (_next_io.ioAction) {
+        switch (_next_io.ioAction)
+        {
             case IOTaskAction::Send: // fall-through
-            case IOTaskAction::Recv: {
+            case IOTaskAction::Recv:
+            {
                 // add-ref the IO about to start
-                (void) _shared_socket->increment_io();
-                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), _next_io] (OVERLAPPED* _ov) noexcept {
-                    ctsMediaStreamClientIoCompletionCallback(_ov, weak_reference, _next_io);
+                (void)_shared_socket->increment_io();
+                auto callback = [weak_reference = std::weak_ptr<ctsSocket>(_shared_socket), nextio = _next_io](OVERLAPPED* ov) noexcept {
+                    ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, nextio);
                 };
 
                 LPCWSTR function_name = nullptr;
                 wsIOResult result;
-                if (IOTaskAction::Send == _next_io.ioAction) {
+                if (IOTaskAction::Send == _next_io.ioAction)
+                {
                     function_name = L"WSASendTo";
                     result = ctsWSASendTo(_shared_socket, _next_io, std::move(callback));
-                } else if (IOTaskAction::Recv == _next_io.ioAction) {
+                }
+                else if (IOTaskAction::Recv == _next_io.ioAction)
+                {
                     function_name = L"WSARecvFrom";
                     result = ctsWSARecvFrom(_shared_socket, _next_io, std::move(callback));
-                } else {
+                }
+                else
+                {
                     ctl::ctAlwaysFatalCondition(
-                        L"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)",
-                        &_next_io);
+                        L"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)", &_next_io);
                 }
 
-                if (WSA_IO_PENDING == result.error_code) {
+                if (WSA_IO_PENDING == result.error_code)
+                {
                     // if successful but did not complete inline
-                    return_status.error_code = result.error_code;
-                    return_status.continue_io = true;
-
-                } else {
-                    // IO successfully completed inline and the async completion won't be invoke
-                    // - or the IO failed
+                    return_status.errorCode = result.error_code;
+                    return_status.continueIo = true;
+                }
+                else
+                {
+                     // IO successfully completed inline and the async completion won't be invoke
+                     // - or the IO failed
                     if (result.error_code != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsMediaStreamClient]\n", function_name, result.error_code);
 
                     // hold a reference on the iopattern
@@ -249,18 +271,19 @@ namespace ctsTraffic {
                         result.bytes_transferred,
                         result.error_code);
 
-                    switch (protocol_status) {
+                    switch (protocol_status)
+                    {
                         case ctsIOStatus::ContinueIo:
                             // the protocol wants to ignore the error and send more data
-                            return_status.error_code = NO_ERROR;
-                            return_status.continue_io = true;
+                            return_status.errorCode = NO_ERROR;
+                            return_status.continueIo = true;
                             break;
 
                         case ctsIOStatus::CompletedIo:
                             // the protocol wants to ignore the error but is done with IO
                             _shared_socket->close_socket();
-                            return_status.error_code = NO_ERROR;
-                            return_status.continue_io = false;
+                            return_status.errorCode = NO_ERROR;
+                            return_status.continueIo = false;
                             break;
 
                         case ctsIOStatus::FailedIo:
@@ -268,8 +291,8 @@ namespace ctsTraffic {
                             ctsConfig::PrintErrorIfFailed(function_name, result.error_code);
                             // the protocol acknoledged the failure - socket is done with IO
                             _shared_socket->close_socket();
-                            return_status.error_code = shared_pattern->get_last_error();
-                            return_status.continue_io = false;
+                            return_status.errorCode = shared_pattern->get_last_error();
+                            return_status.continueIo = false;
                             break;
 
                         default:
@@ -288,32 +311,35 @@ namespace ctsTraffic {
                 break;
             }
 
-            case IOTaskAction::None: {
+            case IOTaskAction::None:
+            {
                 // nothing failed, just no more IO right now
-                return_status.error_code = NO_ERROR;
-                return_status.continue_io = false;
+                return_status.errorCode = NO_ERROR;
+                return_status.continueIo = false;
                 break;
             }
 
-            case IOTaskAction::Abort: {
+            case IOTaskAction::Abort:
+            {
                 // the protocol signaled to immediately stop the stream
                 auto shared_pattern(_shared_socket->io_pattern());
                 shared_pattern->complete_io(_next_io, 0, 0);
                 _shared_socket->close_socket();
 
-                return_status.error_code = NO_ERROR;
-                return_status.continue_io = false;
+                return_status.errorCode = NO_ERROR;
+                return_status.continueIo = false;
                 break;
             }
 
-            case IOTaskAction::FatalAbort: {
+            case IOTaskAction::FatalAbort:
+            {
                 // the protocol indicated to rudely abort the connection
                 auto shared_pattern(_shared_socket->io_pattern());
                 shared_pattern->complete_io(_next_io, 0, 0);
                 _shared_socket->close_socket();
 
-                return_status.error_code = shared_pattern->get_last_error();
-                return_status.continue_io = false;
+                return_status.errorCode = shared_pattern->get_last_error();
+                return_status.continueIo = false;
                 break;
             }
 
@@ -335,10 +361,11 @@ namespace ctsTraffic {
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
         const ctsIOTask& _io_task
-        ) noexcept
+    ) noexcept
     {
         auto shared_socket(_weak_socket.lock());
-        if (!shared_socket) {
+        if (!shared_socket)
+        {
             return;
         }
 
@@ -346,16 +373,20 @@ namespace ctsTraffic {
         DWORD transferred = 0;
         // scope to the socket lock
         {
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            const SOCKET socket = socket_lock.get();
-            if (socket != INVALID_SOCKET) {
+            const auto socket_ref(shared_socket->socket_reference());
+            const SOCKET socket = socket_ref.socket();
+            if (socket != INVALID_SOCKET)
+            {
                 DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags)) {
+                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+                {
                     gle = ::WSAGetLastError();
                 }
-            } else {
-                // we're intentionally ignoring the error when we have closed it early
-                // - doing this because that's how we shutdown the client after processing all frames
+            }
+            else
+            {
+                 // we're intentionally ignoring the error when we have closed it early
+                 // - doing this because that's how we shutdown the client after processing all frames
                 gle = NO_ERROR;
             }
         }
@@ -364,16 +395,20 @@ namespace ctsTraffic {
         auto shared_pattern(shared_socket->io_pattern());
         // see if complete_io requests more IO
         const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
-        switch (protocol_status) {
-            case ctsIOStatus::ContinueIo: {
+        switch (protocol_status)
+        {
+            case ctsIOStatus::ContinueIo:
+            {
                 // more IO is requested from the protocol
                 IoImplStatus status;
-                do {
-                    // invoke the new IO call while holding a refcount to the prior IO in a tight loop
+                do
+                {
+                // invoke the new IO call while holding a refcount to the prior IO in a tight loop
                     status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
-                } while (status.continue_io);
+                }
+                while (status.continueIo);
 
-                gle = status.error_code;
+                gle = status.errorCode;
                 break;
             }
 
@@ -383,13 +418,16 @@ namespace ctsTraffic {
                 break;
 
             case ctsIOStatus::FailedIo:
-                if (gle != 0) {
+                if (gle != 0)
+                {
                     // the failure may have been a protocol error - in which case gle would just be NO_ERROR
                     ctsConfig::PrintErrorInfo(
                         L"MediaStream Client: IO failed (%ws) with error %d",
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
                         gle);
-                } else {
+                }
+                else
+                {
                     ctsConfig::PrintErrorInfo(
                         L"MediaStream Client: IO succeeded (%ws) but the ctsIOProtocol failed the stream (%u)",
                         (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
@@ -401,12 +439,13 @@ namespace ctsTraffic {
 
             default:
                 ctl::ctAlwaysFatalCondition(
-                    L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n", 
+                    L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n",
                     static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO - the prior IO is now formally "done"
-        if (shared_socket->decrement_io() == 0) {
+        if (shared_socket->decrement_io() == 0)
+        {
             // if we have no more IO pended, complete the state
             shared_socket->complete_state(gle);
         }
@@ -420,41 +459,44 @@ namespace ctsTraffic {
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* _overlapped,
         const std::weak_ptr<ctsSocket>& _weak_socket,
-        const ctl::ctSockaddr& _target_address
-        ) noexcept
+        const ctl::ctSockaddr& _target_address) noexcept
     {
         auto shared_socket(_weak_socket.lock());
-        if (!shared_socket) {
+        if (!shared_socket)
+        {
             return;
         }
 
         int gle = NO_ERROR;
-        DWORD transferred = 0;
-        // scope to the socket lock
+        const auto socket_ref(shared_socket->socket_reference());
+        const SOCKET socket = socket_ref.socket();
+        if (INVALID_SOCKET == socket)
         {
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            const SOCKET socket = socket_lock.get();
-            if (INVALID_SOCKET == socket) {
-                gle = WSAECONNABORTED;
-            } else {
-                DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags)) {
-                    gle = ::WSAGetLastError();
-                }
+            gle = WSAECONNABORTED;
+        }
+        else
+        {
+            DWORD flags;
+            DWORD transferred;
+            if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+            {
+                gle = ::WSAGetLastError();
             }
+        }
 
-            ctsConfig::PrintErrorIfFailed(L"\tWSASendTo (START request)", gle);
+        ctsConfig::PrintErrorIfFailed(L"\tWSASendTo (START request)", gle);
 
-            if (NO_ERROR == gle) {
-                // set the local and remote addr's
-                const ctl::ctSockaddr local_addr;
-                int local_addr_len = local_addr.length();
-                if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len)) {
-                    shared_socket->set_local_address(local_addr);
-                }
-                shared_socket->set_target_address(_target_address);
-                ctsConfig::PrintNewConnection(local_addr, _target_address);
+        if (NO_ERROR == gle)
+        {
+            // set the local and remote addr's
+            const ctl::ctSockaddr local_addr;
+            int local_addr_len = local_addr.length();
+            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+            {
+                shared_socket->set_local_address(local_addr);
             }
+            shared_socket->set_target_address(_target_address);
+            ctsConfig::PrintNewConnection(local_addr, _target_address);
         }
 
         shared_socket->complete_state(gle);

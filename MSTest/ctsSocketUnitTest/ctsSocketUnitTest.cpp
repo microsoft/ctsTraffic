@@ -17,7 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctString.hpp>
 
 #include "ctsSocket.h"
-#include "ctsSocketGuard.hpp"
 #include "ctsSocketState.h"
 #include "ctsIOPattern.h"
 #include "ctsWinsockLayer.h"
@@ -31,12 +30,12 @@ namespace Microsoft {
 
             // Test writer must define specialization of ToString<const Q& q> types used in Assert
  
-            template <> static std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
+            template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
             {
                 return ctl::ctString::format_string(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
             }
 
-            template <> static std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
+            template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
             {
                 return _addr.writeCompleteAddress();
             }
@@ -79,19 +78,23 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
         {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) noexcept
+        void PrintConnectionResults(unsigned long) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+        }
+        void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
@@ -149,8 +152,8 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // get the socket under lock
-            auto socket_guard(ctsGuardSocket(test));
-            Assert::AreEqual(socket_value, socket_guard.get());
+            auto socket_guard(test->socket_reference());
+            Assert::AreEqual(socket_value, socket_guard.socket());
         }
 
         TEST_METHOD(SocketGuardIsMovable)
@@ -164,12 +167,12 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // validate the object guard
-            auto socket_guard(ctsGuardSocket(test));
-            Assert::AreEqual(socket_value, socket_guard.get());
+            auto socket_guard(test->socket_reference());
+            Assert::AreEqual(socket_value, socket_guard.socket());
             
             // move the guard object
             auto second_socket_guard(move(socket_guard));
-            Assert::AreEqual(socket_value, second_socket_guard.get());
+            Assert::AreEqual(socket_value, second_socket_guard.socket());
         }
 
         TEST_METHOD(CloseSocket)
@@ -181,14 +184,14 @@ namespace ctsUnitTest
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(ctsGuardSocket(test));
-                Assert::AreEqual(socket_value, socket_guard.get());
+                auto socket_guard(test->socket_reference());
+                Assert::AreEqual(socket_value, socket_guard.socket());
             }
 
             test->close_socket();
             {
-                auto socket_guard(ctsGuardSocket(test));
-                Assert::AreEqual(INVALID_SOCKET, socket_guard.get());
+                auto socket_guard(test->socket_reference());
+                Assert::AreEqual(INVALID_SOCKET, socket_guard.socket());
             }
         }
 
@@ -201,8 +204,8 @@ namespace ctsUnitTest
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(ctsGuardSocket(test));
-                Assert::AreEqual(socket_value, socket_guard.get());
+                auto socket_guard(test->socket_reference());
+                Assert::AreEqual(socket_value, socket_guard.socket());
             }
 
             test.reset();

@@ -12,6 +12,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 // cpp headers
+#include <array>
 #include <memory>
 #include <utility>
 // os headers
@@ -27,7 +28,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
-#include "ctsSocketGuard.hpp"
 
 namespace ctsTraffic {
 
@@ -275,7 +275,7 @@ namespace ctsTraffic {
             return FALSE;
         }
         // close the IOCP handle on error
-        auto deleteIoCPOnError = wil::scope_exit([&]() { ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
+        auto deleteIocpOnError = wil::scope_exit([&]() { ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
 
         // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
         // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
@@ -336,7 +336,7 @@ namespace ctsTraffic {
         // dismiss all scope guards - successfully initialized
         freeHandleArrayOnError.release();
         closeCQOnError.release();
-        deleteIoCPOnError.release();
+        deleteIocpOnError.release();
         freeOverlappedOnError.release();
         deleteAllCqsOnError.release();
         return TRUE;
@@ -427,8 +427,8 @@ namespace ctsTraffic {
             }
 
             // lock the socket when doing IO on it
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            const SOCKET socket = socket_lock.get();
+            const auto socket_ref(shared_socket->socket_reference());
+            const SOCKET socket = socket_ref.socket();
             if (INVALID_SOCKET == socket) {
                 throw std::exception("ctsRioIocp: invalid socket given to RioSocketContext");
             }
@@ -466,6 +466,7 @@ namespace ctsTraffic {
             // no failures
             releaseRoomInCqOnFailure.release();
         }
+
         ~RioSocketContext() noexcept
         {
             // release all the space in the CQ for this RQ
@@ -484,7 +485,7 @@ namespace ctsTraffic {
         ///
         /// Exposes access to a shared_ptr for the contained ctsSocket
         ///
-        std::shared_ptr<ctsSocket> get_socket() const noexcept
+        [[nodiscard]] std::shared_ptr<ctsSocket> get_socket() const noexcept
         {
             return this->weak_socket.lock();
         }
@@ -507,7 +508,7 @@ namespace ctsTraffic {
             //
             // Must lock the socket before doing anything on it
             //
-            auto socket_lock(ctsGuardSocket(shared_socket));
+            auto socket_ref(shared_socket->socket_reference());
             //
             // decrement the counter in our RQ for the completed IO
             //
@@ -590,8 +591,8 @@ namespace ctsTraffic {
             auto shared_pattern(shared_socket->io_pattern());
 
             // hold onto the RIO socket lock while posting IO on it
-            const auto socket_lock(ctsGuardSocket(shared_socket));
-            SOCKET rio_socket = socket_lock.get();
+            const auto socket_ref(shared_socket->socket_reference());
+            SOCKET rio_socket = socket_ref.socket();
             if (INVALID_SOCKET == rio_socket) {
                 return WSAECONNABORTED;
             }
@@ -718,7 +719,7 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept
     {
-        RIORESULT rio_result_array[RioResultArrayLength];
+        std::array<RIORESULT, RioResultArrayLength> rio_result_array;
 
         for (;;) {
             DWORD transferred;
@@ -763,7 +764,7 @@ namespace ctsTraffic {
             // Dequeue from the RIO socket under our locks
             // - note: Dequeue will invoke a RIONotify
             //
-            const ULONG deque_result = s_deque_from_cq(rio_result_array);
+            const ULONG deque_result = s_deque_from_cq(rio_result_array.data());
 
             // Now that we have dequeued the IO
             // - iterate through each one and take next steps:

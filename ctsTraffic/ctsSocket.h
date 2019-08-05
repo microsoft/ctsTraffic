@@ -16,6 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <functional>
+#include <type_traits>
 // os headers
 #include <windows.h>
 #include <Winsock2.h>
@@ -26,39 +27,70 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
-#include "ctsSocketGuard.hpp"
 
-namespace ctsTraffic {
-    //
-    // forward declare ctsSocketState
-    // - can't include ctsSocketState.h in this header to avoid circular declarations
-    //
+namespace ctsTraffic
+{
+//
+// forward declare ctsSocketState
+// - can't include ctsSocketState.h in this header to avoid circular declarations
+//
     class ctsSocketState;
 
     //
     // A safe socket container
     // - ensures has a lock on the socket while in scope
     //
-    class ctsSocket : public std::enable_shared_from_this<ctsSocket> {
+    class ctsSocket : public std::enable_shared_from_this<ctsSocket>
+    {
     public:
+        class SocketReference
+        {
+        public:
+            SocketReference(SocketReference&&) = default;
+            SocketReference& operator=(SocketReference&&) = default;
+            SocketReference(const SocketReference&) = delete;
+            SocketReference& operator=(const SocketReference&) = delete;
+            ~SocketReference() = default;
+
+            [[nodiscard]] SOCKET socket() const noexcept
+            {
+                return m_socket;
+            }
+
+        private:
+            friend class ctsSocket;
+            SocketReference(wil::critical_section& socket_lock, const wil::unique_socket& socket) :
+                m_csExit(socket_lock.lock()), m_socket(socket.get())
+            {
+            }
+
+            wil::cs_leave_scope_exit m_csExit;
+            SOCKET m_socket = INVALID_SOCKET;
+        };
+
+        [[nodiscard]] SocketReference socket_reference() const noexcept
+        {
+            return SocketReference(socket_cs, socket);
+        }
+
         //
         // c'tor requiring a parent ctsSocket reference
         //
         explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent);
 
         _No_competing_thread_
-        ~ctsSocket() noexcept;
+            ~ctsSocket() noexcept;
 
-        //
-        // Assigns the object a new SOCKET value and fully initializes the object for use
-        //
-        // Must still be the default initialized SOCKET value
-        // - if set_socket() is called twice, will RaiseException
-        //
-        // Cannot call any method in this object before this method succeeds
-        //
-        // A no-fail operation
-        //
+            //
+            // Assigns the object a new SOCKET value and fully initializes the object for use
+            //
+            // Must still be the default initialized SOCKET value
+            // - if set_socket() is called twice, will RaiseException
+            //
+            // Cannot call any method in this object before this method succeeds
+            //
+            // A no-fail operation
+            //
         void set_socket(SOCKET _socket) noexcept;
 
         //
@@ -141,10 +173,6 @@ namespace ctsTraffic {
         friend class ctsSocketState;
         void shutdown() noexcept;
 
-        // ctsSocketGuard is given friend-access to call lock & unlock
-        friend class ctsSocketGuard <std::shared_ptr<ctsSocket>>;
-        wil::cs_leave_scope_exit lock_socket() const noexcept;
-
         void initiate_isb_notification()  noexcept;
         void process_isb_notification() noexcept;
 
@@ -161,7 +189,7 @@ namespace ctsTraffic {
         std::shared_ptr<ctsIOPattern> pattern;
 
         /// only guarded when returning to the caller
-        std::shared_ptr<ctl::ctThreadIocp>      tp_iocp;
+        std::shared_ptr<ctl::ctThreadIocp> tp_iocp;
         std::shared_ptr<ctl::ctThreadpoolTimer> tp_timer;
 
         ctl::ctSockaddr local_sockaddr;

@@ -505,7 +505,7 @@ namespace ctsTraffic {
     }
 
     template <>
-    inline void ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>::completed_task_per_protocol(const ctsIOTask& _completed_task, unsigned long) noexcept
+    inline void ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>::completed_task_per_protocol(const ctsIOTask& , unsigned long) noexcept
     {
         // UDP pattern is not concerned about in-flight bytes
         // - this function is only concerned about bytes that have been completed to determine completion
@@ -614,7 +614,7 @@ namespace ctsTraffic {
     }
 
     template <>
-    inline void ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>::completed_task_per_protocol(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) noexcept
+    inline void ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>::completed_task_per_protocol(const ctsIOTask& /*_completed_task*/, unsigned long _completed_transfer_bytes) noexcept
     {
         const auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
         //

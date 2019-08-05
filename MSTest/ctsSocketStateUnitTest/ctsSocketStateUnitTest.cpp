@@ -15,9 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 #include <Windows.h>
-
-#include <ctLocks.hpp>
-
+#include <ctString.hpp>
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsSocketState.h"
@@ -55,19 +53,23 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , unsigned long ) noexcept
         {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* _string, unsigned long _value) noexcept
+        void PrintConnectionResults(unsigned long) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+        }
+        void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
@@ -96,7 +98,7 @@ namespace ctsTraffic {
     void ctsSocketBroker::initiating_io() noexcept
     {
     }
-    void ctsSocketBroker::closing(bool _was_active) noexcept
+    void ctsSocketBroker::closing(bool ) noexcept
     {
     }
 }

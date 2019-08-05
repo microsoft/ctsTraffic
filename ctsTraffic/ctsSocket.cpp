@@ -21,10 +21,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketState.h"
 #include "ctsWinsockLayer.h"
 
-
 namespace ctsTraffic
 {
-
     using namespace ctl;
     using namespace std;
 
@@ -47,17 +45,12 @@ namespace ctsTraffic
         this->pattern.reset();
     }
 
-    wil::cs_leave_scope_exit ctsSocket::lock_socket() const noexcept
-    {
-        return this->socket_cs.lock();
-    }
-
     void ctsSocket::set_socket(SOCKET _socket) noexcept
     {
         const auto lock = this->socket_cs.lock();
 
         ctFatalCondition(
-            !this->socket,
+            !!this->socket,
             L"ctsSocket::set_socket trying to set a SOCKET (%Iu) when it has already been set in this object (%Iu)",
             _socket, this->socket.get());
 
@@ -107,10 +100,7 @@ namespace ctsTraffic
         {
              // failed during socket creation, bind, or connect
             ctsConfig::PrintConnectionResults(
-                this->local_address(),
-                this->target_address(),
                 _last_error);
-
         }
     }
 
@@ -177,8 +167,8 @@ namespace ctsTraffic
     {
         // lock the socket
         const auto shared_this = shared_from_this();
-        const auto socket_lock(ctsGuardSocket(shared_this));
-        const auto local_socket = socket_lock.get();
+        const auto socket_lock(shared_this->socket_reference());
+        const auto local_socket = socket_lock.socket();
         if (local_socket != INVALID_SOCKET)
         {
             ULONG isb;
@@ -212,8 +202,8 @@ namespace ctsTraffic
                     return;
                 }
 
-                const auto socket_lock(ctsGuardSocket(shared_this_ptr));
-                const auto local_socket = socket_lock.get();
+                const auto socket_lock(shared_this_ptr->socket_reference());
+                const auto local_socket = socket_lock.socket();
                 if (local_socket != INVALID_SOCKET)
                 {
                     DWORD transferred, flags; // unneeded
@@ -241,8 +231,8 @@ namespace ctsTraffic
             }); // lambda for new_request
 
             const auto shared_this = this->shared_from_this();
-            const auto socket_lock(ctsGuardSocket(shared_this));
-            const auto local_socket = socket_lock.get();
+            const auto socket_lock(shared_this->socket_reference());
+            const auto local_socket = socket_lock.socket();
             if (local_socket != INVALID_SOCKET)
             {
                 const auto error = idealsendbacklognotify(local_socket, ov, nullptr);
@@ -263,7 +253,7 @@ namespace ctsTraffic
             }
             else
             {
-                     // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
+                // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
                 shared_iocp->cancel_request(ov);
             }
         }
