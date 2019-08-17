@@ -62,7 +62,7 @@ namespace ctsTraffic {
         // (internal) flag if this IO request is tracked and verified
         bool track_io = false;
 
-        static LPCWSTR PrintIOAction(const IOTaskAction& _action) noexcept
+        static PCWSTR PrintIOAction(const IOTaskAction& _action) noexcept
         {
             switch (_action) {
                 case IOTaskAction::None: return L"None";

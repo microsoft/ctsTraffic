@@ -82,7 +82,7 @@ namespace ctsTraffic {
                     ::ZeroMemory(this->recv_buffer.data(), this->recv_buffer.size());
 
                     this->recv_flags = 0;
-                    this->remote_addr.reset();
+                    this->remote_addr.set(this->remote_addr.family(), ctl::ctSockaddr::AddressType::Any);
                     this->remote_addr_len = this->remote_addr.length();
                     OVERLAPPED* pov = this->thread_iocp->new_request(
                         [this] (OVERLAPPED* _ov) noexcept {
@@ -171,7 +171,7 @@ namespace ctsTraffic {
                         if (WSAECONNRESET == gle) {
                             ctsConfig::PrintErrorInfo(
                                 L"ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%ws) failed with port unreachable",
-                                this->remote_addr.writeCompleteAddress().c_str());
+                                this->remote_addr.WriteCompleteAddress().c_str());
                         } else {
                             ctsConfig::PrintErrorInfo(
                                 L"ctsMediaStreamServer - WSARecvFrom failed [%d]",
@@ -191,7 +191,7 @@ namespace ctsTraffic {
                         case MediaStreamAction::START:
                             PrintDebugInfo(
                                 L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                                this->remote_addr.writeCompleteAddress().c_str());
+                                this->remote_addr.WriteCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods
                             pimpl_operation = [this] () {

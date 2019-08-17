@@ -202,7 +202,7 @@ namespace ctsTraffic
             {
                 PrintDebugInfo(
                     L"\t\tctsMediaStreamClient sent its START message to %ws\n",
-                    targetAddress.writeCompleteAddress().c_str());
+                    targetAddress.WriteCompleteAddress().c_str());
             }
             catch (...) {}
         }
@@ -234,7 +234,7 @@ namespace ctsTraffic
                     ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, nextio);
                 };
 
-                LPCWSTR function_name = nullptr;
+                PCWSTR function_name = nullptr;
                 wsIOResult result;
                 if (IOTaskAction::Send == _next_io.ioAction)
                 {

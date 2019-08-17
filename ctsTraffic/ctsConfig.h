@@ -179,7 +179,7 @@ namespace ctsTraffic
         void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept;
 
         void PrintStatusUpdate() noexcept;
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
 #define PrintDebugInfo(fmt, ...)                                        \
@@ -193,10 +193,10 @@ namespace ctsTraffic
             }                                                           \
         }
 
-        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) noexcept;
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
+        void PrintErrorIfFailed(PCWSTR _what, unsigned long _why) noexcept;
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept;
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
 
         void PrintException(const std::exception& e) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
@@ -307,7 +307,7 @@ namespace ctsTraffic
         {
             // dynamically initialize status details with current qpc
             ctsConfigSettings() noexcept :
-                ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
+                ConnectionStatusDetails(ctl::ctTimer::ctSnapQpcInMillis())
             {
             }
             ~ctsConfigSettings() noexcept = default;

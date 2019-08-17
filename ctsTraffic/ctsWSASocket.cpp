@@ -48,7 +48,7 @@ namespace ctsTraffic {
         const auto bind_size = ctsConfig::Settings->BindAddresses.size();
         auto socket_counter = ctl::ctMemoryGuardIncrement(&s_BindCounter);
         ctl::ctSockaddr local_addr(ctsConfig::Settings->BindAddresses[socket_counter % bind_size]);
-        local_addr.setPort(next_port);
+        local_addr.SetPort(next_port);
 
         ctl::ctSockaddr target_addr;
         if (!ctsConfig::Settings->TargetAddresses.empty()) {

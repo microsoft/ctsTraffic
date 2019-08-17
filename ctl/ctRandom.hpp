@@ -69,18 +69,19 @@ namespace ctl
 		RealT uniform_real(RealT lowerInclusiveBound, RealT upperInclusiveBound);
 
 		/// Generates a new random floating-point number chosen uniformly at random from the range [0.0, 1.0].
-		double uniform_probability() const;
+        [[nodiscard]] double uniform_probability() const;
 
 		/// Generates a new random double chosen randomly from a normal distribution with the characteristics
 		/// given by the two parameters (by default, a standard normal distribution).
-		double normal_real(double distributionMean = 0.0, double distributionSigma = 1.0) const;
+        [[nodiscard]] double normal_real(double distributionMean = 0.0, double distributionSigma = 1.0) const;
 
 		/// Seeds the generator manually.
-		void seed(unsigned long _seed) const;
+		void seed(unsigned long seed) const;
 
 		// Enabling move, move assign, and swap
-		ctRandomTwister(ctRandomTwister&& other) noexcept;
-		ctRandomTwister& operator=(ctRandomTwister&& other) noexcept;
+		ctRandomTwister(ctRandomTwister&& other) noexcept = default;
+        ctRandomTwister& operator=(ctRandomTwister&& other) noexcept = default;
+
 		void swap(ctRandomTwister& other) noexcept;
 
 		~ctRandomTwister() = default;
@@ -92,11 +93,12 @@ namespace ctl
 	private:
 		/// Keep the 5kb engine on the heap
 		/// We can use unique_ptr because there's a header-level STLVER>=100 requirement
-		std::unique_ptr<engine_type> engine;
+		std::unique_ptr<engine_type> m_engine;
 	};
 
 	// non-member namespace swap
-	inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) noexcept
+    // ReSharper disable once CppInconsistentNaming
+    inline void swap(ctRandomTwister& lhs, ctRandomTwister& rhs) noexcept
 	{
 		lhs.swap(rhs);
 	}
@@ -105,57 +107,45 @@ namespace ctl
 	// Implementation
 
 	inline ctRandomTwister::ctRandomTwister(unsigned long seed) :
-		engine(std::make_unique<engine_type>(seed))
+		m_engine(std::make_unique<engine_type>(seed))
 	{
 	}
 
 	inline ctRandomTwister::ctRandomTwister() :
-		engine(std::make_unique<engine_type>(std::random_device()()))
+		m_engine(std::make_unique<engine_type>(std::random_device()()))
 	{
-	}
-
-	inline ctRandomTwister::ctRandomTwister(ctRandomTwister&& other) noexcept :
-		engine(std::move(other.engine))
-	{
-	}
-
-	inline ctRandomTwister& ctRandomTwister::operator=(ctRandomTwister&& other) noexcept
-	{
-		ctRandomTwister temp(std::move(other));
-		temp.swap(*this);
-		return *this;
 	}
 
 	inline void ctRandomTwister::swap(ctRandomTwister& other) noexcept
 	{
 		using std::swap;
-		swap(this->engine, other.engine);
+		swap(this->m_engine, other.m_engine);
 	}
 
 	template <class IntegerT>
 	IntegerT ctRandomTwister::uniform_int(IntegerT lowerInclusiveBound, IntegerT upperInclusiveBound)
 	{
-		return std::uniform_int_distribution<IntegerT>(lowerInclusiveBound, upperInclusiveBound)(*engine);
+		return std::uniform_int_distribution<IntegerT>(lowerInclusiveBound, upperInclusiveBound)(*m_engine);
 	}
 
 	template <class RealT>
 	RealT ctRandomTwister::uniform_real(RealT lowerInclusiveBound, RealT upperInclusiveBound)
 	{
-		return std::uniform_real_distribution<RealT>(lowerInclusiveBound, upperInclusiveBound)(*engine);
+		return std::uniform_real_distribution<RealT>(lowerInclusiveBound, upperInclusiveBound)(*m_engine);
 	}
 
 	inline double ctRandomTwister::uniform_probability() const
 	{
-		return std::uniform_real_distribution<double>(0.0, 1.0)(*engine);
+		return std::uniform_real_distribution<double>(0.0, 1.0)(*m_engine);
 	}
 
 	inline double ctRandomTwister::normal_real(double distributionMean, double distributionSigma) const
 	{
-		return std::normal_distribution<double>(distributionMean, distributionSigma)(*engine);
+		return std::normal_distribution<double>(distributionMean, distributionSigma)(*m_engine);
 	}
 
-	inline void ctRandomTwister::seed(unsigned long _seed) const
+	inline void ctRandomTwister::seed(unsigned long seed) const
 	{
-		engine->seed(_seed);
+		m_engine->seed(seed);
 	}
 } // namespace ctl

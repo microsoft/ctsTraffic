@@ -63,14 +63,14 @@ namespace ctsTraffic
             // - willing to take the cost of 2 interlocked operations the first time this is initialized
             //   versus taking a QPC hit on every IO request
             if (0LL == _statistics_object.start_time.get()) {
-                _statistics_object.start_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+                _statistics_object.start_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
             }
         }
 
         template <typename T>
         void End(_In_ T& _statistics_object) noexcept
         {
-            _statistics_object.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+            _statistics_object.end_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
         }
     }
 
@@ -208,7 +208,7 @@ namespace ctsTraffic
         //
         ctsConnectionStatistics snap_view(bool _clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
             const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
@@ -277,7 +277,7 @@ namespace ctsTraffic
         //
         ctsUdpStatistics snap_view(bool _clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
             const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();
@@ -351,7 +351,7 @@ namespace ctsTraffic
         //
         ctsTcpStatistics snap_view(bool _clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::snap_qpc_as_msec();
+            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
             const long long prior_time_read = (_clear_settings) ?
                 this->start_time.set_prior_value(current_time) :
                 this->start_time.get_prior_value();

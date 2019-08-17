@@ -97,7 +97,7 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::PrintLegend();
 
         // set the start timer as close as possible to the start of the engine
-        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
+        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::ctSnapQpcInMillis();
         std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
         g_SocketBroker = broker.get();
         broker->start();
@@ -129,7 +129,7 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_CANCELLED;
     }
 
-    const auto total_time_run = ctTimer::snap_qpc_as_msec() - ctsConfig::Settings->StartTimeMilliseconds;
+    const auto total_time_run = ctTimer::ctSnapQpcInMillis() - ctsConfig::Settings->StartTimeMilliseconds;
 
     // write out the final status update
     ctsConfig::PrintStatusUpdate();
@@ -155,18 +155,32 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     } else {
         // currently don't track UDP server stats
         if (!ctsConfig::IsListening()) {
+            const auto successfulFrames = ctsConfig::Settings->UdpStatusDetails.successful_frames.get();
+            const auto droppedFrames = ctsConfig::Settings->UdpStatusDetails.dropped_frames.get();
+            const auto duplicateFrames = ctsConfig::Settings->UdpStatusDetails.duplicate_frames.get();
+            const auto errorFrames = ctsConfig::Settings->UdpStatusDetails.error_frames.get();
+
+            const auto totalFrames =
+                successfulFrames +
+                droppedFrames +
+                duplicateFrames +
+                errorFrames;
             ctsConfig::PrintSummary(
                 L"\n"
                 L"  Total Bytes Recv : %lld\n"
-                L"  Total Successful Frames : %lld\n"
-                L"  Total Dropped Frames : %lld\n"
-                L"  Total Duplicate Frames : %lld\n"
-                L"  Total Error Frames : %lld\n",
+                L"  Total Successful Frames : %lld (%f)\n"
+                L"  Total Dropped Frames : %lld (%f)\n"
+                L"  Total Duplicate Frames : %lld (%f)\n"
+                L"  Total Error Frames : %lld (%f)\n",
                 ctsConfig::Settings->UdpStatusDetails.bits_received.get() / 8LL,
-                ctsConfig::Settings->UdpStatusDetails.successful_frames.get(),
-                ctsConfig::Settings->UdpStatusDetails.dropped_frames.get(),
-                ctsConfig::Settings->UdpStatusDetails.duplicate_frames.get(),
-                ctsConfig::Settings->UdpStatusDetails.error_frames.get());
+                successfulFrames,
+                totalFrames > 0 ? static_cast<double>(successfulFrames) / totalFrames * 100.0 : 0.0,
+                droppedFrames,
+                totalFrames > 0 ? static_cast<double>(droppedFrames) / totalFrames * 100.0 : 0.0,
+                duplicateFrames,
+                totalFrames > 0 ? static_cast<double>(duplicateFrames) / totalFrames * 100.0 : 0.0,
+                errorFrames,
+                totalFrames > 0 ? static_cast<double>(errorFrames) / totalFrames * 100.0 : 0.0);
         }
     }
     ctsConfig::PrintSummary(

@@ -34,8 +34,8 @@ namespace ctsTraffic
 ///
 ///
 /// - all concrete types must implement:
-///     message_impl(LPCWSTR)
-///     error_impl(LPCWSTR)
+///     message_impl(PCWSTR)
+///     error_impl(PCWSTR)
 ///
 ///   Note: all logging functions are no-throw
 ///         only the c'tor can throw
@@ -54,7 +54,7 @@ namespace ctsTraffic
 
         void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
-            LPCWSTR const message = _status_info->print_legend(this->format);
+            PCWSTR const message = _status_info->print_legend(this->format);
             if (message != nullptr)
             {
                 log_message_impl(message);
@@ -63,7 +63,7 @@ namespace ctsTraffic
 
         void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
         {
-            LPCWSTR const message = _status_info->print_header(this->format);
+            PCWSTR const message = _status_info->print_header(this->format);
             if (message != nullptr)
             {
                 log_message_impl(message);
@@ -72,19 +72,19 @@ namespace ctsTraffic
 
         void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
         {
-            LPCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
+            PCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
             if (message != nullptr)
             {
                 log_message_impl(message);
             }
         }
 
-        void LogMessage(LPCWSTR _message) noexcept
+        void LogMessage(PCWSTR _message) noexcept
         {
             log_message_impl(_message);
         }
 
-        void LogError(LPCWSTR _message) noexcept
+        void LogError(PCWSTR _message) noexcept
         {
             log_error_impl(_message);
         }
@@ -102,14 +102,14 @@ namespace ctsTraffic
         ctsConfig::StatusFormatting format;
 
         /// pure virtual methods concrete classes must implement
-        virtual void log_message_impl(LPCWSTR _message) noexcept = 0;
-        virtual void log_error_impl(LPCWSTR _message) noexcept = 0;
+        virtual void log_message_impl(PCWSTR _message) noexcept = 0;
+        virtual void log_error_impl(PCWSTR _message) noexcept = 0;
     };
 
     class ctsTextLogger : public ctsLogger
     {
     public:
-        ctsTextLogger(LPCWSTR _file_name, ctsConfig::StatusFormatting _format) :
+        ctsTextLogger(PCWSTR _file_name, ctsConfig::StatusFormatting _format) :
             ctsLogger(_format)
         {
             file_handle.reset(::CreateFileW(
@@ -125,7 +125,7 @@ namespace ctsTraffic
                 const auto gle = ::GetLastError();
                 throw ctl::ctException(
                     gle,
-                    ctl::ctString::format_string(L"CreateFile(%ws)", _file_name).c_str(),
+                    ctl::ctString::ctFormatString(L"CreateFile(%ws)", _file_name).c_str(),
                     L"ctsTextLogger",
                     true);
             }
@@ -146,12 +146,12 @@ namespace ctsTraffic
         }
         ~ctsTextLogger() noexcept override = default;
 
-        void log_message_impl(LPCWSTR _message) noexcept override
+        void log_message_impl(PCWSTR _message) noexcept override
         {
             write_impl(_message);
         }
 
-        void log_error_impl(LPCWSTR _message) noexcept override
+        void log_error_impl(PCWSTR _message) noexcept override
         {
             write_impl(_message);
         }
@@ -165,7 +165,7 @@ namespace ctsTraffic
         wil::critical_section file_cs;
         wil::unique_hfile file_handle;
 
-        void write_impl(LPCWSTR _message) noexcept
+        void write_impl(PCWSTR _message) noexcept
         {
             const auto lock = file_cs.lock();
             DWORD bytesWritten;

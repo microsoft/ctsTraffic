@@ -46,7 +46,7 @@ namespace ctl
         wil::com_ptr<IWbemClassObject> m_wbemClass;
 
     public:
-        // forward declare iterator class
+        // ReSharper disable once CppInconsistentNaming
         class iterator;
 
         ctWmiProperties(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) :
@@ -77,18 +77,19 @@ namespace ctl
                 nullptr));
         }
 
-        iterator begin(const bool nonSystemPropertiesOnly = true) const
+        [[nodiscard]] iterator begin(const bool nonSystemPropertiesOnly = true) const
         {
             return iterator(m_wbemClass, nonSystemPropertiesOnly);
         }
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
-        iterator end() const noexcept
+        [[nodiscard]] iterator end() const noexcept
         {
             return iterator();
         }
 
         // A forward iterator to enable forward-traversing instances of the queried WMI provider
+        // ReSharper disable once CppInconsistentNaming
         class iterator
         {
             const unsigned END_ITERATOR_INDEX = 0xffffffff;
@@ -141,7 +142,8 @@ namespace ctl
                 }
                 return &m_propertyName;
             }
-            CIMTYPE type() const
+
+            [[nodiscard]] CIMTYPE type() const
             {
                 if (m_index == END_ITERATOR_INDEX)
                 {

@@ -62,14 +62,14 @@ namespace ctsTraffic {
         ctsStatusInformation& operator=(const ctsStatusInformation&) = delete;
         ctsStatusInformation& operator=(ctsStatusInformation&&) = delete;
 
-        LPCWSTR print_legend(const ctsConfig::StatusFormatting& _format) noexcept
+        PCWSTR print_legend(const ctsConfig::StatusFormatting& _format) noexcept
         {
             return (ctsConfig::StatusFormatting::Csv == _format) ?
                 nullptr :
                 this->format_legend(_format);
         }
 
-        LPCWSTR print_header(const ctsConfig::StatusFormatting& _format) noexcept
+        PCWSTR print_header(const ctsConfig::StatusFormatting& _format) noexcept
         {
             return this->format_header(_format);
         }
@@ -78,7 +78,7 @@ namespace ctsTraffic {
         // Expects to be called in a loop
         // - returns nullptr if nothing left to print
         //
-        LPCWSTR print_status(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept
+        PCWSTR print_status(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept
         {
             this->reset_buffer();
             if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint) {
@@ -93,10 +93,10 @@ namespace ctsTraffic {
         // derived class is required to implement these three pure virtual function
         //
         virtual PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept = 0;
-        virtual LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept = 0;
-        virtual LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept = 0;
+        virtual PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept = 0;
+        virtual PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept = 0;
 
-        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, LPCWSTR _value) noexcept
+        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, PCWSTR _value) noexcept
         {
             ctl::ctFatalCondition(
                 0 == _left_justified_offset,
@@ -327,7 +327,7 @@ namespace ctsTraffic {
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, LPCWSTR _value, bool _add_comma = true) noexcept
+        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, PCWSTR _value, bool _add_comma = true) noexcept
         {
             const auto converted = ::_snwprintf_s(
                 OutputBuffer + _offset,
@@ -366,7 +366,7 @@ namespace ctsTraffic {
         //
         // Pure-Virtual functions required to be defined
         //
-        LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
         {
             if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
                 return
@@ -393,7 +393,7 @@ namespace ctsTraffic {
             }
         }
 
-        LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
         {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 return
@@ -559,7 +559,7 @@ namespace ctsTraffic {
             return PrintingStatus::PrintComplete;
         }
 
-        LPCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
         {
             if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
                 return
@@ -584,7 +584,7 @@ namespace ctsTraffic {
             }
         }
 
-        LPCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
         {
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 return

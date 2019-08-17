@@ -409,7 +409,7 @@ namespace ctsTraffic {
                 // only calculate the QPC the first time
                 // - willing to take the cost of 2 interlocked operations the first time this is initialized
                 //   versus taking a QPC hit on every IO request
-                stats.start_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+                stats.start_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
             }
         }
         ///
@@ -418,7 +418,7 @@ namespace ctsTraffic {
         ///
         void end_stats() noexcept override
         {
-            stats.end_time.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+            stats.end_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
         }
         ///
         /// Access the ConnectionId stored in the Stats object

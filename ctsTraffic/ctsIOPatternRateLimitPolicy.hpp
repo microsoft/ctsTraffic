@@ -61,7 +61,7 @@ namespace ctsTraffic {
         : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
           QuantumPeriodMs(ctsConfig::Settings->TcpBytesPerSecondPeriod),
           bytes_sent_this_quantum(0ULL),
-          quantum_start_time_ms(ctl::ctTimer::snap_qpc_as_msec())
+          quantum_start_time_ms(ctl::ctTimer::ctSnapQpcInMillis())
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
             PrintDebugInfo(
@@ -78,7 +78,7 @@ namespace ctsTraffic {
             }
 
             _task.time_offset_milliseconds = 0LL;
-            const auto current_time_ms(ctl::ctTimer::snap_qpc_as_msec());
+            const auto current_time_ms(ctl::ctTimer::ctSnapQpcInMillis());
 
             if (this->bytes_sent_this_quantum < this->BytesSendingPerQuantum) {
                 if (current_time_ms < this->quantum_start_time_ms + this->QuantumPeriodMs) {

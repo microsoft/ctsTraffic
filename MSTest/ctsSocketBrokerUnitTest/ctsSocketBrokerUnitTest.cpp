@@ -46,7 +46,7 @@ namespace Microsoft {
                     case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
                     case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
                 }
-                return ctl::ctString::format_string(L"Unknown State (0x%x)", _state);
+                return ctl::ctString::ctFormatString(L"Unknown State (0x%x)", _state);
             }
         }
     }
@@ -60,13 +60,13 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) noexcept
+        void PrintDebug(PCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
 
-            auto formatted(ctl::ctString::format_string_va(_text, args));
-            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
         }
@@ -235,7 +235,7 @@ void ctsSocketState::complete_state(DWORD _error_code) noexcept
 
         default:
             Assert::Fail(
-                ctl::ctString::format_string(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+                ctl::ctString::ctFormatString(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
     }
     } else {
         // move straight to Closed

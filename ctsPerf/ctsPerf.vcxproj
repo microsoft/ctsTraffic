@@ -387,8 +387,8 @@
   <ItemGroup>
     <ClInclude Include="..\ctl\ctComInitialize.hpp" />
     <ClInclude Include="..\ctl\ctException.hpp" />
-    <ClInclude Include="..\ctl\ctLocks.hpp" />
     <ClInclude Include="..\ctl\ctMath.hpp" />
+    <ClInclude Include="..\ctl\ctMemoryGuard.hpp" />
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp" />
     <ClInclude Include="..\ctl\ctRandom.hpp" />
     <ClInclude Include="..\ctl\ctSockaddr.hpp" />

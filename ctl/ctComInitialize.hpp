@@ -13,12 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// cpp headers
-#include <cerrno>
 // os headers
 #include <Windows.h>
 #include <Objbase.h>
 // wil headers
+// ReSharper disable once CppUnusedIncludeDirective
 #include <wil/resource.h>
 // local headers
 #include "ctException.hpp"

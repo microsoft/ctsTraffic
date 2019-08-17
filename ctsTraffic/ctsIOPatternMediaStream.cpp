@@ -131,7 +131,7 @@ namespace ctsTraffic {
     {
         if (0 == this->base_time_milliseconds) {
             // initiate the timers the first time the object is used
-            this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
+            this->base_time_milliseconds = ctTimer::ctSnapQpcInMillis();
             this->set_next_start_timer();
             (void)this->set_next_timer(true);
         }
@@ -230,7 +230,7 @@ namespace ctsTraffic {
                         found_slot->sender_qpc = buffered_qpc;
                         found_slot->sender_qpf = buffered_qpf;
                         found_slot->receiver_qpc = qpc.QuadPart;
-                        found_slot->receiver_qpf = ctTimer::snap_qpf();
+                        found_slot->receiver_qpf = ctTimer::ctSnapQpf();
                         found_slot->received += _completed_bytes;
 
                         PrintDebugInfo(
@@ -343,12 +343,12 @@ namespace ctsTraffic {
             // - we'll also render a frame at the same time if the initial buffer is full
             timer_offset += static_cast<long long>(static_cast<double>(this->timer_wheel_offset_frames) * this->frame_rate_ms_per_frame);
             // subtract out the current time to get the delta # of milliseconds
-            timer_offset -= ctTimer::snap_qpc_as_msec();
+            timer_offset -= ctTimer::ctSnapQpcInMillis();
             // only set the timer if we have time to wait
             if (initial_timer || timer_offset > 2) {
                 // convert to filetime from milliseconds
                 // - make a 'relative' for SetThreadpoolTimer
-                FILETIME file_time(ctTimer::convert_msec_relative_filetime(timer_offset));
+                FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(timer_offset));
                 // TP Timer APIs work off of the UTC time
                 ::SetThreadpoolTimer(this->renderer_timer, &file_time, 0, 0);
                 timer_scheduled = true;
@@ -364,7 +364,7 @@ namespace ctsTraffic {
         if (this->start_timer != nullptr) {
             // convert to filetime from milliseconds
             // - make a 'relative' for SetThreadpoolTimer
-            FILETIME file_time(ctTimer::convert_msec_relative_filetime(static_cast<long long>(frame_rate_ms_per_frame) + 500LL));
+            FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(static_cast<long long>(frame_rate_ms_per_frame) + 500LL));
             // TP Timer APIs work off of the UTC time
             ::SetThreadpoolTimer(this->start_timer, &file_time, 0, 0);
         }

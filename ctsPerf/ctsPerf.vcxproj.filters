@@ -7,9 +7,6 @@
     <ClInclude Include="..\ctl\ctException.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctLocks.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctMath.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -71,6 +68,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
   </ItemGroup>

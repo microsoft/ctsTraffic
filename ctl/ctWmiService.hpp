@@ -86,7 +86,8 @@ namespace ctl
 		{
 			return m_wbemServices.get();
 		}
-		const IWbemServices* get() const noexcept
+
+        [[nodiscard]] const IWbemServices* get() const noexcept
 		{
 			return m_wbemServices.get();
 		}

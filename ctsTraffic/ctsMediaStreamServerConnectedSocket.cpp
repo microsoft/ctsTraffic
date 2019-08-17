@@ -41,7 +41,7 @@ namespace ctsTraffic {
         io_functor(std::move(_io_functor)),
         sending_socket(_sending_socket),
         remote_addr(std::move(_remote_addr)),
-        connect_time(ctTimer::snap_qpc_as_msec())
+        connect_time(ctTimer::ctSnapQpcInMillis())
     {
         task_timer = ::CreateThreadpoolTimer(ctsMediaStreamTimerCallback, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == task_timer) {
@@ -95,7 +95,7 @@ namespace ctsTraffic {
                 ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(nullptr, this, nullptr);
 
             } else {
-                FILETIME ftDueTime(ctTimer::convert_msec_relative_filetime(_task.time_offset_milliseconds));
+                FILETIME ftDueTime(ctTimer::ctConvertMillisToRelativeFiletime(_task.time_offset_milliseconds));
                 // assign the next task *and* schedule the timer while in *this object lock
                 const auto lock = object_guard.lock();
                 this->next_task = _task;
@@ -177,7 +177,7 @@ namespace ctsTraffic {
             try {
                 ctsConfig::PrintErrorInfo(
                     L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-                    this_ptr->remote_addr.writeCompleteAddress().c_str());
+                    this_ptr->remote_addr.WriteCompleteAddress().c_str());
             }
             catch (const std::exception&) {
                 // best effort
@@ -189,7 +189,7 @@ namespace ctsTraffic {
             try {
                 PrintDebugInfo(
                     L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-                    this_ptr->remote_addr.writeCompleteAddress().c_str());
+                    this_ptr->remote_addr.WriteCompleteAddress().c_str());
             }
             catch (const std::exception&) {
                 // best effort

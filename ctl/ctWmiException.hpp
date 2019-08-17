@@ -262,7 +262,7 @@ namespace ctl
 
 	private:
 		template <typename T>
-		_Success_(return) bool get_parameter_value(LPCWSTR _parameter, _Out_ T* _value) const;
+		_Success_(return) bool get_parameter_value(PCWSTR _parameter, _Out_ T* _value) const;
 	};
 
 	class ctWmiException final : public ctException
@@ -283,34 +283,34 @@ namespace ctl
 			get_className(classObject);
 		}
 
-		explicit ctWmiException(LPCWSTR wszMessage, bool bMessageCopy = true) noexcept :
+		explicit ctWmiException(PCWSTR wszMessage, bool bMessageCopy = true) noexcept :
 			ctException(wszMessage, bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(LPCWSTR wszMessage, const IWbemClassObject* classObject, bool bMessageCopy = true) noexcept :
+		explicit ctWmiException(PCWSTR wszMessage, const IWbemClassObject* classObject, bool bMessageCopy = true) noexcept :
 			ctException(wszMessage, bMessageCopy)
 		{
 			get_className(classObject);
 		}
 
-		explicit ctWmiException(HRESULT ulCode, LPCWSTR wszMessage, bool bMessageCopy = true) noexcept :
+		explicit ctWmiException(HRESULT ulCode, PCWSTR wszMessage, bool bMessageCopy = true) noexcept :
 			ctException(ulCode, wszMessage, bMessageCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT ulCode, const IWbemClassObject* classObject, LPCWSTR wszMessage, bool bMessageCopy = true) noexcept :
+		explicit ctWmiException(HRESULT ulCode, const IWbemClassObject* classObject, PCWSTR wszMessage, bool bMessageCopy = true) noexcept :
 			ctException(ulCode, wszMessage, bMessageCopy)
 		{
 			get_className(classObject);
 		}
 
-		explicit ctWmiException(HRESULT ulCode, LPCWSTR wszMessage, LPCWSTR wszLocation, bool bBothStringCopy = true) noexcept :
+		explicit ctWmiException(HRESULT ulCode, PCWSTR wszMessage, PCWSTR wszLocation, bool bBothStringCopy = true) noexcept :
 			ctException(ulCode, wszMessage, wszLocation, bBothStringCopy)
 		{
 		}
 
-		explicit ctWmiException(HRESULT ulCode, const IWbemClassObject* classObject, LPCWSTR wszMessage, LPCWSTR wszLocation, bool bBothStringCopy = true) noexcept :
+		explicit ctWmiException(HRESULT ulCode, const IWbemClassObject* classObject, PCWSTR wszMessage, PCWSTR wszLocation, bool bBothStringCopy = true) noexcept :
 			ctException(ulCode, wszMessage, wszLocation, bBothStringCopy)
 		{
 			get_className(classObject);
@@ -567,7 +567,7 @@ namespace ctl
 	}
 
 	template <typename T>
-	_Success_(return) bool ctWmiErrorInfo::get_parameter_value(LPCWSTR _parameter, _Out_ T* _value) const
+	_Success_(return) bool ctWmiErrorInfo::get_parameter_value(PCWSTR _parameter, _Out_ T* _value) const
 	{
 		if (!m_errorInfo)
 		{

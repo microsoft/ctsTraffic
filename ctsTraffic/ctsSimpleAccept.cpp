@@ -99,7 +99,7 @@ namespace ctsTraffic {
                     closeSocketOnError.release();
 
                     PrintDebugInfo(
-                        L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
+                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                 }
 
                 if (listening_sockets.empty()) {

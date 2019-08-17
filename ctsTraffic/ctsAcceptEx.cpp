@@ -173,7 +173,7 @@ namespace ctsTraffic {
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                     // Make the structures for the listener and its accept sockets
                     std::shared_ptr<ctsListenSocketInfo> listen_socket_info = std::make_shared<ctsListenSocketInfo>(addr);
-                    PrintDebugInfo(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
+                    PrintDebugInfo(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
@@ -388,8 +388,8 @@ namespace ctsTraffic {
             // transfer ownership of the SOCKET to the caller
             return_details.accept_socket = std::move(socket);
             return_details.gle = 0;
-            return_details.local_addr.setSockaddr(local_addr);
-            return_details.remote_addr.setSockaddr(remote_addr);
+            return_details.local_addr.set(local_addr);
+            return_details.remote_addr.set(remote_addr);
 
             return return_details;
         }

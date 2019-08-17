@@ -146,7 +146,7 @@ namespace ctsTraffic
                 ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
                 if (NO_ERROR == error)
                 {
-                    PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
+                    PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());
                 }
             }
             else

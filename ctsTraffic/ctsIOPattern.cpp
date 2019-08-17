@@ -166,7 +166,7 @@ namespace ctsTraffic {
     ctsIOPattern::ctsIOPattern(unsigned long _recv_count) :
         // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
         bytes_sending_per_quantum(ctsConfig::GetTcpBytesPerSecond() * static_cast<unsigned long long>(ctsConfig::Settings->TcpBytesPerSecondPeriod) / 1000LL),
-        quantum_start_time_ms(ctTimer::snap_qpc_as_msec())
+        quantum_start_time_ms(ctTimer::ctSnapQpcInMillis())
     {
         ctFatalCondition(
             ctsConfig::Settings->UseSharedBuffer && ctsConfig::Settings->ShouldVerifyBuffers,
@@ -554,7 +554,7 @@ namespace ctsTraffic {
             // check to see if the send needs to be deferred into the future
             //
             if (this->bytes_sending_per_quantum > 0) {
-                const auto current_time_ms(ctTimer::snap_qpc_as_msec());
+                const auto current_time_ms(ctTimer::ctSnapQpcInMillis());
                 if (this->bytes_sending_this_quantum < this->bytes_sending_per_quantum) {
                     // adjust bytes_sending_this_quantum
                     this->bytes_sending_this_quantum += new_buffer_size;
@@ -1045,7 +1045,7 @@ namespace ctsTraffic {
             break;
 
         case ServerState::IdSent:
-            this->base_time_milliseconds = ctTimer::snap_qpc_as_msec();
+            this->base_time_milliseconds = ctTimer::ctSnapQpcInMillis();
             this->state = ServerState::IoStarted;
             // fall-through
         case ServerState::IoStarted:
@@ -1056,7 +1056,7 @@ namespace ctsTraffic {
                 return_task.time_offset_milliseconds =
                     this->base_time_milliseconds
                     + static_cast<long long>(this->current_frame) * 1000LL / static_cast<long long>(this->frame_rate_fps)
-                    - ctTimer::snap_qpc_as_msec();
+                    - ctTimer::ctSnapQpcInMillis();
 
                 current_frame_requested += return_task.buffer_length;
             }

@@ -52,7 +52,7 @@ namespace ctsTraffic {
         void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
         {
         }
         void PrintException(const std::exception& ) noexcept
@@ -61,7 +61,7 @@ namespace ctsTraffic {
         void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR , ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
         {
         }
 

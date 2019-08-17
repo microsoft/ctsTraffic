@@ -32,12 +32,12 @@ namespace Microsoft {
  
             template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
             {
-                return ctl::ctString::format_string(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
+                return ctl::ctString::ctFormatString(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
             }
 
             template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
             {
-                return _addr.writeCompleteAddress();
+                return _addr.WriteCompleteAddress();
             }
         }
     }
@@ -68,13 +68,13 @@ namespace ctsTraffic {
     namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) noexcept
+        void PrintDebug(PCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
 
-            auto formatted(ctl::ctString::format_string_va(_text, args));
-            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
         }
@@ -97,13 +97,13 @@ namespace ctsTraffic {
         void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
         }
         void PrintException(const std::exception& e) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
-                    ctl::ctString::format_exception(e).c_str()).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintException(%ws)",
+                    ctl::ctString::ctFormatException(e).c_str()).c_str());
         }
         bool ShutdownCalled() noexcept
         {
@@ -212,9 +212,8 @@ namespace ctsUnitTest
             
             // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
             // - trying to use it should fail with an invalid socket error
-            ctl::ctSockaddr local_addr(AF_INET);
-            local_addr.setAddressLoopback();
-            local_addr.setPort(55555);
+            ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+            local_addr.SetPort(55555);
             auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
             auto gle = ::WSAGetLastError();
             Assert::AreEqual(SOCKET_ERROR, error);
@@ -243,9 +242,8 @@ namespace ctsUnitTest
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
-            ctl::ctSockaddr test_address(AF_INET);
-            test_address.setAddressLoopback();
-            test_address.setPort(55555);
+            ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+            test_address.SetPort(55555);
 
             test->set_local_address(test_address);
             Assert::AreEqual(test_address, test->local_address());
@@ -257,9 +255,8 @@ namespace ctsUnitTest
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
-            ctl::ctSockaddr test_address(AF_INET);
-            test_address.setAddressLoopback();
-            test_address.setPort(55555);
+            ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+            test_address.SetPort(55555);
 
             test->set_target_address(test_address);
             Assert::AreEqual(test_address, test->target_address());
@@ -296,7 +293,7 @@ namespace ctsUnitTest
             // create a valid UDP socket
             SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
             auto gle = ::WSAGetLastError();
-            Logger::WriteMessage(ctl::ctString::format_string(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
+            Logger::WriteMessage(ctl::ctString::ctFormatString(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
             Assert::AreNotEqual(INVALID_SOCKET, socket_value);
 
             return socket_value;

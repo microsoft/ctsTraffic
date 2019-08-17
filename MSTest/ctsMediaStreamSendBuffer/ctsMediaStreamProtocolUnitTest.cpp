@@ -32,7 +32,7 @@ template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFram
         case ctsTraffic::MediaStreamAction::START:
             return L"START";
     }
-    return ctl::ctString::format_string(L"Unknown Message (0x%x)", _message);
+    return ctl::ctString::ctFormatString(L"Unknown Message (0x%x)", _message);
 }
 
 namespace ctsUnitTest
@@ -176,14 +176,14 @@ namespace ctsUnitTest
         unsigned long verify_byte_count(ctsMediaStreamSendRequests& _testbuffer, unsigned long _buffer_size) const
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"Buffer size %u\n", _buffer_size).c_str());
+                ctl::ctString::ctFormatString(L"Buffer size %u\n", _buffer_size).c_str());
 
             unsigned long datagram_count = 0;
             unsigned long total_bytes = 0;
             for (auto& buffer_array : _testbuffer) {
                 for (auto& wsa_buf : buffer_array) {
                     Logger::WriteMessage(
-                        ctl::ctString::format_string(L"Buffer length %u  :  ", wsa_buf.len).c_str());
+                        ctl::ctString::ctFormatString(L"Buffer length %u  :  ", wsa_buf.len).c_str());
                     total_bytes += wsa_buf.len;
                 }
                 Logger::WriteMessage(L"\n");

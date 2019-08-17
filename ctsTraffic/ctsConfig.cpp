@@ -217,12 +217,12 @@ namespace ctsTraffic
             const wchar_t* param_delimiter = find(_input_argument, param_end, L':');
             if (!(param_end > param_delimiter + 1))
             {
-                throw invalid_argument(ctString::convert_to_string(_input_argument));
+                throw invalid_argument(ctString::ctConvertToString(_input_argument));
             }
             // temporarily null-terminate it at the delimiter to do a string compare
             *const_cast<wchar_t*>(param_delimiter) = L'\0';
             const wchar_t* return_value = nullptr;
-            if (ctString::iordinal_equals(_expected_param, _input_argument))
+            if (ctString::ctOrdinalEqualsCaseInsensative(_expected_param, _input_argument))
             {
                 return_value = param_delimiter + 1;
             }
@@ -256,7 +256,7 @@ namespace ctsTraffic
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         template <typename T>
-        T as_integral(const wstring& _string)
+        T as_integral(const wstring&)
         {
             static_assert(false, "Only supports the below specializations");
             return {};
@@ -264,116 +264,116 @@ namespace ctsTraffic
 
         // LONG and ULONG
         template <>
-        long as_integral<long>(const wstring& _string)
+        long as_integral<long>(const wstring& inputString)
         {
             long return_value;
             size_t first_unconverted_offset = 0;
-            if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos)
+            if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
             {
-                return_value = stol(_string, &first_unconverted_offset, 16);
+                return_value = stol(inputString, &first_unconverted_offset, 16);
             }
             else
             {
-                return_value = stol(_string, &first_unconverted_offset, 10);
+                return_value = stol(inputString, &first_unconverted_offset, 10);
             }
 
-            if (first_unconverted_offset != _string.length())
+            if (first_unconverted_offset != inputString.length())
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return return_value;
         }
         template <>
-        unsigned long as_integral<unsigned long>(const wstring& _string)
+        unsigned long as_integral<unsigned long>(const wstring& inputString)
         {
             unsigned long return_value;
             size_t first_unconverted_offset = 0;
-            if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos)
+            if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
             {
-                return_value = stoul(_string, &first_unconverted_offset, 16);
+                return_value = stoul(inputString, &first_unconverted_offset, 16);
             }
             else
             {
-                return_value = stoul(_string, &first_unconverted_offset, 10);
+                return_value = stoul(inputString, &first_unconverted_offset, 10);
             }
 
-            if (first_unconverted_offset != _string.length())
+            if (first_unconverted_offset != inputString.length())
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return return_value;
         }
         // INT and UINT
         template <>
-        int as_integral<int>(const wstring& _string)
+        int as_integral<int>(const wstring& inputString)
         {
-            return as_integral<long>(_string);
+            return as_integral<long>(inputString);
         }
         template <>
-        unsigned int as_integral<unsigned int>(const wstring& _string)
+        unsigned int as_integral<unsigned int>(const wstring& inputString)
         {
-            return as_integral<unsigned long>(_string);
+            return as_integral<unsigned long>(inputString);
         }
         // SHORT and USHORT
         template <>
-        short as_integral<short>(const wstring& _string)
+        short as_integral<short>(const wstring& inputString)
         {
-            const long return_value = as_integral<long>(_string);
+            const long return_value = as_integral<long>(inputString);
             if (return_value > MAXSHORT || return_value < MINSHORT)
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return static_cast<short>(return_value);
         }
         template <>
-        unsigned short as_integral<unsigned short>(const wstring& _string)
+        unsigned short as_integral<unsigned short>(const wstring& inputString)
         {
-            const unsigned long return_value = as_integral<unsigned long>(_string);
+            const unsigned long return_value = as_integral<unsigned long>(inputString);
             // MAXWORD == MAXUSHORT
             if (return_value > MAXWORD)
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return static_cast<unsigned short>(return_value);
         }
         // LONGLONG and ULONGLONG
         template <>
-        long long as_integral<long long>(const wstring& _string)
+        long long as_integral<long long>(const wstring& inputString)
         {
             long long return_value;
             size_t first_unconverted_offset = 0;
-            if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos)
+            if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
             {
-                return_value = stoll(_string, &first_unconverted_offset, 16);
+                return_value = stoll(inputString, &first_unconverted_offset, 16);
             }
             else
             {
-                return_value = stoll(_string, &first_unconverted_offset, 10);
+                return_value = stoll(inputString, &first_unconverted_offset, 10);
             }
 
-            if (first_unconverted_offset != _string.length())
+            if (first_unconverted_offset != inputString.length())
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return return_value;
         }
         template <>
-        unsigned long long as_integral<unsigned long long>(const wstring& _string)
+        unsigned long long as_integral<unsigned long long>(const wstring& inputString)
         {
             unsigned long long return_value;
             size_t first_unconverted_offset = 0;
-            if (_string.find(L'x') != wstring::npos || _string.find(L'X') != wstring::npos)
+            if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
             {
-                return_value = stoull(_string, &first_unconverted_offset, 16);
+                return_value = stoull(inputString, &first_unconverted_offset, 16);
             }
             else
             {
-                return_value = stoull(_string, &first_unconverted_offset, 10);
+                return_value = stoull(inputString, &first_unconverted_offset, 10);
             }
 
-            if (first_unconverted_offset != _string.length())
+            if (first_unconverted_offset != inputString.length())
             {
-                throw invalid_argument(ctString::convert_to_string(_string));
+                throw invalid_argument(ctString::ctConvertToString(inputString));
             }
             return return_value;
         }
@@ -419,12 +419,12 @@ namespace ctsTraffic
                 }
 
                 const auto value = ParseArgument(*found_arg, L"-conn");
-                if (ctString::iordinal_equals(L"ConnectEx", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"ConnectEx", value))
                 {
                     Settings->ConnectFunction = ctsConnectEx;
                     s_ConnectFunctionName = L"ConnectEx";
                 }
-                else if (ctString::iordinal_equals(L"connect", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"connect", value))
                 {
                     Settings->ConnectFunction = ctsSimpleConnect;
                     s_ConnectFunctionName = L"connect";
@@ -484,12 +484,12 @@ namespace ctsTraffic
                 }
 
                 const auto value = ParseArgument(*found_arg, L"-acc");
-                if (ctString::iordinal_equals(L"accept", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"accept", value))
                 {
                     Settings->AcceptFunction = ctsSimpleAccept;
                     s_AcceptFunctionName = L"accept";
                 }
-                else if (ctString::iordinal_equals(L"AcceptEx", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"AcceptEx", value))
                 {
                     Settings->AcceptFunction = ctsAcceptEx;
                     s_AcceptFunctionName = L"AcceptEx";
@@ -546,18 +546,18 @@ namespace ctsTraffic
                 }
 
                 const auto value = ParseArgument(*found_arg, L"-io");
-                if (ctString::iordinal_equals(L"iocp", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"iocp", value))
                 {
                     Settings->IoFunction = ctsSendRecvIocp;
                     Settings->Options |= HANDLE_INLINE_IOCP;
                     s_IoFunctionName = L"Iocp (WSASend/WSARecv using IOCP)";
                 }
-                else if (ctString::iordinal_equals(L"readwritefile", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"readwritefile", value))
                 {
                     Settings->IoFunction = ctsReadWriteIocp;
                     s_IoFunctionName = L"ReadWriteFile (ReadFile/WriteFile using IOCP)";
                 }
-                else if (ctString::iordinal_equals(L"rioiocp", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"rioiocp", value))
                 {
                     Settings->IoFunction = ctsRioIocp;
                     Settings->SocketFlags |= WSA_FLAG_REGISTERED_IO;
@@ -620,11 +620,11 @@ namespace ctsTraffic
             if (found_arg != end(args))
             {
                 const auto value = ParseArgument(*found_arg, L"-inlinecompletions");
-                if (ctString::iordinal_equals(L"on", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
                 {
                     Settings->Options |= HANDLE_INLINE_IOCP;
                 }
-                else if (ctString::iordinal_equals(L"off", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"off", value))
                 {
                     Settings->Options &= ~HANDLE_INLINE_IOCP;
                 }
@@ -654,11 +654,11 @@ namespace ctsTraffic
             if (found_arg != end(args))
             {
                 const auto value = ParseArgument(*found_arg, L"-msgwaitall");
-                if (ctString::iordinal_equals(L"on", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
                 {
                     Settings->Options |= MSG_WAIT_ALL;
                 }
-                else if (ctString::iordinal_equals(L"off", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"off", value))
                 {
                     Settings->Options &= ~MSG_WAIT_ALL;
                 }
@@ -689,11 +689,11 @@ namespace ctsTraffic
             if (found_arg != end(args))
             {
                 const auto value = ParseArgument(*found_arg, L"-Protocol");
-                if (ctString::iordinal_equals(L"tcp", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"tcp", value))
                 {
                     Settings->Protocol = ProtocolType::TCP;
                 }
-                else if (ctString::iordinal_equals(L"udp", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"udp", value))
                 {
                     Settings->Protocol = ProtocolType::UDP;
                 }
@@ -732,7 +732,7 @@ namespace ctsTraffic
                 if (found_arg != end(args))
                 {
                     const auto value = ParseArgument(*found_arg, L"-Options");
-                    if (ctString::iordinal_equals(L"keepalive", value))
+                    if (ctString::ctOrdinalEqualsCaseInsensative(L"keepalive", value))
                     {
                         if (ProtocolType::TCP == Settings->Protocol)
                         {
@@ -743,7 +743,7 @@ namespace ctsTraffic
                             throw invalid_argument("-Options (keepalive only allowed with TCP sockets)");
                         }
                     }
-                    else if (ctString::iordinal_equals(L"tcpfastpath", value))
+                    else if (ctString::ctOrdinalEqualsCaseInsensative(L"tcpfastpath", value))
                     {
                         if (ProtocolType::TCP == Settings->Protocol)
                         {
@@ -796,19 +796,19 @@ namespace ctsTraffic
                 }
 
                 const auto value = ParseArgument(*found_arg, L"-pattern");
-                if (ctString::iordinal_equals(L"push", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"push", value))
                 {
                     Settings->IoPattern = IoPatternType::Push;
                 }
-                else if (ctString::iordinal_equals(L"pull", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"pull", value))
                 {
                     Settings->IoPattern = IoPatternType::Pull;
                 }
-                else if (ctString::iordinal_equals(L"pushpull", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"pushpull", value))
                 {
                     Settings->IoPattern = IoPatternType::PushPull;
                 }
-                else if (ctString::iordinal_equals(L"flood", value) || ctString::iordinal_equals(L"duplex", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"flood", value) || ctString::ctOrdinalEqualsCaseInsensative(L"duplex", value))
                 {
                     // the old name for this was 'flood'
                     Settings->IoPattern = IoPatternType::Duplex;
@@ -1003,14 +1003,12 @@ namespace ctsTraffic
                         Settings->Options |= KEEPALIVE;
                     }
                     const auto value = ParseArgument(*found_listen, L"-listen");
-                    if (ctString::iordinal_equals(L"*", value))
+                    if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
                     {
                         // add both v4 and v6
-                        ctSockaddr listen_addr(AF_INET);
-                        listen_addr.setAddressAny();
+                        ctSockaddr listen_addr(AF_INET, ctSockaddr::AddressType::Any);
                         Settings->ListenAddresses.push_back(listen_addr);
-                        listen_addr.reset(AF_INET6);
-                        listen_addr.setAddressAny();
+                        listen_addr.set(AF_INET6, ctSockaddr::AddressType::Any);
                         Settings->ListenAddresses.push_back(listen_addr);
                     }
                     else
@@ -1071,14 +1069,12 @@ namespace ctsTraffic
                 {
                     const auto value = ParseArgument(*found_bind, L"-bind");
                     // check for a comma-delimited list of IP Addresses
-                    if (ctString::iordinal_equals(L"*", value))
+                    if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
                     {
                         // add both v4 and v6
-                        ctSockaddr bind_addr(AF_INET);
-                        bind_addr.setAddressAny();
+                        ctSockaddr bind_addr(AF_INET, ctSockaddr::AddressType::Any);
                         Settings->BindAddresses.push_back(bind_addr);
-                        bind_addr.reset(AF_INET6);
-                        bind_addr.setAddressAny();
+                        bind_addr.set(AF_INET6, ctSockaddr::AddressType::Any);
                         Settings->BindAddresses.push_back(bind_addr);
                     }
                     else
@@ -1114,11 +1110,9 @@ namespace ctsTraffic
             // default bind addresses if not listening and did not exclusively want to bind
             if (Settings->ListenAddresses.empty() && Settings->BindAddresses.empty())
             {
-                ctSockaddr defaultAddr(AF_INET);
-                defaultAddr.setAddressAny();
+                ctSockaddr defaultAddr(AF_INET, ctSockaddr::AddressType::Any);
                 Settings->BindAddresses.push_back(defaultAddr);
-                defaultAddr.reset(AF_INET6);
-                defaultAddr.setAddressAny();
+                defaultAddr.set(AF_INET6, ctSockaddr::AddressType::Any);
                 Settings->BindAddresses.push_back(defaultAddr);
             }
 
@@ -1697,7 +1691,7 @@ namespace ctsTraffic
 
             if (!connectionFilename.empty())
             {
-                if (ctString::iends_with(connectionFilename, L".csv"))
+                if (ctString::ctOrdinalEndsWithCaseInsensative(connectionFilename, L".csv"))
                 {
                     s_ConnectionLogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::Csv);
                 }
@@ -1709,7 +1703,7 @@ namespace ctsTraffic
 
             if (!errorFilename.empty())
             {
-                if (ctString::iordinal_equals(connectionFilename, errorFilename))
+                if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, errorFilename))
                 {
                     if (s_ConnectionLogger->IsCsvFormat())
                     {
@@ -1719,7 +1713,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    if (ctString::iends_with(errorFilename, L".csv"))
+                    if (ctString::ctOrdinalEndsWithCaseInsensative(errorFilename, L".csv"))
                     {
                         throw invalid_argument("The error logfile cannot be of csv format");
                     }
@@ -1729,7 +1723,7 @@ namespace ctsTraffic
 
             if (!statusFilename.empty())
             {
-                if (ctString::iordinal_equals(connectionFilename, statusFilename))
+                if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, statusFilename))
                 {
                     if (s_ConnectionLogger->IsCsvFormat())
                     {
@@ -1737,7 +1731,7 @@ namespace ctsTraffic
                     }
                     s_StatusLogger = s_ConnectionLogger;
                 }
-                else if (ctString::iordinal_equals(errorFilename, statusFilename))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(errorFilename, statusFilename))
                 {
                     if (s_ErrorLogger->IsCsvFormat())
                     {
@@ -1747,7 +1741,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    if (ctString::iends_with(statusFilename, L".csv"))
+                    if (ctString::ctOrdinalEndsWithCaseInsensative(statusFilename, L".csv"))
                     {
                         s_StatusLogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::Csv);
                     }
@@ -1760,11 +1754,11 @@ namespace ctsTraffic
 
             if (!jitterFilename.empty())
             {
-                if (ctString::iends_with(jitterFilename, L".csv"))
+                if (ctString::ctOrdinalEndsWithCaseInsensative(jitterFilename, L".csv"))
                 {
-                    if (ctString::iordinal_equals(connectionFilename, jitterFilename) ||
-                        ctString::iordinal_equals(errorFilename, jitterFilename) ||
-                        ctString::iordinal_equals(statusFilename, jitterFilename))
+                    if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, jitterFilename) ||
+                        ctString::ctOrdinalEqualsCaseInsensative(errorFilename, jitterFilename) ||
+                        ctString::ctOrdinalEqualsCaseInsensative(statusFilename, jitterFilename))
                     {
                         throw invalid_argument("The same csv filename cannot be used for different loggers");
                     }
@@ -1794,11 +1788,11 @@ namespace ctsTraffic
             if (found_arg != end(args))
             {
                 const auto value = ParseArgument(*found_arg, L"-OnError");
-                if (ctString::iordinal_equals(L"log", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"log", value))
                 {
                     s_BreakOnError = false;
                 }
-                else if (ctString::iordinal_equals(L"break", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"break", value))
                 {
                     s_BreakOnError = true;
                 }
@@ -1939,13 +1933,13 @@ namespace ctsTraffic
                     s_NetAdapterAddresses->begin(),
                     s_NetAdapterAddresses->end(),
                     [&value](const IP_ADAPTER_ADDRESSES& _adapter_address) {
-                    return ctString::iordinal_equals(value, _adapter_address.FriendlyName);
+                    return ctString::ctOrdinalEqualsCaseInsensative(value, _adapter_address.FriendlyName);
                 });
                 if (found_interface == s_NetAdapterAddresses->end())
                 {
                     throw ctException(
                         ERROR_NOT_FOUND,
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"GetAdaptersAddresses could not find the interface alias '%ws'",
                             value).c_str(),
                         L"ctsConfig::set_compartment",
@@ -2007,12 +2001,12 @@ namespace ctsTraffic
             if (found_arg != end(args))
             {
                 const auto value = ParseArgument(*found_arg, L"-verify");
-                if (ctString::iordinal_equals(L"always", value) || ctString::iordinal_equals(L"data", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"always", value) || ctString::ctOrdinalEqualsCaseInsensative(L"data", value))
                 {
                     Settings->ShouldVerifyBuffers = true;
                     Settings->UseSharedBuffer = false;
                 }
-                else if (ctString::iordinal_equals(L"never", value) || ctString::iordinal_equals(L"connection", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"never", value) || ctString::ctOrdinalEqualsCaseInsensative(L"connection", value))
                 {
                     Settings->ShouldVerifyBuffers = false;
                     Settings->UseSharedBuffer = true;
@@ -2052,11 +2046,11 @@ namespace ctsTraffic
                 }
 
                 const auto value = ParseArgument(*found_arg, L"-shutdown");
-                if (ctString::iordinal_equals(L"graceful", value))
+                if (ctString::ctOrdinalEqualsCaseInsensative(L"graceful", value))
                 {
                     Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
                 }
-                else if (ctString::iordinal_equals(L"rude", value))
+                else if (ctString::ctOrdinalEqualsCaseInsensative(L"rude", value))
                 {
                     Settings->TcpShutdown = TcpShutdownType::HardShutdown;
                 }
@@ -2494,28 +2488,28 @@ namespace ctsTraffic
                 begin(args),
                 end(args),
                 [](const wchar_t* _arg) -> bool {
-                    return (ctString::istarts_with(_arg, L"-Help") ||
-                            ctString::iordinal_equals(_arg, L"-?"));
+                    return (ctString::ctOrdinalEndsWithCaseInsensative(_arg, L"-Help") ||
+                            ctString::ctOrdinalEqualsCaseInsensative(_arg, L"-?"));
                 });
             if (found_help != end(args))
             {
-                LPCWSTR const help_string = *found_help;
-                if (ctString::iordinal_equals(help_string, L"-Help:Advanced"))
+                PCWSTR const help_string = *found_help;
+                if (ctString::ctOrdinalEqualsCaseInsensative(help_string, L"-Help:Advanced"))
                 {
                     PrintUsage(PrintUsageOption::Advanced);
                     return false;
                 }
-                if (ctString::iordinal_equals(help_string, L"-Help:Tcp"))
+                if (ctString::ctOrdinalEqualsCaseInsensative(help_string, L"-Help:Tcp"))
                 {
                     PrintUsage(PrintUsageOption::Tcp);
                     return false;
                 }
-                if (ctString::iordinal_equals(help_string, L"-Help:Udp"))
+                if (ctString::ctOrdinalEqualsCaseInsensative(help_string, L"-Help:Udp"))
                 {
                     PrintUsage(PrintUsageOption::Udp);
                     return false;
                 }
-                if (ctString::iordinal_equals(help_string, L"-Help:Logging"))
+                if (ctString::ctOrdinalEqualsCaseInsensative(help_string, L"-Help:Logging"))
                 {
                     PrintUsage(PrintUsageOption::Logging);
                     return false;
@@ -2568,14 +2562,14 @@ namespace ctsTraffic
             {
                 if (addr.port() == 0x0000)
                 {
-                    addr.setPort(Settings->Port);
+                    addr.SetPort(Settings->Port);
                 }
             }
             for (auto& addr : Settings->TargetAddresses)
             {
                 if (addr.port() == 0x0000)
                 {
-                    addr.setPort(Settings->Port);
+                    addr.SetPort(Settings->Port);
                 }
             }
 
@@ -2730,11 +2724,11 @@ namespace ctsTraffic
                 wstring error_string;
                 for (const auto& arg_string : args)
                 {
-                    error_string.append(ctString::format_string(L" %ws", arg_string));
+                    error_string.append(ctString::ctFormatString(L" %ws", arg_string));
                 }
                 error_string.append(L"\n");
                 PrintErrorInfoOverride(error_string.c_str());
-                throw invalid_argument(ctString::convert_to_string(error_string));
+                throw invalid_argument(ctString::ctConvertToString(error_string));
             }
 
             if (ProtocolType::UDP == Settings->Protocol)
@@ -2801,12 +2795,12 @@ namespace ctsTraffic
             {
                 if (write_to_console)
                 {
-                    LPCWSTR const legend = s_PrintStatusInformation->print_legend(StatusFormatting::ConsoleOutput);
+                    PCWSTR const legend = s_PrintStatusInformation->print_legend(StatusFormatting::ConsoleOutput);
                     if (legend != nullptr)
                     {
                         fwprintf(stdout, L"%ws\n", legend);
                     }
-                    LPCWSTR const header = s_PrintStatusInformation->print_header(StatusFormatting::ConsoleOutput);
+                    PCWSTR const header = s_PrintStatusInformation->print_header(StatusFormatting::ConsoleOutput);
                     if (header != nullptr)
                     {
                         fwprintf(stdout, L"%ws\n", header);
@@ -2848,16 +2842,16 @@ namespace ctsTraffic
             try
             {
                 const auto formatted_string(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"[%.3f] %ws",
                         GetStatusTimeStamp(),
-                        ctString::format_exception(e).c_str()));
+                        ctString::ctFormatException(e).c_str()));
 
                 fwprintf(stderr, L"%ws\n", formatted_string.c_str());
                 if (s_ErrorLogger)
                 {
                     s_ErrorLogger->LogError(
-                        ctString::format_string(L"%ws\r\n", formatted_string.c_str()).c_str());
+                        ctString::ctFormatString(L"%ws\r\n", formatted_string.c_str()).c_str());
                 }
             }
             catch (const exception&)
@@ -2882,7 +2876,7 @@ namespace ctsTraffic
 
             try
             {
-                const wstring exception_text(ctString::format_exception(e));
+                const wstring exception_text(ctString::ctFormatException(e));
 
                 if (!s_ShutdownCalled)
                 {
@@ -2917,7 +2911,7 @@ namespace ctsTraffic
             }
         }
         // Always print to console if override
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2933,10 +2927,10 @@ namespace ctsTraffic
                 try
                 {
                     s_ErrorLogger->LogError(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"[%.3f] %ws\r\n",
                             GetStatusTimeStamp(),
-                            ctString::format_string_va(_text, argptr).c_str()).c_str());
+                            ctString::ctFormatStringVa(_text, argptr).c_str()).c_str());
                 }
                 catch (const exception&)
                 {
@@ -2945,7 +2939,7 @@ namespace ctsTraffic
 
             va_end(argptr);
         }
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -2976,7 +2970,7 @@ namespace ctsTraffic
                     wstring formatted_string;
                     if (write_to_console)
                     {
-                        formatted_string = ctString::format_string_va(_text, argptr);
+                        formatted_string = ctString::ctFormatStringVa(_text, argptr);
                         wprintf_s(L"%ws\n", formatted_string.c_str());
                     }
 
@@ -2984,10 +2978,10 @@ namespace ctsTraffic
                     {
                         if (formatted_string.empty())
                         {
-                            formatted_string = ctString::format_string_va(_text, argptr);
+                            formatted_string = ctString::ctFormatStringVa(_text, argptr);
                         }
                         s_ErrorLogger->LogError(
-                            ctString::format_string(
+                            ctString::ctFormatString(
                                 L"[%.3f] %ws\r\n",
                                 GetStatusTimeStamp(),
                                 formatted_string.c_str()).c_str());
@@ -3000,7 +2994,7 @@ namespace ctsTraffic
                 va_end(argptr);
             }
         }
-        void PrintErrorIfFailed(LPCWSTR _what, unsigned long _why) noexcept
+        void PrintErrorIfFailed(PCWSTR _what, unsigned long _why) noexcept
         {
             ctsConfigInitOnce();
 
@@ -3028,7 +3022,7 @@ namespace ctsTraffic
                     wstring error_string;
                     if (ctsIOPattern::IsProtocolError(_why))
                     {
-                        error_string = ctString::format_string(
+                        error_string = ctString::ctFormatString(
                             L"[%.3f] Connection aborted due to the protocol error %ws",
                             GetStatusTimeStamp(),
                             ctsIOPattern::BuildProtocolErrorString(_why));
@@ -3036,7 +3030,7 @@ namespace ctsTraffic
                     else
                     {
                         const ctException error_details(_why, _what);
-                        error_string = ctString::format_string(
+                        error_string = ctString::ctFormatString(
                             L"[%.3f] %ws failed (%u) %ws",
                             GetStatusTimeStamp(),
                             _what,
@@ -3052,7 +3046,7 @@ namespace ctsTraffic
                     if (s_ErrorLogger)
                     {
                         s_ErrorLogger->LogError(
-                            ctString::format_string(L"%ws\r\n", error_string.c_str()).c_str());
+                            ctString::ctFormatString(L"%ws\r\n", error_string.c_str()).c_str());
                     }
                 }
                 catch (const exception&)
@@ -3086,7 +3080,7 @@ namespace ctsTraffic
                     {
                         // capture the timeslices
                         const ctsSignedLongLong l_previoutimeslice = s_PreviousPrintTimeslice;
-                        const ctsSignedLongLong l_current_timeslice = ctTimer::snap_qpc_as_msec() - Settings->StartTimeMilliseconds;
+                        const ctsSignedLongLong l_current_timeslice = ctTimer::ctSnapQpcInMillis() - Settings->StartTimeMilliseconds;
 
                         if (l_current_timeslice > l_previoutimeslice)
                         {
@@ -3095,7 +3089,7 @@ namespace ctsTraffic
                             {
                                 if (s_PrintTimesliceCount != 0 && 0 == s_PrintTimesliceCount % 40)
                                 {
-                                    LPCWSTR const header = s_PrintStatusInformation->print_header(StatusFormatting::ConsoleOutput);
+                                    PCWSTR const header = s_PrintStatusInformation->print_header(StatusFormatting::ConsoleOutput);
                                     if (header != nullptr)
                                     {
                                         fwprintf(stdout, L"%ws", header);
@@ -3120,7 +3114,7 @@ namespace ctsTraffic
                             {
                                 --status_count;
                                 const bool clear_status = (0 == status_count);
-                                LPCWSTR const print_string = s_PrintStatusInformation->print_status(
+                                PCWSTR const print_string = s_PrintStatusInformation->print_status(
                                     StatusFormatting::ConsoleOutput,
                                     l_current_timeslice,
                                     clear_status);
@@ -3225,8 +3219,8 @@ namespace ctsTraffic
                     L"[%.3f] TCP connection established [%ws - %ws]\n" :
                     L"[%.3f] UDP connection established [%ws - %ws]\n",
                     GetStatusTimeStamp(),
-                    _local_addr.writeCompleteAddress().c_str(),
-                    _remote_addr.writeCompleteAddress().c_str());
+                    _local_addr.WriteCompleteAddress().c_str(),
+                    _remote_addr.WriteCompleteAddress().c_str());
             }
 
             if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat())
@@ -3234,13 +3228,13 @@ namespace ctsTraffic
                 try
                 {
                     s_ConnectionLogger->LogMessage(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                         (ProtocolType::TCP == Settings->Protocol) ?
                             L"[%.3f] TCP connection established [%ws - %ws]\r\n" :
                             L"[%.3f] UDP connection established [%ws - %ws]\r\n",
                             GetStatusTimeStamp(),
-                            _local_addr.writeCompleteAddress().c_str(),
-                            _remote_addr.writeCompleteAddress().c_str()).c_str());
+                            _local_addr.WriteCompleteAddress().c_str(),
+                            _remote_addr.WriteCompleteAddress().c_str()).c_str());
                 }
                 catch (const exception&)
                 {
@@ -3288,9 +3282,9 @@ namespace ctsTraffic
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static PCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
-            static LPCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
+            static PCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
 
             const float current_time = GetStatusTimeStamp();
 
@@ -3307,22 +3301,22 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        error_string = ctString::format_string(
+                        error_string = ctString::ctFormatString(
                             L"%lu: %ws",
                             _error,
                             ctException(_error).translation_w());
                         // remove any commas from the formatted string - since that will mess up csv files
-                        ctString::replace_all(error_string, L",", L" ");
+                        ctString::ctReplaceAll(error_string, L",", L" ");
                     }
                 }
 
                 if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat())
                 {
-                    csv_string = ctString::format_string(
+                    csv_string = ctString::ctFormatString(
                         TCPResultCsvFormat,
                         current_time,
-                        ctSockaddr().writeCompleteAddress().c_str(),
-                        ctSockaddr().writeCompleteAddress().c_str(),
+                        ctSockaddr().WriteCompleteAddress().c_str(),
+                        ctSockaddr().WriteCompleteAddress().c_str(),
                         0LL,
                         0LL,
                         0LL,
@@ -3335,12 +3329,12 @@ namespace ctsTraffic
                 // - and/or in the case the s_ConnectionLogger isn't writing to csv
                 if (write_to_console || (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()))
                 {
-                    text_string = ctString::format_string(
+                    text_string = ctString::ctFormatString(
                         TCPNetworkFailureResultTextFormat,
                         current_time,
                         error_string.c_str(),
-                        ctSockaddr().writeCompleteAddress().c_str(),
-                        ctSockaddr().writeCompleteAddress().c_str(),
+                        ctSockaddr().WriteCompleteAddress().c_str(),
+                        ctSockaddr().WriteCompleteAddress().c_str(),
                         L"",
                         0LL,
                         0LL,
@@ -3364,7 +3358,7 @@ namespace ctsTraffic
                     else
                     {
                         s_ConnectionLogger->LogMessage(
-                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
+                            ctString::ctFormatString(L"%ws\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -3413,12 +3407,12 @@ namespace ctsTraffic
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%ws - %ws] [%hs]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
-            static LPCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
-            static LPCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static PCWSTR TCPSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%ws - %ws] [%hs]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static PCWSTR TCPNetworkFailureResultTextFormat = L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
+            static PCWSTR TCPProtocolFailureResultTextFormat = L"[%.3f] TCP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
 
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
-            static LPCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
+            static PCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
 
             const long long total_time = (_stats.end_time.get() - _stats.start_time.get());
             ctFatalCondition(
@@ -3439,22 +3433,22 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        error_string = ctString::format_string(
+                        error_string = ctString::ctFormatString(
                             L"%lu: %ws",
                             _error,
                             ctException(_error).translation_w());
                         // remove any commas from the formatted string - since that will mess up csv files
-                        ctString::replace_all(error_string, L",", L" ");
+                        ctString::ctReplaceAll(error_string, L",", L" ");
                     }
                 }
 
                 if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat())
                 {
-                    csv_string = ctString::format_string(
+                    csv_string = ctString::ctFormatString(
                         TCPResultCsvFormat,
                         current_time,
-                        _local_addr.writeCompleteAddress().c_str(),
-                        _remote_addr.writeCompleteAddress().c_str(),
+                        _local_addr.WriteCompleteAddress().c_str(),
+                        _remote_addr.WriteCompleteAddress().c_str(),
                         _stats.bytes_sent.get(),
                         (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                         _stats.bytes_recv.get(),
@@ -3471,11 +3465,11 @@ namespace ctsTraffic
                 {
                     if (0 == _error)
                     {
-                        text_string = ctString::format_string(
+                        text_string = ctString::ctFormatString(
                             TCPSuccessfulResultTextFormat,
                             current_time,
-                            _local_addr.writeCompleteAddress().c_str(),
-                            _remote_addr.writeCompleteAddress().c_str(),
+                            _local_addr.WriteCompleteAddress().c_str(),
+                            _remote_addr.WriteCompleteAddress().c_str(),
                             _stats.connection_identifier,
                             _stats.bytes_sent.get(),
                             (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
@@ -3485,12 +3479,12 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        text_string = ctString::format_string(
+                        text_string = ctString::ctFormatString(
                             (ErrorType::ProtocolError == error_type) ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
                             current_time,
                             (ErrorType::ProtocolError == error_type) ? ctsIOPattern::BuildProtocolErrorString(_error) : error_string.c_str(),
-                            _local_addr.writeCompleteAddress().c_str(),
-                            _remote_addr.writeCompleteAddress().c_str(),
+                            _local_addr.WriteCompleteAddress().c_str(),
+                            _remote_addr.WriteCompleteAddress().c_str(),
                             _stats.connection_identifier,
                             _stats.bytes_sent.get(),
                             (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
@@ -3515,7 +3509,7 @@ namespace ctsTraffic
                     else
                     {
                         s_ConnectionLogger->LogMessage(
-                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
+                            ctString::ctFormatString(L"%ws\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -3563,12 +3557,12 @@ namespace ctsTraffic
                 error_type = ErrorType::NetworkError;
             }
 
-            static LPCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
-            static LPCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
-            static LPCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static PCWSTR UDPSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static PCWSTR UDPNetworkFailureResultTextFormat = L"[%.3f] UDP connection failed with the error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
+            static PCWSTR UDPProtocolFailureResultTextFormat = L"[%.3f] UDP connection failed with the protocol error %ws : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
 
             // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
-            static LPCWSTR UDPResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
+            static PCWSTR UDPResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
 
             const float current_time = GetStatusTimeStamp();
             const long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
@@ -3587,22 +3581,22 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        error_string = ctString::format_string(
+                        error_string = ctString::ctFormatString(
                             L"%lu: %ws",
                             _error,
                             ctException(_error).translation_w());
                         // remove any commas from the formatted string - since that will mess up csv files
-                        ctString::replace_all(error_string, L",", L" ");
+                        ctString::ctReplaceAll(error_string, L",", L" ");
                     }
                 }
 
                 if (s_ConnectionLogger && s_ConnectionLogger->IsCsvFormat())
                 {
-                    csv_string = ctString::format_string(
+                    csv_string = ctString::ctFormatString(
                         UDPResultCsvFormat,
                         current_time,
-                        _local_addr.writeCompleteAddress().c_str(),
-                        _remote_addr.writeCompleteAddress().c_str(),
+                        _local_addr.WriteCompleteAddress().c_str(),
+                        _remote_addr.WriteCompleteAddress().c_str(),
                         bits_per_second,
                         _stats.successful_frames.get(),
                         _stats.dropped_frames.get(),
@@ -3619,11 +3613,11 @@ namespace ctsTraffic
                 {
                     if (0 == _error)
                     {
-                        text_string = ctString::format_string(
+                        text_string = ctString::ctFormatString(
                             UDPSuccessfulResultTextFormat,
                             current_time,
-                            _local_addr.writeCompleteAddress().c_str(),
-                            _remote_addr.writeCompleteAddress().c_str(),
+                            _local_addr.WriteCompleteAddress().c_str(),
+                            _remote_addr.WriteCompleteAddress().c_str(),
                             _stats.connection_identifier,
                             bits_per_second,
                             _stats.successful_frames.get(),
@@ -3633,14 +3627,14 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        text_string = ctString::format_string(
+                        text_string = ctString::ctFormatString(
                             (ErrorType::ProtocolError == error_type) ? UDPProtocolFailureResultTextFormat : UDPNetworkFailureResultTextFormat,
                             current_time,
                             (ErrorType::ProtocolError == error_type) ?
                             ctsIOPattern::BuildProtocolErrorString(_error) :
                             error_string.c_str(),
-                            _local_addr.writeCompleteAddress().c_str(),
-                            _remote_addr.writeCompleteAddress().c_str(),
+                            _local_addr.WriteCompleteAddress().c_str(),
+                            _remote_addr.WriteCompleteAddress().c_str(),
                             _stats.connection_identifier,
                             bits_per_second,
                             _stats.successful_frames.get(),
@@ -3665,7 +3659,7 @@ namespace ctsTraffic
                     else
                     {
                         s_ConnectionLogger->LogMessage(
-                            ctString::format_string(L"%ws\r\n", text_string.c_str()).c_str());
+                            ctString::ctFormatString(L"%ws\r\n", text_string.c_str()).c_str());
                     }
                 }
             }
@@ -3684,7 +3678,7 @@ namespace ctsTraffic
                 PrintConnectionResults(_local_addr, _remote_addr, _error, ctsUdpStatistics());
             }
         }
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ LPCWSTR _text, ...) noexcept
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
         {
             ctsConfigInitOnce();
 
@@ -3712,7 +3706,7 @@ namespace ctsTraffic
                 wstring formatted_string;
                 if (write_to_console)
                 {
-                    formatted_string = ctString::format_string_va(_text, argptr);
+                    formatted_string = ctString::ctFormatStringVa(_text, argptr);
                     wprintf(L"%ws", formatted_string.c_str());
                 }
 
@@ -3720,10 +3714,10 @@ namespace ctsTraffic
                 {
                     if (formatted_string.empty())
                     {
-                        formatted_string = ctString::format_string_va(_text, argptr);
+                        formatted_string = ctString::ctFormatStringVa(_text, argptr);
                     }
                     s_ConnectionLogger->LogMessage(
-                        ctString::replace_all_copy(
+                        ctString::ctReplaceAllCopy(
                             formatted_string, L"\n", L"\r\n").c_str());
                 }
             }
@@ -3810,7 +3804,7 @@ namespace ctsTraffic
 
         float GetStatusTimeStamp() noexcept
         {
-            return static_cast<float>((ctTimer::snap_qpc_as_msec() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
+            return static_cast<float>((ctTimer::ctSnapQpcInMillis() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3898,7 +3892,7 @@ namespace ctsTraffic
                     }
 
                 }
-                else if (!_local_address.isAddressAny() && _local_address.port() == 0)
+                else if (!_local_address.IsAddressAny() && _local_address.port() == 0)
                 {
                     DWORD optval = 1; // BOOL
                     const auto optlen = static_cast<int>(sizeof optval);
@@ -4105,11 +4099,11 @@ namespace ctsTraffic
                 }
                 if (Settings->Options & SET_RECV_BUF)
                 {
-                    setting_string.append(ctString::format_string(L" SO_RCVBUF(%lu)", static_cast<unsigned long>(Settings->RecvBufValue)));
+                    setting_string.append(ctString::ctFormatString(L" SO_RCVBUF(%lu)", static_cast<unsigned long>(Settings->RecvBufValue)));
                 }
                 if (Settings->Options & SET_SEND_BUF)
                 {
-                    setting_string.append(ctString::format_string(L" SO_SNDBUF(%lu)", static_cast<unsigned long>(Settings->SendBufValue)));
+                    setting_string.append(ctString::ctFormatString(L" SO_SNDBUF(%lu)", static_cast<unsigned long>(Settings->SendBufValue)));
                 }
                 if (Settings->Options & MSG_WAIT_ALL)
                 {
@@ -4118,7 +4112,7 @@ namespace ctsTraffic
             }
             setting_string.append(L"\n");
 
-            setting_string.append(ctString::format_string(L"\tIO function: %ws\n", s_IoFunctionName));
+            setting_string.append(ctString::ctFormatString(L"\tIO function: %ws\n", s_IoFunctionName));
 
             setting_string.append(L"\tIoPattern: ");
             switch (Settings->IoPattern)
@@ -4131,8 +4125,8 @@ namespace ctsTraffic
                     break;
                 case IoPatternType::PushPull:
                     setting_string.append(L"PushPull <TCP client/server alternate send/recv>\n");
-                    setting_string.append(ctString::format_string(L"\t\tPushBytes: %lu\n", static_cast<unsigned long>(Settings->PushBytes)));
-                    setting_string.append(ctString::format_string(L"\t\tPullBytes: %lu\n", static_cast<unsigned long>(Settings->PullBytes)));
+                    setting_string.append(ctString::ctFormatString(L"\t\tPushBytes: %lu\n", static_cast<unsigned long>(Settings->PushBytes)));
+                    setting_string.append(ctString::ctFormatString(L"\t\tPullBytes: %lu\n", static_cast<unsigned long>(Settings->PullBytes)));
                     break;
                 case IoPatternType::Duplex:
                     setting_string.append(L"Duplex <TCP client/server both sending and receiving>\n");
@@ -4146,35 +4140,35 @@ namespace ctsTraffic
                     ctAlwaysFatalCondition(L"Unexpected Settings IoPattern");
             }
 
-            setting_string.append(ctString::format_string(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
+            setting_string.append(ctString::ctFormatString(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
 
             if (Settings->PrePostSends > 0)
             {
-                setting_string.append(ctString::format_string(L"\tPrePostSends: %u\n", static_cast<unsigned long>(Settings->PrePostSends)));
+                setting_string.append(ctString::ctFormatString(L"\tPrePostSends: %u\n", static_cast<unsigned long>(Settings->PrePostSends)));
             }
             else
             {
-                setting_string.append(ctString::format_string(L"\tPrePostSends: Following Ideal Send Backlog\n"));
+                setting_string.append(ctString::ctFormatString(L"\tPrePostSends: Following Ideal Send Backlog\n"));
             }
 
             setting_string.append(
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"\tLevel of verification: %ws\n",
                     Settings->ShouldVerifyBuffers ? L"Connections & Data" : L"Connections"));
 
-            setting_string.append(ctString::format_string(L"\tPort: %u\n", Settings->Port));
+            setting_string.append(ctString::ctFormatString(L"\tPort: %u\n", Settings->Port));
 
             if (0 == s_BufferSizeHigh)
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tBuffer used for each IO request: %u [0x%x] bytes\n",
                         s_BufferSizeLow, s_BufferSizeLow));
             }
             else
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tBuffer used for each IO request: [%u, %u] bytes\n",
                         s_BufferSizeLow, s_BufferSizeHigh));
             }
@@ -4182,14 +4176,14 @@ namespace ctsTraffic
             if (0 == s_TransferSizeHigh)
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tTotal transfer per connection: %llu bytes\n",
                         s_TransferSizeLow));
             }
             else
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tTotal transfer per connection: [%llu, %llu] bytes\n",
                         s_TransferSizeLow, s_TransferSizeHigh));
             }
@@ -4197,29 +4191,29 @@ namespace ctsTraffic
             if (ProtocolType::UDP == Settings->Protocol)
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\t\tUDP Stream BitsPerSecond: %lld bits per second\n",
                         static_cast<long long>(s_MediaStreamSettings.BitsPerSecond)));
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\t\tUDP Stream FrameRate: %lu frames per second\n",
                         static_cast<unsigned long>(s_MediaStreamSettings.FramesPerSecond)));
 
                 if (s_MediaStreamSettings.BufferDepthSeconds > 0)
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\t\tUDP Stream BufferDepth: %lu seconds\n",
                             static_cast<unsigned long>(s_MediaStreamSettings.BufferDepthSeconds)));
                 }
 
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\t\tUDP Stream StreamLength: %lu seconds (%lu frames)\n",
                         static_cast<unsigned long>(s_MediaStreamSettings.StreamLengthSeconds),
                         static_cast<unsigned long>(s_MediaStreamSettings.StreamLengthFrames)));
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\t\tUDP Stream FrameSize: %lu bytes\n",
                         static_cast<unsigned long>(s_MediaStreamSettings.FrameSizeBytes)));
             }
@@ -4229,14 +4223,14 @@ namespace ctsTraffic
                 if (0 == s_RateLimitHigh)
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tSending throughput rate limited down to %lld bytes/second\n",
                             s_RateLimitLow));
                 }
                 else
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tSending throughput rate limited down to a range of [%lld, %lld] bytes/second\n",
                             s_RateLimitLow, s_RateLimitHigh));
                 }
@@ -4245,17 +4239,17 @@ namespace ctsTraffic
             if (s_NetAdapterAddresses != nullptr)
             {
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tIP Compartment: %u\n", s_CompartmentId));
             }
 
             if (!Settings->ListenAddresses.empty())
             {
                 setting_string.append(L"\tAccepting connections on addresses:\n");
-                WCHAR wsaddress[IP_STRING_MAX_LENGTH]{};
+                WCHAR wsaddress[IpStringMaxLength]{};
                 for (const auto& addr : Settings->ListenAddresses)
                 {
-                    if (addr.writeCompleteAddress(wsaddress))
+                    if (addr.WriteCompleteAddress(wsaddress))
                     {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
@@ -4269,15 +4263,15 @@ namespace ctsTraffic
                 if (Settings->OutgoingIfIndex > 0)
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tInterfaceIndex: %u\n", Settings->OutgoingIfIndex));
                 }
 
                 setting_string.append(L"\tConnecting out to addresses:\n");
-                WCHAR wsaddress[IP_STRING_MAX_LENGTH]{};
+                WCHAR wsaddress[IpStringMaxLength]{};
                 for (const auto& addr : Settings->TargetAddresses)
                 {
-                    if (addr.writeCompleteAddress(wsaddress))
+                    if (addr.WriteCompleteAddress(wsaddress))
                     {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
@@ -4288,7 +4282,7 @@ namespace ctsTraffic
                 setting_string.append(L"\tBinding to local addresses for outgoing connections:\n");
                 for (const auto& addr : Settings->BindAddresses)
                 {
-                    if (addr.writeCompleteAddress(wsaddress))
+                    if (addr.WriteCompleteAddress(wsaddress))
                     {
                         setting_string.append(L"\t\t");
                         setting_string.append(wsaddress);
@@ -4301,26 +4295,26 @@ namespace ctsTraffic
                     if (0 == Settings->LocalPortHigh)
                     {
                         setting_string.append(
-                            ctString::format_string(
+                            ctString::ctFormatString(
                                 L"\tUsing local port for outgoing connections: %u\n",
                                 Settings->LocalPortLow));
                     }
                     else
                     {
                         setting_string.append(
-                            ctString::format_string(
+                            ctString::ctFormatString(
                                 L"\tUsing local port for outgoing connections: [%u, %u]\n",
                                 Settings->LocalPortLow, Settings->LocalPortHigh));
                     }
                 }
 
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tConnection limit (maximum established connections): %u [0x%x]\n",
                         static_cast<unsigned long>(Settings->ConnectionLimit),
                         static_cast<unsigned long>(Settings->ConnectionLimit)));
                 setting_string.append(
-                    ctString::format_string(
+                    ctString::ctFormatString(
                         L"\tConnection throttling rate (maximum pended connection attempts): %u [0x%x]\n",
                         static_cast<unsigned long>(Settings->ConnectionThrottleLimit),
                         static_cast<unsigned long>(Settings->ConnectionThrottleLimit)));
@@ -4331,14 +4325,14 @@ namespace ctsTraffic
                 if (Settings->ServerExitLimit > MAXLONG)
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tServer-accepted connections before exit : 0x%llx\n",
                             static_cast<ULONGLONG>(Settings->ServerExitLimit)));
                 }
                 else
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tServer-accepted connections before exit : %llu [0x%llx]\n",
                             static_cast<ULONGLONG>(Settings->ServerExitLimit),
                             static_cast<ULONGLONG>(Settings->ServerExitLimit)));
@@ -4358,14 +4352,14 @@ namespace ctsTraffic
                 if (totalConnections > MAXLONG)
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tTotal outgoing connections before exit (iterations * concurrent connections) : 0x%llx\n",
                             totalConnections));
                 }
                 else
                 {
                     setting_string.append(
-                        ctString::format_string(
+                        ctString::ctFormatString(
                             L"\tTotal outgoing connections before exit (iterations * concurrent connections) : %llu [0x%llx]\n",
                             totalConnections,
                             totalConnections));
@@ -4393,7 +4387,7 @@ namespace ctsTraffic
             if (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat())
             {
                 s_ConnectionLogger->LogMessage(
-                    ctString::replace_all_copy(
+                    ctString::ctReplaceAllCopy(
                         setting_string, L"\n", L"\r\n").c_str());
             }
         }

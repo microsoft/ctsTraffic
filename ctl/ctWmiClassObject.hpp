@@ -49,7 +49,9 @@ namespace ctl
         //
         // forward declare iterator classes
         //
+        // ReSharper disable once CppInconsistentNaming
         class property_iterator;
+        // ReSharper disable once CppInconsistentNaming
         class method_iterator;
 
         ctWmiClassObject(ctWmiService wbemServices, wil::com_ptr<IWbemClassObject> wbemClass) noexcept :
@@ -58,19 +60,19 @@ namespace ctl
         {
         }
 
-        ctWmiClassObject(ctWmiService _wbemServices, LPCWSTR _className) :
-            m_wbemServices(std::move(_wbemServices))
+        ctWmiClassObject(ctWmiService wbemServices, PCWSTR className) :
+            m_wbemServices(std::move(wbemServices))
         {
             THROW_IF_FAILED(m_wbemServices->GetObject(
-                wil::make_bstr(_className).get(),
+                wil::make_bstr(className).get(),
                 0,
                 nullptr,
                 m_wbemClassObject.put(),
                 nullptr));
         }
 
-        ctWmiClassObject(ctWmiService _wbemServices, const BSTR className) :
-            m_wbemServices(std::move(_wbemServices))
+        ctWmiClassObject(ctWmiService wbemServices, const BSTR className) :  // NOLINT(misc-misplaced-const)
+            m_wbemServices(std::move(wbemServices))
         {
             THROW_IF_FAILED(m_wbemServices->GetObjectW(
                 className,
@@ -80,18 +82,18 @@ namespace ctl
                 nullptr));
         }
 
-        wil::com_ptr<IWbemClassObject> get_class_object() const noexcept
+        [[nodiscard]] wil::com_ptr<IWbemClassObject> get_class_object() const noexcept
         {
             return m_wbemClassObject;
         }
 
-        property_iterator property_begin(bool _fNonSystemPropertiesOnly = true) const
+        [[nodiscard]] property_iterator property_begin(bool fNonSystemPropertiesOnly = true) const
         {
-            return property_iterator(m_wbemClassObject, _fNonSystemPropertiesOnly);
+            return property_iterator(m_wbemClassObject, fNonSystemPropertiesOnly);
         }
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
-        property_iterator property_end() const noexcept
+        [[nodiscard]] property_iterator property_end() const noexcept
         {
             return property_iterator();
         }
@@ -109,21 +111,22 @@ namespace ctl
         /// }
 
         // A forward property_iterator class type to enable forward-traversing instances of the queried WMI provider
+        // ReSharper disable once CppInconsistentNaming
         class property_iterator
         {
         private:
-            static const unsigned long END_ITERATOR_INDEX = 0xffffffff;
+            static const unsigned long c_EndIteratorIndex = 0xffffffff;
 
             wil::com_ptr<IWbemClassObject> m_wbemClassObj;
             wil::shared_bstr m_propertyName;
             CIMTYPE m_propertyType = 0;
-            DWORD m_index = END_ITERATOR_INDEX;
+            DWORD m_index = c_EndIteratorIndex;
 
         public:
             property_iterator() = default;
 
-            property_iterator(wil::com_ptr<IWbemClassObject> _classObj, bool fNonSystemPropertiesOnly) :
-                m_wbemClassObj(std::move(_classObj)),
+            property_iterator(wil::com_ptr<IWbemClassObject> classObj, bool fNonSystemPropertiesOnly) :
+                m_wbemClassObj(std::move(classObj)),
                 m_index(0)
             {
                 THROW_IF_FAILED(m_wbemClassObj->BeginEnumeration(fNonSystemPropertiesOnly ? WBEM_FLAG_NONSYSTEM_ONLY : 0));
@@ -154,7 +157,7 @@ namespace ctl
             ////////////////////////////////////////////////////////////////////////////////
             BSTR operator*()
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == c_EndIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiClassObject::property_iterator::operator * - invalid subscript");
                 }
@@ -163,7 +166,7 @@ namespace ctl
 
             BSTR operator*() const
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == c_EndIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiClassObject::property_iterator::operator * - invalid subscript");
                 }
@@ -172,35 +175,35 @@ namespace ctl
 
             BSTR* operator->()
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == c_EndIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiClassObject::property_iterator::operator-> - invalid subscript");
                 }
                 return m_propertyName.addressof();
             }
 
-            CIMTYPE type() const
+            [[nodiscard]] CIMTYPE type() const
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == c_EndIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiClassObject::property_iterator::type - invalid subscript");
                 }
                 return m_propertyType;
             }
 
-            bool operator==(const property_iterator& _iter) const noexcept
+            bool operator==(const property_iterator& iter) const noexcept
             {
-                if (m_index != END_ITERATOR_INDEX)
+                if (m_index != c_EndIteratorIndex)
                 {
-                    return m_index == _iter.m_index &&
-                        m_wbemClassObj == _iter.m_wbemClassObj;
+                    return m_index == iter.m_index &&
+                        m_wbemClassObj == iter.m_wbemClassObj;
                 }
-                return m_index == _iter.m_index;
+                return m_index == iter.m_index;
             }
 
-            bool operator!=(const property_iterator& _iter) const noexcept
+            bool operator!=(const property_iterator& iter) const noexcept
             {
-                return !(*this == _iter);
+                return !(*this == iter);
             }
 
             // preincrement
@@ -219,12 +222,12 @@ namespace ctl
             }
 
             // increment by integer
-            property_iterator& operator+=(DWORD _inc)
+            property_iterator& operator+=(DWORD inc)
             {
-                for (unsigned loop = 0; loop < _inc; ++loop)
+                for (unsigned loop = 0; loop < inc; ++loop)
                 {
                     increment();
-                    if (m_index == END_ITERATOR_INDEX)
+                    if (m_index == c_EndIteratorIndex)
                     {
                         throw std::out_of_range("ctWmiClassObject::property_iterator::operator+= - invalid subscript");
                     }
@@ -247,7 +250,7 @@ namespace ctl
         private:
             void increment()
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == c_EndIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiClassObject::property_iterator - cannot increment: at the end");
                 }
@@ -275,7 +278,7 @@ namespace ctl
                     case WBEM_S_NO_MORE_DATA:
                     {
                         // at the end...
-                        m_index = END_ITERATOR_INDEX;
+                        m_index = c_EndIteratorIndex;
                         m_propertyName.reset();
                         m_propertyType = 0;
                         break;

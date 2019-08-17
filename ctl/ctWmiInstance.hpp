@@ -76,18 +76,18 @@ namespace ctl
         {
         }
 
-        bool operator ==(const ctWmiInstance& _obj) const noexcept
+        bool operator ==(const ctWmiInstance& obj) const noexcept
         {
-            return m_wbemServices == _obj.m_wbemServices &&
-                m_instanceObject == _obj.m_instanceObject;
+            return m_wbemServices == obj.m_wbemServices &&
+                m_instanceObject == obj.m_instanceObject;
         }
 
-        bool operator !=(const ctWmiInstance& _obj) const noexcept
+        bool operator !=(const ctWmiInstance& obj) const noexcept
         {
-            return !(*this == _obj);
+            return !(*this == obj);
         }
 
-        wil::unique_bstr get_path() const
+        [[nodiscard]] wil::unique_bstr get_path() const
         {
             wil::unique_variant object_path_variant;
             get(L"__RELPATH", object_path_variant.addressof());
@@ -105,13 +105,13 @@ namespace ctl
             return wil::make_bstr(V_BSTR(&object_path_variant));
         }
 
-        ctWmiService get_service() const noexcept
+        [[nodiscard]] ctWmiService get_service() const noexcept
         {
             return m_wbemServices;
         }
 
         // Retrieves the class name this ctWmiInstance is representing if any
-        wil::unique_bstr get_class_name() const
+        [[nodiscard]] wil::unique_bstr get_class_name() const
         {
             wil::unique_variant class_variant;
             get(L"__CLASS", class_variant.addressof());
@@ -128,13 +128,13 @@ namespace ctl
             return wil::make_bstr(V_BSTR(&class_variant));
         }
 
-        wil::com_ptr<IWbemClassObject> get_instance_object() const noexcept
+        [[nodiscard]] wil::com_ptr<IWbemClassObject> get_instance_object() const noexcept
         {
             return m_instanceObject;
         }
 
         // Returns a class object for the class represented by this instance
-        ctWmiClassObject get_class_object() const noexcept
+        [[nodiscard]] ctWmiClassObject get_class_object() const noexcept
         {
             return { m_wbemServices, m_instanceObject };
         }
@@ -262,7 +262,7 @@ namespace ctl
         // Returns a ctWmiInstace containing the [out] parameters from the method call
         //   (the property "ReturnValue" contains the return value)
         template <typename Arg1, typename Arg2>
-        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 _arg2)
+        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2)
         {
             // establish the class object for the [in] params to the method
             wil::com_ptr<IWbemClassObject> inParamsDefinition;
@@ -284,7 +284,7 @@ namespace ctl
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
             propertyclassObject.set(*property_iter, arg1);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg2);
+            propertyclassObject.set(*property_iter, arg2);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -294,7 +294,7 @@ namespace ctl
         // Returns a ctWmiInstace containing the [out] parameters from the method call
         //   (the property "ReturnValue" contains the return value)
         template <typename Arg1, typename Arg2, typename Arg3>
-        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 _arg2, Arg3 _arg3)
+        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3)
         {
             // establish the class object for the [in] params to the method
             wil::com_ptr<IWbemClassObject> inParamsDefinition;
@@ -316,9 +316,9 @@ namespace ctl
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
             propertyclassObject.set(*property_iter, arg1);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg2);
+            propertyclassObject.set(*property_iter, arg2);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg3);
+            propertyclassObject.set(*property_iter, arg3);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -328,7 +328,7 @@ namespace ctl
         // Returns a ctWmiInstace containing the [out] parameters from the method call
         //   (the property "ReturnValue" contains the return value)
         template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4)
+        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4)
         {
             // establish the class object for the [in] params to the method
             wil::com_ptr<IWbemClassObject> inParamsDefinition;
@@ -350,11 +350,11 @@ namespace ctl
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
             propertyclassObject.set(*property_iter, arg1);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg2);
+            propertyclassObject.set(*property_iter, arg2);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg3);
+            propertyclassObject.set(*property_iter, arg3);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg4);
+            propertyclassObject.set(*property_iter, arg4);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -364,7 +364,7 @@ namespace ctl
         // Returns a ctWmiInstace containing the [out] parameters from the method call
         //   (the property "ReturnValue" contains the return value)
         template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 _arg2, Arg3 _arg3, Arg4 _arg4, Arg5 _arg5)
+        ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5)
         {
             // establish the class object for the [in] params to the method
             wil::com_ptr<IWbemClassObject> inParamsDefinition;
@@ -386,13 +386,13 @@ namespace ctl
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
             propertyclassObject.set(*property_iter, arg1);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg2);
+            propertyclassObject.set(*property_iter, arg2);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg3);
+            propertyclassObject.set(*property_iter, arg3);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg4);
+            propertyclassObject.set(*property_iter, arg4);
             ++property_iter;
-            propertyclassObject.set(*property_iter, _arg5);
+            propertyclassObject.set(*property_iter, arg5);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -433,7 +433,7 @@ namespace ctl
                 0));
         }
 
-        ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* _inParams)
+        ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* inParams)
         {
             // exec the method semi-synchronously from this instance based off the __REPATH property
             wil::com_ptr<IWbemCallResult> result;
@@ -442,7 +442,7 @@ namespace ctl
                 wil::make_bstr(method).get(),
                 WBEM_FLAG_RETURN_IMMEDIATELY,
                 nullptr,
-                _inParams,
+                inParams,
                 nullptr,
                 result.addressof()));
 

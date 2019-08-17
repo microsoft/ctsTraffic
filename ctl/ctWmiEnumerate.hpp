@@ -35,6 +35,7 @@ namespace ctl
     {
     public:
         // A forward iterator class type to enable forward-traversing instances of the queried WMI provider
+        // ReSharper disable once CppInconsistentNaming
         class iterator
         {
         public:
@@ -57,7 +58,6 @@ namespace ctl
             iterator(iterator&&) noexcept = default;
             iterator& operator =(iterator&&) noexcept = default;
 
-
             void swap(_Inout_ iterator& rhs) noexcept
             {
                 using std::swap;
@@ -67,7 +67,7 @@ namespace ctl
                 swap(m_ctInstance, rhs.m_ctInstance);
             }
 
-            unsigned long location() const noexcept
+            [[nodiscard]] unsigned long location() const noexcept
             {
                 return m_index;
             }
@@ -100,23 +100,22 @@ namespace ctl
         private:
             void increment();
 
-            static const unsigned long END_ITERATOR_INDEX = 0xffffffff;
-
-            unsigned long m_index = END_ITERATOR_INDEX;
+            static const unsigned long c_EndIteratorIndex = 0xffffffff;
+            unsigned long m_index = c_EndIteratorIndex;
             ctWmiService m_wbemServices;
             wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;
             std::shared_ptr<ctWmiInstance> m_ctInstance;
         };
 
 
-        explicit ctWmiEnumerate(ctWmiService _wbemServices) noexcept :
-            m_wbemServices(std::move(_wbemServices))
+        explicit ctWmiEnumerate(ctWmiService wbemServices) noexcept :
+            m_wbemServices(std::move(wbemServices))
         {
         }
 
         // Allows for executing a WMI query against the WMI service for an enumeration of WMI objects.
         // Assumes the query of of the WQL query language.
-        void query(LPCWSTR query)
+        void query(PCWSTR query)
         {
             THROW_IF_FAILED(m_wbemServices->ExecQuery(
                 wil::make_bstr(L"WQL").get(),
@@ -126,7 +125,7 @@ namespace ctl
                 m_wbemEnumerator.put()));
         }
 
-        void query(LPCWSTR query, const wil::com_ptr<IWbemContext>& context)
+        void query(PCWSTR query, const wil::com_ptr<IWbemContext>& context)
         {
             THROW_IF_FAILED(m_wbemServices->ExecQuery(
                 wil::make_bstr(L"WQL").get(),
@@ -173,22 +172,22 @@ namespace ctl
         mutable wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;
     };
 
-    inline bool ctWmiEnumerate::iterator::operator==(const iterator& _iter) const noexcept
+    inline bool ctWmiEnumerate::iterator::operator==(const iterator& iter) const noexcept
     {
-        if (m_index != END_ITERATOR_INDEX)
+        if (m_index != c_EndIteratorIndex)
         {
-            return m_index == _iter.m_index &&
-                m_wbemServices == _iter.m_wbemServices &&
-                m_wbemEnumerator == _iter.m_wbemEnumerator &&
-                m_ctInstance == _iter.m_ctInstance;
+            return m_index == iter.m_index &&
+                m_wbemServices == iter.m_wbemServices &&
+                m_wbemEnumerator == iter.m_wbemEnumerator &&
+                m_ctInstance == iter.m_ctInstance;
         }
-        return m_index == _iter.m_index &&
-            m_wbemServices == _iter.m_wbemServices;
+        return m_index == iter.m_index &&
+            m_wbemServices == iter.m_wbemServices;
     }
 
-    inline bool ctWmiEnumerate::iterator::operator!=(const iterator& _iter) const noexcept
+    inline bool ctWmiEnumerate::iterator::operator!=(const iterator& iter) const noexcept
     {
-        return !(*this == _iter);
+        return !(*this == iter);
     }
 
     // preincrement
@@ -207,12 +206,12 @@ namespace ctl
     }
 
     // increment by integer
-    inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(DWORD _inc)
+    inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(DWORD inc)
     {
-        for (unsigned loop = 0; loop < _inc; ++loop)
+        for (unsigned loop = 0; loop < inc; ++loop)
         {
             increment();
-            if (m_index == END_ITERATOR_INDEX)
+            if (m_index == c_EndIteratorIndex)
             {
                 throw std::out_of_range("ctWmiEnumerate::iterator::operator+= - invalid subscript");
             }
@@ -222,7 +221,7 @@ namespace ctl
 
     inline void ctWmiEnumerate::iterator::increment()
     {
-        if (m_index == END_ITERATOR_INDEX)
+        if (m_index == c_EndIteratorIndex)
         {
             throw std::out_of_range("ctWmiEnumerate::iterator::increment at the end");
         }
@@ -238,7 +237,7 @@ namespace ctl
         if (0 == uReturn)
         {
             // at the end...
-            m_index = END_ITERATOR_INDEX;
+            m_index = c_EndIteratorIndex;
             m_ctInstance.reset();
         }
         else

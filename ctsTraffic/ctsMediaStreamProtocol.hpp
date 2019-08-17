@@ -220,7 +220,7 @@ namespace ctsTraffic {
         ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, const char* _send_buffer) noexcept 
         : wsabuf(),
           qpc_value(),
-          qpf(ctl::ctTimer::snap_qpf()),
+          qpf(ctl::ctTimer::ctSnapQpf()),
           bytes_to_send(_bytes_to_send),
           sequence_number(_sequence_number)
         {
@@ -429,13 +429,13 @@ namespace ctsTraffic {
         {
             const std::string buffer(_input, _input + _input_length);
 
-            if (ctl::ctString::iordinal_equals(UdpDatagramStartString, buffer)) {
+            if (ctl::ctString::ctOrdinalEqualsCaseInsensative(UdpDatagramStartString, buffer)) {
                 return ctsMediaStreamMessage(MediaStreamAction::START);
             }
 
             throw ctl::ctException(
                 ERROR_INVALID_DATA,
-                ctl::ctString::format_string(
+                ctl::ctString::ctFormatString(
                     L"Invalid MediaStream message: %hs",
                     buffer.c_str()).c_str(),
                 L"ctsMediaStreamMessage",

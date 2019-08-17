@@ -43,7 +43,7 @@ namespace ctsTraffic {
     using ctsSafeIntException = msl::utilities::SafeIntException;
 
     inline
-    LPCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
+    PCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
     {
         switch (_ex.m_code) {
             case msl::utilities::SafeIntNoError: return L"SafeInt - No Error";

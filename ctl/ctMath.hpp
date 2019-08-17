@@ -29,9 +29,9 @@ namespace ctl
 	///   get<1> : the standard deviation
 	///
 	template <typename BidirectionalIterator>
-	std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
+	std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& begin, const BidirectionalIterator& end)
 	{
-		const auto size = _end - _begin;
+		const auto size = end - begin;
 		if (size == 0) {
 			return std::make_tuple(
 				static_cast<double>(0),
@@ -39,15 +39,15 @@ namespace ctl
 		}
 		if (size == 1) {
 			return std::make_tuple(
-				static_cast<double>(*_begin),
+				static_cast<double>(*begin),
 				static_cast<double>(0));
 		}
 
-		const double sum = std::accumulate(_begin, _end, 0.0);
+		const double sum = std::accumulate(begin, end, 0.0);
 		const double mean = sum / size;
 		// ReSharper disable once CppUseAuto
 		double accum = 0.0;
-		for (auto iter = _begin; iter != _end; ++iter) {
+		for (auto iter = begin; iter != end; ++iter) {
 			auto& value = *iter;
 			accum += (value - mean) * (value - mean);
 		}
@@ -70,9 +70,9 @@ namespace ctl
 	///   get<2> : quartile 3 (median of the upper half - at the 75% mark)
 	///
 	template <typename BidirectionalIterator>
-	std::tuple<double, double, double> ctInterquartileRange(const BidirectionalIterator& _begin, const BidirectionalIterator& _end)
+	std::tuple<double, double, double> ctInterquartileRange(const BidirectionalIterator& begin, const BidirectionalIterator& end)
 	{
-		const auto size = _end - _begin;
+		const auto size = end - begin;
 		if (size < 3) {
 			return std::make_tuple(
 				static_cast<double>(0),
@@ -82,12 +82,12 @@ namespace ctl
 
 		if (size == 3) {
 			return std::make_tuple(
-				static_cast<double>(*_begin),
-				static_cast<double>(*(_begin + 1)),
-				static_cast<double>(*(_begin + 2)));
+				static_cast<double>(*begin),
+				static_cast<double>(*(begin + 1)),
+				static_cast<double>(*(begin + 2)));
 		}
 
-		auto split_section = [](const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end)
+		const auto split_section = [](const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end)
 		                       -> std::tuple<BidirectionalIterator, BidirectionalIterator> {
 			const size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
 
@@ -116,9 +116,9 @@ namespace ctl
 			return std::make_tuple(lhs, rhs);
 		};
 
-		auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& _split) -> double {
-			const BidirectionalIterator& lhs = std::get<0>(_split);
-			const BidirectionalIterator& rhs = std::get<1>(_split);
+		auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
+			const BidirectionalIterator& lhs = std::get<0>(split);
+			const BidirectionalIterator& rhs = std::get<1>(split);
 			ctl::ctFatalCondition(rhs < lhs, L"ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
 
 			double median_value = 0.0;
@@ -151,13 +151,13 @@ namespace ctl
 			return median_value;
 		};
 
-		auto median_split = split_section(_begin, _end);
+		auto median_split = split_section(begin, end);
 		double median = find_median(median_split);
 
-		const auto lhs_split = split_section(_begin, std::get<0>(median_split) + 1);
+		const auto lhs_split = split_section(begin, std::get<0>(median_split) + 1);
 		double lower_quartile = find_median(lhs_split);
 
-		const auto rhs_split = split_section(std::get<1>(median_split), _end);
+		const auto rhs_split = split_section(std::get<1>(median_split), end);
 		double higher_quartile = find_median(rhs_split);
 
 		return std::make_tuple(

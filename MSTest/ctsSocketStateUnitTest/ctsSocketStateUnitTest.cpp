@@ -43,13 +43,13 @@ namespace ctsTraffic {
 	namespace ctsConfig {
         ctsConfigSettings* Settings;
 
-        void PrintDebug(LPCWSTR _text, ...) noexcept
+        void PrintDebug(PCWSTR _text, ...) noexcept
         {
             va_list args;
             va_start(args, _text);
 
-            auto formatted(ctl::ctString::format_string_va(_text, args));
-            Logger::WriteMessage(ctl::ctString::format_string(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
         }
@@ -72,13 +72,13 @@ namespace ctsTraffic {
         void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
         }
         void PrintException(const std::exception& e) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::format_string(L"ctsConfig::PrintException(%ws)",
-                ctl::ctString::format_exception(e).c_str()).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintException(%ws)",
+                ctl::ctString::ctFormatException(e).c_str()).c_str());
         }
         bool IsListening() noexcept
         {

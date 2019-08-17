@@ -34,112 +34,83 @@ namespace ctl
 	class ctNetAdapterAddresses
 	{
 	public:
-		class iterator
+        // ReSharper disable once CppInconsistentNaming
+        class iterator
 		{
 		public:
-			////////////////////////////////////////////////////////////////////////////////
-			///
-			/// c'tor
-			/// - NULL ptr is an 'end' iterator
-			///
-			/// - default d'tor, copy c'tor, and copy assignment
-			///
-			////////////////////////////////////////////////////////////////////////////////
 			iterator() = default;
 
-			explicit iterator(std::shared_ptr<std::vector<BYTE>> _ipAdapter) noexcept
-			: buffer(std::move(_ipAdapter))
+			explicit iterator(std::shared_ptr<std::vector<BYTE>> ipAdapter) noexcept
+			: m_buffer(std::move(ipAdapter))
 			{
-				if (buffer && !buffer->empty()) {
-					current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0)));
+				if (m_buffer && !m_buffer->empty()) {
+					m_current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0));
 				}
 			}
 
-			////////////////////////////////////////////////////////////////////////////////
-			///
-			/// member swap method
-			///
-			////////////////////////////////////////////////////////////////////////////////
-			void swap(_Inout_ iterator& _in) noexcept
+			void swap(_Inout_ iterator& rhs) noexcept
 			{
 				using std::swap;
-				swap(this->buffer, _in.buffer);
-				swap(this->current, _in.current);
+				swap(this->m_buffer, rhs.m_buffer);
+				swap(this->m_current, rhs.m_current);
 			}
 
-			////////////////////////////////////////////////////////////////////////////////
-			///
-			/// accessors:
-			/// - dereference operators to access the internal row
-			///
-			////////////////////////////////////////////////////////////////////////////////
 			IP_ADAPTER_ADDRESSES& operator*() const
 			{
-				if (!this->current) {
+				if (!this->m_current) {
 					throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator*");
 				}
-				return *(this->current);
+				return *this->m_current;
 			}
 
 			IP_ADAPTER_ADDRESSES* operator->() const
 			{
-				if (!this->current) {
+				if (!this->m_current) {
 					throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator->");
 				}
-				return this->current;
+				return this->m_current;
 			}
 
-			////////////////////////////////////////////////////////////////////////////////
-			///
-			/// comparison and arithmatic operators
-			/// 
-			/// comparison operators are no-throw/no-fail
-			/// arithmatic operators can fail 
-			///
-			////////////////////////////////////////////////////////////////////////////////
-			bool operator==(const iterator& _iter) const noexcept
+			bool operator==(const iterator& iter) const noexcept
 			{
 				// for comparison of 'end' iterators, just look at current
-				if (!this->current) {
-					return (this->current == _iter.current);
+				if (!this->m_current) {
+					return this->m_current == iter.m_current;
 				}
 
-				return ((this->buffer == _iter.buffer) &&
-					    (this->current == _iter.current));
+				return this->m_buffer == iter.m_buffer &&
+                    this->m_current == iter.m_current;
 			}
 
-			bool operator!=(const iterator& _iter) const noexcept
+			bool operator!=(const iterator& iter) const noexcept
 			{
-				return !(*this == _iter);
+				return !(*this == iter);
 			}
 
-			// preincrement
 			iterator& operator++()
 			{
-				if (!this->current) {
+				if (!this->m_current) {
 					throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator++");
 				}
 				// increment
-				current = current->Next;
+				m_current = m_current->Next;
 				return *this;
 			}
 
-			// postincrement
 			iterator operator++(int)
 			{
 				// ReSharper disable once CppUseAuto
 				iterator temp(*this);
-				++(*this);
+				++*this;
 				return temp;
 			}
 
-			// increment by integer
 			iterator& operator+=(DWORD _inc)
 			{
-				for (unsigned loop = 0; (loop < _inc) && (this->current != nullptr); ++loop) {
-					current = current->Next;
+				for (unsigned loop = 0; loop < _inc && this->m_current != nullptr; ++loop) {
+					m_current = m_current->Next;
 				}
-				if (!this->current) {
+				if (!this->m_current) {
 					throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator+=");
 				}
 				return *this;
@@ -158,8 +129,8 @@ namespace ctl
 			typedef IP_ADAPTER_ADDRESSES&       reference;
 
 		private:
-			std::shared_ptr<std::vector<BYTE>> buffer;
-			PIP_ADAPTER_ADDRESSES current = nullptr;
+			std::shared_ptr<std::vector<BYTE>> m_buffer;
+			PIP_ADAPTER_ADDRESSES m_current = nullptr;
 		};
 
 	public:
@@ -174,7 +145,7 @@ namespace ctl
 		///
 		////////////////////////////////////////////////////////////////////////////////
 		explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) :
-			buffer(std::make_shared<std::vector<BYTE>>(16384))
+			m_buffer(std::make_shared<std::vector<BYTE>>(16384))
 		{
 			this->refresh(_family, _gaaFlags);
 		}
@@ -193,24 +164,24 @@ namespace ctl
 		///       information is lost. This is still safe to call after errors.
 		///
 		////////////////////////////////////////////////////////////////////////////////
-		void refresh(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) const
+		void refresh(unsigned family = AF_UNSPEC, DWORD gaaFlags = 0) const
 		{
 			// get both v4 and v6 adapter info
-			auto byteSize = static_cast<ULONG>(this->buffer->size());
+			auto byteSize = static_cast<ULONG>(this->m_buffer->size());
 			auto err = ::GetAdaptersAddresses(
-				_family,   // Family
-				_gaaFlags, // Flags
+				family,   // Family
+				gaaFlags, // Flags
 				nullptr,   // Reserved
-				reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
+				reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0)),
 				&byteSize
 			);
 			if (err == ERROR_BUFFER_OVERFLOW) {
-				this->buffer->resize(byteSize);
+				this->m_buffer->resize(byteSize);
 				err = ::GetAdaptersAddresses(
-					_family,   // Family
-					_gaaFlags, // Flags
+					family,   // Family
+					gaaFlags, // Flags
 					nullptr,   // Reserved
-					reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&(this->buffer->at(0))),
+					reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0)),
 					&byteSize
 				);
 			}
@@ -219,19 +190,13 @@ namespace ctl
 			}
 		}
 
-		////////////////////////////////////////////////////////////////////////////////
-		///
-		/// begin/end
-		///
-		/// - constructs ctNetAdapterAddresses::iterators
-		///
-		////////////////////////////////////////////////////////////////////////////////
-		iterator begin() const noexcept
+        [[nodiscard]] iterator begin() const noexcept
 		{
-			return iterator(this->buffer);
+			return iterator(this->m_buffer);
 		}
 
-		iterator end() const noexcept
+        // ReSharper disable once CppMemberFunctionMayBeStatic
+        [[nodiscard]] iterator end() const noexcept
 		{
 			return iterator();
 		}
@@ -240,30 +205,28 @@ namespace ctl
 		///
 		/// private members
 		///
-		std::shared_ptr<std::vector<BYTE>> buffer;
+		std::shared_ptr<std::vector<BYTE>> m_buffer;
 	};
 
-	///
 	/// functor ctNetAdapterMatchingAddrPredicate
 	///
 	/// Created to leverage STL algorigthms to parse a ctNetAdapterAddresses set of iterators
 	/// - to find the first interface that has the specified address assigned
-	///
 	struct ctNetAdapterMatchingAddrPredicate
 	{
-		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr _addr) noexcept :
-			targetAddr(std::move(_addr))
+		explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr addr) noexcept :
+			m_targetAddr(std::move(addr))
 		{
 		}
 
-		bool operator ()(const IP_ADAPTER_ADDRESSES& _ipAddress) const noexcept
+		bool operator ()(const IP_ADAPTER_ADDRESSES& ipAddress) const noexcept
 		{
-			for (auto unicastAddress = _ipAddress.FirstUnicastAddress;
+			for (auto unicastAddress = ipAddress.FirstUnicastAddress;
 			     unicastAddress != nullptr;
 			     unicastAddress = unicastAddress->Next)
 			{
 				const ctSockaddr unicastSockaddr(&unicastAddress->Address);
-				if (unicastSockaddr == targetAddr) {
+				if (unicastSockaddr == m_targetAddr) {
 					return true;
 				}
 			}
@@ -271,6 +234,6 @@ namespace ctl
 		}
 
 	private:
-		ctSockaddr targetAddr;
+		ctSockaddr m_targetAddr;
 	};
 } // namespace ctl

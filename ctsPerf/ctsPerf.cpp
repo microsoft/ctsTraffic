@@ -118,9 +118,9 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer);
 void ProcessPerProcessCounters(const wstring& trackProcess, DWORD processId, ctsPerf::ctsWriteDetails& writer);
 
-LPCWSTR g_FileName = L"ctsPerf.csv";
-LPCWSTR g_NetworkingFilename = L"ctsNetworking.csv";
-LPCWSTR g_ProcessFilename = L"ctsPerProcess.csv";
+PCWSTR g_FileName = L"ctsPerf.csv";
+PCWSTR g_NetworkingFilename = L"ctsNetworking.csv";
+PCWSTR g_ProcessFilename = L"ctsPerProcess.csv";
 
 bool g_MeanOnly = false;
 
@@ -160,7 +160,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     for (DWORD arg_count = argc; arg_count > 1; --arg_count)
     {
-        if (ctString::istarts_with(argv[arg_count - 1], L"-process:"))
+        if (ctString::ctOridinalStartsWith(argv[arg_count - 1], L"-process:"))
         {
             trackProcess = argv[arg_count - 1];
 
@@ -169,7 +169,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackProcess.erase(trackProcess.begin(), endOfToken + 1);
 
             // the performance counter does not look at the extension, so remove .exe if it's there
-            if (ctString::iends_with(trackProcess, L".exe"))
+            if (ctString::ctOrdinalEndsWithCaseInsensative(trackProcess, L".exe"))
             {
                 trackProcess.erase(trackProcess.end() - 4, trackProcess.end());
             }
@@ -181,7 +181,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             }
 
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-pid:"))
+        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[arg_count - 1], L"-pid:"))
         {
             wstring pidString(argv[arg_count - 1]);
 
@@ -207,17 +207,17 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             }
 
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-estats"))
+        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[arg_count - 1], L"-estats"))
         {
             trackEstats = true;
 
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-Networking"))
+        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[arg_count - 1], L"-Networking"))
         {
             trackNetworking = true;
 
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-InterfaceDescription:"))
+        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[arg_count - 1], L"-InterfaceDescription:"))
         {
             trackInterfaceDescription = argv[arg_count - 1];
 
@@ -226,7 +226,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
 
         }
-        else if (ctString::istarts_with(argv[arg_count - 1], L"-MeanOnly"))
+        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[arg_count - 1], L"-MeanOnly"))
         {
             g_MeanOnly = true;
 
@@ -357,7 +357,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     catch (const exception& e)
     {
-        wprintf(L"ctsPerf exception: %ws\n", ctString::format_exception(e).c_str());
+        wprintf(L"ctsPerf exception: %ws\n", ctString::ctFormatException(e).c_str());
         return 1;
     }
 
@@ -382,42 +382,42 @@ ctWmiPerformance InstantiateProcessorCounters()
 
     // create objects for system counters we care about
     processor_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Processor,
+        ctWmiEnumClassName::Processor,
         L"PercentProcessorTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(processor_time);
     wprintf(L".");
 
     processor_percent_of_max = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Processor,
+        ctWmiEnumClassName::Processor,
         L"PercentofMaximumFrequency",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(processor_percent_of_max);
     wprintf(L".");
 
 	processor_percent_dpc_time = ctCreatePerfCounter<ULONGLONG>(
-		ctWmiClassName::Processor,
+		ctWmiEnumClassName::Processor,
 		L"PercentDPCTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_dpc_time);
 	wprintf(L".");
 
 	processor_dpcs_queued_per_second = ctCreatePerfCounter<ULONG>(
-		ctWmiClassName::Processor,
+		ctWmiEnumClassName::Processor,
 		L"DPCsQueuedPersec",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_dpcs_queued_per_second);
 	wprintf(L".");
 
 	processor_percent_privileged_time = ctCreatePerfCounter<ULONGLONG>(
-		ctWmiClassName::Processor,
+		ctWmiEnumClassName::Processor,
 		L"PercentPrivilegedTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_privileged_time);
 	wprintf(L".");
 
 	processor_percent_user_time = ctCreatePerfCounter<ULONGLONG>(
-		ctWmiClassName::Processor,
+		ctWmiEnumClassName::Processor,
 		L"PercentUserTime",
 		g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
 	performance_counter.add_counter(processor_percent_user_time);
@@ -451,9 +451,9 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 		// processor name strings look like "0,1" when there are more than one cores
 		// need to replace the comma so the csv will print correctly
 		writer.write_row(
-			ctString::format_string(
+			ctString::ctFormatString(
 				L"Processor %ws",
-				ctString::replace_all_copy(name, L",", L" - ").c_str()));
+				ctString::ctReplaceAllCopy(name, L",", L" - ").c_str()));
 
         const auto processor_range = processor_time->reference_range(name.c_str());
 		vector<ULONGLONG> processor_time_vector(processor_range.first, processor_range.second);
@@ -570,14 +570,14 @@ ctWmiPerformance InstantiateMemoryCounters()
 {
     ctWmiPerformance performance_counter;
     paged_pool_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Memory,
+        ctWmiEnumClassName::Memory,
         L"PoolPagedBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(paged_pool_bytes);
     wprintf(L".");
 
     non_paged_pool_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Memory,
+        ctWmiEnumClassName::Memory,
         L"PoolNonpagedBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(non_paged_pool_bytes);
@@ -639,7 +639,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     ctWmiPerformance performance_counter;
 
     network_adapter_total_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"BytesTotalPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     if (!trackInterfaceDescription.empty()) {
@@ -649,7 +649,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_offloaded_connections = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"OffloadedConnections",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -659,7 +659,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"PacketsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -669,7 +669,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"PacketsOutboundErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -679,7 +679,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"PacketsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -689,7 +689,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"PacketsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -699,7 +699,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_packets_per_second = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"PacketsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     if (!trackInterfaceDescription.empty()) {
@@ -709,7 +709,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
     wprintf(L".");
 
     network_adapter_active_rsc_connections = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkAdapter,
+        ctWmiEnumClassName::NetworkAdapter,
         L"TCPActiveRSCConnections",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -754,14 +754,14 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         if (g_MeanOnly) {
             writer.write_mean(
                 L"NetworkAdapter",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"PacketsPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkAdapter",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"PacketsPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
@@ -771,14 +771,14 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         if (g_MeanOnly) {
             writer.write_mean(
                 L"NetworkAdapter",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"BytesTotalPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkAdapter",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"BytesTotalPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
@@ -788,7 +788,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"OffloadedConnections for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -797,7 +797,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"TCPActiveRSCConnections for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -806,7 +806,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsOutboundDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -815,7 +815,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsOutboundErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -824,7 +824,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsReceivedDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -833,7 +833,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkAdapter",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsReceivedErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -856,7 +856,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     ctWmiPerformance performance_counter;
 
     network_interface_total_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"BytesTotalPerSec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     if (!trackInterfaceDescription.empty()) {
@@ -866,7 +866,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     wprintf(L".");
 
     network_interface_packets_outbound_discarded = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"PacketsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -876,7 +876,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     wprintf(L".");
 
     network_interface_packets_outbound_errors = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"PacketsOutboundErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -886,7 +886,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     wprintf(L".");
 
     network_interface_packets_received_discarded = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -896,7 +896,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     wprintf(L".");
 
     network_interface_packets_received_errors = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -906,7 +906,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
     wprintf(L".");
 
     network_interface_packets_received_unknown = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::NetworkInterface,
+        ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedUnknown",
         ctWmiPerformanceCollectionType::FirstLast);
     if (!trackInterfaceDescription.empty()) {
@@ -949,14 +949,14 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         if (g_MeanOnly) {
             writer.write_mean(
                 L"NetworkInterface",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"BytesTotalPerSec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
         } else {
             writer.write_details(
                 L"NetworkInterface",
-                ctString::format_string(
+                ctString::ctFormatString(
                     L"BytesTotalPerSec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
@@ -965,7 +965,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkInterface",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsOutboundDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -974,7 +974,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkInterface",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsOutboundErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -983,7 +983,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkInterface",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsReceivedDiscarded for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -992,7 +992,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkInterface",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsReceivedErrors for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -1001,7 +1001,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
         ullData.assign(network_range.first, network_range.second);
         writer.write_difference(
             L"NetworkInterface",
-            ctString::format_string(
+            ctString::ctFormatString(
                 L"PacketsReceivedUnknown for interface %ws",
                 name.c_str()).c_str(),
             ullData);
@@ -1037,112 +1037,112 @@ ctWmiPerformance InstantiateIPCounters()
     ctWmiPerformance performance_counter;
 
     tcpip_ipv4_outbound_discarded = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_discarded);
     wprintf(L".");
 
     tcpip_ipv4_outbound_no_route = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsOutboundNoRoute",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_outbound_no_route);
     wprintf(L".");
 
     tcpip_ipv4_received_address_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsReceivedAddressErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_address_errors);
     wprintf(L".");
 
     tcpip_ipv4_received_discarded = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_discarded);
     wprintf(L".");
 
     tcpip_ipv4_received_header_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsReceivedHeaderErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_header_errors);
     wprintf(L".");
 
     tcpip_ipv4_received_unknown_protocol = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"DatagramsReceivedUnknownProtocol",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_received_unknown_protocol);
     wprintf(L".");
 
     tcpip_ipv4_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"FragmentReassemblyFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragment_reassembly_failures);
     wprintf(L".");
 
     tcpip_ipv4_fragmentation_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv4,
+        ctWmiEnumClassName::TcpipIpv4,
         L"FragmentationFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv4_fragmentation_failures);
     wprintf(L".");
 
     tcpip_ipv6_outbound_discarded = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_discarded);
     wprintf(L".");
 
     tcpip_ipv6_outbound_no_route = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsOutboundNoRoute",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_outbound_no_route);
     wprintf(L".");
 
     tcpip_ipv6_received_address_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsReceivedAddressErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_address_errors);
     wprintf(L".");
 
     tcpip_ipv6_received_discarded = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_discarded);
     wprintf(L".");
 
     tcpip_ipv6_received_header_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsReceivedHeaderErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_header_errors);
     wprintf(L".");
 
     tcpip_ipv6_received_unknown_protocol = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"DatagramsReceivedUnknownProtocol",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_received_unknown_protocol);
     wprintf(L".");
 
     tcpip_ipv6_fragment_reassembly_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"FragmentReassemblyFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragment_reassembly_failures);
     wprintf(L".");
 
     tcpip_ipv6_fragmentation_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_Ipv6,
+        ctWmiEnumClassName::TcpipIpv6,
         L"FragmentationFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_ipv6_fragmentation_failures);
@@ -1309,56 +1309,56 @@ ctWmiPerformance InstantiateTCPCounters()
     ctWmiPerformance performance_counter;
 
     tcpip_tcpv4_connections_established = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv4,
+        ctWmiEnumClassName::TcpipTcpv4,
         L"ConnectionsEstablished",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv4_connections_established);
     wprintf(L".");
 
     tcpip_tcpv6_connections_established = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv6,
+        ctWmiEnumClassName::TcpipTcpv6,
         L"ConnectionsEstablished",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_tcpv6_connections_established);
     wprintf(L".");
 
     tcpip_tcpv4_connection_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv4,
+        ctWmiEnumClassName::TcpipTcpv4,
         L"ConnectionFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connection_failures);
     wprintf(L".");
 
     tcpip_tcpv6_connection_failures = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv6,
+        ctWmiEnumClassName::TcpipTcpv6,
         L"ConnectionFailures",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connection_failures);
     wprintf(L".");
 
     tcpip_tcpv4_connections_reset = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv4,
+        ctWmiEnumClassName::TcpipTcpv4,
         L"ConnectionsReset",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv4_connections_reset);
     wprintf(L".");
 
     tcpip_tcpv6_connections_reset = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_TCPv6,
+        ctWmiEnumClassName::TcpipTcpv6,
         L"ConnectionsReset",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_tcpv6_connections_reset);
     wprintf(L".");
 
     winsock_bsp_rejected_connections = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::WinsockBSP,
+        ctWmiEnumClassName::WinsockBsp,
         L"RejectedConnections",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_rejected_connections);
     wprintf(L".");
 
     winsock_bsp_rejected_connections_per_sec = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::WinsockBSP,
+        ctWmiEnumClassName::WinsockBsp,
         L"RejectedConnectionsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(winsock_bsp_rejected_connections_per_sec);
@@ -1481,56 +1481,56 @@ ctWmiPerformance InstantiateUDPCounters()
     ctWmiPerformance performance_counter;
 
     tcpip_udpv4_noport_per_sec = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv4,
+        ctWmiEnumClassName::TcpipUdpv4,
         L"DatagramsNoPortPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv4_noport_per_sec);
     wprintf(L".");
 
     tcpip_udpv4_received_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv4,
+        ctWmiEnumClassName::TcpipUdpv4,
         L"DatagramsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv4_received_errors);
     wprintf(L".");
 
     tcpip_udpv4_datagrams_per_sec = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv4,
+        ctWmiEnumClassName::TcpipUdpv4,
         L"DatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv4_datagrams_per_sec);
     wprintf(L".");
 
     tcpip_udpv6_noport_per_sec = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv6,
+        ctWmiEnumClassName::TcpipUdpv6,
         L"DatagramsNoPortPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv6_noport_per_sec);
     wprintf(L".");
 
     tcpip_udpv6_received_errors = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv6,
+        ctWmiEnumClassName::TcpipUdpv6,
         L"DatagramsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(tcpip_udpv6_received_errors);
     wprintf(L".");
 
     tcpip_udpv6_datagrams_per_sec = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::Tcpip_UDPv6,
+        ctWmiEnumClassName::TcpipUdpv6,
         L"DatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(tcpip_udpv6_datagrams_per_sec);
     wprintf(L".");
 
     winsock_bsp_dropped_datagrams = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::WinsockBSP,
+        ctWmiEnumClassName::WinsockBsp,
         L"DroppedDatagrams",
         ctWmiPerformanceCollectionType::FirstLast);
     performance_counter.add_counter(winsock_bsp_dropped_datagrams);
     wprintf(L".");
 
     winsock_bsp_dropped_datagrams_per_second = ctCreatePerfCounter<ULONG>(
-        ctWmiClassName::WinsockBSP,
+        ctWmiEnumClassName::WinsockBsp,
         L"DroppedDatagramsPersec",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     performance_counter.add_counter(winsock_bsp_dropped_datagrams_per_second);
@@ -1668,7 +1668,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
 
     // PercentPrivilegedTime, PercentProcessorTime, PercentUserTime, PrivateBytes, VirtualBytes, WorkingSet
     per_process_privileged_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentPrivilegedTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_privileged_time->add_filter(L"Name", trackProcess.c_str());
@@ -1676,7 +1676,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
     wprintf(L".");
 
     per_process_processor_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentProcessorTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_processor_time->add_filter(L"Name", trackProcess.c_str());
@@ -1684,7 +1684,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
     wprintf(L".");
 
     per_process_user_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentUserTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_user_time->add_filter(L"Name", trackProcess.c_str());
@@ -1692,7 +1692,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
     wprintf(L".");
 
     per_process_private_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PrivateBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_private_bytes->add_filter(L"Name", trackProcess.c_str());
@@ -1700,7 +1700,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
     wprintf(L".");
 
     per_process_virtual_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"VirtualBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_virtual_bytes->add_filter(L"Name", trackProcess.c_str());
@@ -1708,7 +1708,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
     wprintf(L".");
 
     per_process_working_set = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"WorkingSet",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_working_set->add_filter(L"Name", trackProcess.c_str());
@@ -1723,7 +1723,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
 
     // PercentPrivilegedTime, PercentProcessorTime, PercentUserTime, PrivateBytes, VirtualBytes, WorkingSet
     per_process_privileged_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentPrivilegedTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_privileged_time->add_filter(L"IDProcess", processId);
@@ -1731,7 +1731,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
     wprintf(L".");
 
     per_process_processor_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentProcessorTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_processor_time->add_filter(L"IDProcess", processId);
@@ -1739,7 +1739,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
     wprintf(L".");
 
     per_process_user_time = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PercentUserTime",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_user_time->add_filter(L"IDProcess", processId);
@@ -1747,7 +1747,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
     wprintf(L".");
 
     per_process_private_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"PrivateBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_private_bytes->add_filter(L"IDProcess", processId);
@@ -1755,7 +1755,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
     wprintf(L".");
 
     per_process_virtual_bytes = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"VirtualBytes",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_virtual_bytes->add_filter(L"IDProcess", processId);
@@ -1763,7 +1763,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
     wprintf(L".");
 
     per_process_working_set = ctCreatePerfCounter<ULONGLONG>(
-        ctWmiClassName::Process,
+        ctWmiEnumClassName::Process,
         L"WorkingSet",
         g_MeanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
     per_process_working_set->add_filter(L"IDProcess", processId);
@@ -1789,10 +1789,10 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
     if (!trackProcess.empty()) {
         wstring full_name(trackProcess);
         full_name += L".exe";
-        counter_classname = ctString::format_string(L"Process (%ws)", full_name.c_str());
+        counter_classname = ctString::ctFormatString(L"Process (%ws)", full_name.c_str());
 
     } else {
-        counter_classname = ctString::format_string(L"Process (pid %u)", processId);
+        counter_classname = ctString::ctFormatString(L"Process (pid %u)", processId);
     }
 
     auto per_process_range = per_process_privileged_time->reference_range();
