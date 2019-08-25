@@ -1927,6 +1927,7 @@ namespace ctsTraffic
             });
             if (found_arg != end(args))
             {
+                // delay-load IPHLPAPI.DLL
                 const auto value = ParseArgument(*found_arg, L"-Compartment");
                 s_NetAdapterAddresses = new ctNetAdapterAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_COMPARTMENTS);
                 const auto found_interface = find_if(

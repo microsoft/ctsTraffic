@@ -147,7 +147,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -157,7 +157,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -189,7 +189,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -198,7 +198,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>Machinex64</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -222,7 +222,6 @@
       <MinimalRebuild>false</MinimalRebuild>
       <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /permissive-</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <CallingConvention>StdCall</CallingConvention>
       <OmitFramePointers>false</OmitFramePointers>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
@@ -231,7 +230,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -240,7 +239,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineARM</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -278,14 +277,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -323,14 +322,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <Bscmake>
@@ -359,7 +358,6 @@
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <BrowseInformation>true</BrowseInformation>
-      <CallingConvention>StdCall</CallingConvention>
       <EnablePREfast>false</EnablePREfast>
       <OmitFramePointers>true</OmitFramePointers>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -372,14 +370,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;kernel32.lib;ws2_32.lib;Iphlpapi.lib;Winmm.lib;rpcrt4.lib;Ole32.lib;OleAut32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineARM</TargetMachine>
     </Link>
     <Bscmake>
