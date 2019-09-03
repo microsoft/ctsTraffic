@@ -2489,7 +2489,7 @@ namespace ctsTraffic
                 begin(args),
                 end(args),
                 [](const wchar_t* _arg) -> bool {
-                    return (ctString::ctOrdinalEndsWithCaseInsensative(_arg, L"-Help") ||
+                    return (ctString::ctOrdinalStartsWithCaseInsensative(_arg, L"-Help") ||
                             ctString::ctOrdinalEqualsCaseInsensative(_arg, L"-?"));
                 });
             if (found_help != end(args))
