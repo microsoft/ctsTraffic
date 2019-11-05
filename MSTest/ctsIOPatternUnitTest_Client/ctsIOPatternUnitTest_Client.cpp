@@ -28,50 +28,47 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
+    // Test writer must define specialization of ToString<const Q& q> types used in Assert
+    template <>
+    std::wstring ToString<ctsTraffic::ctsIOTask>(const ctsTraffic::ctsIOTask& _task)
+    {
+        return ctl::ctString::ctFormatString(
+            L"ctsIOTask:\n"
+            L"\tbuffer: 0x%p\n"
+            L"\tbuffer_length: %u\n"
+            L"\tbuffer_offset: %u\n"
+            L"\texpected_pattern_offset: %u\n"
+            L"\tioAction: %ws\n"
+            L"\trio_bufferid: %p\n"
+            L"\ttime_offset_milliseconds: %lld\n"
+            L"\tverify_io: %ws\n",
+            _task.buffer,
+            _task.buffer_length,
+            _task.buffer_offset,
+            _task.expected_pattern_offset,
+            ctsTraffic::ctsIOTask::PrintIOAction(_task.ioAction),
+            _task.rio_bufferid,
+            _task.time_offset_milliseconds,
+            _task.track_io ? L"true" : L"false");
+    }
+    template <>
+    std::wstring ToString<ctsTraffic::IOTaskAction>(const ctsTraffic::IOTaskAction& _action)
+    {
+        return ctsTraffic::ctsIOTask::PrintIOAction(_action);
+    }
 
-            // Test writer must define specialization of ToString<const Q& q> types used in Assert
-            template <>
-            std::wstring ToString<ctsTraffic::ctsIOTask>(const ctsTraffic::ctsIOTask& _task)
-            {
-                return ctl::ctString::ctFormatString(
-                    L"ctsIOTask:\n"
-                    L"\tbuffer: 0x%p\n"
-                    L"\tbuffer_length: %u\n"
-                    L"\tbuffer_offset: %u\n"
-                    L"\texpected_pattern_offset: %u\n"
-                    L"\tioAction: %ws\n"
-                    L"\trio_bufferid: %p\n"
-                    L"\ttime_offset_milliseconds: %lld\n"
-                    L"\tverify_io: %ws\n",
-                    _task.buffer, 
-                    _task.buffer_length, 
-                    _task.buffer_offset, 
-                    _task.expected_pattern_offset, 
-                    ctsTraffic::ctsIOTask::PrintIOAction(_task.ioAction),
-                    _task.rio_bufferid,
-                    _task.time_offset_milliseconds,
-                    _task.track_io ? L"true" : L"false");
-            }
-            template <>
-            std::wstring ToString<ctsTraffic::IOTaskAction>(const ctsTraffic::IOTaskAction& _action)
-            {
-                return ctsTraffic::ctsIOTask::PrintIOAction(_action);
-            }
-                
-            template <>
-            std::wstring ToString<ctsTraffic::ctsIOStatus>(const ctsTraffic::ctsIOStatus& _status)
-            {
-                switch (_status) {
-                    case ctsTraffic::ctsIOStatus::ContinueIo: return L"ContinueIo";
-                    case ctsTraffic::ctsIOStatus::CompletedIo: return L"CompletedIo";
-                    case ctsTraffic::ctsIOStatus::FailedIo: return L"FailedIo";
-                }
-                return L"Unknown_ctsIOStatus";
-            }
+    template <>
+    std::wstring ToString<ctsTraffic::ctsIOStatus>(const ctsTraffic::ctsIOStatus& _status)
+    {
+        switch (_status)
+        {
+            case ctsTraffic::ctsIOStatus::ContinueIo: return L"ContinueIo";
+            case ctsTraffic::ctsIOStatus::CompletedIo: return L"CompletedIo";
+            case ctsTraffic::ctsIOStatus::FailedIo: return L"FailedIo";
         }
+        return L"Unknown_ctsIOStatus";
     }
 }
 
@@ -89,74 +86,74 @@ ctsTraffic::ctsConfig::MediaStreamSettings s_MediaStreamSettings;
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
-    namespace ctsConfig {
-        ctsConfigSettings* Settings;
+namespace ctsTraffic::ctsConfig
+{
+    ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(unsigned long ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
-        {
-        }
-        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
-        void PrintException(const std::exception& ) noexcept
-        {
-        }
-        void PrintJitterUpdate(const JitterFrameEntry& , const JitterFrameEntry& , const JitterFrameEntry& ) noexcept
-        {
-        }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
+    void PrintConnectionResults(unsigned long) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    {
+    }
+    void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
+    void PrintException(const std::exception&) noexcept
+    {
+    }
+    void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&, const JitterFrameEntry&) noexcept
+    {
+    }
+    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
 
-        bool IsListening() noexcept
-        {
-            return s_IsListening;
-        }
+    bool IsListening() noexcept
+    {
+        return s_IsListening;
+    }
 
 
-        const MediaStreamSettings& GetMediaStream() noexcept
-        {
-            return s_MediaStreamSettings;
-        }
+    const MediaStreamSettings& GetMediaStream() noexcept
+    {
+        return s_MediaStreamSettings;
+    }
 
-        ctsSignedLongLong GetTcpBytesPerSecond() noexcept
-        {
-            return s_TcpBytesPerSecond;
-        }
-        ctsUnsignedLong GetMaxBufferSize() noexcept
-        {
-            return s_MaxBufferSize;
-        }
-        ctsUnsignedLong GetBufferSize() noexcept
-        {
-            return s_BufferSize;
-        }
-        ctsUnsignedLongLong GetTransferSize() noexcept
-        {
-            return s_TransferSize;
-        }
+    ctsSignedLongLong GetTcpBytesPerSecond() noexcept
+    {
+        return s_TcpBytesPerSecond;
+    }
+    ctsUnsignedLong GetMaxBufferSize() noexcept
+    {
+        return s_MaxBufferSize;
+    }
+    ctsUnsignedLong GetBufferSize() noexcept
+    {
+        return s_BufferSize;
+    }
+    ctsUnsignedLongLong GetTransferSize() noexcept
+    {
+        return s_TransferSize;
+    }
 
-        float GetStatusTimeStamp() noexcept
-        {
-            return static_cast<float>((ctl::ctTimer::ctSnapQpcInMillis() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
-        }
-        bool ShutdownCalled() noexcept
-        {
-            return false;
-        }
-        unsigned long ConsoleVerbosity() noexcept
-        {
-            return 0;
-        }
+    float GetStatusTimeStamp() noexcept
+    {
+        return static_cast<float>((ctl::ctTimer::ctSnapQpcInMillis() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
+    }
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
+    unsigned long ConsoleVerbosity() noexcept
+    {
+        return 0;
     }
 }
+
 ///
 /// End of Fakes
 ///
@@ -182,12 +179,14 @@ namespace ctsTraffic {
 ///
 
 using namespace ctsTraffic;
-namespace ctsUnitTest {	
+namespace ctsUnitTest
+{
 
     TEST_CLASS(ctsIOPatternUnitTest_Client)
     {
     private:
-        enum TestRole  {
+        enum TestRole
+        {
             Client,
             Server
         };
@@ -200,7 +199,8 @@ namespace ctsUnitTest {
         static const unsigned long DefaultTransferSize = 10UL;
         void SetTestBaseClassDefaults(TestRole _role, TestShutdownMethod _shutdown = Graceful) const
         {
-            if (Server == _role && Hard == _shutdown) {
+            if (Server == _role && Hard == _shutdown)
+            {
                 Assert::Fail(L"Servers only support the default Graceful shutdown");
             }
 
@@ -252,7 +252,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
-            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 0));
+            Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 0));
 
             // recv server completion
             test_task = test_pattern->initiate_io();
@@ -407,7 +407,7 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
-            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task,ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
+            Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
             Assert::AreEqual(1, test_pattern->get_last_error());
         }
 
@@ -745,14 +745,15 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
                 Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
                 Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, 1024, 0));
             }
-        
+
             // recv server completion
             test_task = test_pattern->initiate_io();
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -791,7 +792,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -832,7 +834,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -878,7 +881,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -919,7 +923,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -965,7 +970,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -1008,7 +1014,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 5; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 5; ++io_count)
+            {
                 const ctsIOTask test_task_one = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task_one.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
@@ -1072,7 +1079,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", 0, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
-            for (unsigned long io_count = 1; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 1; io_count < 10; ++io_count)
+            {
                 const ctsIOTask test_task_one = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task_one.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
@@ -1128,7 +1136,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
             std::vector<ctsIOTask> pended_tasks;
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
@@ -1142,11 +1151,13 @@ namespace ctsUnitTest {
             Assert::AreEqual(0UL, test_task_empty.buffer_length);
             Assert::AreEqual(IOTaskAction::None, test_task_empty.ioAction);
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(pended_tasks[io_count], 1024, 0));
 
                 // after the 10th completion, it will move to the below protocol
-                if (io_count < 9) {
+                if (io_count < 9)
+                {
                     test_task_empty = test_pattern->initiate_io();
                     Assert::AreEqual(0UL, test_task_empty.buffer_length);
                     Assert::AreEqual(IOTaskAction::None, test_task_empty.ioAction);
@@ -1193,7 +1204,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 20; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 20; ++io_count)
+            {
                 const ctsIOTask test_task_loop = test_pattern->initiate_io();
                 Assert::AreEqual(512UL, test_task_loop.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task_loop.ioAction);
@@ -1246,7 +1258,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 5; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 5; ++io_count)
+            {
                 const ctsIOTask test_task_one = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task_one.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task_one.ioAction);
@@ -1316,7 +1329,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1364,7 +1378,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1407,7 +1422,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 9; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 9; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1464,7 +1480,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 9; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 9; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1516,7 +1533,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1564,7 +1582,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1607,7 +1626,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 9; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 9; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1664,7 +1684,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 9; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 9; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1716,7 +1737,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
@@ -1764,7 +1786,8 @@ namespace ctsUnitTest {
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::ContinueIo, test_pattern->complete_io(test_task, ctsStatistics::ConnectionIdLength, 0));
 
-            for (unsigned long io_count = 0; io_count < 10; ++io_count) {
+            for (unsigned long io_count = 0; io_count < 10; ++io_count)
+            {
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);

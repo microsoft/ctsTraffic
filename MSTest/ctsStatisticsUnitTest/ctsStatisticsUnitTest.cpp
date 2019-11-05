@@ -22,15 +22,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
-            template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
-            {
-                return std::to_wstring(static_cast<unsigned long long>(_value));
-            }
-
-        }
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
+    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+    {
+        return std::to_wstring(static_cast<unsigned long long>(_value));
     }
 }
 
@@ -39,57 +35,58 @@ bool s_Listening = false;
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
-    namespace ctsConfig {
-        ctsConfigSettings* Settings;
+namespace ctsTraffic::ctsConfig
+{
+    ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
-        {
-        }
-        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
-        void PrintException(const std::exception& ) noexcept
-        {
-        }
-        void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
-        {
-        }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    {
+    }
+    void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
+    void PrintException(const std::exception&) noexcept
+    {
+    }
+    void PrintJitterUpdate(long long, long long, long long, long long, long long) noexcept
+    {
+    }
+    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
 
-        bool IsListening() noexcept
-        {
-            return s_Listening;
-        }
+    bool IsListening() noexcept
+    {
+        return s_Listening;
+    }
 
-        ctsUnsignedLongLong GetTransferSize() noexcept
-        {
-            return s_TransferSize;
-        }
-        bool ShutdownCalled() noexcept
-        {
-            return false;
-        }
-        unsigned long ConsoleVerbosity() noexcept
-        {
-            return 0;
-        }
+    ctsUnsignedLongLong GetTransferSize() noexcept
+    {
+        return s_TransferSize;
+    }
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
+    unsigned long ConsoleVerbosity() noexcept
+    {
+        return 0;
     }
 }
+
 ///
 /// End of Fakes
 ///
-    
+
 using namespace ctsTraffic;
-namespace ctsUnitTest {
+namespace ctsUnitTest
+{
     TEST_CLASS(ctsStatisticsUnitTest)
     {
     private:
@@ -98,7 +95,8 @@ namespace ctsUnitTest {
         //
         std::unique_ptr<ctsIOPatternState> pattern_state;
 
-        enum Role  {
+        enum Role
+        {
             Client,
             Server
         };

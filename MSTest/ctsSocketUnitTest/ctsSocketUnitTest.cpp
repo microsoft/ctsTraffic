@@ -24,31 +24,28 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
 
-            // Test writer must define specialization of ToString<const Q& q> types used in Assert
- 
-            template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
-            {
-                return ctl::ctString::ctFormatString(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
-            }
+    // Test writer must define specialization of ToString<const Q& q> types used in Assert
 
-            template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
-            {
-                return _addr.WriteCompleteAddress();
-            }
-        }
+    template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
+    {
+        return ctl::ctString::ctFormatString(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
+    }
+
+    template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
+    {
+        return _addr.WriteCompleteAddress();
     }
 }
-
 
 
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     shared_ptr<ctsIOPattern> ctsIOPattern::MakeIOPattern()
     {
         Logger::WriteMessage(L"ctsIOPattern::MakeIOPattern\n");
@@ -60,12 +57,13 @@ namespace ctsTraffic {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
     }
 
-	wsIOResult ctsSetLingertoRSTSocket(SOCKET) noexcept
-	{
-		return wsIOResult();
-	}
+    wsIOResult ctsSetLingertoRSTSocket(SOCKET) noexcept
+    {
+        return wsIOResult();
+    }
 
-    namespace ctsConfig {
+    namespace ctsConfig
+    {
         ctsConfigSettings* Settings;
 
         void PrintDebug(PCWSTR _text, ...) noexcept
@@ -78,15 +76,15 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
@@ -94,7 +92,7 @@ namespace ctsTraffic {
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
+        void PrintErrorIfFailed(const wchar_t*, unsigned long _value) noexcept
         {
             Logger::WriteMessage(
                 ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
@@ -123,7 +121,7 @@ namespace ctsTraffic {
 using namespace ctsTraffic;
 
 namespace ctsUnitTest
-{		
+{
     TEST_CLASS(ctsSocketUnitTest)
     {
     public:
@@ -147,7 +145,7 @@ namespace ctsUnitTest
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
-            
+
             // set the socket
             test->set_socket(socket_value);
 
@@ -169,7 +167,7 @@ namespace ctsUnitTest
             // validate the object guard
             auto socket_guard(test->socket_reference());
             Assert::AreEqual(socket_value, socket_guard.socket());
-            
+
             // move the guard object
             auto second_socket_guard(move(socket_guard));
             Assert::AreEqual(socket_value, second_socket_guard.socket());
@@ -209,7 +207,7 @@ namespace ctsUnitTest
             }
 
             test.reset();
-            
+
             // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
             // - trying to use it should fail with an invalid socket error
             ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
@@ -228,7 +226,7 @@ namespace ctsUnitTest
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // when the socket is INVALID_SOCKET, should return a nullptr
-            auto tp1 (test->thread_pool());
+            auto tp1(test->thread_pool());
             Assert::AreEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp1);
 
             // once given a real socket, should return a valid TP handle

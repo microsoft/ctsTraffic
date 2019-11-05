@@ -21,65 +21,64 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
-            template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
-            {
-                return std::to_wstring(static_cast<unsigned long long>(_value));
-            }
-            /*
-            enum ctsIOPatternProtocolTask {
-                NoIo,
-                SendConnectionGuid,
-                RecvConnectionGuid,
-                MoreIo,
-                SendCompletion,
-                RecvCompletion,
-                GracefulShutdown,
-                HardShutdown,
-                RequestFin
-                };
-            enum ctsIOPatternProtocolError {
-                NoError,
-                TooManyBytes,
-                TooFewBytes,
-                CorruptedBytes,
-                ErrorIOFailed,
-                SuccessfullyCompleted
-                };
-            */
-            template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolTask>(const ctsTraffic::ctsIOPatternProtocolTask& _value)
-            {
-                switch (_value) {
-                    case ctsTraffic::ctsIOPatternProtocolTask::NoIo: return L"NoIo";
-                    case ctsTraffic::ctsIOPatternProtocolTask::SendConnectionGuid: return L"SendConnectionGuid";
-                    case ctsTraffic::ctsIOPatternProtocolTask::RecvConnectionGuid: return L"RecvConnectionGuid";
-                    case ctsTraffic::ctsIOPatternProtocolTask::MoreIo: return L"MoreIo";
-                    case ctsTraffic::ctsIOPatternProtocolTask::SendCompletion: return L"SendCompletion";
-                    case ctsTraffic::ctsIOPatternProtocolTask::RecvCompletion: return L"RecvCompletion";
-                    case ctsTraffic::ctsIOPatternProtocolTask::GracefulShutdown: return L"GracefulShutdown";
-                    case ctsTraffic::ctsIOPatternProtocolTask::HardShutdown: return L"HardShutdown";
-                    case ctsTraffic::ctsIOPatternProtocolTask::RequestFIN: return L"RequestFIN";
-                }
-
-                Assert::Fail(L"Unknown ctsIOPatternProtocolTask");
-            }
-
-            template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolError>(const ctsTraffic::ctsIOPatternProtocolError& _value)
-            {
-                switch (_value) {
-                    case ctsTraffic::ctsIOPatternProtocolError::NotProtocolError: return L"NotProtocolError";
-                    case ctsTraffic::ctsIOPatternProtocolError::NoConnectionGuid: return L"NoConnectionGuid";
-                    case ctsTraffic::ctsIOPatternProtocolError::ZeroByteXfer: return L"ZeroByteXfer";
-                    case ctsTraffic::ctsIOPatternProtocolError::TooManyBytes: return L"TooManyBytes";
-                    case ctsTraffic::ctsIOPatternProtocolError::TooFewBytes: return L"TooFewBytes";
-                    case ctsTraffic::ctsIOPatternProtocolError::CorruptedXfer: return L"CorruptedXfer";
-                }
-
-                Assert::Fail(L"Unknown ctsIOPatternProtocolError");
-            }
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
+    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+    {
+        return std::to_wstring(static_cast<unsigned long long>(_value));
+    }
+    /*
+    enum ctsIOPatternProtocolTask {
+        NoIo,
+        SendConnectionGuid,
+        RecvConnectionGuid,
+        MoreIo,
+        SendCompletion,
+        RecvCompletion,
+        GracefulShutdown,
+        HardShutdown,
+        RequestFin
+        };
+    enum ctsIOPatternProtocolError {
+        NoError,
+        TooManyBytes,
+        TooFewBytes,
+        CorruptedBytes,
+        ErrorIOFailed,
+        SuccessfullyCompleted
+        };
+    */
+    template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolTask>(const ctsTraffic::ctsIOPatternProtocolTask& _value)
+    {
+        switch (_value)
+        {
+            case ctsTraffic::ctsIOPatternProtocolTask::NoIo: return L"NoIo";
+            case ctsTraffic::ctsIOPatternProtocolTask::SendConnectionGuid: return L"SendConnectionGuid";
+            case ctsTraffic::ctsIOPatternProtocolTask::RecvConnectionGuid: return L"RecvConnectionGuid";
+            case ctsTraffic::ctsIOPatternProtocolTask::MoreIo: return L"MoreIo";
+            case ctsTraffic::ctsIOPatternProtocolTask::SendCompletion: return L"SendCompletion";
+            case ctsTraffic::ctsIOPatternProtocolTask::RecvCompletion: return L"RecvCompletion";
+            case ctsTraffic::ctsIOPatternProtocolTask::GracefulShutdown: return L"GracefulShutdown";
+            case ctsTraffic::ctsIOPatternProtocolTask::HardShutdown: return L"HardShutdown";
+            case ctsTraffic::ctsIOPatternProtocolTask::RequestFIN: return L"RequestFIN";
         }
+
+        Assert::Fail(L"Unknown ctsIOPatternProtocolTask");
+    }
+
+    template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolError>(const ctsTraffic::ctsIOPatternProtocolError& _value)
+    {
+        switch (_value)
+        {
+            case ctsTraffic::ctsIOPatternProtocolError::NotProtocolError: return L"NotProtocolError";
+            case ctsTraffic::ctsIOPatternProtocolError::NoConnectionGuid: return L"NoConnectionGuid";
+            case ctsTraffic::ctsIOPatternProtocolError::ZeroByteXfer: return L"ZeroByteXfer";
+            case ctsTraffic::ctsIOPatternProtocolError::TooManyBytes: return L"TooManyBytes";
+            case ctsTraffic::ctsIOPatternProtocolError::TooFewBytes: return L"TooFewBytes";
+            case ctsTraffic::ctsIOPatternProtocolError::CorruptedXfer: return L"CorruptedXfer";
+        }
+
+        Assert::Fail(L"Unknown ctsIOPatternProtocolError");
     }
 }
 
@@ -88,57 +87,58 @@ bool s_Listening = false;
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
-    namespace ctsConfig {
-        ctsConfigSettings* Settings;
+namespace ctsTraffic::ctsConfig
+{
+    ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
-        {
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
-        {
-        }
-        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
-        void PrintException(const std::exception& ) noexcept
-        {
-        }
-        void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
-        {
-        }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
-        {
-        }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    {
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    {
+    }
+    void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
+    void PrintException(const std::exception&) noexcept
+    {
+    }
+    void PrintJitterUpdate(long long, long long, long long, long long, long long) noexcept
+    {
+    }
+    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
 
-        bool IsListening() noexcept
-        {
-            return s_Listening;
-        }
+    bool IsListening() noexcept
+    {
+        return s_Listening;
+    }
 
-        ctsUnsignedLongLong GetTransferSize() noexcept
-        {
-            return s_TransferSize;
-        }
-        bool ShutdownCalled() noexcept
-        {
-            return false;
-        }
-        unsigned long ConsoleVerbosity() noexcept
-        {
-            return 0;
-        }
+    ctsUnsignedLongLong GetTransferSize() noexcept
+    {
+        return s_TransferSize;
+    }
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
+    unsigned long ConsoleVerbosity() noexcept
+    {
+        return 0;
     }
 }
+
 ///
 /// End of Fakes
 ///
 
 using namespace ctsTraffic;
-namespace ctsUnitTest {
+namespace ctsUnitTest
+{
     TEST_CLASS(ctsIOPatternProtocolPolicyUnitTest)
     {
     private:
@@ -210,16 +210,22 @@ namespace ctsUnitTest {
         ctsIOTask RequestConnectionGuid(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
         {
             auto task = _ioPattern->get_next_task();
-            if (s_Listening) {
+            if (s_Listening)
+            {
                 Assert::AreEqual(ctsIOPatternProtocolTask::SendConnectionGuid, task);
-            } else {
+            }
+            else
+            {
                 Assert::AreEqual(ctsIOPatternProtocolTask::RecvConnectionGuid, task);
             }
 
             ctsIOTask test_task;
-            if (s_Listening) {
+            if (s_Listening)
+            {
                 test_task.ioAction = IOTaskAction::Send;
-            } else {
+            }
+            else
+            {
                 test_task.ioAction = IOTaskAction::Recv;
             }
             test_task.track_io = false;

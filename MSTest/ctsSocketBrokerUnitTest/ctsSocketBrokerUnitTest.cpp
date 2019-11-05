@@ -30,25 +30,23 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
 
-            template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& _state)
-            {
-                switch (_state) {
-                    case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
-                    case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
-                    case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
-                    case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
-                    case ctsTraffic::ctsSocketState::InternalState::InitiatingIO: return L"InitiatingIO";
-                    case ctsTraffic::ctsSocketState::InternalState::InitiatedIO: return L"InitiatedIO";
-                    case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
-                    case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
-                }
-                return ctl::ctString::ctFormatString(L"Unknown State (0x%x)", _state);
-            }
+    template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& _state)
+    {
+        switch (_state)
+        {
+            case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
+            case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
+            case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
+            case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
+            case ctsTraffic::ctsSocketState::InternalState::InitiatingIO: return L"InitiatingIO";
+            case ctsTraffic::ctsSocketState::InternalState::InitiatedIO: return L"InitiatedIO";
+            case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
+            case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
         }
+        return ctl::ctString::ctFormatString(L"Unknown State (0x%x)", _state);
     }
 }
 
@@ -56,42 +54,42 @@ namespace Microsoft {
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
-    namespace ctsConfig {
-        ctsConfigSettings* Settings;
+namespace ctsTraffic::ctsConfig
+{
+    ctsConfigSettings* Settings;
 
-        void PrintDebug(PCWSTR _text, ...) noexcept
-        {
-            va_list args;
-            va_start(args, _text);
+    void PrintDebug(PCWSTR _text, ...) noexcept
+    {
+        va_list args;
+        va_start(args, _text);
 
-            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+        auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+        Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
-            va_end(args);
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
-        }
-        bool ShutdownCalled() noexcept
-        {
-            return false;
-        }
-        unsigned long ConsoleVerbosity() noexcept
-        {
-            return 0;
-        }
+        va_end(args);
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    {
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    {
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
+    }
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    {
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
+    }
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
+    unsigned long ConsoleVerbosity() noexcept
+    {
+        return 0;
     }
 }
+
 ///
 /// End of Fakes
 ///
@@ -113,7 +111,8 @@ using namespace ctsTraffic;
 
 
 /// class used to communicate between the test and the created ctsSocketState objects
-class SocketStatePool {
+class SocketStatePool
+{
 public:
     SocketStatePool() = default;
     ~SocketStatePool() noexcept = default;
@@ -133,7 +132,7 @@ public:
             std::remove_if(
                 std::begin(state_objects),
                 std::end(state_objects),
-                [&] (const std::weak_ptr<ctsSocketState>& _weak_ptr) { return _weak_ptr.expired(); }),
+                [&](const std::weak_ptr<ctsSocketState>& _weak_ptr) { return _weak_ptr.expired(); }),
             std::end(state_objects));
     }
     void reset() noexcept
@@ -148,10 +147,12 @@ public:
     {
         const auto hold_lock = cs.lock();
 
-        for (auto& socket_state : state_objects) {
+        for (auto& socket_state : state_objects)
+        {
             auto shared_state(socket_state.lock());
             Assert::IsNotNull(shared_state.get());
-            if (shared_state) {
+            if (shared_state)
+            {
                 shared_state->complete_state(_error_code);
             }
         }
@@ -167,11 +168,14 @@ public:
         const auto hold_lock = cs.lock();
 
         size_t matched_state = 0;
-        for (auto& socket_state : state_objects) {
+        for (auto& socket_state : state_objects)
+        {
             auto shared_state(socket_state.lock());
             Assert::IsNotNull(shared_state.get());
-            if (shared_state) {
-                if (shared_state->current_state() == _state) {
+            if (shared_state)
+            {
+                if (shared_state->current_state() == _state)
+                {
                     ++matched_state;
                 }
             }
@@ -214,32 +218,38 @@ void ctsSocketState::start() noexcept
 
 void ctsSocketState::complete_state(DWORD _error_code) noexcept
 {
-    if (NO_ERROR == _error_code) {
-        // walk states from creating -> InitiatingIO -> Closed
-        switch (this->state) {
-            
-        // Skipping Connecting, since that state doesn't affect ctsSocketBroker
+    if (NO_ERROR == _error_code)
+    {
+// walk states from creating -> InitiatingIO -> Closed
+        switch (this->state)
+        {
 
-		case ctsSocketState::InternalState::Creating: {
-			auto parent = this->broker.lock();
-			parent->initiating_io();
-			this->state = ctsSocketState::InternalState::InitiatingIO;
-			break;
-		}
-		case ctsSocketState::InternalState::InitiatingIO: {
-			auto parent = this->broker.lock();
-			parent->closing(true);
-			this->state = ctsSocketState::InternalState::Closed;
-			break;
-		}
+// Skipping Connecting, since that state doesn't affect ctsSocketBroker
 
-        default:
-            Assert::Fail(
-                ctl::ctString::ctFormatString(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+            case ctsSocketState::InternalState::Creating:
+            {
+                auto parent = this->broker.lock();
+                parent->initiating_io();
+                this->state = ctsSocketState::InternalState::InitiatingIO;
+                break;
+            }
+            case ctsSocketState::InternalState::InitiatingIO:
+            {
+                auto parent = this->broker.lock();
+                parent->closing(true);
+                this->state = ctsSocketState::InternalState::Closed;
+                break;
+            }
+
+            default:
+                Assert::Fail(
+                    ctl::ctString::ctFormatString(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+        }
     }
-    } else {
-        // move straight to Closed
-		auto parent = this->broker.lock();
+    else
+    {
+     // move straight to Closed
+        auto parent = this->broker.lock();
         parent->closing(ctsSocketState::InternalState::InitiatingIO == this->state);
         this->state = ctsSocketState::InternalState::Closed;
     }
@@ -251,7 +261,8 @@ ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
 }
 
 
-namespace ctsUnitTest {
+namespace ctsUnitTest
+{
     TEST_CLASS(ctsSocketBrokerUnitTest)
     {
     public:
@@ -297,7 +308,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -330,7 +341,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -354,7 +365,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 1;
             ctsConfig::Settings->Iterations = 1;
             ctsConfig::Settings->AcceptLimit = 1;
@@ -364,7 +375,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -387,7 +398,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 100;
             ctsConfig::Settings->Iterations = 100;
             ctsConfig::Settings->AcceptLimit = 100;
@@ -397,7 +408,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -421,7 +432,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = MAXULONGLONG;
             ctsConfig::Settings->Iterations = 1;
             ctsConfig::Settings->AcceptLimit = 1;
@@ -431,7 +442,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -454,7 +465,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = MAXULONGLONG;
             ctsConfig::Settings->Iterations = 100;
             ctsConfig::Settings->AcceptLimit = 100;
@@ -464,7 +475,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -499,7 +510,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -528,7 +539,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -548,7 +559,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 1;
             ctsConfig::Settings->Iterations = 1;
             ctsConfig::Settings->AcceptLimit = 1;
@@ -558,7 +569,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -577,7 +588,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 100;
             ctsConfig::Settings->Iterations = 100;
             ctsConfig::Settings->AcceptLimit = 100;
@@ -587,7 +598,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -617,7 +628,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -650,7 +661,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
@@ -674,7 +685,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 1;
             ctsConfig::Settings->Iterations = 1;
             ctsConfig::Settings->AcceptLimit = 1;
@@ -684,7 +695,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
@@ -707,7 +718,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 100;
             ctsConfig::Settings->Iterations = 100;
             ctsConfig::Settings->AcceptLimit = 100;
@@ -717,7 +728,7 @@ namespace ctsUnitTest {
 
             ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             s_SocketPool->validate_expected_count(100);
 
@@ -750,7 +761,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5);
@@ -798,7 +809,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -839,7 +850,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -870,7 +881,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 15;
             ctsConfig::Settings->Iterations = 15;
             ctsConfig::Settings->AcceptLimit = 5;
@@ -879,7 +890,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
@@ -917,7 +928,7 @@ namespace ctsUnitTest {
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [] (std::weak_ptr<ctsSocket>) { };
+            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
             ctsConfig::Settings->ServerExitLimit = 1;
             ctsConfig::Settings->Iterations = 15;
             ctsConfig::Settings->AcceptLimit = 5;
@@ -926,7 +937,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 1 creating\n");
             s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
@@ -963,7 +974,7 @@ namespace ctsUnitTest {
             ctsConfig::Settings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-			test_broker->start();
+            test_broker->start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 95 waiting\n");
             s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);

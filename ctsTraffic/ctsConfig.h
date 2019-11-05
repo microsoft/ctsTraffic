@@ -111,8 +111,7 @@ namespace ctsTraffic
         {
             return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
-        inline
-            OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
+        inline OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
         {
             lhs = lhs | rhs;
             return lhs;

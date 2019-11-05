@@ -30,19 +30,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace Microsoft {
-    namespace VisualStudio {
-        namespace CppUnitTestFramework {
-            template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
-            {
-                return std::to_wstring(static_cast<unsigned long long>(_value));
-            }
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
+    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+    {
+        return std::to_wstring(static_cast<unsigned long long>(_value));
+    }
 
-            template<> inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
-            {
-                return _value.WriteCompleteAddress();
-            }
-        }
+    template<> inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
+    {
+        return _value.WriteCompleteAddress();
     }
 }
 
@@ -51,29 +48,31 @@ bool s_Listening = false;
 ///
 /// Fakes
 ///
-namespace ctsTraffic {
-    namespace ctsConfig {
+namespace ctsTraffic
+{
+    namespace ctsConfig
+    {
         ctsConfigSettings* Settings;
 
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
         {
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
         {
         }
-        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
+        void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
         {
         }
-        void PrintException(const std::exception& ) noexcept
+        void PrintException(const std::exception&) noexcept
         {
         }
-        void PrintJitterUpdate(long long , long long , long long , long long , long long ) noexcept
+        void PrintJitterUpdate(long long, long long, long long, long long, long long) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR , ...) noexcept
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
         {
         }
 
@@ -132,18 +131,21 @@ namespace ctsTraffic {
         unsigned long remaining_io = s_IOCount.load();
 
         ctsIOTask return_task;
-        if (pended_io == 0 && remaining_io > 0) {
+        if (pended_io == 0 && remaining_io > 0)
+        {
             return_task.ioAction = IOTaskAction::Send;
             return_task.time_offset_milliseconds = s_IOTimeOffset;
             ++s_IOPended;
-        } else {
+        }
+        else
+        {
             return_task.ioAction = IOTaskAction::None;
             return_task.time_offset_milliseconds = 0;
         }
         return return_task;
     }
 
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& , unsigned long , unsigned long _status_code) noexcept
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask&, unsigned long, unsigned long _status_code) noexcept
     {
         Assert::AreEqual(s_IOStatusCode, _status_code);
         Logger::WriteMessage(L"ctsIOPattern::complete_io\n");
@@ -164,7 +166,7 @@ namespace ctsTraffic {
         }
 
         // none of these are called - required to be defined
-        virtual void print_stats(const ctl::ctSockaddr& , const ctl::ctSockaddr& ) noexcept
+        virtual void print_stats(const ctl::ctSockaddr&, const ctl::ctSockaddr&) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
             Assert::IsFalse(true);
@@ -175,7 +177,7 @@ namespace ctsTraffic {
             Assert::IsFalse(true);
             return ctsIOTask();
         }
-        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long ) noexcept
+        virtual ctsIOPatternProtocolError completed_task(const ctsIOTask&, unsigned long) noexcept
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::completed_task\n");
             Assert::IsFalse(true);
@@ -243,7 +245,8 @@ namespace ctsTraffic {
 ///
 
 using namespace ctsTraffic;
-namespace ctsUnitTest {
+namespace ctsUnitTest
+{
     TEST_CLASS(ctsMediaStreamServerConnectedSocketUnitTest)
     {
     public:
@@ -289,7 +292,7 @@ namespace ctsUnitTest {
                 std::weak_ptr<ctsSocket>(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult 
+                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
             {
                 ++callback_invoked;
 
@@ -337,7 +340,7 @@ namespace ctsUnitTest {
                 std::weak_ptr<ctsSocket>(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult 
+                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
             {
                 ++callback_invoked;
 
@@ -385,7 +388,7 @@ namespace ctsUnitTest {
                 std::weak_ptr<ctsSocket>(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
+                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
                 auto socket_guard(test_socket->socket_reference());
@@ -397,7 +400,8 @@ namespace ctsUnitTest {
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
-                if (callback_invoked == 10) {
+                if (callback_invoked == 10)
+                {
                     s_IOStatus = ctsIOStatus::CompletedIo;
                 }
                 s_IOStatusCode = WSAENOBUFS;
@@ -435,7 +439,7 @@ namespace ctsUnitTest {
                 std::weak_ptr<ctsSocket>(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult 
+                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
             {
                 ++callback_invoked;
 
@@ -484,7 +488,7 @@ namespace ctsUnitTest {
                 std::weak_ptr<ctsSocket>(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&] (ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
+                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
                 auto socket_guard(test_socket->socket_reference());
@@ -496,7 +500,8 @@ namespace ctsUnitTest {
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
-                if (callback_invoked == 5) {
+                if (callback_invoked == 5)
+                {
                     s_IOStatus = ctsIOStatus::FailedIo;
                 }
                 s_IOStatusCode = WSAENOBUFS;
