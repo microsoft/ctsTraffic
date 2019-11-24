@@ -1578,7 +1578,7 @@ namespace ctl
 
         // this patterns (const array of wchar_t* pointers)
         // allows for compile-time construction of the array of properties
-        const ctWmiPerformanceCounterProperties PerformanceCounterPropertiesArray[] = {
+        inline const ctWmiPerformanceCounterProperties c_PerformanceCounterPropertiesArray[] = {
 
         {
             ctWmiEnumClassType::Static,
@@ -1757,7 +1757,7 @@ namespace ctl
     std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(const ctWmiEnumClassName& wmiClass, PCWSTR counter_name, const ctWmiPerformanceCollectionType collection_type = ctWmiPerformanceCollectionType::Detailed)
     {
         const ctWmiPerformanceCounterProperties* foundProperty = nullptr;
-        for (const auto& counterProperty : ctWmiPerformanceDetails::PerformanceCounterPropertiesArray)
+        for (const auto& counterProperty : ctWmiPerformanceDetails::c_PerformanceCounterPropertiesArray)
         {
             if (wmiClass == counterProperty.className)
             {

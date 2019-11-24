@@ -30,8 +30,8 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    static const unsigned long BufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
-    static unsigned char BufferPattern[BufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
+    static const unsigned long c_BufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
+    static unsigned char s_BufferPattern[c_BufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
 
     /// SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
     /// will be memcmp'ing against for validity checks.
@@ -40,26 +40,26 @@ namespace ctsTraffic {
     /// need to wait for input parsing before we can set that.
     // TODO: expand the comment to explain the logic working with offsets
 
-    static INIT_ONCE s_IOPatternInitializer = INIT_ONCE_STATIC_INIT;
+    static INIT_ONCE s_IoPatternInitializer = INIT_ONCE_STATIC_INIT;
     static char* s_WriteableSharedBuffer = nullptr;
     static char* s_ProtectedSharedBuffer = nullptr;
     static unsigned long s_SharedBufferSize = 0;
-    static RIO_BUFFERID s_SharedBufferId = RIO_INVALID_BUFFERID;
+    static RIO_BUFFERID s_SharedBufferId = RIO_INVALID_BUFFERID;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 
     static const char* s_CompletionMessage = "DONE";
-    static const unsigned long s_CompletionMessageSize = 4;
-    static const unsigned long s_FinBufferSize = 4; // just 4 bytes for the FIN
-    static char s_FinBuffer[s_FinBufferSize];
+    static const unsigned long c_CompletionMessageSize = 4;
+    static const unsigned long c_FinBufferSize = 4; // just 4 bytes for the FIN
+    static char s_FinBuffer[c_FinBufferSize];
 
-    BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
+    BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
     {
         // first create the buffer pattern
-        for (unsigned long fill_slot = 0; fill_slot < BufferPatternSize; ++fill_slot)
+        for (unsigned long fill_slot = 0; fill_slot < c_BufferPatternSize; ++fill_slot)
         {
-            *reinterpret_cast<unsigned short*>(&BufferPattern[fill_slot * 2]) = static_cast<unsigned short>(fill_slot);
+            *reinterpret_cast<unsigned short*>(&s_BufferPattern[fill_slot * 2]) = static_cast<unsigned short>(fill_slot);
         }
 
-        s_SharedBufferSize = BufferPatternSize + ctsConfig::GetMaxBufferSize() + s_CompletionMessageSize;
+        s_SharedBufferSize = c_BufferPatternSize + ctsConfig::GetMaxBufferSize() + c_CompletionMessageSize;
 
         s_ProtectedSharedBuffer = static_cast<char*>(::VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
         if (!s_ProtectedSharedBuffer) {
@@ -76,19 +76,19 @@ namespace ctsTraffic {
         char* writeable_destination = s_WriteableSharedBuffer;
         unsigned long write_size_remaining = s_SharedBufferSize;
         while (write_size_remaining > 0) {
-            const unsigned long bytes_to_write = (write_size_remaining > BufferPatternSize) ? BufferPatternSize : write_size_remaining;
+            const unsigned long bytes_to_write = (write_size_remaining > c_BufferPatternSize) ? c_BufferPatternSize : write_size_remaining;
 
-            auto memerror = ::memcpy_s(protected_destination, write_size_remaining, BufferPattern, bytes_to_write);
+            auto memerror = ::memcpy_s(protected_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
             ctFatalCondition(
                 memerror != 0,
                 L"memcpy_s(%p, %lu, %p, %lu) failed : %d",
-                protected_destination, write_size_remaining, BufferPattern, bytes_to_write, memerror);
+                protected_destination, write_size_remaining, s_BufferPattern, bytes_to_write, memerror);
 
-            memerror = ::memcpy_s(writeable_destination, write_size_remaining, BufferPattern, bytes_to_write);
+            memerror = ::memcpy_s(writeable_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
             ctFatalCondition(
                 memerror != 0,
                 L"memcpy_s(%p, %lu, %p, %lu) failed : %d",
-                writeable_destination, write_size_remaining, BufferPattern, bytes_to_write, memerror);
+                writeable_destination, write_size_remaining, s_BufferPattern, bytes_to_write, memerror);
 
             protected_destination += bytes_to_write;
             writeable_destination += bytes_to_write;
@@ -96,15 +96,15 @@ namespace ctsTraffic {
         }
         // set the final 4 bytes to the DONE message for the send buffer
         ::memcpy_s(
-            s_ProtectedSharedBuffer + s_SharedBufferSize - s_CompletionMessageSize,
-            s_CompletionMessageSize,
+            s_ProtectedSharedBuffer + s_SharedBufferSize - c_CompletionMessageSize,
+            c_CompletionMessageSize,
             s_CompletionMessage,
-            s_CompletionMessageSize);
+            c_CompletionMessageSize);
         ::memcpy_s(
-            s_WriteableSharedBuffer + s_SharedBufferSize - s_CompletionMessageSize,
-            s_CompletionMessageSize,
+            s_WriteableSharedBuffer + s_SharedBufferSize - c_CompletionMessageSize,
+            c_CompletionMessageSize,
             s_CompletionMessage,
-            s_CompletionMessageSize);
+            c_CompletionMessageSize);
 
         // guarantee noone will write to our s_ProtectedSharedBuffer
         DWORD old_setting;
@@ -115,7 +115,7 @@ namespace ctsTraffic {
         // establish a RIO ID for the writable shared buffer if we're using RIO APIs
         if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
             s_SharedBufferId = ctRIORegisterBuffer(s_WriteableSharedBuffer, s_SharedBufferSize);
-            if (RIO_INVALID_BUFFERID == s_SharedBufferId) {
+            if (RIO_INVALID_BUFFERID == s_SharedBufferId) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
                 ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", ::WSAGetLastError());
             }
         }
@@ -159,56 +159,56 @@ namespace ctsTraffic {
     char* ctsIOPattern::AccessSharedBuffer() noexcept
     {
         // this init-once call is no-fail
-        (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
+        (void) ::InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
         return s_ProtectedSharedBuffer;
     }
 
-    ctsIOPattern::ctsIOPattern(unsigned long _recv_count) :
+    ctsIOPattern::ctsIOPattern(unsigned long recv_count) :
         // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
-        bytes_sending_per_quantum(ctsConfig::GetTcpBytesPerSecond() * static_cast<unsigned long long>(ctsConfig::Settings->TcpBytesPerSecondPeriod) / 1000LL),
-        quantum_start_time_ms(ctTimer::ctSnapQpcInMillis())
+        m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * static_cast<unsigned long long>(ctsConfig::Settings->TcpBytesPerSecondPeriod) / 1000LL),
+        m_quantumStartTimeMs(ctTimer::ctSnapQpcInMillis())
     {
         ctFatalCondition(
             ctsConfig::Settings->UseSharedBuffer && ctsConfig::Settings->ShouldVerifyBuffers,
             L"Cannot use a shared buffer across connections and still verify buffers");
 
         // this init-once call is no-fail
-        (void) ::InitOnceExecuteOnce(&s_IOPatternInitializer, InitOnceIOPatternCallback, nullptr, nullptr);
+        (void) ::InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
 
         // if TCP, will always need a recv buffer for the final FIN 
-        if ((_recv_count > 0) || (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)) {
+        if ((recv_count > 0) || (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)) {
             // recv will only use the same shared buffer when the user specified to do so on the cmdline
             if (ctsConfig::Settings->UseSharedBuffer) {
-                if (_recv_count > 0) {
-                    for (unsigned long free_list = 0; free_list < _recv_count; ++free_list) {
-                        recv_buffer_free_list.push_back(s_WriteableSharedBuffer);
+                if (recv_count > 0) {
+                    for (unsigned long free_list = 0; free_list < recv_count; ++free_list) {
+                        m_recvBufferFreeList.push_back(s_WriteableSharedBuffer);
                     }
                     // if using RIO, can share the same BufferId when not needing to validate the buffer
-                    recv_rio_bufferid = s_SharedBufferId;
+                    m_recvRioBufferid = s_SharedBufferId;
                 } else {
                     // just use the shared buffer to capture the ACK's since recv_count == 0
-                    recv_buffer_free_list.push_back(s_WriteableSharedBuffer);
-                    recv_rio_bufferid = s_SharedBufferId;
+                    m_recvBufferFreeList.push_back(s_WriteableSharedBuffer);
+                    m_recvRioBufferid = s_SharedBufferId;
                 }
             } else {
-                if (_recv_count > 0) {
-                    recv_buffer_container.resize(ctsConfig::GetMaxBufferSize() * _recv_count);
-                    char* raw_recv_buffer = &recv_buffer_container[0];
-                    for (unsigned long free_list = 0; free_list < _recv_count; ++free_list) {
-                        recv_buffer_free_list.push_back(raw_recv_buffer + static_cast<size_t>(free_list * ctsConfig::GetMaxBufferSize()));
+                if (recv_count > 0) {
+                    m_recvBufferContainer.resize(ctsConfig::GetMaxBufferSize() * recv_count);
+                    char* raw_recv_buffer = &m_recvBufferContainer[0];
+                    for (unsigned long free_list = 0; free_list < recv_count; ++free_list) {
+                        m_recvBufferFreeList.push_back(raw_recv_buffer + static_cast<size_t>(free_list * ctsConfig::GetMaxBufferSize()));
                     }
                 } else {
                     // just use the shared buffer to capture the FIN since recv_count == 0
-                    recv_buffer_free_list.push_back(s_WriteableSharedBuffer);
-                    recv_rio_bufferid = s_SharedBufferId;
+                    m_recvBufferFreeList.push_back(s_WriteableSharedBuffer);
+                    m_recvRioBufferid = s_SharedBufferId;
                 }
             }
 
             if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO &&
-                recv_rio_bufferid != s_SharedBufferId) {
-                ctFatalCondition(_recv_count > 1, L"Current not supporting >1 concurrent IO requests with RIO");
-                recv_rio_bufferid = ctRIORegisterBuffer(recv_buffer_free_list[0], static_cast<DWORD>(ctsConfig::GetMaxBufferSize()));
-                if (RIO_INVALID_BUFFERID == recv_rio_bufferid) {
+                m_recvRioBufferid != s_SharedBufferId) {
+                ctFatalCondition(recv_count > 1, L"Current not supporting >1 concurrent IO requests with RIO");
+                m_recvRioBufferid = ctRIORegisterBuffer(m_recvBufferFreeList[0], static_cast<DWORD>(ctsConfig::GetMaxBufferSize()));
+                if (RIO_INVALID_BUFFERID == m_recvRioBufferid) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
                     throw ctException(::WSAGetLastError(), L"RIORegisterBuffer", L"ctsIOPattern", false);
                 }
             }
@@ -216,10 +216,10 @@ namespace ctsTraffic {
     }
 
 
-    ctsIOPattern::~ctsIOPattern() noexcept
+    ctsIOPattern::~ctsIOPattern() noexcept  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     {
-        if (recv_rio_bufferid != RIO_INVALID_BUFFERID && recv_rio_bufferid != s_SharedBufferId) {
-            ctRIODeregisterBuffer(recv_rio_bufferid);
+        if (m_recvRioBufferid != RIO_INVALID_BUFFERID && m_recvRioBufferid != s_SharedBufferId) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+            ctRIODeregisterBuffer(m_recvRioBufferid);
         }
     }
 
@@ -228,9 +228,9 @@ namespace ctsTraffic {
         // make sure stats starts tracking IO at the first IO request
         this->start_stats();
 
-        const auto local_cs = this->cs.lock();
+        const auto local_cs = m_cs.lock();
         ctsIOTask return_task;
-        switch (this->pattern_state.get_next_task()) {
+        switch (m_patternState.get_next_task()) {
         case ctsIOPatternProtocolTask::MoreIo:
             return_task = this->next_task();
             break;
@@ -258,8 +258,8 @@ namespace ctsTraffic {
             return_task.ioAction = IOTaskAction::Send;
             return_task.buffer = s_ProtectedSharedBuffer;
             return_task.rio_bufferid = s_SharedBufferId;
-            return_task.buffer_length = s_CompletionMessageSize;
-            return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+            return_task.buffer_length = c_CompletionMessageSize;
+            return_task.buffer_offset = s_SharedBufferSize - c_CompletionMessageSize;
             return_task.track_io = false;
             return_task.buffer_type = ctsIOTask::BufferType::Static;
             break;
@@ -273,8 +273,8 @@ namespace ctsTraffic {
             return_task.ioAction = IOTaskAction::Recv;
             return_task.buffer = s_WriteableSharedBuffer;
             return_task.rio_bufferid = s_SharedBufferId;
-            return_task.buffer_length = s_CompletionMessageSize;
-            return_task.buffer_offset = s_SharedBufferSize - s_CompletionMessageSize;
+            return_task.buffer_length = c_CompletionMessageSize;
+            return_task.buffer_offset = s_SharedBufferSize - c_CompletionMessageSize;
             return_task.track_io = false;
             return_task.buffer_type = ctsIOTask::BufferType::Static;
             break;
@@ -309,14 +309,14 @@ namespace ctsTraffic {
             this->end_stats();
 
             ctFatalCondition(
-                this->recv_buffer_free_list.empty(),
+                m_recvBufferFreeList.empty(),
                 L"ctsIOPattern::initiate_io : (%p) recv_buffer_free_list is empty", this);
 
-            if (this->recv_rio_bufferid != RIO_INVALID_BUFFERID) {
+            if (m_recvRioBufferid != RIO_INVALID_BUFFERID) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
                 // RIO must always use the allocated buffers which were registered
-                return_task.buffer = *this->recv_buffer_free_list.rbegin();
-                this->recv_buffer_free_list.pop_back();
-                return_task.rio_bufferid = this->recv_rio_bufferid;
+                return_task.buffer = *m_recvBufferFreeList.rbegin();
+                m_recvBufferFreeList.pop_back();
+                return_task.rio_bufferid = m_recvRioBufferid;
                 return_task.buffer_type = ctsIOTask::BufferType::Tracked;
             } else {
                 return_task.buffer = s_FinBuffer;
@@ -324,7 +324,7 @@ namespace ctsTraffic {
             }
 
             return_task.ioAction = IOTaskAction::Recv;
-            return_task.buffer_length = s_FinBufferSize;
+            return_task.buffer_length = c_FinBufferSize;
             return_task.buffer_offset = 0;
             return_task.track_io = false;
             break;
@@ -333,7 +333,7 @@ namespace ctsTraffic {
             ctAlwaysFatalCondition(L"ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
         }
 
-        this->pattern_state.notify_next_task(return_task);
+        m_patternState.notify_next_task(return_task);
         return return_task;
     }
 
@@ -351,19 +351,19 @@ namespace ctsTraffic {
     /// Returns the current status of the IO operation on this socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& _original_task, unsigned long _current_transfer, unsigned long _status_code) noexcept
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& original_task, unsigned long current_transfer, unsigned long status_code) noexcept
     {
-        const auto lock = this->cs.lock();
+        const auto lock = m_cs.lock();
 
         // Only add the recv buffer back if it was one of our listed recv buffers
-        if (ctsIOTask::BufferType::Tracked == _original_task.buffer_type) {
-            this->recv_buffer_free_list.push_back(_original_task.buffer);
+        if (ctsIOTask::BufferType::Tracked == original_task.buffer_type) {
+            m_recvBufferFreeList.push_back(original_task.buffer);
         }
 
         // preserve the previous task
-        const bool task_was_more_io = this->pattern_state.is_current_task_more_io();
+        const bool task_was_more_io = m_patternState.is_current_task_more_io();
 
-        switch (_original_task.ioAction) {
+        switch (original_task.ioAction) {
         case IOTaskAction::None:
             // ignore completions for tasks on None
             break;
@@ -389,45 +389,45 @@ namespace ctsTraffic {
             //
         case IOTaskAction::Send:
             bool verify_io = true;
-            if (ctsIOTask::BufferType::TcpConnectionId == _original_task.buffer_type) {
+            if (ctsIOTask::BufferType::TcpConnectionId == original_task.buffer_type) {
                 //
                 // not verifying the IO buffer if this is the connection id request
                 // - but must complete the task to update the protocol
                 //
                 verify_io = false;
 
-                if (_status_code != NO_ERROR) {
-                    this->update_last_error(_status_code);
+                if (status_code != NO_ERROR) {
+                    this->update_last_error(status_code);
                 } else {
-                    if (IOTaskAction::Recv == _original_task.ioAction) {
+                    if (IOTaskAction::Recv == original_task.ioAction) {
                         // save off the connection ID when we receive it
-                        if (!ctsIOBuffers::SetConnectionId(this->connection_id(), _original_task, _current_transfer)) {
+                        if (!ctsIOBuffers::SetConnectionId(this->connection_id(), original_task, current_transfer)) {
                             this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
                         }
                     }
 
                     // process the TCP protocol state machine in pattern_state after receiving the connection id
-                    this->update_last_protocol_error(this->pattern_state.completed_task(_original_task, _current_transfer));
+                    this->update_last_protocol_error(m_patternState.completed_task(original_task, current_transfer));
 
-                    if (_original_task.ioAction == IOTaskAction::Send) {
-                        ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
+                    if (original_task.ioAction == IOTaskAction::Send) {
+                        ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(current_transfer);
                     } else {
-                        ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
+                        ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(current_transfer);
                     }
                 }
-                ctsIOBuffers::ReleaseConnectionIdBuffer(_original_task);
+                ctsIOBuffers::ReleaseConnectionIdBuffer(original_task);
 
-            } else if (_status_code != NO_ERROR) {
+            } else if (status_code != NO_ERROR) {
                 //
                 // if the IO task failed, the entire IO pattern is now failed
                 // - unless this is an extra recv that was canceled once we completed the transfer
                 //
-                if (IOTaskAction::Recv == _original_task.ioAction && this->pattern_state.is_completed()) {
-                    PrintDebugInfo(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", _status_code);
+                if (IOTaskAction::Recv == original_task.ioAction && m_patternState.is_completed()) {
+                    PrintDebugInfo(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", status_code);
                 } else {
-                    const auto current_status = this->update_last_error(_status_code);
+                    const auto current_status = this->update_last_error(status_code);
                     if (current_status != ctsStatusIORunning) {
-                        PrintDebugInfo(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", _status_code, current_status);
+                        PrintDebugInfo(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", status_code, current_status);
                         verify_io = false;
                     }
                 }
@@ -437,7 +437,7 @@ namespace ctsTraffic {
                 //
                 // IO succeeded - update state machine with the completed task if this task had IO
                 //
-                const auto pattern_status = this->pattern_state.completed_task(_original_task, _current_transfer);
+                const auto pattern_status = m_patternState.completed_task(original_task, current_transfer);
                 // update the last_error if the pattern_state detected an error
                 this->update_last_protocol_error(pattern_status);
                 //
@@ -448,21 +448,21 @@ namespace ctsTraffic {
                 //
                 if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP &&
                     ctsConfig::Settings->ShouldVerifyBuffers &&
-                    _original_task.ioAction == IOTaskAction::Recv &&
-                    _original_task.track_io &&
+                    original_task.ioAction == IOTaskAction::Recv &&
+                    original_task.track_io &&
                     (ctsIOPatternProtocolError::SuccessfullyCompleted == pattern_status || ctsIOPatternProtocolError::NoError == pattern_status)) {
 
                     ctFatalCondition(
-                        _original_task.expected_pattern_offset != this->recv_pattern_offset,
+                        original_task.expected_pattern_offset != m_recvPatternOffset,
                         L"ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%Iu)",
-                        &_original_task, _original_task.expected_pattern_offset, static_cast<size_t>(this->recv_pattern_offset));
+                        &original_task, original_task.expected_pattern_offset, static_cast<size_t>(m_recvPatternOffset));
 
-                    if (!this->verify_buffer(_original_task, _current_transfer)) {
+                    if (!VerifyBuffer(original_task, current_transfer)) {
                         this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
                     }
 
-                    this->recv_pattern_offset += _current_transfer;
-                    this->recv_pattern_offset %= BufferPatternSize;
+                    m_recvPatternOffset += current_transfer;
+                    m_recvPatternOffset %= c_BufferPatternSize;
                 }
             }
             break;
@@ -474,18 +474,18 @@ namespace ctsTraffic {
         // If the derived interface returns an error,
         // - update the last_error status
         //
-        if ((_original_task.ioAction != IOTaskAction::None) &&
-            (NO_ERROR == _status_code)) {
+        if ((original_task.ioAction != IOTaskAction::None) &&
+            (NO_ERROR == status_code)) {
 
-            if (IOTaskAction::Send == _original_task.ioAction) {
-                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(_current_transfer);
+            if (IOTaskAction::Send == original_task.ioAction) {
+                ctsConfig::Settings->TcpStatusDetails.bytes_sent.add(current_transfer);
             } else {
-                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(_current_transfer);
+                ctsConfig::Settings->TcpStatusDetails.bytes_recv.add(current_transfer);
             }
             // only complete tasks that were requested
             if (task_was_more_io) {
                 this->update_last_protocol_error(
-                    this->completed_task(_original_task, _current_transfer));
+                    this->completed_task(original_task, current_transfer));
             }
         }
         //
@@ -493,7 +493,7 @@ namespace ctsTraffic {
         // - set the last error to zero in case it was not already set to an error
         //   but do this *after* the other possible failure points were checked
         //
-        if (this->pattern_state.is_completed()) {
+        if (m_patternState.is_completed()) {
             this->update_last_error(NO_ERROR);
             this->end_stats();
         }
@@ -501,23 +501,23 @@ namespace ctsTraffic {
         return this->current_status();
     }
 
-    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
+    ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long max_transfer) noexcept
     {
-        const auto lock = this->cs.lock();
-        ctsIOTask return_task(this->new_task(_action, _max_transfer));
+        const auto lock = m_cs.lock();
+        ctsIOTask return_task(this->new_task(_action, max_transfer));
         return_task.track_io = true;
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
+    ctsIOTask ctsIOPattern::untracked_task(IOTaskAction _action, unsigned long max_transfer) noexcept
     {
-        const auto lock = this->cs.lock();
-        ctsIOTask return_task(this->new_task(_action, _max_transfer));
+        const auto lock = m_cs.lock();
+        ctsIOTask return_task(this->new_task(_action, max_transfer));
         return_task.track_io = false;
         return return_task;
     }
 
-    ctsIOTask ctsIOPattern::new_task(IOTaskAction _action, unsigned long _max_transfer) noexcept
+    ctsIOTask ctsIOPattern::new_task(IOTaskAction action, unsigned long max_transfer) noexcept
     {
         //
         // with TCP, we need to calculate the buffer size based off bytes remaining
@@ -529,12 +529,12 @@ namespace ctsTraffic {
         //
         ctsSignedLongLong new_buffer_size = min<ctsUnsignedLongLong>(
             ctsConfig::GetBufferSize(),
-            this->pattern_state.get_remaining_transfer());
+            m_patternState.get_remaining_transfer());
         //
         // second: if the protocol specified a ceiling, recalculate given their ceiling
         //
-        if ((_max_transfer > 0) && (_max_transfer < new_buffer_size)) {
-            new_buffer_size = _max_transfer;
+        if ((max_transfer > 0) && (max_transfer < new_buffer_size)) {
+            new_buffer_size = max_transfer;
         }
         //
         // guard against hitting a 32-bit overflow
@@ -549,32 +549,32 @@ namespace ctsTraffic {
         // Recv must not specify an offset because will always use the entire buffer for the recv
         //
         ctsIOTask return_task;
-        if (IOTaskAction::Send == _action) {
+        if (IOTaskAction::Send == action) {
             //
             // check to see if the send needs to be deferred into the future
             //
-            if (this->bytes_sending_per_quantum > 0) {
+            if (m_bytesSendingPerQuantum > 0) {
                 const auto current_time_ms(ctTimer::ctSnapQpcInMillis());
-                if (this->bytes_sending_this_quantum < this->bytes_sending_per_quantum) {
+                if (m_bytesSendingThisQuantum < m_bytesSendingPerQuantum) {
                     // adjust bytes_sending_this_quantum
-                    this->bytes_sending_this_quantum += new_buffer_size;
+                    m_bytesSendingThisQuantum += new_buffer_size;
 
                     // no need to adjust quantum_start_time_ms unless we skipped into a new quantum
                     // (meaning the previous quantum had not filled the max bytes for that quantum)
-                    if (current_time_ms >(this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod)) {
+                    if (current_time_ms >(m_quantumStartTimeMs + ctsConfig::Settings->TcpBytesPerSecondPeriod)) {
                         // current time shows it's now beyond this quantum timeframe
                         // - once we see how many quantums we have skipped forward, move our quantum start time to the quantum we are actually in
                         // - then adjust the number of bytes we are to send this quantum by how many quantum we just skipped
-                        const auto quantums_skipped_since_last_send = (current_time_ms - this->quantum_start_time_ms) / ctsConfig::Settings->TcpBytesPerSecondPeriod;
-                        this->quantum_start_time_ms += quantums_skipped_since_last_send * ctsConfig::Settings->TcpBytesPerSecondPeriod;
+                        const auto quantums_skipped_since_last_send = (current_time_ms - m_quantumStartTimeMs) / ctsConfig::Settings->TcpBytesPerSecondPeriod;
+                        m_quantumStartTimeMs += quantums_skipped_since_last_send * ctsConfig::Settings->TcpBytesPerSecondPeriod;
 
                         // we have to be careful making this adjustment since the remainingbytes this quantum could be very small
                         // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
-                        const auto bytes_to_adjust = this->bytes_sending_per_quantum * quantums_skipped_since_last_send;
-                        if (bytes_to_adjust > this->bytes_sending_this_quantum) {
-                            this->bytes_sending_this_quantum = 0;
+                        const auto bytes_to_adjust = m_bytesSendingPerQuantum * quantums_skipped_since_last_send;
+                        if (bytes_to_adjust > m_bytesSendingThisQuantum) {
+                            m_bytesSendingThisQuantum = 0;
                         } else {
-                            this->bytes_sending_this_quantum -= bytes_to_adjust;
+                            m_bytesSendingThisQuantum -= bytes_to_adjust;
                         }
                     }
                     // update the return task for when to schedule the send
@@ -582,7 +582,7 @@ namespace ctsTraffic {
                 } else {
                     // we have sent more than required for this quantum
                     // - check if this fullfilled future quantums as well
-                    const auto quantum_ahead_to_schedule = static_cast<unsigned long>(this->bytes_sending_this_quantum / this->bytes_sending_per_quantum);
+                    const auto quantum_ahead_to_schedule = static_cast<unsigned long>(m_bytesSendingThisQuantum / m_bytesSendingPerQuantum);
 
                     // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
                     // - when we have already sent at least 1 additional quantum of bytes
@@ -591,20 +591,20 @@ namespace ctsTraffic {
                     // carry forward extra bytes from quantums that will be filled by the bytes we have already sent
                     // (including the current quantum)
                     // then adding the bytes we're about to send
-                    this->bytes_sending_this_quantum -= this->bytes_sending_per_quantum * quantum_ahead_to_schedule;
-                    this->bytes_sending_this_quantum += new_buffer_size;
+                    m_bytesSendingThisQuantum -= m_bytesSendingPerQuantum * quantum_ahead_to_schedule;
+                    m_bytesSendingThisQuantum += new_buffer_size;
 
                     // update the return task for when to schedule the send
                     // first, calculate the time to get to the end of this time quantum
                     // - only adjust if the current time isn't already outside this quantum
-                    if (current_time_ms < this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod) {
-                        return_task.time_offset_milliseconds = (this->quantum_start_time_ms + ctsConfig::Settings->TcpBytesPerSecondPeriod) - current_time_ms;
+                    if (current_time_ms < m_quantumStartTimeMs + ctsConfig::Settings->TcpBytesPerSecondPeriod) {
+                        return_task.time_offset_milliseconds = (m_quantumStartTimeMs + ctsConfig::Settings->TcpBytesPerSecondPeriod) - current_time_ms;
                     }
                     // then add in any quantum we need to skip
                     return_task.time_offset_milliseconds += ms_for_quantums_to_skip;
 
                     // finally, adjust quantum_start_time_ms to the next quantum which IO will complete
-                    this->quantum_start_time_ms += ms_for_quantums_to_skip + ctsConfig::Settings->TcpBytesPerSecondPeriod;
+                    m_quantumStartTimeMs += ms_for_quantums_to_skip + ctsConfig::Settings->TcpBytesPerSecondPeriod;
                 }
             } else {
                 return_task.time_offset_milliseconds = 0LL;
@@ -614,18 +614,18 @@ namespace ctsTraffic {
             return_task.buffer = s_ProtectedSharedBuffer;
             return_task.rio_bufferid = s_SharedBufferId;
             return_task.buffer_length = static_cast<unsigned long>(new_buffer_size);
-            return_task.buffer_offset = static_cast<unsigned long>(this->send_pattern_offset);
+            return_task.buffer_offset = static_cast<unsigned long>(m_sendPatternOffset);
             return_task.expected_pattern_offset = 0; // The sender shouldn't be validating this
             return_task.buffer_type = ctsIOTask::BufferType::Static;
 
             // now that we are indicating this buffer to send, increment the offset for the next send request
-            this->send_pattern_offset += new_buffer_size;
-            this->send_pattern_offset %= BufferPatternSize;
+            m_sendPatternOffset += new_buffer_size;
+            m_sendPatternOffset %= c_BufferPatternSize;
 
             ctFatalCondition(
-                this->send_pattern_offset >= BufferPatternSize,
+                m_sendPatternOffset >= c_BufferPatternSize,
                 L"this->pattern_offset being too large (larger than BufferPatternSize %lu) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
-                BufferPatternSize, this);
+                c_BufferPatternSize, this);
             ctFatalCondition(
                 return_task.buffer_length + return_task.buffer_offset > s_SharedBufferSize,
                 L"return_task (%p) for a Send request is specifying a buffer that is larger than the static SharedBufferSize (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
@@ -633,21 +633,21 @@ namespace ctsTraffic {
 
         } else {
             ctFatalCondition(
-                this->recv_buffer_free_list.empty(),
+                m_recvBufferFreeList.empty(),
                 L"recv_buffer_free_list is empty for a new Recv task  (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
 
             return_task.ioAction = IOTaskAction::Recv;
-            return_task.buffer = *this->recv_buffer_free_list.rbegin();
-            this->recv_buffer_free_list.pop_back();
+            return_task.buffer = *m_recvBufferFreeList.rbegin();
+            m_recvBufferFreeList.pop_back();
             return_task.buffer_type = ctsIOTask::BufferType::Tracked;
 
-            return_task.rio_bufferid = this->recv_rio_bufferid;
+            return_task.rio_bufferid = m_recvRioBufferid;
             return_task.buffer_length = static_cast<unsigned long>(new_buffer_size);
             return_task.buffer_offset = 0; // always recv to the beginning of the buffer
-            return_task.expected_pattern_offset = static_cast<unsigned long>(this->recv_pattern_offset);
+            return_task.expected_pattern_offset = static_cast<unsigned long>(m_recvPatternOffset);
 
             ctFatalCondition(
-                this->recv_pattern_offset >= BufferPatternSize,
+                m_recvPatternOffset >= c_BufferPatternSize,
                 L"pattern_offset being too large means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
             ctFatalCondition(
                 return_task.buffer_length + return_task.buffer_offset > new_buffer_size,
@@ -657,7 +657,9 @@ namespace ctsTraffic {
 
         return return_task;
     }
-    bool ctsIOPattern::verify_buffer(const ctsIOTask& _original_task, unsigned long _transferred_bytes) const noexcept
+
+    // static
+    bool ctsIOPattern::VerifyBuffer(const ctsIOTask& original_task, unsigned long transferred_bytes) noexcept
     {
         // only doing deep verification if the user asked us to
         if (!ctsConfig::Settings->ShouldVerifyBuffers) {
@@ -667,24 +669,24 @@ namespace ctsTraffic {
         // We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
         // which is more useful than memcmp's "sign of the difference between the first two differing elements"
         //
-        const auto pattern_buffer = s_ProtectedSharedBuffer + _original_task.expected_pattern_offset;
+        const auto pattern_buffer = s_ProtectedSharedBuffer + original_task.expected_pattern_offset;
         const size_t length_matched = ::RtlCompareMemory(
             pattern_buffer,
-            _original_task.buffer + _original_task.buffer_offset,
-            _transferred_bytes);
-        if (length_matched != _transferred_bytes) {
+            original_task.buffer + original_task.buffer_offset,
+            transferred_bytes);
+        if (length_matched != transferred_bytes) {
             ctsConfig::PrintErrorInfo(
                 L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
                 L"buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
-                _transferred_bytes,
-                _original_task.buffer + _original_task.buffer_offset,
+                transferred_bytes,
+                original_task.buffer + original_task.buffer_offset,
                 pattern_buffer,
                 length_matched,
                 pattern_buffer[length_matched],
-                *(_original_task.buffer + _original_task.buffer_offset + length_matched));
+                *(original_task.buffer + original_task.buffer_offset + length_matched));
         }
 
-        return (length_matched == _transferred_bytes);
+        return (length_matched == transferred_bytes);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -699,9 +701,9 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternPull::ctsIOPatternPull() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
-        io_action(ctsConfig::IsListening() ? IOTaskAction::Send : IOTaskAction::Recv),
-        recv_needed(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
-        send_bytes_inflight(0)
+        m_ioAction(ctsConfig::IsListening() ? IOTaskAction::Send : IOTaskAction::Recv),
+        m_recvNeeded(ctsConfig::IsListening() ? 0 : ctsConfig::Settings->PrePostRecvs),
+        m_sendBytesInflight(0)
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -716,28 +718,28 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOTask ctsIOPatternPull::next_task() noexcept
     {
-        if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
-            --this->recv_needed;
-            return this->tracked_task(this->io_action);
+        if (m_ioAction == IOTaskAction::Recv && m_recvNeeded > 0) {
+            --m_recvNeeded;
+            return this->tracked_task(m_ioAction);
         }
         
-        if (this->io_action == IOTaskAction::Send && this->get_ideal_send_backlog() > this->send_bytes_inflight) {
-            const auto max_bytes_to_send = this->get_ideal_send_backlog() - this->send_bytes_inflight;
-            const auto return_task(this->tracked_task(this->io_action, max_bytes_to_send));
-            this->send_bytes_inflight += return_task.buffer_length;
+        if (m_ioAction == IOTaskAction::Send && this->get_ideal_send_backlog() > m_sendBytesInflight) {
+            const auto max_bytes_to_send = this->get_ideal_send_backlog() - m_sendBytesInflight;
+            const auto return_task(this->tracked_task(m_ioAction, max_bytes_to_send));
+            m_sendBytesInflight += return_task.buffer_length;
             return return_task;
         }
 
         return ctsIOTask();
     }
-    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
+    ctsIOPatternProtocolError ctsIOPatternPull::completed_task(const ctsIOTask& task, unsigned long completed_bytes) noexcept
     {
-        if (IOTaskAction::Send == _task.ioAction) {
-            this->stats.bytes_sent.add(_completed_bytes);
-            this->send_bytes_inflight -= _completed_bytes;
+        if (IOTaskAction::Send == task.ioAction) {
+            this->stats.bytes_sent.add(completed_bytes);
+            m_sendBytesInflight -= completed_bytes;
         } else {
-            this->stats.bytes_recv.add(_completed_bytes);
-            ++this->recv_needed;
+            this->stats.bytes_recv.add(completed_bytes);
+            ++m_recvNeeded;
         }
 
         return ctsIOPatternProtocolError::NoError;
@@ -756,9 +758,9 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternPush::ctsIOPatternPush() :
         ctsIOPatternStatistics(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
-        io_action(ctsConfig::IsListening() ? IOTaskAction::Recv : IOTaskAction::Send),
-        recv_needed(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
-        send_bytes_inflight(0)
+        m_ioAction(ctsConfig::IsListening() ? IOTaskAction::Recv : IOTaskAction::Send),
+        m_recvNeeded(ctsConfig::IsListening() ? ctsConfig::Settings->PrePostRecvs : 0),
+        m_sendBytesInflight(0)
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -773,28 +775,28 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOTask ctsIOPatternPush::next_task() noexcept
     {
-        if (this->io_action == IOTaskAction::Recv && this->recv_needed > 0) {
-            --this->recv_needed;
-            return this->tracked_task(this->io_action);
+        if (m_ioAction == IOTaskAction::Recv && m_recvNeeded > 0) {
+            --m_recvNeeded;
+            return this->tracked_task(m_ioAction);
         }
         
-        if (this->io_action == IOTaskAction::Send && this->get_ideal_send_backlog() > send_bytes_inflight) {
-            const auto max_bytes_to_send = this->get_ideal_send_backlog() - send_bytes_inflight;
-            const auto return_task(this->tracked_task(this->io_action, max_bytes_to_send));
-            send_bytes_inflight += return_task.buffer_length;
+        if (m_ioAction == IOTaskAction::Send && this->get_ideal_send_backlog() > m_sendBytesInflight) {
+            const auto max_bytes_to_send = this->get_ideal_send_backlog() - m_sendBytesInflight;
+            const auto return_task(this->tracked_task(m_ioAction, max_bytes_to_send));
+            m_sendBytesInflight += return_task.buffer_length;
             return return_task;
         }
 
         return ctsIOTask();
     }
-    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
+    ctsIOPatternProtocolError ctsIOPatternPush::completed_task(const ctsIOTask& task, unsigned long completed_bytes) noexcept
     {
-        if (IOTaskAction::Send == _task.ioAction) {
-            this->stats.bytes_sent.add(_completed_bytes);
-            send_bytes_inflight -= _completed_bytes;
+        if (IOTaskAction::Send == task.ioAction) {
+            this->stats.bytes_sent.add(completed_bytes);
+            m_sendBytesInflight -= completed_bytes;
         } else {
-            this->stats.bytes_recv.add(_completed_bytes);
-            ++this->recv_needed;
+            this->stats.bytes_recv.add(completed_bytes);
+            ++m_recvNeeded;
         }
 
         return ctsIOPatternProtocolError::NoError;
@@ -817,12 +819,12 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternPushPull::ctsIOPatternPushPull() :
         ctsIOPatternStatistics(1), // currently not supporting >1 concurrent IO requests
-        push_segment_size(ctsConfig::Settings->PushBytes),
-        pull_segment_size(ctsConfig::Settings->PullBytes),
-        intra_segment_transfer(0ULL),
-        listening(ctsConfig::IsListening()),
-        io_needed(true),
-        sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
+        m_pushSegmentSize(ctsConfig::Settings->PushBytes),
+        m_pullSegmentSize(ctsConfig::Settings->PullBytes),
+        m_intraSegmentTransfer(0ULL),
+        m_listening(ctsConfig::IsListening()),
+        m_ioNeeded(true),
+        m_sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
     {
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -838,63 +840,63 @@ namespace ctsTraffic {
     ctsIOTask ctsIOPatternPushPull::next_task() noexcept
     {
         ctsUnsignedLong segment_size;
-        if (this->listening) {
+        if (m_listening) {
             // server role is opposite client
-            segment_size = (this->sending) ? this->pull_segment_size : this->push_segment_size;
+            segment_size = (m_sending) ? m_pullSegmentSize : m_pushSegmentSize;
         } else {
-            segment_size = (this->sending) ? this->push_segment_size : this->pull_segment_size;
+            segment_size = (m_sending) ? m_pushSegmentSize : m_pullSegmentSize;
         }
 
         ctFatalCondition(
-            (this->intra_segment_transfer >= segment_size),
+            (m_intraSegmentTransfer >= segment_size),
             L"Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
-            static_cast<unsigned long>(this->intra_segment_transfer),
+            static_cast<unsigned long>(m_intraSegmentTransfer),
             static_cast<unsigned long>(segment_size));
 
-        if (this->io_needed) {
-            this->io_needed = false;
+        if (m_ioNeeded) {
+            m_ioNeeded = false;
 
-            if (this->sending) {
+            if (m_sending) {
                 return this->tracked_task(
                     IOTaskAction::Send,
-                    segment_size - this->intra_segment_transfer);
+                    segment_size - m_intraSegmentTransfer);
             } else {
                 return this->tracked_task(
                     IOTaskAction::Recv,
-                    segment_size - this->intra_segment_transfer);
+                    segment_size - m_intraSegmentTransfer);
             }
         } else {
             return ctsIOTask();
         }
     }
-    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) noexcept
+    ctsIOPatternProtocolError ctsIOPatternPushPull::completed_task(const ctsIOTask& task, unsigned long current_transfer) noexcept
     {
-        if (IOTaskAction::Send == _task.ioAction) {
-            this->stats.bytes_sent.add(_current_transfer);
+        if (IOTaskAction::Send == task.ioAction) {
+            this->stats.bytes_sent.add(current_transfer);
         } else {
-            this->stats.bytes_recv.add(_current_transfer);
+            this->stats.bytes_recv.add(current_transfer);
         }
 
-        this->io_needed = true;
-        this->intra_segment_transfer += _current_transfer;
+        m_ioNeeded = true;
+        m_intraSegmentTransfer += current_transfer;
 
         ctsUnsignedLong segment_size;
-        if (this->listening) {
+        if (m_listening) {
             // server role is opposite client
-            segment_size = (this->sending) ? this->pull_segment_size : this->push_segment_size;
+            segment_size = (m_sending) ? m_pullSegmentSize : m_pushSegmentSize;
         } else {
-            segment_size = (this->sending) ? this->push_segment_size : this->pull_segment_size;
+            segment_size = (m_sending) ? m_pushSegmentSize : m_pullSegmentSize;
         }
 
         ctFatalCondition(
-            (this->intra_segment_transfer > segment_size),
+            (m_intraSegmentTransfer > segment_size),
             L"Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
-            static_cast<unsigned long>(this->intra_segment_transfer),
+            static_cast<unsigned long>(m_intraSegmentTransfer),
             static_cast<unsigned long>(segment_size));
 
-        if (segment_size == this->intra_segment_transfer) {
-            this->sending = !this->sending;
-            this->intra_segment_transfer = 0;
+        if (segment_size == m_intraSegmentTransfer) {
+            m_sending = !m_sending;
+            m_intraSegmentTransfer = 0;
         }
 
         return ctsIOPatternProtocolError::NoError;
@@ -912,10 +914,10 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternDuplex::ctsIOPatternDuplex() :
         ctsIOPatternStatistics(ctsConfig::Settings->PrePostRecvs),
-        remaining_send_bytes(0),
-        remaining_recv_bytes(0),
-        recv_needed(ctsConfig::Settings->PrePostRecvs),
-        send_bytes_inflight(0)
+        m_remainingSendBytes(0),
+        m_remainingRecvBytes(0),
+        m_recvNeeded(ctsConfig::Settings->PrePostRecvs),
+        m_sendBytesInflight(0)
     {
         // max transfer bytes must be an even # so send bytes and recv bytes are balanced
         auto current_max_transfer = this->get_total_transfer();
@@ -923,14 +925,14 @@ namespace ctsTraffic {
             this->set_total_transfer(++current_max_transfer);
         }
 
-        remaining_send_bytes = current_max_transfer / 2;
-        remaining_recv_bytes = remaining_send_bytes;
+        m_remainingSendBytes = current_max_transfer / 2;
+        m_remainingRecvBytes = m_remainingSendBytes;
 
         ctFatalCondition(
-            (remaining_send_bytes + remaining_recv_bytes) != this->get_total_transfer(),
+            (m_remainingSendBytes + m_remainingRecvBytes) != this->get_total_transfer(),
             L"ctsIOPatternDuplex: internal failure - send_bytes (%llu) + recv_bytes (%llu) must equal total bytes (%llu)",
-            static_cast<ULONGLONG>(remaining_send_bytes),
-            static_cast<ULONGLONG>(remaining_recv_bytes),
+            static_cast<ULONGLONG>(m_remainingSendBytes),
+            static_cast<ULONGLONG>(m_remainingRecvBytes),
             static_cast<ULONGLONG>(this->get_total_transfer()));
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -948,58 +950,58 @@ namespace ctsTraffic {
         ctsIOTask return_task;
 
         // since we can have multiple receives in flight, must also check that we have remaining_recv_bytes
-        if (this->remaining_recv_bytes > 0 && this->recv_needed > 0) {
+        if (m_remainingRecvBytes > 0 && m_recvNeeded > 0) {
             // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
             // to unsigned long when passed to tracked_task()
-            const ctsUnsignedLong max_remaining_bytes = this->remaining_recv_bytes > MAXLONG ?
+            const ctsUnsignedLong max_remaining_bytes = m_remainingRecvBytes > MAXLONG ?
                 MAXLONG :
-                static_cast<unsigned long>(this->remaining_recv_bytes);
+                static_cast<unsigned long>(m_remainingRecvBytes);
             return_task = this->tracked_task(IOTaskAction::Recv, max_remaining_bytes);
             // for tracking purposes, assume that this recv *might* end up receiving the entire buffer size
             // - only on completion will we adjust to the actual # of bytes received
-            this->remaining_recv_bytes -= return_task.buffer_length;
-            --this->recv_needed;
+            m_remainingRecvBytes -= return_task.buffer_length;
+            --m_recvNeeded;
 
-        } else if (this->remaining_send_bytes > 0 && this->get_ideal_send_backlog() > this->send_bytes_inflight) {
+        } else if (m_remainingSendBytes > 0 && this->get_ideal_send_backlog() > m_sendBytesInflight) {
             // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
             // to unsigned long when passed to tracked_task()
-            const ctsUnsignedLong max_remaining_bytes = this->remaining_send_bytes > MAXLONG ?
+            const ctsUnsignedLong max_remaining_bytes = m_remainingSendBytes > MAXLONG ?
                 MAXLONG : 
-                static_cast<unsigned long>(this->remaining_send_bytes);
-            ctsUnsignedLong max_send = this->get_ideal_send_backlog() - this->send_bytes_inflight;
+                static_cast<unsigned long>(m_remainingSendBytes);
+            ctsUnsignedLong max_send = this->get_ideal_send_backlog() - m_sendBytesInflight;
             if (max_send > max_remaining_bytes) {
                 max_send = max_remaining_bytes;
             }
             return_task = this->tracked_task(IOTaskAction::Send, max_send);
-            this->remaining_send_bytes -= return_task.buffer_length;
-            this->send_bytes_inflight += return_task.buffer_length;
+            m_remainingSendBytes -= return_task.buffer_length;
+            m_sendBytesInflight += return_task.buffer_length;
         } else {
             // no IO needed now: return the default task
         }
 
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
+    ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& task, unsigned long completed_bytes) noexcept
     {
-        switch (_task.ioAction) {
+        switch (task.ioAction) {
         case IOTaskAction::Send:
-            this->stats.bytes_sent.add(_completed_bytes);
-            this->send_bytes_inflight -= _completed_bytes;
+            this->stats.bytes_sent.add(completed_bytes);
+            m_sendBytesInflight -= completed_bytes;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
-            this->remaining_send_bytes += _task.buffer_length;
+            m_remainingSendBytes += task.buffer_length;
             // then we need to subtract back out the actual number of bytes sent
-            this->remaining_send_bytes -= _completed_bytes;
+            m_remainingSendBytes -= completed_bytes;
             break;
 
         case IOTaskAction::Recv:
-            this->stats.bytes_recv.add(_completed_bytes);
-            ++this->recv_needed;
+            this->stats.bytes_recv.add(completed_bytes);
+            ++m_recvNeeded;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
-            this->remaining_recv_bytes += _task.buffer_length;
+            m_remainingRecvBytes += task.buffer_length;
             // then we need to subtract back out the actual number of bytes received
-            this->remaining_recv_bytes -= _completed_bytes;
+            m_remainingRecvBytes -= completed_bytes;
             break;
         }
 
@@ -1021,62 +1023,62 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOPatternMediaStreamServer::ctsIOPatternMediaStreamServer() :
         ctsIOPatternStatistics(1), // the pattern will use the recv writeable-buffer for sending a connection ID
-        frame_size_bytes(ctsConfig::GetMediaStream().FrameSizeBytes),
-        current_frame_requested(0UL),
-        current_frame_completed(0UL),
-        frame_rate_fps(ctsConfig::GetMediaStream().FramesPerSecond),
-        current_frame(1UL),
-        base_time_milliseconds(0LL),
-        state(ServerState::NotStarted)
+        m_frameSizeBytes(ctsConfig::GetMediaStream().FrameSizeBytes),
+        m_currentFrameRequested(0UL),
+        m_currentFrameCompleted(0UL),
+        m_frameRateFps(ctsConfig::GetMediaStream().FramesPerSecond),
+        m_currentFrame(1UL),
+        m_baseTimeMilliseconds(0LL),
+        m_state(ServerState::NotStarted)
     {
-        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / this->frame_rate_fps));
+        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / m_frameRateFps));
     }
     // required virtual functions
     ctsIOTask ctsIOPatternMediaStreamServer::next_task() noexcept
     {
         ctsIOTask return_task;
-        switch (this->state) {
+        switch (m_state) {
         case ServerState::NotStarted:
             // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
             return_task = ctsMediaStreamMessage::MakeConnectionIdTask(
                 this->untracked_task(IOTaskAction::Recv, UdpDatagramConnectionIdHeaderLength),
                 this->connection_id());
-            this->state = ServerState::IdSent;
+            m_state = ServerState::IdSent;
             break;
 
         case ServerState::IdSent:
-            this->base_time_milliseconds = ctTimer::ctSnapQpcInMillis();
-            this->state = ServerState::IoStarted;
+            m_baseTimeMilliseconds = ctTimer::ctSnapQpcInMillis();
+            m_state = ServerState::IoStarted;
             // fall-through
         case ServerState::IoStarted:
-            if (current_frame_requested < frame_size_bytes) {
-                return_task = this->tracked_task(IOTaskAction::Send, frame_size_bytes);
+            if (m_currentFrameRequested < m_frameSizeBytes) {
+                return_task = this->tracked_task(IOTaskAction::Send, m_frameSizeBytes);
                 // calculate the future time to initiate the IO
                 // - then subtract the start time to give the difference
                 return_task.time_offset_milliseconds =
-                    this->base_time_milliseconds
-                    + static_cast<long long>(this->current_frame) * 1000LL / static_cast<long long>(this->frame_rate_fps)
+                    m_baseTimeMilliseconds
+                    + static_cast<long long>(m_currentFrame) * 1000LL / static_cast<long long>(m_frameRateFps)
                     - ctTimer::ctSnapQpcInMillis();
 
-                current_frame_requested += return_task.buffer_length;
+                m_currentFrameRequested += return_task.buffer_length;
             }
             break;
         }
         return return_task;
     }
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& _task, unsigned long _current_transfer) noexcept
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamServer::completed_task(const ctsIOTask& task, unsigned long current_transfer) noexcept
     {
-        if (_task.buffer_type != ctsIOTask::BufferType::UdpConnectionId) {
-            const ctsUnsignedLong current_transfer_bits = _current_transfer * 8UL;
+        if (task.buffer_type != ctsIOTask::BufferType::UdpConnectionId) {
+            const ctsUnsignedLong current_transfer_bits = current_transfer * 8UL;
 
             ctsConfig::Settings->UdpStatusDetails.bits_received.add(current_transfer_bits);
             this->stats.bits_received.add(current_transfer_bits);
 
-            this->current_frame_completed += _current_transfer;
-            if (this->current_frame_completed == frame_size_bytes) {
-                ++this->current_frame;
-                this->current_frame_requested = 0UL;
-                this->current_frame_completed = 0UL;
+            m_currentFrameCompleted += current_transfer;
+            if (m_currentFrameCompleted == m_frameSizeBytes) {
+                ++m_currentFrame;
+                m_currentFrameRequested = 0UL;
+                m_currentFrameCompleted = 0UL;
             }
         }
         return ctsIOPatternProtocolError::NoError;

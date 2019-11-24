@@ -56,23 +56,23 @@ namespace ctsTraffic {
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
         ctsIOTask initiate_io() noexcept;
-        virtual ctsIOStatus complete_io(const ctsIOTask& _task, unsigned long _bytes_transferred, unsigned long _status_code) noexcept = 0;
+        virtual ctsIOStatus complete_io(const ctsIOTask& task, unsigned long bytes_transferred, unsigned long status_code) noexcept = 0;
 
         ///
         /// Enabling callers to trigger writing statistics via ctsConfig
         ///
-        virtual void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept = 0;
+        virtual void print_stats(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept = 0;
 
         ///
         /// Some derived IO types require callbacks to the IO functions
         /// - to request tasks outside the typical initiate_io / complete_io pattern
         ///
-        virtual void register_callback(std::function<void(const ctsIOTask&)> _callback) = 0;
+        virtual void register_callback(std::function<void(const ctsIOTask&)> callback) = 0;
 
         ///
         /// Exposing the last recorded error from the requested IO
         ///
-        virtual unsigned long get_last_error() const noexcept = 0;
+        [[nodiscard]] virtual unsigned long get_last_error() const noexcept = 0;
     };
 
 
@@ -84,30 +84,30 @@ namespace ctsTraffic {
     public:
         ctsIOPatternT() = default;
 
-        void print_stats(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept override final
+        void print_stats(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept final
         {
             // before printing the final results, make sure the timers are stopped
-            if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
+            if (0 == this->get_last_error() && 0 == m_stats.current_bytes()) {
                 PrintDebugInfo(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n");
-                this->protocol_policy.update_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
+                this->m_protocolPolicy.update_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }
             ctsConfig::PrintConnectionResults(
-                _local_addr,
-                _remote_addr,
+                local_addr,
+                remote_addr,
                 this->get_last_error(),
-                stats);
+                m_stats);
         }
 
-        void register_callback(std::function<void(const ctsIOTask&)> _callback) override final
+        void register_callback(std::function<void(const ctsIOTask&)> callback) final
         {
-            const auto take_lock = cs.lock();
-            this->callback = std::move(_callback);
+            const auto take_lock = m_cs.lock();
+            this->m_callback = std::move(callback);
         }
 
-        unsigned long get_last_error() const noexcept override final
+        unsigned long get_last_error() const noexcept final
         {
-            const auto auto_lock = cs.lock();
-            return this->protocol_policy.get_last_error();
+            const auto auto_lock = m_cs.lock();
+            return this->m_protocolPolicy.get_last_error();
         }
 
         /// no copy c'tor or copy assignment
@@ -115,13 +115,13 @@ namespace ctsTraffic {
         ctsIOPatternT& operator= (const ctsIOPatternT&) = delete;
 
     private:
-        mutable wil::critical_section cs;
+        mutable wil::critical_section m_cs;
         // optional callback for protocols which need to communicate OOB to the IO function
-        std::function<void(const ctsIOTask&)> callback = nullptr;
+        std::function<void(const ctsIOTask&)> m_callback = nullptr;
 
-        Stats stats;
-        ctsIOPatternProtocolPolicy<ProtocolPolicy> protocol_policy;
-        ctsIOPatternRateLimitPolicy<RateLimitPolicy> ratelimit_policy;
+        Stats m_stats;
+        ctsIOPatternProtocolPolicy<ProtocolPolicy> m_protocolPolicy;
+        ctsIOPatternRateLimitPolicy<RateLimitPolicy> m_ratelimitPolicy;
 
         ///
         /// void start_stats() noexcept
