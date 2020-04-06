@@ -69,9 +69,6 @@ namespace ctsTraffic
         void PrintException(const std::exception&) noexcept
         {
         }
-        void PrintJitterUpdate(long long, long long, long long, long long, long long) noexcept
-        {
-        }
         void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
         {
         }
@@ -211,7 +208,7 @@ namespace ctsTraffic
     }
 
     // ctsSocket fakes
-    ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>)
+    ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>) noexcept
     {
         this->pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
     }
@@ -299,7 +296,7 @@ namespace ctsUnitTest
                 auto socket_guard(test_socket->socket_reference());
                 SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(_socket_object->lock_socket());
+                auto connected_socket_guard(_socket_object->lock_object());
                 SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
@@ -347,7 +344,7 @@ namespace ctsUnitTest
                 auto socket_guard(test_socket->socket_reference());
                 SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(_socket_object->lock_socket());
+                auto connected_socket_guard(_socket_object->lock_object());
                 SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
@@ -394,7 +391,7 @@ namespace ctsUnitTest
                 auto socket_guard(test_socket->socket_reference());
                 SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(_socket_object->lock_socket());
+                auto connected_socket_guard(_socket_object->lock_object());
                 SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
@@ -446,7 +443,7 @@ namespace ctsUnitTest
                 auto socket_guard(test_socket->socket_reference());
                 SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(_socket_object->lock_socket());
+                auto connected_socket_guard(_socket_object->lock_object());
                 SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
@@ -494,7 +491,7 @@ namespace ctsUnitTest
                 auto socket_guard(test_socket->socket_reference());
                 SOCKET cts_socket = socket_guard.socket();
 
-                auto connected_socket_guard(_socket_object->lock_socket());
+                auto connected_socket_guard(_socket_object->lock_object());
                 SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());

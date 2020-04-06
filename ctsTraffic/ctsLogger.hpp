@@ -52,7 +52,7 @@ namespace ctsTraffic
         virtual ~ctsLogger() noexcept
             = default;
 
-        void LogLegend(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
+        void LogLegend(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
         {
             PCWSTR const message = _status_info->print_legend(this->format);
             if (message != nullptr)
@@ -61,7 +61,7 @@ namespace ctsTraffic
             }
         }
 
-        void LogHeader(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info) noexcept
+        void LogHeader(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
         {
             PCWSTR const message = _status_info->print_header(this->format);
             if (message != nullptr)
@@ -70,7 +70,7 @@ namespace ctsTraffic
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsTraffic::ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
+        void LogStatus(const std::shared_ptr<ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
         {
             PCWSTR const message = _status_info->print_status(this->format, _current_time, _clear_status);
             if (message != nullptr)
@@ -112,7 +112,7 @@ namespace ctsTraffic
         ctsTextLogger(PCWSTR _file_name, ctsConfig::StatusFormatting _format) :
             ctsLogger(_format)
         {
-            file_handle.reset(::CreateFileW(
+            file_handle.reset(CreateFileW(
                 _file_name,
                 GENERIC_WRITE,
                 FILE_SHARE_READ, // allow others to read the file while we write to it
@@ -122,7 +122,7 @@ namespace ctsTraffic
                 nullptr));
             if (!file_handle)
             {
-                const auto gle = ::GetLastError();
+                const auto gle = GetLastError();
                 throw ctl::ctException(
                     gle,
                     ctl::ctString::ctFormatString(L"CreateFile(%ws)", _file_name).c_str(),
@@ -131,20 +131,20 @@ namespace ctsTraffic
             }
 
             // write the UTF16 Byte order mark
-            const WCHAR bom_utf16 = 0xFEFF;
-            DWORD bytesWritten;
-            if (!::WriteFile(
+            constexpr WCHAR bom_utf16 = 0xFEFF;
+            DWORD bytesWritten{};
+            if (!WriteFile(
                 file_handle.get(),
                 &bom_utf16,
                 static_cast<DWORD>(sizeof WCHAR),
                 &bytesWritten,
                 nullptr))
             {
-                const auto gle = ::GetLastError();
+                const auto gle = GetLastError();
                 throw ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false);
             }
         }
-        ~ctsTextLogger() noexcept override = default;
+        ~ctsTextLogger() noexcept = default;
 
         void log_message_impl(PCWSTR _message) noexcept override
         {
@@ -168,15 +168,15 @@ namespace ctsTraffic
         void write_impl(PCWSTR _message) noexcept
         {
             const auto lock = file_cs.lock();
-            DWORD bytesWritten;
-            if (!::WriteFile(
+            DWORD bytesWritten{};
+            if (!WriteFile(
                 file_handle.get(),
                 _message,
-                static_cast<DWORD>(::wcslen(_message) * sizeof(WCHAR)),
+                static_cast<DWORD>(wcslen(_message) * sizeof(WCHAR)),
                 &bytesWritten,
                 nullptr))
             {
-                const auto gle = ::GetLastError();
+                const auto gle = GetLastError();
                 ctsConfig::PrintException(
                     ctl::ctException(gle, L"WriteFile", L"ctsTextLogger", false));
             }

@@ -76,9 +76,9 @@ namespace ctsTraffic
             else
             {
                 DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+                if (!WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
                 {
-                    gle = ::WSAGetLastError();
+                    gle = WSAGetLastError();
                 }
             }
         }
@@ -147,9 +147,9 @@ namespace ctsTraffic
 
         if (IOTaskAction::GracefulShutdown == next_io.ioAction)
         {
-            if (0 != ::shutdown(_socket, SD_SEND))
+            if (0 != shutdown(_socket, SD_SEND))
             {
-                return_status.ioErrorcode = ::WSAGetLastError();
+                return_status.ioErrorcode = WSAGetLastError();
             }
             return_status.ioDone = (_shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo);
             return_status.ioStarted = false;
@@ -183,18 +183,18 @@ namespace ctsTraffic
                 if (IOTaskAction::Send == next_io.ioAction)
                 {
                     function_name = L"WSASend";
-                    if (::WSASend(_socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0)
+                    if (WSASend(_socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0)
                     {
-                        return_status.ioErrorcode = ::WSAGetLastError();
+                        return_status.ioErrorcode = WSAGetLastError();
                     }
                 }
                 else
                 {
                     function_name = L"WSARecv";
                     DWORD flags = (ctsConfig::Settings->Options & ctsConfig::OptionType::MSG_WAIT_ALL) ? MSG_WAITALL : 0;
-                    if (::WSARecv(_socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0)
+                    if (WSARecv(_socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0)
                     {
-                        return_status.ioErrorcode = ::WSAGetLastError();
+                        return_status.ioErrorcode = WSAGetLastError();
                     }
                 }
                 //
@@ -218,10 +218,10 @@ namespace ctsTraffic
                     if (NO_ERROR == return_status.ioErrorcode)
                     {
                         DWORD flags;
-                        if (!::WSAGetOverlappedResult(_socket, pov, &bytes_transferred, FALSE, &flags))
+                        if (!WSAGetOverlappedResult(_socket, pov, &bytes_transferred, FALSE, &flags))
                         {
                             ctl::ctAlwaysFatalCondition(
-                                L"WSAGetOverlappedResult failed (%d) after the IO request (%ws) succeeded", ::WSAGetLastError(), function_name);
+                                L"WSAGetOverlappedResult failed (%d) after the IO request (%ws) succeeded", WSAGetLastError(), function_name);
                         }
                     }
                     // must cancel the IOCP TP since IO is not pended

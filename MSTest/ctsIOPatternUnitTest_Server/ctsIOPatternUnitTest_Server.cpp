@@ -100,7 +100,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&, const JitterFrameEntry&) noexcept
+    void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&) noexcept
     {
     }
     void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept

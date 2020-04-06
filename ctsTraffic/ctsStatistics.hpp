@@ -1,4 +1,4 @@
-/*
+  /*
 
 Copyright (c) Microsoft Corporation
 All rights reserved.
@@ -26,33 +26,33 @@ namespace ctsTraffic
 {
     namespace ctsStatistics
     {
-        static const unsigned long ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
+        constexpr unsigned long ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
         template <typename T>
         void GenerateConnectionId(_In_ T& _statistics_object)
         {
             UUID connection_id;
-            RPC_STATUS status = ::UuidCreate(&connection_id);
+            RPC_STATUS status = UuidCreate(&connection_id);
             if (status != RPC_S_OK) {
                 throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
             }
 
             RPC_CSTR connection_id_string = nullptr;
-            status = ::UuidToStringA(&connection_id, &connection_id_string);
+            status = UuidToStringA(&connection_id, &connection_id_string);
             if (status != RPC_S_OK) {
                 throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
             }
             ctl::ctFatalCondition(
-                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
+                strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
                 L"UuidToString returned a string not 36 characters long (%Iu)",
-                ::strlen(reinterpret_cast<LPSTR>(connection_id_string)));
+                strlen(reinterpret_cast<LPSTR>(connection_id_string)));
 
             const auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"memcpy_s failed trying to copy a UUID string (%d)", copy_error);
 
-            ::RpcStringFreeA(&connection_id_string);
+            RpcStringFreeA(&connection_id_string);
             _statistics_object.connection_identifier[ConnectionIdLength - 1] = '\0';
         }
 
@@ -261,7 +261,7 @@ namespace ctsTraffic
             error_frames(_in.error_frames)
         {
             // not needing to guard this string: it's created exactly once
-            ::memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
+            memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
 
@@ -320,7 +320,7 @@ namespace ctsTraffic
             bytes_recv(0LL)
         {
             static const char * NULL_GUID_STRING = "00000000-0000-0000-0000-000000000000";
-            ::strcpy_s(
+            strcpy_s(
                 connection_identifier,
                 NULL_GUID_STRING);
         }
@@ -334,7 +334,7 @@ namespace ctsTraffic
             bytes_recv(_in.bytes_recv)
         {
             // not needing to guard this string: it's created exactly once
-            ::memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
+            memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
             connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
         }
 

@@ -44,7 +44,7 @@ namespace ctsPerf {
         }
 
         // write the UTF16 Byte order mark
-        const WCHAR bom_utf16 = 0xFEFF;
+        constexpr WCHAR bom_utf16 = 0xFEFF;
         DWORD length = sizeof(WCHAR);
         DWORD written;
         if (!::WriteFile(m_fileHandle.get(), &bom_utf16, length, &written, nullptr)) {
@@ -52,13 +52,13 @@ namespace ctsPerf {
         }
 
         if (mean_only) {
-            WCHAR meanHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,Mean\r\n";
+            constexpr WCHAR meanHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,Mean\r\n";
             length = sizeof meanHeader;
             if (!::WriteFile(m_fileHandle.get(), meanHeader, length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
             }
         } else {
-            WCHAR detailedHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR\r\n";
+            constexpr WCHAR detailedHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,-1Std,Mean,+1Std,-1IQR,Median,+1IQR\r\n";
             length = sizeof detailedHeader;
             if (!::WriteFile(m_fileHandle.get(), detailedHeader, length, &written, nullptr)) {
                 throw ctl::ctException(::GetLastError(), L"WriteFile", false);
@@ -83,7 +83,7 @@ namespace ctsPerf {
         }
 
         // write the UTF16 Byte order mark
-        const WCHAR bom_utf16 = 0xFEFF;
+        constexpr WCHAR bom_utf16 = 0xFEFF;
         DWORD length = sizeof(WCHAR);
         DWORD written;
         if (!::WriteFile(m_fileHandle.get(), &bom_utf16, length, &written, nullptr)) {
@@ -132,8 +132,8 @@ namespace ctsPerf {
 
     void ctsWriteDetails::end_row() const noexcept
     {
-        static const WCHAR c_Eol[2] = { L'\r', L'\n' };
-        static const DWORD c_EolLen = sizeof c_Eol;
+        constexpr WCHAR c_Eol[2] = { L'\r', L'\n' };
+        constexpr DWORD c_EolLen = sizeof c_Eol;
         DWORD written;
         if (!::WriteFile(m_fileHandle.get(), c_Eol, c_EolLen, &written, nullptr)) {
             const auto gle = ::GetLastError();

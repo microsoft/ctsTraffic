@@ -30,7 +30,7 @@ namespace ctsTraffic {
     using namespace ctl;
     using namespace std;
 
-    static const unsigned long c_BufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
+    constexpr unsigned long c_BufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
     static unsigned char s_BufferPattern[c_BufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
 
     /// SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
@@ -38,7 +38,6 @@ namespace ctsTraffic {
     ///
     /// The buffers' sizes will be the constant "BufferPatternSize + ctsConfig::GetMaxBufferSize()", but we
     /// need to wait for input parsing before we can set that.
-    // TODO: expand the comment to explain the logic working with offsets
 
     static INIT_ONCE s_IoPatternInitializer = INIT_ONCE_STATIC_INIT;
     static char* s_WriteableSharedBuffer = nullptr;
@@ -46,9 +45,9 @@ namespace ctsTraffic {
     static unsigned long s_SharedBufferSize = 0;
     static RIO_BUFFERID s_SharedBufferId = RIO_INVALID_BUFFERID;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 
-    static const char* s_CompletionMessage = "DONE";
-    static const unsigned long c_CompletionMessageSize = 4;
-    static const unsigned long c_FinBufferSize = 4; // just 4 bytes for the FIN
+    const char* s_CompletionMessage = "DONE";
+    constexpr unsigned long c_CompletionMessageSize = 4;
+    constexpr unsigned long c_FinBufferSize = 4; // just 4 bytes for the FIN
     static char s_FinBuffer[c_FinBufferSize];
 
     BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
@@ -61,14 +60,14 @@ namespace ctsTraffic {
 
         s_SharedBufferSize = c_BufferPatternSize + ctsConfig::GetMaxBufferSize() + c_CompletionMessageSize;
 
-        s_ProtectedSharedBuffer = static_cast<char*>(::VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
+        s_ProtectedSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
         if (!s_ProtectedSharedBuffer) {
-            ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", ::GetLastError());
+            ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", GetLastError());
         }
 
-        s_WriteableSharedBuffer = static_cast<char*>(::VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
+        s_WriteableSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
         if (!s_WriteableSharedBuffer) {
-            ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", ::GetLastError());
+            ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", GetLastError());
         }
 
         // fill in this allocated buffer while we can write to it
@@ -78,13 +77,13 @@ namespace ctsTraffic {
         while (write_size_remaining > 0) {
             const unsigned long bytes_to_write = (write_size_remaining > c_BufferPatternSize) ? c_BufferPatternSize : write_size_remaining;
 
-            auto memerror = ::memcpy_s(protected_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
+            auto memerror = memcpy_s(protected_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
             ctFatalCondition(
                 memerror != 0,
                 L"memcpy_s(%p, %lu, %p, %lu) failed : %d",
                 protected_destination, write_size_remaining, s_BufferPattern, bytes_to_write, memerror);
 
-            memerror = ::memcpy_s(writeable_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
+            memerror = memcpy_s(writeable_destination, write_size_remaining, s_BufferPattern, bytes_to_write);
             ctFatalCondition(
                 memerror != 0,
                 L"memcpy_s(%p, %lu, %p, %lu) failed : %d",
@@ -95,12 +94,12 @@ namespace ctsTraffic {
             write_size_remaining -= bytes_to_write;
         }
         // set the final 4 bytes to the DONE message for the send buffer
-        ::memcpy_s(
+        memcpy_s(
             s_ProtectedSharedBuffer + s_SharedBufferSize - c_CompletionMessageSize,
             c_CompletionMessageSize,
             s_CompletionMessage,
             c_CompletionMessageSize);
-        ::memcpy_s(
+        memcpy_s(
             s_WriteableSharedBuffer + s_SharedBufferSize - c_CompletionMessageSize,
             c_CompletionMessageSize,
             s_CompletionMessage,
@@ -108,15 +107,15 @@ namespace ctsTraffic {
 
         // guarantee noone will write to our s_ProtectedSharedBuffer
         DWORD old_setting;
-        if (!::VirtualProtect(s_ProtectedSharedBuffer, s_SharedBufferSize, PAGE_READONLY, &old_setting)) {
-            ctAlwaysFatalCondition(L"VirtualProtect failed: %u", ::GetLastError());
+        if (!VirtualProtect(s_ProtectedSharedBuffer, s_SharedBufferSize, PAGE_READONLY, &old_setting)) {
+            ctAlwaysFatalCondition(L"VirtualProtect failed: %u", GetLastError());
         }
 
         // establish a RIO ID for the writable shared buffer if we're using RIO APIs
         if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
             s_SharedBufferId = ctRIORegisterBuffer(s_WriteableSharedBuffer, s_SharedBufferSize);
             if (RIO_INVALID_BUFFERID == s_SharedBufferId) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-                ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", ::WSAGetLastError());
+                ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", WSAGetLastError());
             }
         }
 
@@ -159,7 +158,7 @@ namespace ctsTraffic {
     char* ctsIOPattern::AccessSharedBuffer() noexcept
     {
         // this init-once call is no-fail
-        (void) ::InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
+        (void) InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
         return s_ProtectedSharedBuffer;
     }
 
@@ -173,7 +172,7 @@ namespace ctsTraffic {
             L"Cannot use a shared buffer across connections and still verify buffers");
 
         // this init-once call is no-fail
-        (void) ::InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
+        (void) InitOnceExecuteOnce(&s_IoPatternInitializer, InitOnceIoPatternCallback, nullptr, nullptr);
 
         // if TCP, will always need a recv buffer for the final FIN 
         if ((recv_count > 0) || (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)) {
@@ -209,7 +208,7 @@ namespace ctsTraffic {
                 ctFatalCondition(recv_count > 1, L"Current not supporting >1 concurrent IO requests with RIO");
                 m_recvRioBufferid = ctRIORegisterBuffer(m_recvBufferFreeList[0], static_cast<DWORD>(ctsConfig::GetMaxBufferSize()));
                 if (RIO_INVALID_BUFFERID == m_recvRioBufferid) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-                    throw ctException(::WSAGetLastError(), L"RIORegisterBuffer", L"ctsIOPattern", false);
+                    throw ctException(WSAGetLastError(), L"RIORegisterBuffer", L"ctsIOPattern", false);
                 }
             }
         }
@@ -351,7 +350,7 @@ namespace ctsTraffic {
     /// Returns the current status of the IO operation on this socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& original_task, unsigned long current_transfer, unsigned long status_code) noexcept
+    ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& original_task, unsigned long current_transfer, unsigned long status_code) noexcept  // NOLINT(bugprone-exception-escape)
     {
         const auto lock = m_cs.lock();
 
@@ -670,7 +669,7 @@ namespace ctsTraffic {
         // which is more useful than memcmp's "sign of the difference between the first two differing elements"
         //
         const auto pattern_buffer = s_ProtectedSharedBuffer + original_task.expected_pattern_offset;
-        const size_t length_matched = ::RtlCompareMemory(
+        const size_t length_matched = RtlCompareMemory(
             pattern_buffer,
             original_task.buffer + original_task.buffer_offset,
             transferred_bytes);
@@ -983,7 +982,8 @@ namespace ctsTraffic {
     }
     ctsIOPatternProtocolError ctsIOPatternDuplex::completed_task(const ctsIOTask& task, unsigned long completed_bytes) noexcept
     {
-        switch (task.ioAction) {
+        // ReSharper disable once CppIncompleteSwitchStatement
+        switch (task.ioAction) {  // NOLINT(clang-diagnostic-switch)
         case IOTaskAction::Send:
             this->stats.bytes_sent.add(completed_bytes);
             m_sendBytesInflight -= completed_bytes;

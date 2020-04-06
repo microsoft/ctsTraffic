@@ -40,21 +40,21 @@ namespace ctsTraffic {
     ///   START
     ///
 
-    static const unsigned short UdpDatagramProtocolHeaderFlagData = 0x0000;
-    static const unsigned short UdpDatagramProtocolHeaderFlagId = 0x1000;
+    constexpr unsigned short UdpDatagramProtocolHeaderFlagData = 0x0000;
+    constexpr unsigned short UdpDatagramProtocolHeaderFlagId = 0x1000;
 
-    static const unsigned long UdpDatagramProtocolHeaderFlagLength = 2;
-    static const unsigned long UdpDatagramConnectionIdHeaderLength = UdpDatagramProtocolHeaderFlagLength + ctsStatistics::ConnectionIdLength;
+    constexpr unsigned long UdpDatagramProtocolHeaderFlagLength = 2;
+    constexpr unsigned long UdpDatagramConnectionIdHeaderLength = UdpDatagramProtocolHeaderFlagLength + ctsStatistics::ConnectionIdLength;
 
-    static const unsigned long UdpDatagramSequenceNumberLength = 8; // 64-bit value
-    static const unsigned long UdpDatagramQPCLength = 8; // 64-bit value
-    static const unsigned long UdpDatagramQPFLength = 8; // 64-bit value
-    static const unsigned long UdpDatagramDataHeaderLength = UdpDatagramProtocolHeaderFlagLength + UdpDatagramSequenceNumberLength + UdpDatagramQPCLength + UdpDatagramQPFLength;
+    constexpr unsigned long UdpDatagramSequenceNumberLength = 8; // 64-bit value
+    constexpr unsigned long UdpDatagramQPCLength = 8; // 64-bit value
+    constexpr unsigned long UdpDatagramQPFLength = 8; // 64-bit value
+    constexpr unsigned long UdpDatagramDataHeaderLength = UdpDatagramProtocolHeaderFlagLength + UdpDatagramSequenceNumberLength + UdpDatagramQPCLength + UdpDatagramQPFLength;
 
-    static const unsigned long UdpDatagramMaximumSizeBytes = 64000UL;
+    constexpr unsigned long UdpDatagramMaximumSizeBytes = 64000UL;
 
     static const char* UdpDatagramStartString = "START";
-    static const unsigned long UdpDatagramStartStringLength = 5;
+    constexpr unsigned long UdpDatagramStartStringLength = 5;
 
     enum class MediaStreamAction : char
     {
@@ -72,7 +72,7 @@ namespace ctsTraffic {
         ctsMediaStreamSendRequests& operator=(ctsMediaStreamSendRequests&&) = delete;
 
 
-        static const unsigned long BufferArraySize = 5;
+        static constexpr unsigned long BufferArraySize = 5;
         ///
         /// compose iteration across buffers to be sent per instantiated request
         ///
@@ -109,7 +109,7 @@ namespace ctsTraffic {
 
                 // refresh the QPC value at the last possible moment before returning the array to the user
                 _Analysis_assume_(this->qpc_address != nullptr);
-                ::QueryPerformanceCounter(this->qpc_address);
+                QueryPerformanceCounter(this->qpc_address);
                 return &this->wsa_buf_array;
             }
 
@@ -121,7 +121,7 @@ namespace ctsTraffic {
 
                 // refresh the QPC value at the last possible moment before returning the array to the user
                 _Analysis_assume_(this->qpc_address != nullptr);
-                ::QueryPerformanceCounter(this->qpc_address);
+                QueryPerformanceCounter(this->qpc_address);
                 return this->wsa_buf_array;
             }
 
@@ -245,12 +245,12 @@ namespace ctsTraffic {
             // the this->wsabuf[4].len field is dependent on bytes_to_send and can change by iterator()
         }
 
-        iterator begin() noexcept
+        [[nodiscard]] iterator begin() noexcept
         {
             return { &this->qpc_value, this->bytes_to_send, this->wsabuf };
         }
 
-        iterator end() const noexcept
+        [[nodiscard]] iterator end() const noexcept
         {
             // end == null qpc + 0 byte length
             return { nullptr, 0, this->wsabuf };
@@ -328,7 +328,7 @@ namespace ctsTraffic {
 
         static void SetConnectionIdFromTask(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _connection_id, const ctsIOTask& _task) noexcept
         {
-            const auto copy_error = ::memcpy_s(
+            const auto copy_error = memcpy_s(
                 _connection_id,
                 ctsStatistics::ConnectionIdLength,
                 _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength,
@@ -344,7 +344,7 @@ namespace ctsTraffic {
         static long long GetSequenceNumberFromTask(const ctsIOTask& _task) noexcept
         {
             long long return_value;
-            const auto copy_error = ::memcpy_s(
+            const auto copy_error = memcpy_s(
                 &return_value,
                 UdpDatagramSequenceNumberLength,
                 _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength,
@@ -361,7 +361,7 @@ namespace ctsTraffic {
         static long long GetQueryPerfCounterFromTask(const ctsIOTask& _task) noexcept
         {
             long long return_value;
-            const auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
+            const auto copy_error = memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",
@@ -374,7 +374,7 @@ namespace ctsTraffic {
         static long long GetQueryPerfFrequencyFromTask(const ctsIOTask& _task) noexcept
         {
             long long return_value;
-            const auto copy_error = ::memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
+            const auto copy_error = memcpy_s(&return_value, UdpDatagramSequenceNumberLength, _task.buffer + _task.buffer_offset + UdpDatagramProtocolHeaderFlagLength, UdpDatagramSequenceNumberLength);
             ctl::ctFatalCondition(
                 copy_error != 0,
                 L"ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - target buffer (%p) ctsIOTask (%p) (error : %d)",
@@ -395,8 +395,8 @@ namespace ctsTraffic {
 
             ctsIOTask return_task(_raw_task);
             // populate the buffer with the connection Id and protocol field
-            ::memcpy_s(return_task.buffer, UdpDatagramProtocolHeaderFlagLength, &UdpDatagramProtocolHeaderFlagId, UdpDatagramProtocolHeaderFlagLength);
-            ::memcpy_s(return_task.buffer + UdpDatagramProtocolHeaderFlagLength, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
+            memcpy_s(return_task.buffer, UdpDatagramProtocolHeaderFlagLength, &UdpDatagramProtocolHeaderFlagId, UdpDatagramProtocolHeaderFlagLength);
+            memcpy_s(return_task.buffer + UdpDatagramProtocolHeaderFlagLength, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
 
             return_task.ioAction = IOTaskAction::Send;
             return_task.buffer_type = ctsIOTask::BufferType::UdpConnectionId;

@@ -28,7 +28,7 @@ namespace ctl
 {
 	namespace details
 	{
-        static const unsigned fn_ptr_count = 9;
+        constexpr unsigned fn_ptr_count = 9;
         static LPFN_TRANSMITFILE transmitfile = nullptr; // WSAID_TRANSMITFILE
         static LPFN_ACCEPTEX acceptex = nullptr; // WSAID_ACCEPTEX
         static LPFN_GETACCEPTEXSOCKADDRS getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
@@ -48,20 +48,20 @@ namespace ctl
 		static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
 		{
 			WSADATA wsadata;
-			const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+			const auto wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
 			if (wsError != 0)
 			{
 				return FALSE;
 			}
-			auto WSACleanupOnExit = wil::scope_exit([&]() { ::WSACleanup(); });
+			auto WSACleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
 
 			// check to see if need to create a temp socket
-			SOCKET local_socket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+			SOCKET local_socket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 			if (INVALID_SOCKET == local_socket)
 			{
 				return FALSE;
 			}
-			auto closesocketOnExit = wil::scope_exit([&]() { ::closesocket(local_socket); });
+			auto closesocketOnExit = wil::scope_exit([&]() noexcept { closesocket(local_socket); });
 
 			// control code and the size to fetch the extension function pointers
 			for (unsigned fn_loop = 0; fn_loop < fn_ptr_count; ++fn_loop)
@@ -75,55 +75,55 @@ namespace ctl
 
 				switch (fn_loop) {
 					case 0: {
-						function_ptr = reinterpret_cast<VOID*>(&transmitfile);
+						function_ptr = &transmitfile;
 						GUID tmp_guid = WSAID_TRANSMITFILE;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 1: {
-						function_ptr = reinterpret_cast<VOID*>(&acceptex);
+						function_ptr = &acceptex;
 						GUID tmp_guid = WSAID_ACCEPTEX;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 2: {
-						function_ptr = reinterpret_cast<VOID*>(&getacceptexsockaddrs);
+						function_ptr = &getacceptexsockaddrs;
 						GUID tmp_guid = WSAID_GETACCEPTEXSOCKADDRS;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 3: {
-						function_ptr = reinterpret_cast<VOID*>(&transmitpackets);
+						function_ptr = &transmitpackets;
 						GUID tmp_guid = WSAID_TRANSMITPACKETS;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 4: {
-						function_ptr = reinterpret_cast<VOID*>(&connectex);
+						function_ptr = &connectex;
 						GUID tmp_guid = WSAID_CONNECTEX;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 5: {
-						function_ptr = reinterpret_cast<VOID*>(&disconnectex);
+						function_ptr = &disconnectex;
 						GUID tmp_guid = WSAID_DISCONNECTEX;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 6: {
-						function_ptr = reinterpret_cast<VOID*>(&wsarecvmsg);
+						function_ptr = &wsarecvmsg;
 						GUID tmp_guid = WSAID_WSARECVMSG;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 7: {
-						function_ptr = reinterpret_cast<VOID*>(&wsasendmsg);
+						function_ptr = &wsasendmsg;
 						GUID tmp_guid = WSAID_WSASENDMSG;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						break;
 					}
 					case 8: {
-						function_ptr = reinterpret_cast<VOID*>(&rioextensionfunctiontable);
+						function_ptr = &rioextensionfunctiontable;
 						GUID tmp_guid = WSAID_MULTIPLE_RIO;
 						memcpy(&guid, &tmp_guid, sizeof GUID);
 						controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
@@ -136,7 +136,7 @@ namespace ctl
 						ctAlwaysFatalCondition(L"Unknown ctSocketExtension function number");
 				}
 
-				if (0 != ::WSAIoctl(
+				if (0 != WSAIoctl(
 					local_socket,
 					controlCode,
 					&guid,
@@ -147,7 +147,7 @@ namespace ctl
 					nullptr, // lpOverlapped
 					nullptr))  // lpCompletionRoutine
 				{
-					const auto errorCode = ::WSAGetLastError();
+					const auto errorCode = WSAGetLastError();
 					if (8 == fn_loop && errorCode == WSAEOPNOTSUPP) {
 						// ignore not-supported errors for RIO APIs to support Win7
 					} else {
@@ -159,7 +159,7 @@ namespace ctl
 			return TRUE;
 		}
 
-		static void s_InitSocketExtensions()
+		static void s_InitSocketExtensions() noexcept
 		{
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;

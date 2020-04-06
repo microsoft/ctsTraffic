@@ -116,7 +116,7 @@ namespace ctl
 			return std::make_tuple(lhs, rhs);
 		};
 
-		auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
+		const auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
 			const BidirectionalIterator& lhs = std::get<0>(split);
 			const BidirectionalIterator& rhs = std::get<1>(split);
 			ctl::ctFatalCondition(rhs < lhs, L"ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
@@ -151,14 +151,14 @@ namespace ctl
 			return median_value;
 		};
 
-		auto median_split = split_section(begin, end);
-		double median = find_median(median_split);
+		const auto median_split = split_section(begin, end);
+		const double median = find_median(median_split);
 
 		const auto lhs_split = split_section(begin, std::get<0>(median_split) + 1);
-		double lower_quartile = find_median(lhs_split);
+		const double lower_quartile = find_median(lhs_split);
 
 		const auto rhs_split = split_section(std::get<1>(median_split), end);
-		double higher_quartile = find_median(rhs_split);
+		const double higher_quartile = find_median(rhs_split);
 
 		return std::make_tuple(
 			lower_quartile,

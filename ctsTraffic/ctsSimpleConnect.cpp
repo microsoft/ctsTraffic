@@ -58,16 +58,16 @@ namespace ctsTraffic
                     throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
                 }
 
-                if (0 != ::connect(socket, targetAddress.sockaddr(), targetAddress.length()))
+                if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
                 {
-                    error = ::WSAGetLastError();
+                    error = WSAGetLastError();
                     ctsConfig::PrintErrorIfFailed(L"connect", error);
                 }
                 else
                 {
                              // set the local address
                     auto local_addr_len = local_addr.length();
-                    if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+                    if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
                     {
                         shared_socket->set_local_address(local_addr);
                     }

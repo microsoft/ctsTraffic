@@ -167,10 +167,6 @@ namespace ctsUnitTest
             // validate the object guard
             auto socket_guard(test->socket_reference());
             Assert::AreEqual(socket_value, socket_guard.socket());
-
-            // move the guard object
-            auto second_socket_guard(move(socket_guard));
-            Assert::AreEqual(socket_value, second_socket_guard.socket());
         }
 
         TEST_METHOD(CloseSocket)

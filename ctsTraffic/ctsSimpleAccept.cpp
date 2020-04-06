@@ -62,19 +62,19 @@ namespace ctsTraffic {
             {
                 // will use the global threadpool, but will mark these work-items as running long
                 ::ZeroMemory(&thread_pool_environment, sizeof thread_pool_environment);
-                ::InitializeThreadpoolEnvironment(&thread_pool_environment);
-                ::SetThreadpoolCallbackRunsLong(&thread_pool_environment);
+                InitializeThreadpoolEnvironment(&thread_pool_environment);
+                SetThreadpoolCallbackRunsLong(&thread_pool_environment);
 
                 // can *not* pass the this ptr to the threadpool, since this object can be copied
-                thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, this, &thread_pool_environment);
+                thread_pool_worker = CreateThreadpoolWork(ThreadPoolWorker, this, &thread_pool_environment);
                 if (nullptr == thread_pool_worker) {
-                    throw ctl::ctException(::GetLastError(), L"CreateThreadpoolWork", L"ctsSimpleAccept", false);
+                    throw ctl::ctException(GetLastError(), L"CreateThreadpoolWork", L"ctsSimpleAccept", false);
                 }
 
                 // listen to each address
                 for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
                     SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
-                    auto closeSocketOnError = wil::scope_exit([&]() { ::closesocket(listening); });
+                    auto closeSocketOnError = wil::scope_exit([&]() noexcept { closesocket(listening); });
 
                     auto gle = ctsConfig::SetPreBindOptions(listening, addr);
                     if (gle != NO_ERROR) {
@@ -86,12 +86,12 @@ namespace ctsTraffic {
                         throw ctl::ctException(gle, L"SetPreConnectOptions", L"ctsSimpleAccept", false);
                     }
 
-                    if (SOCKET_ERROR == ::bind(listening, addr.sockaddr(), addr.length())) {
-                        throw ctl::ctException(::WSAGetLastError(), L"bind", L"ctsSimpleAccept", false);
+                    if (SOCKET_ERROR == bind(listening, addr.sockaddr(), addr.length())) {
+                        throw ctl::ctException(WSAGetLastError(), L"bind", L"ctsSimpleAccept", false);
                     }
 
-                    if (SOCKET_ERROR == ::listen(listening, ctsConfig::GetListenBacklog())) {
-                        throw ctl::ctException(::WSAGetLastError(), L"listen", L"ctsSimpleAccept", false);
+                    if (SOCKET_ERROR == listen(listening, ctsConfig::GetListenBacklog())) {
+                        throw ctl::ctException(WSAGetLastError(), L"listen", L"ctsSimpleAccept", false);
                     }
 
                     listening_sockets.push_back(listening);
@@ -113,7 +113,7 @@ namespace ctsTraffic {
                 /// close all listening sockets to release any pended accept's
                 for (auto& listening_socket : listening_sockets) {
                     if (listening_socket != INVALID_SOCKET) {
-                        ::closesocket(listening_socket);
+                        closesocket(listening_socket);
                         listening_socket = INVALID_SOCKET;
                     }
                 }
@@ -121,8 +121,8 @@ namespace ctsTraffic {
 
                 if (thread_pool_worker != nullptr) {
                     // ctsSimpleAccept object was initialized
-                    ::WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
-                    ::CloseThreadpoolWork(thread_pool_worker);
+                    WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
+                    CloseThreadpoolWork(thread_pool_worker);
                 }
             }
 
@@ -133,7 +133,7 @@ namespace ctsTraffic {
             {
                 const auto lock = accepting_cs.lock();
                 accepting_sockets.push_back(_weak_socket);
-                ::SubmitThreadpoolWork(thread_pool_worker);
+                SubmitThreadpoolWork(thread_pool_worker);
             }
 
             // non-copyable
@@ -183,8 +183,8 @@ namespace ctsTraffic {
                 ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);
                 const ctl::ctSockaddr remote_addr;
                 int remote_addr_len = remote_addr.length();
-                const SOCKET new_socket = ::accept(listener, remote_addr.sockaddr(), &remote_addr_len);
-                DWORD gle = ::WSAGetLastError();
+                const SOCKET new_socket = accept(listener, remote_addr.sockaddr(), &remote_addr_len);
+                DWORD gle = WSAGetLastError();
                 ::InterlockedDecrement(&pimpl->listening_sockets_refcount[listener_position]);
 
                 // if failed complete the ctsSocket and return
@@ -200,9 +200,9 @@ namespace ctsTraffic {
 
                 const ctl::ctSockaddr local_addr;
                 int local_addr_len = local_addr.length();
-                if (0 == ::getsockname(new_socket, local_addr.sockaddr(), &local_addr_len)) {
+                if (0 == getsockname(new_socket, local_addr.sockaddr(), &local_addr_len)) {  // NOLINT(bugprone-branch-clone)
                     accept_socket->set_local_address(local_addr);
-                } else if (0 == ::getsockname(listener, local_addr.sockaddr(), &local_addr_len)) {
+                } else if (0 == getsockname(listener, local_addr.sockaddr(), &local_addr_len)) {
                     accept_socket->set_local_address(local_addr);
                 }
 
@@ -244,7 +244,7 @@ namespace ctsTraffic {
     void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
-        if (!::InitOnceExecuteOnce(&details::s_ctsSimpleAcceptImplInitOnce, details::s_ctsSimpleAcceptImplInitFn, &error, nullptr)) {
+        if (!InitOnceExecuteOnce(&details::s_ctsSimpleAcceptImplInitOnce, details::s_ctsSimpleAcceptImplInitFn, &error, nullptr)) {
             auto shared_socket(_weak_socket.lock());
             if (shared_socket) {
                 shared_socket->complete_state(error);
@@ -252,7 +252,7 @@ namespace ctsTraffic {
 
         } else {
             try { details::s_pimpl->accept_socket(_weak_socket); }
-            catch (const std::exception&) {
+            catch (...) {
                 auto shared_socket(_weak_socket.lock());
                 if (shared_socket) {
                     shared_socket->complete_state(ERROR_OUTOFMEMORY);

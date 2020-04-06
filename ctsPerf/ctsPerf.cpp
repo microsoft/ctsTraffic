@@ -76,7 +76,7 @@ static const PCWSTR UsageStatement =
     L"\n";
 
 // 0 is a possible process ID
-static const DWORD UninitializedProcessId = 0xffffffff;
+constexpr DWORD UninitializedProcessId = 0xffffffff;
 
 ctWmiPerformance InstantiateProcessorCounters();
 ctWmiPerformance InstantiateMemoryCounters();
@@ -97,7 +97,7 @@ void DeleteTCPCounters() noexcept;
 void DeleteUDPCounters() noexcept;
 void DeletePerProcessCounters() noexcept;
 
-void DeleteAllCounters()
+void DeleteAllCounters() noexcept
 {
     DeleteProcessorCounters();
     DeleteMemoryCounters();
@@ -276,11 +276,11 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
 
         wprintf(L"Instantiating WMI Performance objects (this can take a few seconds)\n");
-        const ctComInitialize coinit;
+        const auto coInit = wil::CoInitializeEx();
         const ctWmiService wmi(L"root\\cimv2");
         g_Wmi = &wmi;
 
-        auto deleteAllCounters = wil::scope_exit([&]() { DeleteAllCounters(); });
+        auto deleteAllCounters = wil::scope_exit([&]() noexcept { DeleteAllCounters(); });
 
         ctsPerf::ctsWriteDetails cpuwriter(g_FileName);
         cpuwriter.create_file(g_MeanOnly);

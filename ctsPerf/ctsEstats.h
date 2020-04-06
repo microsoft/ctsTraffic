@@ -202,7 +202,7 @@ namespace ctsPerf
         template <TCP_ESTATS_TYPE TcpType>
         ULONG GetPerConnectionDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
         {
-            typename EstatsTypeConverter<TcpType>::read_write_type rw;
+            typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
             auto error = ::GetPerTcpConnectionEStats(
                 tcpRow,
@@ -221,7 +221,7 @@ namespace ctsPerf
         template <TCP_ESTATS_TYPE TcpType>
         ULONG GetPerConnectionDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
         {
-            typename EstatsTypeConverter<TcpType>::read_write_type rw;
+            typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
             auto error = ::GetPerTcp6ConnectionEStats(
                 tcpRow,
@@ -283,7 +283,7 @@ namespace ctsPerf
                 // always on
             }
             template <typename PTCPROW>
-            void UpdateData(const PTCPROW tcpRow)
+            void UpdateData(const PTCPROW tcpRow) noexcept
             {
                 if (m_mssRcvd == 0)
                 {
@@ -323,7 +323,7 @@ namespace ctsPerf
                 SetPerConnectionEstats<TcpConnectionEstatsData>(tcpRow, &rw);
             }
             template <typename PTCPROW>
-            void UpdateData(const PTCPROW tcpRow)
+            void UpdateData(const PTCPROW tcpRow) noexcept
             {
                 TCP_ESTATS_DATA_ROD_v0 rod{};
                 if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsData>(tcpRow, &rod))
@@ -652,7 +652,7 @@ namespace ctsPerf
             {
                 return L"LocalAddress,RemoteAddress";
             }
-            static PCWSTR PrintHeader()
+            static PCWSTR PrintHeader() noexcept
             {
                 return EstatsDataTracking<TcpType>::PrintHeader();
             }
@@ -738,7 +738,7 @@ namespace ctsPerf
             }
 
             template <typename T>
-            void StartTracking(T tcpRow) const
+            void StartTracking(T tcpRow) const noexcept
             {
                 m_data.StartTracking(tcpRow);
             }
@@ -966,7 +966,7 @@ namespace ctsPerf
             if (!accessDenied)
             {
                 // schedule timer from this moment
-                m_timer.schedule_singleton([this]() { UpdateEstats(); }, 1000);
+                m_timer.schedule_singleton([this]() noexcept { UpdateEstats(); }, 1000);
             }
 
             return !accessDenied;
@@ -1045,7 +1045,7 @@ namespace ctsPerf
             auto foundInstance = std::find_if(
                 std::begin(m_synOptsData),
                 std::end(m_synOptsData),
-                [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint)
+                [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept
             {
                 return dataPoint.LastestCounter() != m_tableCounter;
             });
@@ -1121,7 +1121,7 @@ namespace ctsPerf
                 foundInstance = std::find_if(
                     std::begin(m_synOptsData),
                     std::end(m_synOptsData),
-                    [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint)
+                    [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept
                 {
                     return dataPoint.LastestCounter() != m_tableCounter;
                 });

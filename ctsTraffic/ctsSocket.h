@@ -59,38 +59,39 @@ namespace ctsTraffic
 
         private:
             friend class ctsSocket;
-            SocketReference(wil::critical_section& socket_lock, const wil::unique_socket& socket) :
-                m_csExit(socket_lock.lock()), m_socket(socket.get())
+            SocketReference(wil::cs_leave_scope_exit&& socket_lock, SOCKET socket) noexcept :
+                m_csExit(std::move(socket_lock)), m_socket(socket)
             {
             }
 
-            wil::cs_leave_scope_exit m_csExit;
-            SOCKET m_socket = INVALID_SOCKET;
+            const wil::cs_leave_scope_exit m_csExit;
+            const SOCKET m_socket = INVALID_SOCKET;
         };
 
         [[nodiscard]] SocketReference socket_reference() const noexcept
         {
-            return SocketReference(socket_cs, socket);
+            auto lock = socket_cs.lock();
+            const SOCKET locked_socket_value = socket.get();
+            return SocketReference(std::move(lock), locked_socket_value);
         }
 
         //
         // c'tor requiring a parent ctsSocket reference
         //
-        explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent);
+        explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent) noexcept;
 
-        _No_competing_thread_
-            ~ctsSocket() noexcept;
+        _No_competing_thread_ ~ctsSocket() noexcept;
 
-            //
-            // Assigns the object a new SOCKET value and fully initializes the object for use
-            //
-            // Must still be the default initialized SOCKET value
-            // - if set_socket() is called twice, will RaiseException
-            //
-            // Cannot call any method in this object before this method succeeds
-            //
-            // A no-fail operation
-            //
+        //
+        // Assigns the object a new SOCKET value and fully initializes the object for use
+        //
+        // Must still be the default initialized SOCKET value
+        // - if set_socket() is called twice, will RaiseException
+        //
+        // Cannot call any method in this object before this method succeeds
+        //
+        // A no-fail operation
+        //
         void set_socket(SOCKET _socket) noexcept;
 
         //

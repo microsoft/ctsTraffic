@@ -34,11 +34,11 @@ namespace ctsTraffic {
     ///
     /// constants for everything related to ctsRioIocp
     ///
-    static const LONG RioResultArrayLength = 20;
-    static const LONG RioRQGrowthFactor = 2;
-    static const LONG RioMaxDataBuffers = 1; // this is the only value accepted as of Win8
-    static const LONG RioDefaultCQSize = 1000;
-    static const ULONG_PTR ExitCompletionKey = 0xffffffff;
+    constexpr LONG RioResultArrayLength = 20;
+    constexpr LONG RioRQGrowthFactor = 2;
+    constexpr LONG RioMaxDataBuffers = 1; // this is the only value accepted as of Win8
+    constexpr LONG RioDefaultCQSize = 1000;
+    constexpr ULONG_PTR ExitCompletionKey = 0xffffffff;
 
     ///
     /// forward-declaring CQ-functions leveraging the below variables
@@ -106,7 +106,7 @@ namespace ctsTraffic {
                 new_cq_used);
 
             if (!ctl::ctRIOResizeCompletionQueue(s_rio_cq, new_cq_size)) {
-                throw ctl::ctException(::WSAGetLastError(), L"ctRIOResizeCompletionQueue", L"ctsRioIocp", false);
+                throw ctl::ctException(WSAGetLastError(), L"ctRIOResizeCompletionQueue", L"ctsRioIocp", false);
             }
         } else {
             PrintDebugInfo(
@@ -193,13 +193,13 @@ namespace ctsTraffic {
                     // if can't indicate to exit, kill the process to see why
                     ctl::ctAlwaysFatalCondition(
                         L"PostQueuedCompletionStatus(%p) failed [%u] to tear down the threadpool",
-                        s_rio_notify_setttings.Iocp.IocpHandle, ::GetLastError());
+                        s_rio_notify_setttings.Iocp.IocpHandle, GetLastError());
                 }
             }
         }
         // wait for threads to exit
         if (threads_alive > 0) {
-            if (::WaitForMultipleObjects(
+            if (WaitForMultipleObjects(
                 threads_alive,
                 &s_rio_worker_threads[0],
                 TRUE,
@@ -207,17 +207,17 @@ namespace ctsTraffic {
                 // if can't wait for the worker threads, kill the process to see why
                 ctl::ctAlwaysFatalCondition(
                     L"WaitForMultipleObjects(%p) failed [%u] to wait on the threadpool",
-                    &s_rio_worker_threads[0], ::GetLastError());
+                    &s_rio_worker_threads[0], GetLastError());
             }
         }
         // now can close the thread handles
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
             if (s_rio_worker_threads[loop_workers] != nullptr) {
-                ::CloseHandle(s_rio_worker_threads[loop_workers]);
+                CloseHandle(s_rio_worker_threads[loop_workers]);
             }
         }
 
-        ::free(s_rio_worker_threads);
+        free(s_rio_worker_threads);
         s_rio_worker_threads = nullptr;
         s_rio_worker_thread_count = 0;
 
@@ -229,11 +229,11 @@ namespace ctsTraffic {
         }
 
         if (s_rio_notify_setttings.Iocp.IocpHandle != nullptr) {
-            ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle);
+            CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle);
             s_rio_notify_setttings.Iocp.IocpHandle = nullptr;
         }
 
-        ::free(s_rio_notify_setttings.Iocp.Overlapped);
+        free(s_rio_notify_setttings.Iocp.Overlapped);
         s_rio_notify_setttings.Iocp.Overlapped = nullptr;
 
         s_rio_cq_size = 0;
@@ -249,33 +249,33 @@ namespace ctsTraffic {
     static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID *) noexcept
     {
         // delete all cq's on error
-        auto deleteAllCqsOnError = wil::scope_exit([&]() { s_delete_all_cqs(); });
+        auto deleteAllCqsOnError = wil::scope_exit([&]() noexcept { s_delete_all_cqs(); });
 
         ::ZeroMemory(&s_rio_notify_setttings, sizeof s_rio_notify_setttings);
         // completion key for RioNotify IOCP is the ctsRioIocpImpl*
-        s_rio_notify_setttings.Type = RIO_NOTIFICATION_COMPLETION_TYPE::RIO_IOCP_COMPLETION;
+        s_rio_notify_setttings.Type = RIO_IOCP_COMPLETION;
         s_rio_notify_setttings.Iocp.CompletionKey = nullptr;
         s_rio_notify_setttings.Iocp.Overlapped = nullptr;
         s_rio_notify_setttings.Iocp.IocpHandle = nullptr;
 
-        s_rio_notify_setttings.Iocp.Overlapped = ::calloc(1, sizeof OVERLAPPED);
+        s_rio_notify_setttings.Iocp.Overlapped = calloc(1, sizeof OVERLAPPED);
         if (nullptr == s_rio_notify_setttings.Iocp.Overlapped) {
             ctsConfig::PrintException(std::bad_alloc());
-            ::SetLastError(WSAENOBUFS);
+            SetLastError(WSAENOBUFS);
             return FALSE;
         }
         // free the OVERLAPPED on error
-        auto freeOverlappedOnError = wil::scope_exit([&]() { ::free(s_rio_notify_setttings.Iocp.Overlapped); });
+        auto freeOverlappedOnError = wil::scope_exit([&]() noexcept { free(s_rio_notify_setttings.Iocp.Overlapped); });
 
-        s_rio_notify_setttings.Iocp.IocpHandle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+        s_rio_notify_setttings.Iocp.IocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
         if (!s_rio_notify_setttings.Iocp.IocpHandle) {
-            const auto gle = ::GetLastError();
+            const auto gle = GetLastError();
             ctsConfig::PrintException(ctl::ctException(gle, L"CreateIoCompletionPort", L"ctsRioIocp", false));
-            ::SetLastError(gle);
+            SetLastError(gle);
             return FALSE;
         }
         // close the IOCP handle on error
-        auto deleteIocpOnError = wil::scope_exit([&]() { ::CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
+        auto deleteIocpOnError = wil::scope_exit([&]() noexcept { CloseHandle(s_rio_notify_setttings.Iocp.IocpHandle); });
 
         // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
         // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
@@ -287,13 +287,13 @@ namespace ctsTraffic {
         s_rio_cq = ctl::ctRIOCreateCompletionQueue(new_queue_size, &s_rio_notify_setttings);
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         if (RIO_INVALID_CQ == s_rio_cq) {
-            const auto gle = ::WSAGetLastError();
+            const auto gle = WSAGetLastError();
             ctsConfig::PrintException(ctl::ctException(gle, L"ctRIOCreateCompletionQueue", L"ctsRioIocp", false));
-            ::SetLastError(gle);
+            SetLastError(gle);
             return FALSE;
         }
         // close the RIO CQ on error
-        auto closeCQOnError = wil::scope_exit([&]() { ctl::ctRIOCloseCompletionQueue(s_rio_cq); });
+        auto closeCQOnError = wil::scope_exit([&]() noexcept { ctl::ctRIOCloseCompletionQueue(s_rio_cq); });
 
         // now that the CQ is created, update info
         s_rio_cq_size = new_queue_size;
@@ -301,25 +301,25 @@ namespace ctsTraffic {
 
         // reserve space for handles
         SYSTEM_INFO system_info;
-        ::GetSystemInfo(&system_info);
-        s_rio_worker_threads = static_cast<HANDLE*>(::calloc(system_info.dwNumberOfProcessors, sizeof HANDLE));
+        GetSystemInfo(&system_info);
+        s_rio_worker_threads = static_cast<HANDLE*>(calloc(system_info.dwNumberOfProcessors, sizeof HANDLE));
         if (nullptr == s_rio_worker_threads) {
             ctsConfig::PrintException(std::bad_alloc());
-            ::SetLastError(WSAENOBUFS);
+            SetLastError(WSAENOBUFS);
             return FALSE;
         }
         // free the handle array on error
-        auto freeHandleArrayOnError = wil::scope_exit([&]() { ::free(s_rio_worker_threads); });
+        auto freeHandleArrayOnError = wil::scope_exit([&]() noexcept { free(s_rio_worker_threads); });
 
         s_rio_worker_thread_count = system_info.dwNumberOfProcessors;
 
         // now that we are ready to go, kick off our thread-pool
         for (unsigned loop_workers = 0; loop_workers < s_rio_worker_thread_count; ++loop_workers) {
-            s_rio_worker_threads[loop_workers] = ::CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
+            s_rio_worker_threads[loop_workers] = CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
             if (!s_rio_worker_threads[loop_workers]) {
-                const auto gle = ::GetLastError();
+                const auto gle = GetLastError();
                 ctsConfig::PrintException(ctl::ctException(gle, L"CreateThread", L"ctsRioIocp", false));
-                ::SetLastError(gle);
+                SetLastError(gle);
                 return FALSE;
             }
         }
@@ -329,7 +329,7 @@ namespace ctsTraffic {
         const auto notify = ctl::ctRIONotify(s_rio_cq);
         if (notify != NO_ERROR) {
             ctsConfig::PrintException(ctl::ctException(notify, L"ctRIONotify", L"ctsRioIocp", false));
-            ::SetLastError(notify);
+            SetLastError(notify);
             return FALSE;
         }
 
@@ -375,7 +375,7 @@ namespace ctsTraffic {
                 if (new_rqueue_used > this->rqueue_reserved) {
                     // making room in the CQ for these next 2 slots in the RQ - can throw
                     s_make_room_in_cq(RioRQGrowthFactor);
-                    auto releaseCqSlotsOnFailure = wil::scope_exit([&]() { s_release_room_in_cq(RioRQGrowthFactor); });
+                    auto releaseCqSlotsOnFailure = wil::scope_exit([&]() noexcept { s_release_room_in_cq(RioRQGrowthFactor); });
 
                     // guarantee room in the RQ for this next IO
                     PrintDebugInfo(
@@ -384,7 +384,7 @@ namespace ctsTraffic {
                         this->rio_rq,
                         static_cast<DWORD>(new_rqueue_used / 2),
                         static_cast<DWORD>(new_rqueue_used / 2))) {
-                        throw ctl::ctException(::WSAGetLastError(), L"RIOResizeRequestQueue", false);
+                        throw ctl::ctException(WSAGetLastError(), L"RIOResizeRequestQueue", false);
                     }
 
                     // since it succeeded, update reserved with the new size
@@ -434,7 +434,7 @@ namespace ctsTraffic {
             }
 
             s_make_room_in_cq(RioRQGrowthFactor);
-            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() { s_release_room_in_cq(RioRQGrowthFactor); });
+            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() noexcept { s_release_room_in_cq(RioRQGrowthFactor); });
 
             // create the RQ for this socket
             // don't need a scope guard to close the RQ on error - the RQ is freed when the RIO socket is closed
@@ -447,7 +447,7 @@ namespace ctsTraffic {
                 this);
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             if (RIO_INVALID_RQ == rio_rq) {
-                throw ctl::ctException(::WSAGetLastError(), L"RIOCreateRequestQueue", false);
+                throw ctl::ctException(WSAGetLastError(), L"RIOCreateRequestQueue", false);
             }
 
             // now register the target remote address for UDP for RIOSendTo
@@ -459,7 +459,7 @@ namespace ctsTraffic {
                         reinterpret_cast<PCHAR>(this->remote_sockaddr.sockaddr_inet()),
                         static_cast<DWORD>(sizeof SOCKADDR_INET));
                 if (RIO_INVALID_BUFFERID == this->rio_remote_address.BufferId) {
-                    throw ctl::ctException(::WSAGetLastError(), L"RIORegisterBuffer", false);
+                    throw ctl::ctException(WSAGetLastError(), L"RIORegisterBuffer", false);
                 }
             }
 
@@ -521,7 +521,8 @@ namespace ctsTraffic {
             //
             const wchar_t* RIOFunction = nullptr;
             if (ctsConfig::ProtocolType::TCP == ctsConfig::Settings->Protocol) {
-                switch (_task.ioAction) {
+                // ReSharper disable once CppIncompleteSwitchStatement
+                switch (_task.ioAction) {  // NOLINT(clang-diagnostic-switch)
                 case IOTaskAction::Recv:
                     RIOFunction = L"RIOReceive";
                     break;
@@ -530,7 +531,8 @@ namespace ctsTraffic {
                     break;
                 }
             } else {
-                switch (_task.ioAction) {
+                // ReSharper disable once CppIncompleteSwitchStatement
+                switch (_task.ioAction) {  // NOLINT(clang-diagnostic-switch)
                 case IOTaskAction::Recv:
                     RIOFunction = L"RIOReceiveEx";
                     break;
@@ -611,8 +613,8 @@ namespace ctsTraffic {
                 }
 
                 if (IOTaskAction::GracefulShutdown == next_io.ioAction) {
-                    if (0 != ::shutdown(rio_socket, SD_SEND)) {
-                        error = ::WSAGetLastError();
+                    if (0 != shutdown(rio_socket, SD_SEND)) {
+                        error = WSAGetLastError();
                     }
                     continue_io = (shared_pattern->complete_io(next_io, 0, error) == ctsIOStatus::ContinueIo);
                     continue;
@@ -656,33 +658,35 @@ namespace ctsTraffic {
                 if (NO_ERROR == error) {
                     // invoke the requested IO now that we have room in our queues
                     if (ctsConfig::ProtocolType::TCP == ctsConfig::Settings->Protocol) {
-                        switch (request_context->ioAction) {
+                        // ReSharper disable once CppIncompleteSwitchStatement
+                        switch (request_context->ioAction) {  // NOLINT(clang-diagnostic-switch)
                         case IOTaskAction::Recv:
                             RIOFunction = L"RIOReceive";
                             if (!ctl::ctRIOReceive(this->rio_rq, &rio_buffer, 1, 0, request_context.get())) {
-                                error = ::WSAGetLastError();
+                                error = WSAGetLastError();
                             }
                             break;
                         case IOTaskAction::Send:
                             RIOFunction = L"RIOSend";
                             if (!ctl::ctRIOSend(this->rio_rq, &rio_buffer, 1, 0, request_context.get())) {
-                                error = ::WSAGetLastError();
+                                error = WSAGetLastError();
                             }
                             break;
                         }
                     } else {
-                        switch (request_context->ioAction) {
+                        // ReSharper disable once CppIncompleteSwitchStatement
+                        switch (request_context->ioAction) {  // NOLINT(clang-diagnostic-switch)
                         case IOTaskAction::Recv:
                             RIOFunction = L"RIOReceiveEx";
                             if (!ctl::ctRIOReceiveEx(this->rio_rq, &rio_buffer, 1, nullptr, nullptr, nullptr, nullptr, 0, request_context.get())) {
-                                error = ::WSAGetLastError();
+                                error = WSAGetLastError();
                             }
                             break;
                         case IOTaskAction::Send:
                             RIOFunction = L"RIOSendEx";
                             const auto pRemote = &this->rio_remote_address;
                             if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, pRemote, nullptr, nullptr, 0, request_context.get())) {
-                                error = ::WSAGetLastError();
+                                error = WSAGetLastError();
                             }
                             break;
                         }
@@ -719,22 +723,22 @@ namespace ctsTraffic {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept
     {
-        std::array<RIORESULT, RioResultArrayLength> rio_result_array;
+        std::array<RIORESULT, RioResultArrayLength> rio_result_array{};
 
         for (;;) {
-            DWORD transferred;
-            ULONG_PTR Key = 0;
-            OVERLAPPED* pov = nullptr;
+            DWORD transferred{};
+            ULONG_PTR Key{};
+            OVERLAPPED* pov{};
             //
             // Wait for the IOCP to be queued from RIO that we have results in our CQ
             //
-            if (!::GetQueuedCompletionStatus(
+            if (!GetQueuedCompletionStatus(
                 s_rio_notify_setttings.Iocp.IocpHandle,
                 &transferred,
                 &Key,
                 &pov,
                 INFINITE)) {
-                const auto gle = ::GetLastError();
+                const auto gle = GetLastError();
 
                 // no IO was dequeued from the IOCP
                 // - no idea why this failed
@@ -807,8 +811,8 @@ namespace ctsTraffic {
         //
         // guarantee fully initialized
         //
-        if (!::InitOnceExecuteOnce(&s_sharedbuffer_initializer, s_init_once_cq, nullptr, nullptr)) {
-            auto gle = ::GetLastError();
+        if (!InitOnceExecuteOnce(&s_sharedbuffer_initializer, s_init_once_cq, nullptr, nullptr)) {
+            auto gle = GetLastError();
             if (0 == gle) {
                 gle = WSAENOBUFS;
             }

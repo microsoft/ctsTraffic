@@ -107,14 +107,14 @@ namespace ctl
 
             static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
             {
-                ::QueryPerformanceFrequency(&g_Qpf);
+                QueryPerformanceFrequency(&g_Qpf);
                 return TRUE;
             }
         }
 
         inline long long ctSnapQpf() noexcept
         {
-            (void)::InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+            (void)InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
             return Details::g_Qpf.QuadPart;
         }
 
@@ -123,9 +123,9 @@ namespace ctl
 #else
         inline long long ctSnapQpcInMillis() noexcept
         {
-            (void)::InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+            (void)InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
             LARGE_INTEGER qpc;
-            ::QueryPerformanceCounter(&qpc);
+            QueryPerformanceCounter(&qpc);
             // multiplying by 1000 as (qpc / qpf) == seconds
             return static_cast<long long>(qpc.QuadPart * 1000LL / Details::g_Qpf.QuadPart);
         }
@@ -139,7 +139,7 @@ namespace ctl
         inline long long ctSnapSystemTimeInMillis() noexcept
         {
             FILETIME filetime;
-            ::GetSystemTimeAsFileTime(&filetime);
+            GetSystemTimeAsFileTime(&filetime);
             return ctConvertFiletimeToMillis(filetime);
         }
     } // namespace ctTimer

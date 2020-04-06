@@ -100,7 +100,7 @@ namespace ctl
         private:
             void increment();
 
-            static const unsigned long c_EndIteratorIndex = 0xffffffff;
+            static constexpr unsigned long c_EndIteratorIndex = 0xffffffff;
             unsigned long m_index = c_EndIteratorIndex;
             ctWmiService m_wbemServices;
             wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;

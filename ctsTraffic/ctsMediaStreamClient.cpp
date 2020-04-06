@@ -190,7 +190,7 @@ namespace ctsTraffic
             // set the local and remote addresses on the socket object
             const ctl::ctSockaddr local_addr;
             auto local_addr_len = local_addr.length();
-            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+            if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
             {
                 shared_socket->set_local_address(local_addr);
             }
@@ -378,9 +378,9 @@ namespace ctsTraffic
             if (socket != INVALID_SOCKET)
             {
                 DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+                if (!WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
                 {
-                    gle = ::WSAGetLastError();
+                    gle = WSAGetLastError();
                 }
             }
             else
@@ -478,9 +478,9 @@ namespace ctsTraffic
         {
             DWORD flags;
             DWORD transferred;
-            if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+            if (!WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
             {
-                gle = ::WSAGetLastError();
+                gle = WSAGetLastError();
             }
         }
 
@@ -491,7 +491,7 @@ namespace ctsTraffic
             // set the local and remote addr's
             const ctl::ctSockaddr local_addr;
             int local_addr_len = local_addr.length();
-            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+            if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
             {
                 shared_socket->set_local_address(local_addr);
             }

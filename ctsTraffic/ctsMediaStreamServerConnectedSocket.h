@@ -35,24 +35,24 @@ namespace ctsTraffic {
     private:
         // the CS is mutable so we can take a lock / release a lock in const methods
         mutable wil::critical_section object_guard;
-        PTP_TIMER task_timer = nullptr;
+        _Guarded_by_(object_guard) ctsIOTask next_task;
+
+        wil::unique_threadpool_timer task_timer;
 
         // this weak_socket is the weak reference to the ctsSocket tracked by ctsSocketState & ctsSocketBroker
         // used to complete the state when finished and take a shared_ptr when needing to take a reference
-        std::weak_ptr<ctsSocket> weak_socket;
+        const std::weak_ptr<ctsSocket> weak_socket;
 
         // invoked to do actual IO on the socket
-        ctsMediaStreamConnectedSocketIoFunctor io_functor;
+        const ctsMediaStreamConnectedSocketIoFunctor io_functor;
 
         // sending_socket is a shared socket from the datagram server
         // that (potentially) many connected datagram sockets will send from
         // thus it's not owned by this class
-        _Guarded_by_(object_guard) SOCKET sending_socket;
-        _Guarded_by_(object_guard) ctsIOTask next_task;
-
+        const SOCKET sending_socket;
         const ctl::ctSockaddr remote_addr;
 
-        _Interlocked_ long long sequence_number = 0LL;
+        long long sequence_number = 0LL;
         const long long connect_time = 0LL;
 
     public:
@@ -64,18 +64,30 @@ namespace ctsTraffic {
 
         ~ctsMediaStreamServerConnectedSocket() noexcept;
 
-        const ctl::ctSockaddr& get_address() const noexcept;
+        const ctl::ctSockaddr& get_address() const noexcept
+        {
+            return remote_addr;
+        }
 
-        wil::cs_leave_scope_exit lock_socket() const noexcept;
         SOCKET get_sending_socket() const noexcept
         {
             return sending_socket;
         }
-        long long get_startTime() const noexcept;
+        long long get_startTime() const noexcept
+        {
+            return connect_time;
+        }
 
-        ctsIOTask get_nextTask() const noexcept;
+        ctsIOTask get_nextTask() const noexcept
+        {
+            const auto lock = object_guard.lock();
+            return next_task;
+        }
 
-        long long increment_sequence() noexcept;
+        long long increment_sequence() noexcept
+        {
+            return InterlockedIncrement64(&sequence_number);
+        }
 
         void schedule_task(const ctsIOTask& _task) noexcept;
 

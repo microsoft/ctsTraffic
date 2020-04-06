@@ -57,8 +57,8 @@ namespace ctsTraffic {
             wsabuf.len = _task.buffer_length;
 
             DWORD flags = 0;
-            if (::WSARecvFrom(socket, &wsabuf, 1, nullptr, &flags, nullptr, nullptr, pov, nullptr) != 0) {
-                return_result.error_code = ::WSAGetLastError();
+            if (WSARecvFrom(socket, &wsabuf, 1, nullptr, &flags, nullptr, nullptr, pov, nullptr) != 0) {
+                return_result.error_code = WSAGetLastError();
                 // IO pended == successfully initiating the IO
                 if (return_result.error_code != WSA_IO_PENDING) {
                     // must cancel the IOCP TP if the IO call fails
@@ -113,8 +113,8 @@ namespace ctsTraffic {
             wsabuf.buf = _task.buffer + _task.buffer_offset;
             wsabuf.len = _task.buffer_length;
 
-            if (::WSASendTo(socket, &wsabuf, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pov, nullptr) != 0) {
-                return_result.error_code = ::WSAGetLastError();
+            if (WSASendTo(socket, &wsabuf, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pov, nullptr) != 0) {
+                return_result.error_code = WSAGetLastError();
                 // IO pended == successfully initiating the IO
                 if (return_result.error_code != WSA_IO_PENDING) {
                     // must cancel the IOCP TP if the IO call fails
@@ -148,11 +148,11 @@ namespace ctsTraffic {
     wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept
     {
         wsIOResult return_result;
-        ::linger linger_option{};
+        linger linger_option{};
         linger_option.l_onoff = 1;
         linger_option.l_linger = 0;
-        if (::setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option))) != 0) {
-            return_result.error_code = ::WSAGetLastError();
+        if (setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option))) != 0) {
+            return_result.error_code = WSAGetLastError();
         }
 
         return return_result;

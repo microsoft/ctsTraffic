@@ -28,7 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // since WMI has limitations on what VARIANT types it accepts
 namespace ctl
 {
-    inline bool ctIsVariantEmptyOrNull(const VARIANT* variant)
+    inline bool ctIsVariantEmptyOrNull(const VARIANT* variant) noexcept
     {
         return V_VT(variant) == VT_EMPTY || V_VT(variant) == VT_NULL;
     }
@@ -219,7 +219,7 @@ namespace ctl
 	{
 		wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = ::SysAllocString(value);
+        V_BSTR(local_variant.addressof()) = SysAllocString(value);
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
 	}
@@ -227,7 +227,7 @@ namespace ctl
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
-        *value = ::SysAllocString(V_BSTR(variant));
+        *value = SysAllocString(V_BSTR(variant));
         THROW_IF_NULL_ALLOC(*value);
         return true;
     }
@@ -236,7 +236,7 @@ namespace ctl
 	{
 		wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = ::SysAllocString(value);
+        V_BSTR(local_variant.addressof()) = SysAllocString(value);
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
 	}
@@ -253,7 +253,7 @@ namespace ctl
     {
         wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = ::SysAllocString(std::to_wstring(value).c_str());
+        V_BSTR(local_variant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
     }
@@ -270,7 +270,7 @@ namespace ctl
     {
         wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = ::SysAllocString(std::to_wstring(value).c_str());
+        V_BSTR(local_variant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
     }
@@ -283,7 +283,7 @@ namespace ctl
     }
 
     template <typename T>
-    wil::unique_variant ctWmiMakeVariant(const wil::com_ptr<T>& value)
+    wil::unique_variant ctWmiMakeVariant(const wil::com_ptr<T>& value) noexcept
     {
         wil::unique_variant variant;
         V_VT(&variant) = VT_UNKNOWN;
@@ -309,7 +309,7 @@ namespace ctl
 
         IUnknown** iUnknownArray;
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&iUnknownArray)));
-        auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant->parray); });
+        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<wil::com_ptr<T>> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -324,9 +324,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<std::wstring>& data)
     {
-        const auto temp_safe_array = ::SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
+        const auto temp_safe_array = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
+        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -334,7 +334,7 @@ namespace ctl
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
             long index[1] = { static_cast<long>(loop) };
 
-            const auto bstr = ::SysAllocString(data[loop].c_str());
+            const auto bstr = SysAllocString(data[loop].c_str());
             THROW_IF_NULL_ALLOC(bstr);
             THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, bstr));
         }
@@ -354,7 +354,7 @@ namespace ctl
 
         BSTR* stringArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&stringArray)));
-        auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant->parray); });
+        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<std::wstring> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -367,9 +367,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned long>& data)
     {
-        const auto temp_safe_array = ::SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
+        const auto temp_safe_array = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
+        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -396,7 +396,7 @@ namespace ctl
 
         unsigned long* intArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-        auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant->parray); });
+        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned long> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -410,9 +410,9 @@ namespace ctl
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& data)
     {
         // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
-        const auto temp_safe_array = ::SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
+        const auto temp_safe_array = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
+        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -441,7 +441,7 @@ namespace ctl
 
         long* intArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-        auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant->parray); });
+        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned short> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -455,9 +455,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned char>& data)
     {
-        const auto temp_safe_array = ::SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
+        const auto temp_safe_array = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() {::SafeArrayDestroy(temp_safe_array); });
+        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -484,7 +484,7 @@ namespace ctl
 
         unsigned char* charArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&charArray)));
-        auto unaccessArray = wil::scope_exit([&]() {::SafeArrayUnaccessData(variant->parray); });
+        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned char> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)

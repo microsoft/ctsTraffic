@@ -106,9 +106,6 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintJitterUpdate(long long, long long, long long, long long, long long) noexcept
-    {
-    }
     void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }

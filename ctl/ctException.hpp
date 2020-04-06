@@ -352,7 +352,7 @@ namespace ctl
 		if (this->bMessageCopy_s) free(const_cast<void*>(static_cast<const void*>(this->szMessage)));
 		if (this->bMessageCopy_w) free(const_cast<void*>(static_cast<const void*>(this->wszMessage)));
 		if (this->bLocationCopy_w) free(const_cast<void*>(static_cast<const void*>(this->wszLocation)));
-		free(static_cast<void*>(this->wszTranslation));
+		free(this->wszTranslation);
 
 		this->ulCode = 0;
 		this->szMessage = nullptr;
@@ -423,17 +423,17 @@ namespace ctl
 			return this->wszTranslation;
 		}
 
-		static const DWORD cchBuffer = 1024;
+		constexpr DWORD cchBuffer = 1024;
 		auto* wszBuffer = static_cast<wchar_t*>(calloc(cchBuffer, sizeof(wchar_t)));
 		if (wszBuffer) {
 			// We carefully avoid using the FORMAT_MESSAGE_ALLOCATE_BUFFER flag.
 			// It triggers a use of the LocalAlloc() function. LocalAlloc() and LocalFree() are in an API set that is obsolete.
-			static const DWORD DWFLAGS =
+			constexpr DWORD DWFLAGS =
 				FORMAT_MESSAGE_FROM_SYSTEM |
 				FORMAT_MESSAGE_IGNORE_INSERTS |
 				FORMAT_MESSAGE_MAX_WIDTH_MASK;
 
-			const auto dwReturn = ::FormatMessageW(
+			const auto dwReturn = FormatMessageW(
 				DWFLAGS,
 				nullptr, // just search the system
 				this->ulCode,
@@ -444,7 +444,7 @@ namespace ctl
 			);
 			if (0 == dwReturn) {
 				// Free the temporary buffer here, as it won't be assigned to wszTranslation to be freed later.
-				free(static_cast<void*>(wszBuffer));
+				free(wszBuffer);
 			} else {
 				this->wszTranslation = wszBuffer;
 			}
@@ -465,7 +465,7 @@ namespace ctl
 			return;
 		}
 
-		auto iResult = ::WideCharToMultiByte(
+		auto iResult = WideCharToMultiByte(
 			CP_ACP,
 			WC_NO_BEST_FIT_CHARS,
 			this->wszMessage,
@@ -478,7 +478,7 @@ namespace ctl
 		if (iResult != 0) {
 			auto* temp_szMessage = static_cast<char*>(calloc(iResult, sizeof(char)));
 			if (temp_szMessage != nullptr) {
-				iResult = ::WideCharToMultiByte(
+				iResult = WideCharToMultiByte(
 					CP_ACP,
 					WC_NO_BEST_FIT_CHARS,
 					this->wszMessage,
@@ -511,11 +511,11 @@ namespace ctl
 			return;
 		}
 
-		auto iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, nullptr, 0);
+		auto iResult = MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, nullptr, 0);
 		if (iResult != 0) {
 			auto* temp_wszMessage = static_cast<wchar_t*>(calloc(iResult, sizeof(wchar_t)));
 			if (temp_wszMessage != nullptr) {
-				iResult = ::MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, temp_wszMessage, iResult);
+				iResult = MultiByteToWideChar(CP_ACP, 0, this->szMessage, -1, temp_wszMessage, iResult);
 				if (0 == iResult) {
 					// failed to populate the buffer, so should free it
 					free(temp_wszMessage);
@@ -615,7 +615,7 @@ namespace ctl
 		}
 	}
 #else
-	inline int ctErrorCode(const std::exception& _exception) noexcept
+	inline int ctErrorCode(const std::exception&) noexcept
 	{
 		return ERROR_OUTOFMEMORY;
 	}
@@ -631,7 +631,7 @@ namespace ctl
 	// The string is additionally written to the STDERR file handle - if a console is waiting for it
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 	// NTSTATUS being used: 1110 (E) for severity, c71f00d for facility & code (ctl)
-	static const unsigned long ctFatalConditionExceptionCode = 0xec71f00d;
+	constexpr unsigned long ctFatalConditionExceptionCode = 0xec71f00d;
 
 	namespace failfast_details
 	{
@@ -652,7 +652,7 @@ namespace ctl
 	{
 		if (_condition) {
 			// write everyting out into a single string
-			static const size_t exception_length = 512;
+			constexpr size_t exception_length = 512;
 			wchar_t exception_text[exception_length] = {L'\0'};
 			_vsnwprintf_s(exception_text, exception_length, _TRUNCATE, _text, _argptr);
 

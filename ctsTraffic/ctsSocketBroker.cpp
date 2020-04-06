@@ -113,7 +113,7 @@ namespace ctsTraffic
 
         // intiate the threadpool timer
         wakeup_timer.schedule_reoccuring(
-            [this]() noexcept { ctsSocketBroker::TimerCallback(this); },
+            [this]() noexcept { TimerCallback(this); },
             0LL,
             s_TimerCallbackTimeoutMs);
     }
@@ -165,7 +165,7 @@ namespace ctsTraffic
         HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
 
         bool fReturn = false;
-        switch (::WaitForMultipleObjects(2, arWait, FALSE, _milliseconds))
+        switch (WaitForMultipleObjects(2, arWait, FALSE, _milliseconds))
         {
             // we are done with our sockets, or user hit ctrl'c
             // - in either case we need to tell the caller to exit
@@ -181,7 +181,7 @@ namespace ctsTraffic
             default:
                 ctAlwaysFatalCondition(
                     L"ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
-                    arWait, ::GetLastError());
+                    arWait, GetLastError());
         }
         return fReturn;
     }
@@ -230,13 +230,13 @@ namespace ctsTraffic
                     0 == _broker->active_sockets)
                 {
                     // it's time to exit if no more work is to be done
-                    ::SetEvent(_broker->done_event.get());
+                    SetEvent(_broker->done_event.get());
 
                 }
                 else
                 {
                              // don't spin up more if the user asked to shutdown
-                    if (WAIT_OBJECT_0 != ::WaitForSingleObject(_broker->done_event.get(), 0))
+                    if (WAIT_OBJECT_0 != WaitForSingleObject(_broker->done_event.get(), 0))
                     {
                         // catch up to the expected # of pended connections
                         while (_broker->pending_sockets < _broker->pending_limit && _broker->total_connections_remaining > 0)

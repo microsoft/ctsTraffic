@@ -391,7 +391,6 @@
     <ClCompile Include="ctsWriteDetails.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ctl\ctComInitialize.hpp" />
     <ClInclude Include="..\ctl\ctException.hpp" />
     <ClInclude Include="..\ctl\ctMath.hpp" />
     <ClInclude Include="..\ctl\ctMemoryGuard.hpp" />

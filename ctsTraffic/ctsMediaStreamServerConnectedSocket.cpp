@@ -24,7 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctException.hpp>
 #include <ctSockaddr.hpp>
 #include <ctTimer.hpp>
-#include <ctMemoryGuard.hpp>
 // project headers
 #include "ctsWinsockLayer.h"
 
@@ -43,70 +42,42 @@ namespace ctsTraffic {
         remote_addr(std::move(_remote_addr)),
         connect_time(ctTimer::ctSnapQpcInMillis())
     {
-        task_timer = ::CreateThreadpoolTimer(ctsMediaStreamTimerCallback, this, ctsConfig::Settings->PTPEnvironment);
-        if (nullptr == task_timer) {
-            const auto gle = ::GetLastError();
-            throw ctException(gle, L"CreateThreadpoolTimer", L"ctsMediaStreamServer", false);
+        task_timer.reset(CreateThreadpoolTimer(ctsMediaStreamTimerCallback, this, ctsConfig::Settings->PTPEnvironment));
+        if (!task_timer) {
+            throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctsMediaStreamServer", false);
         }
     }
 
     ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() noexcept
     {
-        // stop the TP before deleting the CS
-        ::SetThreadpoolTimer(task_timer, nullptr, 0, 0);
-        ::WaitForThreadpoolTimerCallbacks(task_timer, TRUE);
-        ::CloseThreadpoolTimer(task_timer);
-    }
-
-    wil::cs_leave_scope_exit ctsMediaStreamServerConnectedSocket::lock_socket() const noexcept
-    {
-        return object_guard.lock();
-    }
-
-    const ctSockaddr& ctsMediaStreamServerConnectedSocket::get_address() const noexcept
-    {
-        return remote_addr;
-    }
-
-    long long ctsMediaStreamServerConnectedSocket::get_startTime() const noexcept
-    {
-        return connect_time;
-    }
-
-    ctsIOTask ctsMediaStreamServerConnectedSocket::get_nextTask() const noexcept
-    {
-        const auto lock = object_guard.lock();
-        return next_task;
-    }
-
-    long long ctsMediaStreamServerConnectedSocket::increment_sequence() noexcept
-    {
-        return ctMemoryGuardIncrement(&sequence_number);
+        // stop the TP before letting the d'tor delete any member objects
+        task_timer.reset();
     }
     
     void ctsMediaStreamServerConnectedSocket::schedule_task(const ctsIOTask& _task) noexcept
     {
-        const auto shared_socket(this->weak_socket.lock());
+        const auto shared_socket(weak_socket.lock());
         if (shared_socket) {
-            if (_task.time_offset_milliseconds < 1) {
+            const auto lock = object_guard.lock();
+            _Analysis_assume_lock_acquired_(object_guard);
+            if (_task.time_offset_milliseconds < 2) {
                 // in this case, immediately schedule the WSASendTo
-                const auto lock = object_guard.lock();
-                this->next_task = _task;
-                ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(nullptr, this, nullptr);
+                next_task = _task;
+                ctsMediaStreamTimerCallback(nullptr, this, nullptr);
 
             } else {
                 FILETIME ftDueTime(ctTimer::ctConvertMillisToRelativeFiletime(_task.time_offset_milliseconds));
                 // assign the next task *and* schedule the timer while in *this object lock
-                const auto lock = object_guard.lock();
-                this->next_task = _task;
-                ::SetThreadpoolTimer(this->task_timer, &ftDueTime, 0, 0);
+                next_task = _task;
+                SetThreadpoolTimer(task_timer.get(), &ftDueTime, 0, 0);
             }
+            _Analysis_assume_lock_released_(object_guard);
         }
     }
 
     void ctsMediaStreamServerConnectedSocket::complete_state(unsigned long _error_code) const noexcept
     {
-        std::shared_ptr<ctsSocket> shared_socket(this->weak_socket);
+        std::shared_ptr<ctsSocket> shared_socket(weak_socket);
         if (shared_socket) {
             shared_socket->complete_state(_error_code);
         }
@@ -121,11 +92,12 @@ namespace ctsTraffic {
         if (!shared_socket) {
             return;
         }
+        
         // hold a reference on the iopattern
-        auto shared_pattern(shared_socket->io_pattern());
-
+        auto shared_pattern = shared_socket->io_pattern();
+        
         const auto lock = this_ptr->object_guard.lock();
-        ctsIOTask current_task = this_ptr->get_nextTask();
+        _Analysis_assume_lock_acquired_(this_ptr->object_guard);
 
         // post the queued IO, then loop sending/scheduling as necessary
         auto send_results = this_ptr->io_functor(this_ptr);
@@ -134,34 +106,35 @@ namespace ctsTraffic {
             send_results.bytes_transferred,
             send_results.error_code);
 
+        ctsIOTask current_task = this_ptr->next_task;
         while (ctsIOStatus::ContinueIo == status && current_task.ioAction != IOTaskAction::None) {
             current_task = shared_pattern->initiate_io();
 
             switch (current_task.ioAction) {
-                case IOTaskAction::Send:
-                    this_ptr->next_task = current_task;
-                    // if the time is less than two ms., we need to catch up on sends
-                    // - post the sendto immediately instead of scheduling for later
-                    if (this_ptr->next_task.time_offset_milliseconds < 2) {
-                        send_results = this_ptr->io_functor(this_ptr);
-                        status = shared_pattern->complete_io(
-                            this_ptr->next_task,
-                            send_results.bytes_transferred,
-                            send_results.error_code);
-                    } else {
-                        this_ptr->schedule_task(this_ptr->next_task);
-                    }
-                    break;
+            case IOTaskAction::Send:
+                this_ptr->next_task = current_task;
+                // if the time is less than two ms., we need to catch up on sends
+                // - post the sendto immediately instead of scheduling for later
+                if (this_ptr->next_task.time_offset_milliseconds < 2) {
+                    send_results = this_ptr->io_functor(this_ptr);
+                    status = shared_pattern->complete_io(
+                        this_ptr->next_task,
+                        send_results.bytes_transferred,
+                        send_results.error_code);
+                } else {
+                    this_ptr->schedule_task(this_ptr->next_task);
+                }
+                break;
 
-                case IOTaskAction::None:
-                    // done until the next send completes
-                    break;
+            case IOTaskAction::None:
+                // done until the next send completes
+                break;
 
-                default:
-                    ctl::ctAlwaysFatalCondition(
-                        L"Unexpected task action returned from initiate_io - %u (dt %p ctsTraffic::ctsIOTask)",
-                        static_cast<unsigned long>(current_task.ioAction),
-                        &current_task);
+            default:
+                ctAlwaysFatalCondition(
+                    L"Unexpected task action returned from initiate_io - %u (dt %p ctsTraffic::ctsIOTask)",
+                    static_cast<unsigned long>(current_task.ioAction),
+                    &current_task);
             }
         }
 
@@ -179,7 +152,7 @@ namespace ctsTraffic {
                     L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
                     this_ptr->remote_addr.WriteCompleteAddress().c_str());
             }
-            catch (const std::exception&) {
+            catch (...) {
                 // best effort
             }
 
@@ -191,11 +164,12 @@ namespace ctsTraffic {
                     L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
                     this_ptr->remote_addr.WriteCompleteAddress().c_str());
             }
-            catch (const std::exception&) {
+            catch (...) {
                 // best effort
             }
 
             this_ptr->complete_state(send_results.error_code);
         }
+        _Analysis_assume_lock_released_(this_ptr->object_guard);
     }
 } // namespace

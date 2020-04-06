@@ -45,7 +45,7 @@ namespace ctsTraffic {
         void reset_buffer() noexcept
         {
             // fill the output buffer with spaces and null terminate
-            ::wmemset(OutputBuffer, L' ', OutputBufferSize);
+            wmemset(OutputBuffer, L' ', OutputBufferSize);
             OutputBuffer[OutputBufferSize] = L'\0';
         }
 
@@ -55,7 +55,7 @@ namespace ctsTraffic {
         // base class is movable
         ctsStatusInformation(ctsStatusInformation&& _moved_from) noexcept
         {
-            ::wmemcpy_s(this->OutputBuffer, OutputBufferSize + 1, _moved_from.OutputBuffer, OutputBufferSize + 1);
+            wmemcpy_s(this->OutputBuffer, OutputBufferSize + 1, _moved_from.OutputBuffer, OutputBufferSize + 1);
             _moved_from.reset_buffer();
         }
         ctsStatusInformation(const ctsStatusInformation&) = delete;
@@ -106,13 +106,13 @@ namespace ctsTraffic {
                 L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _left_justified_offset);
 
-            const size_t value_length = ::wcslen(_value);
+            const size_t value_length = wcslen(_value);
             ctl::ctFatalCondition(
                 value_length > _max_length,
                 L"ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
                 _max_length, _value);
 
-            ::wmemcpy_s(
+            wmemcpy_s(
                 OutputBuffer + _left_justified_offset - 1,
                 OutputBufferSize - _left_justified_offset - 1,
                 _value,
@@ -120,7 +120,7 @@ namespace ctsTraffic {
         }
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, float _value) noexcept
         {
-            static const unsigned long CoversionBufferLength = 16;
+            constexpr unsigned long CoversionBufferLength = 16;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
@@ -135,10 +135,9 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
-            const auto converted = ::_snwprintf_s(
+            const auto converted = _snwprintf_s(
                 conversionBuffer,
                 CoversionBufferLength,
-                _TRUNCATE,
                 L"%.3f",
                 _value);
             ctl::ctFatalCondition(
@@ -147,7 +146,7 @@ namespace ctsTraffic {
                 _value, errno);
             _Analysis_assume_(converted != -1);
 
-            ::wmemcpy_s(
+            wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
                 conversionBuffer,
@@ -155,7 +154,7 @@ namespace ctsTraffic {
         }
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, unsigned long _value) noexcept
         {
-            static const unsigned long CoversionBufferLength = 12;
+            constexpr unsigned long CoversionBufferLength = 12;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
@@ -170,10 +169,9 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length > CoversionBufferLength - 1);
 
-            const int converted = ::_snwprintf_s(
+            const int converted = _snwprintf_s(
                 conversionBuffer,
                 CoversionBufferLength,
-                _TRUNCATE,
                 L"%u",
                 _value);
             ctl::ctFatalCondition(
@@ -182,7 +180,7 @@ namespace ctsTraffic {
                 _value, errno);
             _Analysis_assume_(converted != -1);
 
-            ::wmemcpy_s(
+            wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
                 conversionBuffer,
@@ -190,7 +188,7 @@ namespace ctsTraffic {
         }
         void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, long long _value) noexcept
         {
-            static const unsigned long CoversionBufferLength = 20;
+            constexpr unsigned long CoversionBufferLength = 20;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
             ctl::ctFatalCondition(
@@ -211,10 +209,9 @@ namespace ctsTraffic {
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
-            const int converted = ::_snwprintf_s(
+            const int converted = _snwprintf_s(
                 conversionBuffer,
                 CoversionBufferLength,
-                _TRUNCATE,
                 L"%lld",
                 _value);
             ctl::ctFatalCondition(
@@ -223,7 +220,7 @@ namespace ctsTraffic {
                 _value, errno);
             _Analysis_assume_(converted != -1);
 
-            ::wmemcpy_s(
+            wmemcpy_s(
                 OutputBuffer + (_right_justified_offset - converted),
                 OutputBufferSize - (_right_justified_offset - converted),
                 conversionBuffer,
@@ -249,7 +246,7 @@ namespace ctsTraffic {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, float _value, bool _add_comma = true) noexcept
         {
-            const auto converted = ::_snwprintf_s(
+            const auto converted = _snwprintf_s(
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 _add_comma ? _value_length + 1 : _value_length,
@@ -263,7 +260,7 @@ namespace ctsTraffic {
 
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, unsigned long _value, bool _add_comma = true) noexcept
         {
-            const errno_t error = ::_ui64tow_s(
+            const errno_t error = _ui64tow_s(
                 _value,
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
@@ -296,7 +293,7 @@ namespace ctsTraffic {
 
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, long long _value, bool _add_comma = true) noexcept
         {
-            const errno_t error = ::_ui64tow_s(
+            const errno_t error = _ui64tow_s(
                 _value,
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
@@ -329,7 +326,7 @@ namespace ctsTraffic {
 
         unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, PCWSTR _value, bool _add_comma = true) noexcept
         {
-            const auto converted = ::_snwprintf_s(
+            const auto converted = _snwprintf_s(
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 _add_comma ? _value_length + 1 : _value_length,

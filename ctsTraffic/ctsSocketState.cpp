@@ -36,10 +36,10 @@ namespace ctsTraffic
     ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker)
         : broker(move(_broker))
     {
-        thread_pool_worker = ::CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
+        thread_pool_worker = CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
         if (nullptr == thread_pool_worker)
         {
-            const auto gle = ::GetLastError();
+            const auto gle = GetLastError();
             throw ctException(gle, L"CreateThreadpoolWork", L"ctsSocketState", false);
         }
     }
@@ -58,8 +58,8 @@ namespace ctsTraffic
         {
             this->socket->shutdown();
         }
-        ::WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
-        ::CloseThreadpoolWork(thread_pool_worker);
+        WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
+        CloseThreadpoolWork(thread_pool_worker);
     }
 
     void ctsSocketState::start() noexcept
@@ -67,7 +67,7 @@ namespace ctsTraffic
         ctFatalCondition(
             state != InternalState::Creating,
             L"ctsSocketState::start must only be called once at the initial state of the object (this == %p)", this);
-        ::SubmitThreadpoolWork(this->thread_pool_worker);
+        SubmitThreadpoolWork(this->thread_pool_worker);
     }
 
     void ctsSocketState::complete_state(DWORD _error) noexcept
@@ -143,7 +143,7 @@ namespace ctsTraffic
         //
         // schedule the next functor to run when not closing down the socket
         //
-        ::SubmitThreadpoolWork(this->thread_pool_worker);
+        SubmitThreadpoolWork(this->thread_pool_worker);
     }
 
     ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
@@ -169,7 +169,7 @@ namespace ctsTraffic
             {
                 unsigned long error = 0;
                 try { this_ptr->socket = make_shared<ctsSocket>(this_ptr->shared_from_this()); }
-                catch (const exception& e) { error = ctl::ctErrorCode(e); }
+                catch (const exception& e) { error = ctErrorCode(e); }
 
                 if (error != 0)
                 {
@@ -210,7 +210,7 @@ namespace ctsTraffic
 
                 unsigned long error = 0;
                 try { this_ptr->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
-                catch (const exception& e) { error = ctl::ctErrorCode(e); }
+                catch (const exception& e) { error = ctErrorCode(e); }
 
                 if (error != 0)
                 {

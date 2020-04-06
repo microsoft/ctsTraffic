@@ -168,14 +168,15 @@ namespace ctsTraffic
 
         struct JitterFrameEntry
         {
+            unsigned long bytes_received = 0UL;
             long long sequence_number = 0LL;
             long long sender_qpc = 0LL;
             long long sender_qpf = 0LL;
             long long receiver_qpc = 0LL;
             long long receiver_qpf = 0LL;
-            unsigned long received = 0UL;
+            double estimated_time_in_flight_ms = 0;
         };
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame, const JitterFrameEntry& first_frame) noexcept;
+        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame) noexcept;
 
         void PrintStatusUpdate() noexcept;
         void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
@@ -328,7 +329,7 @@ namespace ctsTraffic
             ProtocolType    Protocol = ProtocolType::NoProtocolSet;
             TcpShutdownType TcpShutdown = TcpShutdownType::NoShutdownOptionSet;
             IoPatternType   IoPattern = IoPatternType::NoIOSet;
-            OptionType      Options = OptionType::NoOptionSet;
+            OptionType      Options = NoOptionSet;
 
             DWORD SocketFlags = 0;
             WORD  Port = 0;
@@ -358,6 +359,7 @@ namespace ctsTraffic
             unsigned long PrePostSends = 0;
             unsigned long RecvBufValue = 0;
             unsigned long SendBufValue = 0;
+            unsigned long KeepAliveValue = 0;
 
             unsigned long PushBytes = 0;
             unsigned long PullBytes = 0;

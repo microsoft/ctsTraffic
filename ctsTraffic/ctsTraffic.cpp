@@ -45,9 +45,9 @@ int
 __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
-    const int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+    const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0) {
-        ::wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
+        wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 
@@ -89,8 +89,8 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
 
     try {
-        if (!::SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE)) {
-            throw ctException(::GetLastError(), L"SetConsoleCtrlHandler", false);
+        if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE)) {
+            throw ctException(GetLastError(), L"SetConsoleCtrlHandler", false);
         }
 
         ctsConfig::PrintSettings();

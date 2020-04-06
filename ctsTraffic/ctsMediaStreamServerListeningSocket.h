@@ -28,25 +28,17 @@ namespace ctsTraffic {
     class ctsMediaStreamServerListeningSocket {
     private:
         static const size_t RecvBufferSize = 1024;
-        mutable wil::critical_section object_guard;
 
-        /// members must have access protected
-        _Guarded_by_(object_guard)
         std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
-        _Guarded_by_(object_guard)
-        std::array<char, RecvBufferSize> recv_buffer;
-        _Guarded_by_(object_guard)
-        wil::unique_socket socket;
-        _Guarded_by_(object_guard)
-        ctl::ctSockaddr listening_addr;
 
-        // remote addr, length, and flags are updated on each recvfrom()
-        _Guarded_by_(object_guard)
+        mutable wil::critical_section socket_lock;
+        _Requires_lock_held_(socket_lock) wil::unique_socket listening_socket;
+
+        const ctl::ctSockaddr listening_addr;
+        std::array<char, RecvBufferSize> recv_buffer{};
+        DWORD recv_flags{};
         ctl::ctSockaddr remote_addr;
-        _Guarded_by_(object_guard)
-        int remote_addr_len = 0;
-        _Guarded_by_(object_guard)
-        DWORD recv_flags = 0;
+        int remote_addr_len{};
 
         void recv_completion(OVERLAPPED* _ov) noexcept;
 
@@ -60,8 +52,6 @@ namespace ctsTraffic {
         SOCKET get_socket() const noexcept;
 
         ctl::ctSockaddr get_address() const noexcept;
-
-        void reset() noexcept;
 
         void initiate_recv() noexcept;
 

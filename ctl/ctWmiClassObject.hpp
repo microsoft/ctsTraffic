@@ -115,7 +115,7 @@ namespace ctl
         class property_iterator
         {
         private:
-            static const unsigned long c_EndIteratorIndex = 0xffffffff;
+            static constexpr unsigned long c_EndIteratorIndex = 0xffffffff;
 
             wil::com_ptr<IWbemClassObject> m_wbemClassObj;
             wil::shared_bstr m_propertyName;
@@ -255,7 +255,7 @@ namespace ctl
                     throw std::out_of_range("ctWmiClassObject::property_iterator - cannot increment: at the end");
                 }
 
-                CIMTYPE next_cimtype;
+                CIMTYPE next_cimtype{};
                 wil::shared_bstr next_name;
                 const auto hr = m_wbemClassObj->Next(
                     0,

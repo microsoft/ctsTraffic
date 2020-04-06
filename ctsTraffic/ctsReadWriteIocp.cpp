@@ -55,9 +55,9 @@ namespace ctsTraffic
             else
             {
                 DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
+                if (!WSAGetOverlappedResult(socket, _overlapped, &transferred, FALSE, &flags))
                 {
-                    gle = ::WSAGetLastError();
+                    gle = WSAGetLastError();
                 }
             }
         }
@@ -135,9 +135,9 @@ namespace ctsTraffic
 
                 if (IOTaskAction::GracefulShutdown == next_io.ioAction)
                 {
-                    if (0 != ::shutdown(socket, SD_SEND))
+                    if (0 != shutdown(socket, SD_SEND))
                     {
-                        io_error = ::WSAGetLastError();
+                        io_error = WSAGetLastError();
                     }
                     io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);
                     continue;
@@ -184,16 +184,16 @@ namespace ctsTraffic
                 char* io_buffer = next_io.buffer + next_io.buffer_offset;
                 if (IOTaskAction::Send == next_io.ioAction)
                 {
-                    if (!::WriteFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov))
+                    if (!WriteFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov))
                     {
-                        io_error = ::GetLastError();
+                        io_error = GetLastError();
                     }
                 }
                 else
                 {
-                    if (!::ReadFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov))
+                    if (!ReadFile(reinterpret_cast<HANDLE>(socket), io_buffer, next_io.buffer_length, nullptr, pov))
                     {
-                        io_error = ::GetLastError();
+                        io_error = GetLastError();
                     }
                 }
                 //

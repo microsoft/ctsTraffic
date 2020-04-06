@@ -97,7 +97,7 @@ namespace ctl
 		void get_m_errorInfo() const noexcept
 		{
 			wil::com_ptr<IErrorInfo> errorInfo;
-            auto hr = ::GetErrorInfo(0, errorInfo.put());
+            auto hr = GetErrorInfo(0, errorInfo.put());
 			if (S_OK == hr)
 			{
 				//  S_FALSE == no error object was returned
@@ -373,7 +373,7 @@ namespace ctl
 			//
 			if (classObject != nullptr) {
 				VARIANT variant;
-				::VariantInit(&variant);
+				VariantInit(&variant);
 				// the method should allow to be called from const() methods
 				// - forced to const-cast to make this const-correct
 				const auto hr = const_cast<IWbemClassObject*>(classObject)->Get(

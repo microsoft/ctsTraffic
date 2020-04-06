@@ -41,11 +41,11 @@ namespace ctsTraffic {
         FailedIo
     };
 
-    static const int ctsStatusIORunning = MAXINT;
-    static const int ctsStatusErrorNotAllDataTransferred = MAXINT - 1;
-    static const int ctsStatusErrorTooMuchDataTransferred = MAXINT - 2;
-    static const int ctsStatusErrorDataDidNotMatchBitPattern = MAXINT - 3;
-    static const int ctsStatusMinimumValue = MAXINT - 3;
+    constexpr int ctsStatusIORunning = MAXINT;
+    constexpr int ctsStatusErrorNotAllDataTransferred = MAXINT - 1;
+    constexpr int ctsStatusErrorTooMuchDataTransferred = MAXINT - 2;
+    constexpr int ctsStatusErrorDataDidNotMatchBitPattern = MAXINT - 3;
+    constexpr int ctsStatusMinimumValue = MAXINT - 3;
 
     class ctsIOPattern {
     public:
@@ -100,7 +100,7 @@ namespace ctsTraffic {
             m_callback = std::move(callback);
         }
 
-        virtual int get_last_error() const noexcept
+        virtual unsigned long get_last_error() const noexcept
         {
             const auto lock = m_cs.lock();
             return m_lastError;
@@ -334,7 +334,7 @@ namespace ctsTraffic {
                     this->update_last_error(NO_ERROR);
                     break;
 
-            case ctsIOPatternProtocolError::NoError: break;
+            case ctsIOPatternProtocolError::NoError: break;  // NOLINT(bugprone-branch-clone)
             case ctsIOPatternProtocolError::ErrorIOFailed: break;
             default: break;
             }
@@ -378,11 +378,17 @@ namespace ctsTraffic {
             }
         }
 
-        ~ctsIOPatternStatistics() noexcept override
+        ~ctsIOPatternStatistics() noexcept
         {
             // guarantee that end_pattern has been called at least once
             ctsIOPatternStatistics<S>::end_stats();
         }
+
+        ctsIOPatternStatistics(const ctsIOPatternStatistics&) = delete;
+        ctsIOPatternStatistics& operator=(const ctsIOPatternStatistics&) = delete;
+        ctsIOPatternStatistics(ctsIOPatternStatistics&&) = delete;
+        ctsIOPatternStatistics& operator=(ctsIOPatternStatistics&&) = delete;
+
         //
         // Printing of results is controlled by the applicable statistics type
         //

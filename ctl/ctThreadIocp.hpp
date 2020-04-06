@@ -47,7 +47,7 @@ namespace ctl
 		ctThreadIocpCallback_t callback;
 
 		// ReSharper disable once CppPossiblyUninitializedMember
-		explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback)
+		explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback) noexcept
 			: callback(std::move(_callback))
 		{
 			::ZeroMemory(&ov, sizeof ov);
@@ -103,19 +103,19 @@ namespace ctl
 		//
 		explicit ctThreadIocp(_In_ HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
 		{
-			ptp_io = ::CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
+			ptp_io = CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
 			if (!ptp_io)
 			{
-				throw ctException(::GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
+				throw ctException(GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
 			}
 		}
 
 		explicit ctThreadIocp(_In_ SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
 		{
-			ptp_io = ::CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
+			ptp_io = CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
 			if (!ptp_io)
 			{
-				throw ctException(::GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
+				throw ctException(GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
 			}
 		}
 
@@ -124,8 +124,8 @@ namespace ctl
 			// could have been moved out of
 			if (ptp_io) {
 				// wait for all callbacks
-				::WaitForThreadpoolIoCallbacks(ptp_io, FALSE);
-				::CloseThreadpoolIo(ptp_io);
+				WaitForThreadpoolIoCallbacks(ptp_io, FALSE);
+				CloseThreadpoolIo(ptp_io);
 			}
 		}
 
@@ -172,7 +172,7 @@ namespace ctl
 
 			// once creating a new request succeeds, start the IO
 			// - all below calls are no-fail calls
-			::StartThreadpoolIo(ptp_io);
+			StartThreadpoolIo(ptp_io);
 			::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
 			return &new_callback->ov;
 		}
@@ -187,7 +187,7 @@ namespace ctl
 		//
 		void cancel_request(OVERLAPPED* _pov) const noexcept
 		{
-			::CancelThreadpoolIo(ptp_io);
+			CancelThreadpoolIo(ptp_io);
 			const auto old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);
 			delete old_request;
 		}
@@ -226,7 +226,7 @@ namespace ctl
 			__except (exr = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER)
 			{
 				__try {
-					::RaiseFailFastException(exr->ExceptionRecord, exr->ContextRecord, 0);
+					RaiseFailFastException(exr->ExceptionRecord, exr->ContextRecord, 0);
 				}
 #pragma warning(suppress: 6320) // not hiding exceptions: RaiseFailFastException is fatal - this creates a break to help debugging in some scenarios
 				__except (EXCEPTION_EXECUTE_HANDLER)

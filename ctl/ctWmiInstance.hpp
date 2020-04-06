@@ -157,7 +157,7 @@ namespace ctl
 
         bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
         {
-            ::VariantClear(value);
+            VariantClear(value);
             get_property(propname, value);
             return !ctIsVariantEmptyOrNull(value);
         }

@@ -65,7 +65,7 @@ namespace ctsTraffic {
         }
         m_timerWheelOffsetFrames = m_initialBufferFrames;
 
-        const static long c_ExtraBufferDepthFactor = 2;
+        constexpr long c_ExtraBufferDepthFactor = 2;
         // queue_size is intentionally a signed long: will catch overflows
         const ctsSignedLong queue_size = c_ExtraBufferDepthFactor * m_initialBufferFrames;
         if (queue_size < c_ExtraBufferDepthFactor) {
@@ -90,20 +90,20 @@ namespace ctsTraffic {
         }
 
         // after creating, refer to the timers under the lock
-        m_rendererTimer = ::CreateThreadpoolTimer(TimerCallback, this, nullptr);
+        m_rendererTimer = CreateThreadpoolTimer(TimerCallback, this, nullptr);
         if (!m_rendererTimer) {
-            throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
+            throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
-        auto deleteTimerCallbackOnError = wil::scope_exit([&]()
+        auto deleteTimerCallbackOnError = wil::scope_exit([&]() noexcept
         {
-            ::SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
-            ::WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
-            ::CloseThreadpoolTimer(m_rendererTimer);
+            SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
+            WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
+            CloseThreadpoolTimer(m_rendererTimer);
         });
 
-        m_startTimer = ::CreateThreadpoolTimer(StartCallback, this, nullptr);
+        m_startTimer = CreateThreadpoolTimer(StartCallback, this, nullptr);
         if (!m_startTimer) {
-            throw ctException(::GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
+            throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
         }
         // no errors, dismiss the scope guard
         deleteTimerCallbackOnError.release();
@@ -118,13 +118,13 @@ namespace ctsTraffic {
         m_rendererTimer = nullptr;
         lock.reset();
         // stop both timers
-        ::SetThreadpoolTimer(m_startTimer, nullptr, 0, 0);
-        ::WaitForThreadpoolTimerCallbacks(m_startTimer, FALSE);
-        ::CloseThreadpoolTimer(m_startTimer);
+        SetThreadpoolTimer(m_startTimer, nullptr, 0, 0);
+        WaitForThreadpoolTimerCallbacks(m_startTimer, FALSE);
+        CloseThreadpoolTimer(m_startTimer);
 
-        ::SetThreadpoolTimer(original_timer, nullptr, 0, 0);
-        ::WaitForThreadpoolTimerCallbacks(original_timer, FALSE);
-        ::CloseThreadpoolTimer(original_timer);
+        SetThreadpoolTimer(original_timer, nullptr, 0, 0);
+        WaitForThreadpoolTimerCallbacks(original_timer, FALSE);
+        CloseThreadpoolTimer(original_timer);
     }
 
     ctsIOTask ctsIOPatternMediaStreamClient::next_task() noexcept
@@ -155,10 +155,10 @@ namespace ctsTraffic {
         return return_task;
     }
 
-    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& task, unsigned long completed_bytes) noexcept
+    ctsIOPatternProtocolError ctsIOPatternMediaStreamClient::completed_task(const ctsIOTask& task, unsigned long bytes_received) noexcept
     {
         LARGE_INTEGER qpc;
-        ::QueryPerformanceCounter(&qpc);
+        QueryPerformanceCounter(&qpc);
 
         if (task.ioAction == IOTaskAction::Abort) {
             // the stream should now be done
@@ -169,7 +169,7 @@ namespace ctsTraffic {
         }
 
         if (task.ioAction == IOTaskAction::Recv) {
-            if (0 == completed_bytes) {
+            if (0 == bytes_received) {
                 if (m_finishedStream) {
                     // the final WSARecvFrom can complete with a zero-byte recv on loopback after the sender closes
                     // TODO: verify on non-loopback
@@ -180,7 +180,7 @@ namespace ctsTraffic {
                 }
             }
 
-            if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(task, completed_bytes)) {
+            if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(task, bytes_received)) {
                 ctsConfig::PrintErrorInfo(L"MediaStreamClient received an invalid datagram trying to parse the protocol header");
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
@@ -197,14 +197,14 @@ namespace ctsTraffic {
             ctsIOTask validation_task(task);
             validation_task.buffer_offset = UdpDatagramDataHeaderLength; // skip the UdpDatagramDataHeaderLength since we use them for our own stuff
             validation_task.buffer_length -= UdpDatagramDataHeaderLength;
-            if (!VerifyBuffer(validation_task, completed_bytes - UdpDatagramDataHeaderLength)) {
+            if (!VerifyBuffer(validation_task, bytes_received - UdpDatagramDataHeaderLength)) {
                 // exit early if the buffers don't match
                 return ctsIOPatternProtocolError::CorruptedBytes;
             }
 
             // track the # of *bits* received
-            ctsConfig::Settings->UdpStatusDetails.bits_received.add(completed_bytes * 8);
-            this->stats.bits_received.add(completed_bytes * 8);
+            ctsConfig::Settings->UdpStatusDetails.bits_received.add(bytes_received * 8);
+            this->stats.bits_received.add(bytes_received * 8);
 
             const long long received_seq_number = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
             if (received_seq_number > m_finalFrame) {
@@ -222,36 +222,28 @@ namespace ctsTraffic {
                 //
                 const auto found_slot = this->find_sequence_number(received_seq_number);
                 if (found_slot != m_frameEntries.end()) {
-                    if (found_slot->received != m_frameSizeBytes) {
-                        const long long buffered_qpc = *reinterpret_cast<long long*>(task.buffer + 8);
-                        const long long buffered_qpf = *reinterpret_cast<long long*>(task.buffer + 16);
+                    const long long buffered_qpc = *reinterpret_cast<long long*>(task.buffer + 8);
+                    const long long buffered_qpf = *reinterpret_cast<long long*>(task.buffer + 16);
 
-                        // always overwrite qpc & qpf values with the latest datagram details
-                        found_slot->sender_qpc = buffered_qpc;
-                        found_slot->sender_qpf = buffered_qpf;
-                        found_slot->receiver_qpc = qpc.QuadPart;
-                        found_slot->receiver_qpf = ctTimer::ctSnapQpf();
-                        found_slot->received += completed_bytes;
+                    // always overwrite qpc & qpf values with the latest datagram details
+                    found_slot->sender_qpc = buffered_qpc;
+                    found_slot->sender_qpf = buffered_qpf;
+                    found_slot->receiver_qpc = qpc.QuadPart;
+                    found_slot->receiver_qpf = ctTimer::ctSnapQpf();
+                    found_slot->bytes_received += bytes_received;
 
-                        PrintDebugInfo(
-                            L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%lu bytes)\n",
-                            static_cast<long long>(found_slot->sequence_number),
-                            static_cast<unsigned long>(found_slot->received));
+                    PrintDebugInfo(
+                        L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%lu received-bytes, %lu frame-bytes)\n",
+                        found_slot->sequence_number,
+                        bytes_received,
+                        found_slot->bytes_received
+                        );
 
-                        // stop the timer once we receive the last frame
-                        // - it's not perfect (e.g. might have received them out of order)
-                        // - but it will be very close for tracking the total bits/sec
-                        if (static_cast<unsigned long>(received_seq_number) == m_finalFrame) {
-                            this->end_stats();
-                        }
-
-                    } else {
-                        ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
-                        this->stats.duplicate_frames.increment();
-
-                        PrintDebugInfo(
-                            L"\t\tctsIOPatternMediaStreamClient received **a duplicate frame** for seq number (%lld)\n",
-                            received_seq_number);
+                    // stop the timer once we receive the last frame
+                    // - it's not perfect (e.g. might have received them out of order)
+                    // - but it will be very close for tracking the total bits/sec
+                    if (static_cast<unsigned long>(received_seq_number) == m_finalFrame) {
+                        this->end_stats();
                     }
 
                 } else {
@@ -323,7 +315,7 @@ namespace ctsTraffic {
         }
 
         for (const auto& udp_frame : m_frameEntries) {
-            if (udp_frame.received > 0UL) {
+            if (udp_frame.bytes_received > 0UL) {
                 return true;
             }
         }
@@ -350,7 +342,7 @@ namespace ctsTraffic {
                 // - make a 'relative' for SetThreadpoolTimer
                 FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(timer_offset));
                 // TP Timer APIs work off of the UTC time
-                ::SetThreadpoolTimer(m_rendererTimer, &file_time, 0, 0);
+                SetThreadpoolTimer(m_rendererTimer, &file_time, 0, 0);
                 timer_scheduled = true;
             }
         }
@@ -366,7 +358,7 @@ namespace ctsTraffic {
             // - make a 'relative' for SetThreadpoolTimer
             FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(static_cast<long long>(m_frameRateMsPerFrame) + 500LL));
             // TP Timer APIs work off of the UTC time
-            ::SetThreadpoolTimer(m_startTimer, &file_time, 0, 0);
+            SetThreadpoolTimer(m_startTimer, &file_time, 0, 0);
         }
     }
 
@@ -375,7 +367,21 @@ namespace ctsTraffic {
     _Requires_lock_held_(cs)
     void ctsIOPatternMediaStreamClient::render_frame() noexcept
     {
-        if (m_headEntry->received == m_frameSizeBytes) {
+        // estimating time in flight for this frame by determining how much time since the first send was just 'waiting' to send this frame
+        // and subtracing that from how much time since the first receive - since time between receives should at least be time between sends
+        if (m_headEntry->receiver_qpf != 0 && m_firstFrame.receiver_qpf != 0)
+        {
+            const double ms_since_first_receive =
+                m_headEntry->receiver_qpc * 1000.0 / m_headEntry->receiver_qpf -
+                m_firstFrame.receiver_qpc * 1000.0 / m_firstFrame.receiver_qpf;
+            const double ms_since_first_send =
+                (m_headEntry->sender_qpc * 1000.0 / m_headEntry->sender_qpf) -
+                (m_firstFrame.sender_qpc * 1000.0 / m_firstFrame.sender_qpf);
+            m_headEntry->estimated_time_in_flight_ms = ms_since_first_receive - ms_since_first_send;
+        }
+
+        if (m_headEntry->bytes_received == m_frameSizeBytes)
+        {
             ctsConfig::Settings->UdpStatusDetails.successful_frames.increment();
             this->stats.successful_frames.increment();
 
@@ -384,37 +390,50 @@ namespace ctsTraffic {
                 static_cast<long long>(m_headEntry->sequence_number));
 
             // Directly write this status update if jitter is enabled
-            ctsConfig::PrintJitterUpdate(*m_headEntry, m_previousFrame, m_firstFrame);
+            PrintJitterUpdate(*m_headEntry, m_previousFrame);
 
             // if this is the first frame, capture it
-            if (m_firstFrame.receiver_qpc == 0) {
+            if (m_firstFrame.receiver_qpc == 0)
+            {
                 m_firstFrame = *m_headEntry;
             }
             // always keep the most recently received frame for jitter
             m_previousFrame = *m_headEntry;
 
-        } else {
+        }
+        else if (m_headEntry->bytes_received < m_frameSizeBytes)
+        {
             ctsConfig::Settings->UdpStatusDetails.dropped_frames.increment();
             this->stats.dropped_frames.increment();
 
             PrintDebugInfo(
-                L"\t\tctsIOPatternMediaStreamClient **dropped** frame %lld\n",
-                static_cast<long long>(m_headEntry->sequence_number));
+                L"\t\tctsIOPatternMediaStreamClient **dropped** frame for seq number (%lld)\n",
+                m_headEntry->sequence_number);
 
             // track the dropped frame
             // indicate zero's for the other values so we won't calculate jitter for a dropped datagram
             ctsConfig::JitterFrameEntry droppedFrame;
             droppedFrame.sequence_number = m_headEntry->sequence_number;
-            ctsConfig::PrintJitterUpdate(droppedFrame, ctsConfig::JitterFrameEntry(), ctsConfig::JitterFrameEntry());
+            PrintJitterUpdate(droppedFrame, ctsConfig::JitterFrameEntry());
+        }
+        else // m_headEntry->bytes_received > m_frameSizeBytes
+        {
+            ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
+            this->stats.duplicate_frames.increment();
+
+            PrintDebugInfo(
+                L"\t\tctsIOPatternMediaStreamClient **a duplicate** frame for seq number (%lld)\n",
+                m_headEntry->sequence_number);
         }
 
         // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)
         m_headEntry->sequence_number = m_headEntry->sequence_number + m_frameEntries.size();
-        m_headEntry->received = 0;
+        m_headEntry->bytes_received = 0;
 
         // move the head entry to the next sequence number
         ++m_headEntry;
-        if (m_headEntry == m_frameEntries.end()) {
+        if (m_headEntry == m_frameEntries.end())
+        {
             m_headEntry = m_frameEntries.begin();
         }
     }
@@ -440,7 +459,7 @@ namespace ctsTraffic {
             resend_task.track_io = false;
             resend_task.buffer = const_cast<char*>(c_StartBuffer);
             resend_task.buffer_offset = 0;
-            resend_task.buffer_length = static_cast<unsigned long>(::strlen(c_StartBuffer));
+            resend_task.buffer_length = static_cast<unsigned long>(strlen(c_StartBuffer));
             resend_task.buffer_type = ctsIOTask::BufferType::Static; // this is our own buffer: the base class should not mess with it
 
             this_ptr->set_next_start_timer();

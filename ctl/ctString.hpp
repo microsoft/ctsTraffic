@@ -127,17 +127,17 @@ namespace ctl
                 return std::string();
             }
 
-            int len = ::WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            int len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
             if (len == 0)
             {
-                throw ctException(::GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::ctConvertToString", false);
+                throw ctException(GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::ctConvertToString", false);
             }
 
             std::string buf(len, '\0');
-            len = ::WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &buf[0], len, nullptr, nullptr);
+            len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &buf[0], len, nullptr, nullptr);
             if (len == 0)
             {
-                throw ctException(::GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::ctConvertToString", false);
+                throw ctException(GetLastError(), L"::WideCharToMultiByte", L"ctl::ctString::ctConvertToString", false);
             }
 
             buf.resize(len - 1); // We needed room for it earlier, but the \0 isn't considered a part of the std::string
@@ -151,17 +151,17 @@ namespace ctl
                 return std::wstring();
             }
 
-            int len = ::MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+            int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
             if (len == 0)
             {
-                throw ctException(::GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::ctConvertToWstring", false);
+                throw ctException(GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::ctConvertToWstring", false);
             }
 
             std::wstring buf(len, L'\0');
-            len = ::MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &buf[0], len);
+            len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &buf[0], len);
             if (len == 0)
             {
-                throw ctException(::GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::ctConvertToWstring", false);
+                throw ctException(GetLastError(), L"::MultiByteToWideChar", L"ctl::ctString::ctConvertToWstring", false);
             }
 
             buf.resize(len - 1); // We needed room for it earlier, but the \0 isn't considered a part of the std::string
@@ -207,7 +207,7 @@ namespace ctl
                 size_t rhs_size,
                 BOOL case_insensitive)
             {
-                switch (::CompareStringOrdinal(
+                switch (CompareStringOrdinal(
                     lhs,
                     static_cast<int>(lhs_size),
                     rhs,
@@ -222,7 +222,7 @@ namespace ctl
                         return false;
 
                     default:
-                        throw ctException(::GetLastError(), L"CompareStringOrdinal", L"ctl::ctString::impl_ordinal_equals", false);
+                        throw ctException(GetLastError(), L"CompareStringOrdinal", L"ctl::ctString::impl_ordinal_equals", false);
                 }
             }
 
@@ -236,7 +236,7 @@ namespace ctl
                 size_t rhs_size,
                 BOOL case_insensitive)
             {
-                switch (::CompareStringA(
+                switch (CompareStringA(
                     LOCALE_INVARIANT,
                     case_insensitive ? NORM_IGNORECASE : 0,
                     lhs,
@@ -252,7 +252,7 @@ namespace ctl
                         return false;
 
                     default:
-                        throw ctException(::GetLastError(), L"CompareString", L"ctl::ctString::impl_ordinal_equals", false);
+                        throw ctException(GetLastError(), L"CompareString", L"ctl::ctString::impl_ordinal_equals", false);
                 }
             }
 #else

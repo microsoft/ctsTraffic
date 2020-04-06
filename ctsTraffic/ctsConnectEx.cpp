@@ -54,20 +54,20 @@ namespace ctsTraffic
             {
                 DWORD transferred;
                 DWORD flags;
-                if (!::WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
+                if (!WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
                 {
-                    gle = ::WSAGetLastError();
+                    gle = WSAGetLastError();
                 }
             }
         }
         // update the socket context if completed successfully - necessary with ConnectEx
         if (NO_ERROR == gle)
         {
-            const int err = ::setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
+            const int err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
             ctl::ctFatalCondition(
                 (err != 0),
                 L"setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
-                ::WSAGetLastError(),
+                WSAGetLastError(),
                 static_cast<long long>(socket_ref.socket()));
         }
 
@@ -77,7 +77,7 @@ namespace ctsTraffic
         {
             // store the local addr of the connection
             int local_addr_len = local_addr.length();
-            if (0 == ::getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+            if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
             {
                 shared_socket->set_local_address(local_addr);
             }
@@ -121,7 +121,7 @@ namespace ctsTraffic
 
                 if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov))
                 {
-                    error = ::WSAGetLastError();
+                    error = WSAGetLastError();
                     if (ERROR_IO_PENDING == error)
                     {
                         // pended is not failure

@@ -42,13 +42,13 @@ namespace ctsTraffic {
         CorruptedXfer      // ctsStatusErrorDataDidNotMatchBitPattern
     };
 
-    static const unsigned long ctsStatusUnsetErrorCode = MAXUINT; // 4294967296
-    static const unsigned long ctsStatusErrorNoConnectionGuid = MAXUINT - 1;
-    static const unsigned long ctsStatusErrorNoDataTransferred = MAXUINT - 2;
-    static const unsigned long ctsStatusErrorNotAllDataTransferred = MAXUINT - 3;
-    static const unsigned long ctsStatusErrorTooMuchDataTransferred = MAXUINT - 4;
-    static const unsigned long ctsStatusErrorDataDidNotMatchBitPattern = MAXUINT - 5;
-    static const unsigned long ctsStatusMinimumValue = MAXUINT - 5;
+    constexpr unsigned long ctsStatusUnsetErrorCode = MAXUINT; // 4294967296
+    constexpr unsigned long ctsStatusErrorNoConnectionGuid = MAXUINT - 1;
+    constexpr unsigned long ctsStatusErrorNoDataTransferred = MAXUINT - 2;
+    constexpr unsigned long ctsStatusErrorNotAllDataTransferred = MAXUINT - 3;
+    constexpr unsigned long ctsStatusErrorTooMuchDataTransferred = MAXUINT - 4;
+    constexpr unsigned long ctsStatusErrorDataDidNotMatchBitPattern = MAXUINT - 5;
+    constexpr unsigned long ctsStatusMinimumValue = MAXUINT - 5;
 
     inline ctsIOPatternProtocolError ctsIOPatternStateCheckProtocolError(unsigned long _status) noexcept
     {
@@ -209,7 +209,7 @@ namespace ctsTraffic {
 
         unsigned long update_last_error(unsigned long _error_code) noexcept
         {
-            if (this->last_error != ctsStatusUnsetErrorCode) {
+            if (this->last_error != ctsStatusUnsetErrorCode) {  // NOLINT(bugprone-branch-clone)
                 // do nothing: already have the initial error for the connection
                 // - this error just came after-the-fact
 

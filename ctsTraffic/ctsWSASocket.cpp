@@ -98,20 +98,20 @@ namespace ctsTraffic {
             function = L"bind";
 
             if (0 == next_port) {
-                if (SOCKET_ERROR == ::bind(socket, local_addr.sockaddr(), local_addr.length())) {
-                    gle = ::WSAGetLastError();
+                if (SOCKET_ERROR == bind(socket, local_addr.sockaddr(), local_addr.length())) {
+                    gle = WSAGetLastError();
                 }
             } else {
                 // sleep up to 5 seconds to allow TCP to cleanup its internal state
-                static const unsigned long BindRetryCount = 5;
-                static const unsigned long BindRetrySleepMs = 1000;
+                constexpr unsigned long BindRetryCount = 5;
+                constexpr unsigned long BindRetrySleepMs = 1000;
 
                 for (unsigned long bind_retry = 0; bind_retry < BindRetryCount; ++bind_retry) {
-                    if (SOCKET_ERROR == ::bind(socket, local_addr.sockaddr(), local_addr.length())) {
-                        gle = ::WSAGetLastError();
+                    if (SOCKET_ERROR == bind(socket, local_addr.sockaddr(), local_addr.length())) {
+                        gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle) {
                             PrintDebugInfo(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs);
-                            ::Sleep(BindRetrySleepMs);
+                            Sleep(BindRetrySleepMs);
                         }
                     } else {
                         // succeeded - exit the loop

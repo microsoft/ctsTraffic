@@ -168,7 +168,7 @@ namespace ctl
 		{
 			// get both v4 and v6 adapter info
 			auto byteSize = static_cast<ULONG>(this->m_buffer->size());
-			auto err = ::GetAdaptersAddresses(
+			auto err = GetAdaptersAddresses(
 				family,   // Family
 				gaaFlags, // Flags
 				nullptr,   // Reserved
@@ -177,7 +177,7 @@ namespace ctl
 			);
 			if (err == ERROR_BUFFER_OVERFLOW) {
 				this->m_buffer->resize(byteSize);
-				err = ::GetAdaptersAddresses(
+				err = GetAdaptersAddresses(
 					family,   // Family
 					gaaFlags, // Flags
 					nullptr,   // Reserved
