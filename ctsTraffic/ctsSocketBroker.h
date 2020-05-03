@@ -25,13 +25,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsSocketState.h"
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     // forward declare ctsSocket
     // - can't include ctsSocket.h in this header to avoid circular declarations
     class ctsSocket;
 
-    class ctsSocketBroker : public std::enable_shared_from_this<ctsSocketBroker> {
+    class ctsSocketBroker : public std::enable_shared_from_this<ctsSocketBroker>
+    {
     public:
         // timer to wake up and clean up the socket pool
         // - delete any closed sockets

@@ -622,7 +622,7 @@ namespace ctl
                     }
                     else
                     {
-                                     // no port was appended
+                        // no port was appended
                         while (scope_ptr != end)
                         {
                             *scope_ptr = L'\0';
@@ -661,7 +661,7 @@ namespace ctl
                     }
                     else
                     {
-                                     // no port was appended
+                        // no port was appended
                         while (scope_ptr != end)
                         {
                             *scope_ptr = '\0';
@@ -675,6 +675,7 @@ namespace ctl
         return false;
     }
 
+    // ReSharper disable once CppMemberFunctionMayBeStatic
     inline int ctSockaddr::length() const noexcept
     {
         return static_cast<int>(m_saddrSize);

@@ -20,12 +20,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsConfig.h"
 
-namespace ctsTraffic {
-
-    //
+namespace ctsTraffic
+{
     // Abstract base class for status - printing classes
-    //
-    class ctsStatusInformation {
+    class ctsStatusInformation
+    {
     protected:
         enum class PrintingStatus
         {
@@ -79,7 +78,8 @@ namespace ctsTraffic {
         PCWSTR print_status(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept
         {
             this->reset_buffer();
-            if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint) {
+            if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint)
+            {
                 return OutputBuffer;
             }
             return nullptr;
@@ -87,9 +87,8 @@ namespace ctsTraffic {
         // 
 
     protected:
-        //
-        // derived class is required to implement these three pure virtual function
-        //
+
+        // derived classes are required to implement these three pure virtual function
         virtual PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept = 0;
         virtual PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept = 0;
         virtual PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept = 0;
@@ -259,7 +258,8 @@ namespace ctsTraffic {
             // find how many characters were printed
             unsigned long converted = 0;
             wchar_t* output_reference = OutputBuffer + _offset;
-            while (*output_reference != L'\0' && *output_reference != L' ') {
+            while (*output_reference != L'\0' && *output_reference != L' ')
+            {
                 ++converted;
                 ++output_reference;
             }
@@ -271,7 +271,8 @@ namespace ctsTraffic {
                 converted > _value_length,
                 "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
 
-            if (_add_comma) {
+            if (_add_comma)
+            {
                 ++converted;
                 *output_reference = L',';
             }
@@ -292,7 +293,8 @@ namespace ctsTraffic {
             // find how many characters were printed
             unsigned long converted = 0;
             wchar_t* output_reference = OutputBuffer + _offset;
-            while (*output_reference != L'\0' && *output_reference != L' ') {
+            while (*output_reference != L'\0' && *output_reference != L' ')
+            {
                 ++converted;
                 ++output_reference;
             }
@@ -304,7 +306,8 @@ namespace ctsTraffic {
                 converted > _value_length,
                 "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
 
-            if (_add_comma) {
+            if (_add_comma)
+            {
                 ++converted;
                 *output_reference = L',';
             }
@@ -336,7 +339,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsUdpStatusInformation final : public ctsStatusInformation {
+    class ctsUdpStatusInformation final : public ctsStatusInformation
+    {
     public:
         ctsUdpStatusInformation() noexcept = default;
         ~ctsUdpStatusInformation() noexcept override = default;
@@ -350,7 +354,8 @@ namespace ctsTraffic {
         //
         PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
+            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            {
                 return
                     L"Legend:\n"
                     L"* TimeSlice - (seconds) cumulative runtime\n"
@@ -361,7 +366,9 @@ namespace ctsTraffic {
                     L"* Repeated Frames - count of frames received multiple times within the TimeSlice\n"
                     L"* Stream Errors - count of invalid frames or buffers within the TimeSlice\n"
                     L"\n";
-            } else {
+            }
+            else
+            {
                 return
                     L"Legend:\r\n"
                     L"* TimeSlice - (seconds) cumulative runtime\r\n"
@@ -377,21 +384,25 @@ namespace ctsTraffic {
 
         PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::Csv == _format) {
+            if (ctsConfig::StatusFormatting::Csv == _format)
+            {
                 return
                     L"TimeSlice,Bits/Sec,Streams,Completed,Dropped,Repeated,Errors\r\n";
 
-            } else if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
+            }
+
+            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            {
                 // Formatted to fit on an 80-column command shell
                 return
                     L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \n";
-                   // 00000000.0...000000000000...00000000...000000000...0000000...00000000...0000000.        
-                   // 1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
-                   //         10        20        30        40        50        60        70        80
-            } else {
-                return
-                    L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \r\n";
+                // 00000000.0...000000000000...00000000...000000000...0000000...00000000...0000000.        
+                // 1   5    0    5    0    5    0    5    0    5    0    5    0    5    0    5    0 
+                //         10        20        30        40        50        60        70        80
             }
+
+            return
+                L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \r\n";
         }
 
         PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept override
@@ -399,7 +410,8 @@ namespace ctsTraffic {
             const ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
             const ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
 
-            if (ctsConfig::StatusFormatting::Csv == _format) {
+            if (ctsConfig::StatusFormatting::Csv == _format)
+            {
                 unsigned long characters_written = 0;
                 // converting milliseconds to seconds before printing
                 characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
@@ -417,7 +429,9 @@ namespace ctsTraffic {
                 characters_written += this->append_csvoutput(characters_written, ErrorFramesLength, udp_data.error_frames.get(), false); // no comma at the end
                 this->terminate_file_string(characters_written);
 
-            } else {
+            }
+            else
+            {
                 // converting milliseconds to seconds before printing
                 this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
@@ -432,9 +446,12 @@ namespace ctsTraffic {
                 this->right_justify_output(DroppedFramesOffset, DroppedFramesLength, udp_data.dropped_frames.get());
                 this->right_justify_output(DuplicatedFramesOffset, DuplicatedFramesLength, udp_data.duplicate_frames.get());
                 this->right_justify_output(ErrorFramesOffset, ErrorFramesLength, udp_data.error_frames.get());
-                if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+                if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+                {
                     this->terminate_string(ErrorFramesOffset);
-                } else {
+                }
+                else
+                {
                     this->terminate_file_string(ErrorFramesOffset);
                 }
             }
@@ -474,7 +491,8 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsTcpStatusInformation final : public ctsStatusInformation {
+    class ctsTcpStatusInformation final : public ctsStatusInformation
+    {
     public:
         ctsTcpStatusInformation() noexcept = default;
         ~ctsTcpStatusInformation() noexcept override = default;
@@ -490,7 +508,8 @@ namespace ctsTraffic {
 
             const long long time_elapsed = tcp_data.end_time.get() - tcp_data.start_time.get();
 
-            if (_format == ctsConfig::StatusFormatting::Csv) {
+            if (_format == ctsConfig::StatusFormatting::Csv)
+            {
                 unsigned long characters_written = 0;
                 // converting milliseconds to seconds before printing
                 characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
@@ -512,7 +531,9 @@ namespace ctsTraffic {
                 characters_written += this->append_csvoutput(characters_written, ProtocolErrorsLength, connection_data.protocol_error_count.get(), false); // no comma at the end
                 this->terminate_file_string(characters_written);
 
-            } else {
+            }
+            else
+            {
                 // converting milliseconds to seconds before printing
                 this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
 
@@ -531,9 +552,12 @@ namespace ctsTraffic {
                 this->right_justify_output(CompletedTransactionsOffset, CompletedTransactionsLength, connection_data.successful_completion_count.get());
                 this->right_justify_output(ConnectionErrorsOffset, ConnectionErrorsLength, connection_data.connection_error_count.get());
                 this->right_justify_output(ProtocolErrorsOffset, ProtocolErrorsLength, connection_data.protocol_error_count.get());
-                if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+                if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+                {
                     this->terminate_string(ProtocolErrorsOffset);
-                } else {
+                }
+                else
+                {
                     this->terminate_file_string(ProtocolErrorsOffset);
                 }
             }
@@ -543,7 +567,8 @@ namespace ctsTraffic {
 
         PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::ConsoleOutput == _format) {
+            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            {
                 return
                     L"Legend:\n"
                     L"* TimeSlice - (seconds) cumulative runtime\n"
@@ -553,7 +578,9 @@ namespace ctsTraffic {
                     L"* Network Errors - cumulative count of failed IO patterns due to Winsock errors\n"
                     L"* Data Errors - cumulative count of failed IO patterns due to data errors\n"
                     L"\n";
-            } else {
+            }
+            else
+            {
                 return
                     L"Legend:\r\n"
                     L"* TimeSlice - (seconds) cumulative runtime\r\n"
@@ -568,12 +595,14 @@ namespace ctsTraffic {
 
         PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
         {
-            if (_format == ctsConfig::StatusFormatting::Csv) {
+            if (_format == ctsConfig::StatusFormatting::Csv)
+            {
                 return
                     L"TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError\r\n";
 
             }
-            if (_format == ctsConfig::StatusFormatting::ConsoleOutput) {
+            if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+            {
                 return
                     L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \n";
                 //    00000000.0..00000000000..00000000000....0000000....0000000...0000000....0000000.        
@@ -615,5 +644,4 @@ namespace ctsTraffic {
         static const unsigned long DetailedAddressOffset = 39;
         static const unsigned long DetailedAddressLength = 46;
     };
-
 } // namespace

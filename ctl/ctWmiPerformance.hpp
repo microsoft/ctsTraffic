@@ -1206,13 +1206,12 @@ namespace ctl
             }
         }
 
-        // non-copyable
         ctWmiPerformance(const ctWmiPerformance&) = delete;
         ctWmiPerformance& operator=(const ctWmiPerformance&) = delete;
+        ctWmiPerformance& operator=(ctWmiPerformance&& rhs) noexcept = delete;
 
         // movable
         ctWmiPerformance(ctWmiPerformance&& rhs) noexcept = default;
-        ctWmiPerformance& operator=(ctWmiPerformance&& rhs) noexcept = default;
 
     private:
         ctWmiService m_wmiService;

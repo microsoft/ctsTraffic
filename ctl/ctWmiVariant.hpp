@@ -33,8 +33,8 @@ namespace ctl
         return V_VT(variant) == VT_EMPTY || V_VT(variant) == VT_NULL;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const bool value)
-	{
+    inline wil::unique_variant ctWmiMakeVariant(const bool value)
+    {
         wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BOOL;
         V_BOOL(local_variant.addressof()) = value;
@@ -48,9 +48,9 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const char value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const char value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_UI1;
         V_UI1(local_variant.addressof()) = value;
         return local_variant;
@@ -63,13 +63,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_UI1;
         V_UI1(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned char* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -78,13 +78,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const short value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const short value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I2;
         V_I2(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, short* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -93,13 +93,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I2;
         V_I2(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned short* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -108,9 +108,9 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const long value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const long value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I4;
         V_I4(local_variant.addressof()) = value;
         return local_variant;
@@ -123,13 +123,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I4;
         V_I4(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned long* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -138,13 +138,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const int value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const int value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I4;
         V_I4(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, int* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -153,13 +153,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_I4;
         V_I4(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned int* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -168,13 +168,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const float value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const float value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_R4;
         V_R4(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, float* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -183,13 +183,13 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const double value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const double value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_R8;
         V_R8(local_variant.addressof()) = value;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, double* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -198,15 +198,15 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
+    {
+        wil::unique_variant local_variant;
         DOUBLE time{};
         THROW_HR_IF(E_INVALIDARG, !::SystemTimeToVariantTime(&value, &time));
         V_VT(local_variant.addressof()) = VT_DATE;
         V_DATE(local_variant.addressof()) = time;
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, SYSTEMTIME* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -215,14 +215,14 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const BSTR value)  // NOLINT(misc-misplaced-const)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const BSTR value)  // NOLINT(misc-misplaced-const)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
         V_BSTR(local_variant.addressof()) = SysAllocString(value);
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, BSTR* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;
@@ -232,14 +232,14 @@ namespace ctl
         return true;
     }
 
-	inline wil::unique_variant ctWmiMakeVariant(const PCWSTR value)
-	{
-		wil::unique_variant local_variant;
+    inline wil::unique_variant ctWmiMakeVariant(const PCWSTR value)
+    {
+        wil::unique_variant local_variant;
         V_VT(local_variant.addressof()) = VT_BSTR;
         V_BSTR(local_variant.addressof()) = SysAllocString(value);
         THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
         return local_variant;
-	}
+    }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::wstring* value)
     {
         if (ctIsVariantEmptyOrNull(variant)) return false;

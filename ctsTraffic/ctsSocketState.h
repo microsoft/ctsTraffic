@@ -22,10 +22,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-//
-// forward declare ctsSocketBroker
-// - can't include ctsSocketBroker.h in this header to avoid circular declarations
-//
+    //
+    // forward declare ctsSocketBroker
+    // - can't include ctsSocketBroker.h in this header to avoid circular declarations
+    //
     class ctsSocketBroker;
 
     //

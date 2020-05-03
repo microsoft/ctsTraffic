@@ -24,19 +24,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// Base class for all ctsTraffic Loggers
-///
-///
-/// - all concrete types must implement:
-///     message_impl(_In_ PCWSTR)
-///     error_impl(_In_ PCWSTR)
-///
-///   Note: all logging functions are no-throw
-///         only the c'tor can throw
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Base class for all ctsTraffic Loggers
+    ///
+    ///
+    /// - all concrete types must implement:
+    ///     message_impl(_In_ PCWSTR)
+    ///     error_impl(_In_ PCWSTR)
+    ///
+    ///   Note: all logging functions are no-throw
+    ///         only the c'tor can throw
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     class ctsLogger
     {

@@ -84,7 +84,7 @@ namespace ctsTraffic
         }
 
         // write to PrintError if the IO failed
-        PCSTR function_name = IOTaskAction::Send == _io_task.ioAction ? "WSASend" : "WSARecv";
+        const char* function_name = IOTaskAction::Send == _io_task.ioAction ? "WSASend" : "WSARecv";
         if (gle != 0) { PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", function_name, gle); }
 
         if (shared_pattern)

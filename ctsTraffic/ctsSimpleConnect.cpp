@@ -26,13 +26,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-//
-// ctsSimpleConnect makes *blocking* calls to connect
-// - callers should be careful to ensure that this is really what they want
-// - since it will not scale out well
-//
-// Its intended use is either for UDP sockets, or for very few concurrent connections
-//
+    //
+    // ctsSimpleConnect makes *blocking* calls to connect
+    // - callers should be careful to ensure that this is really what they want
+    // - since it will not scale out well
+    //
+    // Its intended use is either for UDP sockets, or for very few concurrent connections
+    //
     void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
@@ -65,7 +65,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                             // set the local address
+                    // set the local address
                     auto local_addr_len = local_addr.length();
                     if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
                     {

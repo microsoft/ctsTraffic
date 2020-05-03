@@ -28,9 +28,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 
-namespace ctsTraffic {
-
-    namespace statics {
+namespace ctsTraffic
+{
+    namespace statics
+    {
         // forward-declarations
         static bool GrowConnectionIdBuffer() noexcept;
 
@@ -54,7 +55,7 @@ namespace ctsTraffic {
             using ctsConfig::IsListening;
             using ctsStatistics::ConnectionIdLength;
 
-            SYSTEM_INFO sysInfo;         // Useful information about the system
+            SYSTEM_INFO sysInfo{};         // Useful information about the system
             GetSystemInfo(&sysInfo);     // Initialize the structure.
             SystemPageSize = sysInfo.dwPageSize;
 
@@ -190,13 +191,9 @@ namespace ctsTraffic {
 
     }
 
-    namespace ctsIOBuffers {
-
-        //////////////////////////////////////////////////////////////////////////
-        //
+    namespace ctsIOBuffers
+    {
         // Will throw std::bad_alloc on low resource conditions
-        //
-        //////////////////////////////////////////////////////////////////////////
         inline ctsIOTask NewConnectionIdBuffer(_In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id)
         {
             // this init-once call is no-fail
@@ -254,7 +251,7 @@ namespace ctsTraffic {
         }
 
         inline void ReleaseConnectionIdBuffer(const ctsIOTask& _task) noexcept
-        try
+            try
         {
             const auto connection_id_lock = statics::ConnectionIdLock.lock();
             // the vector was initially reserved to be large enough to hold all possible buffers

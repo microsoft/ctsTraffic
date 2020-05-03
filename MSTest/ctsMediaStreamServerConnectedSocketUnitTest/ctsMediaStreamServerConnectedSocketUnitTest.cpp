@@ -297,7 +297,7 @@ namespace ctsUnitTest
                 const SOCKET cts_socket = socket_guard.socket();
                 const SOCKET connected_socket = _socket_object->get_sending_socket();
 
-                Assert::AreEqual(test_addr[0], _socket_object->get_address());
+                Assert::AreEqual(test_addr[0], _socket_object->get_remote_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
@@ -343,7 +343,7 @@ namespace ctsUnitTest
                 const SOCKET cts_socket = socket_guard.socket();
                 const SOCKET connected_socket = _socket_object->get_sending_socket();
 
-                Assert::AreEqual(test_addr[0], _socket_object->get_address());
+                Assert::AreEqual(test_addr[0], _socket_object->get_remote_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
@@ -388,7 +388,7 @@ namespace ctsUnitTest
                 const SOCKET cts_socket = socket_guard.socket();
                 const SOCKET connected_socket = _socket_object->get_sending_socket();
 
-                Assert::AreEqual(test_addr[0], _socket_object->get_address());
+                Assert::AreEqual(test_addr[0], _socket_object->get_remote_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 if (callback_invoked == 10)
@@ -438,7 +438,7 @@ namespace ctsUnitTest
                 const SOCKET cts_socket = socket_guard.socket();
                 const SOCKET connected_socket = _socket_object->get_sending_socket();
 
-                Assert::AreEqual(test_addr[0], _socket_object->get_address());
+                Assert::AreEqual(test_addr[0], _socket_object->get_remote_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 s_IOStatusCode = WSAENOBUFS;
@@ -484,7 +484,7 @@ namespace ctsUnitTest
                 const SOCKET cts_socket = socket_guard.socket();
                 const SOCKET connected_socket = _socket_object->get_sending_socket();
 
-                Assert::AreEqual(test_addr[0], _socket_object->get_address());
+                Assert::AreEqual(test_addr[0], _socket_object->get_remote_address());
                 Assert::AreEqual(cts_socket, connected_socket);
 
                 if (callback_invoked == 5)

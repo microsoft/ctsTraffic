@@ -30,13 +30,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace ctl;
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
         std::weak_ptr<ctsSocket> _weak_socket,
         SOCKET _sending_socket,
         ctSockaddr _remote_addr,
-        ctsMediaStreamConnectedSocketIoFunctor _io_functor)
-        :
+        ctsMediaStreamConnectedSocketIoFunctor _io_functor) :
         weak_socket(std::move(_weak_socket)),
         io_functor(std::move(_io_functor)),
         sending_socket(_sending_socket),
@@ -163,7 +163,7 @@ namespace ctsTraffic {
             {
                 ctsConfig::PrintErrorInfo(
                     ctl::ctString::ctFormatString("MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-                    this_ptr->remote_addr.WriteCompleteAddress().c_str()).c_str());
+                        this_ptr->remote_addr.WriteCompleteAddress().c_str()).c_str());
             }
             catch (...)
             {

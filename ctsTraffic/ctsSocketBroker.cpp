@@ -49,7 +49,7 @@ namespace ctsTraffic
         }
         else
         {
-             // client 'connect' settings
+            // client 'connect' settings
             if (ctsConfig::Settings->Iterations == MAXULONGLONG)
             {
                 total_connections_remaining = MAXULONGLONG;
@@ -202,11 +202,11 @@ namespace ctsTraffic
             // refresh our pool of sockets if more sockets should be added
             try
             {
-               //
-               // Everything must occur under the broker lock
-               // - touching the socket_pool
-               // - touching the socket / connection counters
-               //
+                //
+                // Everything must occur under the broker lock
+                // - touching the socket_pool
+                // - touching the socket / connection counters
+                //
                 for (auto& socket_pool_entry : _broker->socket_pool)
                 {
                     if (ctsSocketState::InternalState::Closed == socket_pool_entry->current_state())
@@ -233,7 +233,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                             // don't spin up more if the user asked to shutdown
+                    // don't spin up more if the user asked to shutdown
                     if (WAIT_OBJECT_0 != WaitForSingleObject(_broker->done_event.get(), 0))
                     {
                         // catch up to the expected # of pended connections

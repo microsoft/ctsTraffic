@@ -13,7 +13,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     typedef struct ctsIOPatternAllocationTypeStatic_t   ctsIOPatternAllocationTypeStatic;
     typedef struct ctsIOPatternAllocationtypeDynamic_t  ctsIOPatternAllocationtypeDynamic;
@@ -37,8 +38,8 @@ namespace ctsTraffic {
     //
     template<>
     class ctsIOPatternBufferPolicy<
-        ctsIOPatternAllocationTypeStatic, 
-        ctsIOPatternBufferTypeHeap> 
+        ctsIOPatternAllocationTypeStatic,
+        ctsIOPatternBufferTypeHeap>
     {
 
     };

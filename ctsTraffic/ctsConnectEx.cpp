@@ -115,8 +115,7 @@ namespace ctsTraffic
                 // get a new IO request from the socket's TP
                 const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
                 OVERLAPPED* pov = connect_iocp->new_request(
-                    [_weak_socket, targetAddress](OVERLAPPED* _ov) noexcept
-                    { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
+                    [_weak_socket, targetAddress](OVERLAPPED* _ov) noexcept { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                 if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov))
                 {

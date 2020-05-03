@@ -31,10 +31,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-//
-// forward declare ctsSocketState
-// - can't include ctsSocketState.h in this header to avoid circular declarations
-//
+    //
+    // forward declare ctsSocketState
+    // - can't include ctsSocketState.h in this header to avoid circular declarations
+    //
     class ctsSocketState;
 
     //
@@ -48,7 +48,7 @@ namespace ctsTraffic
         {
         public:
             SocketReference(SocketReference&&) = default;
-            SocketReference& operator=(SocketReference&&) = default;
+            SocketReference& operator=(SocketReference&&) = delete;
             SocketReference(const SocketReference&) = delete;
             SocketReference& operator=(const SocketReference&) = delete;
             ~SocketReference() = default;

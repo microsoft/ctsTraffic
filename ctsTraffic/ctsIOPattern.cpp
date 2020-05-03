@@ -26,8 +26,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOBuffers.hpp"
 
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     using namespace ctl;
     using namespace std;
 
@@ -62,16 +62,10 @@ namespace ctsTraffic {
         s_SharedBufferSize = c_BufferPatternSize + ctsConfig::GetMaxBufferSize() + c_CompletionMessageSize;
 
         s_ProtectedSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
-        if (!s_ProtectedSharedBuffer)
-        {
-            FAIL_FAST_MSG("VirtualAlloc alloc failed: %u", GetLastError());
-        }
+        FAIL_FAST_IF_MSG(!s_ProtectedSharedBuffer, "VirtualAlloc alloc failed: %u", GetLastError());
 
         s_WriteableSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, s_SharedBufferSize, MEM_COMMIT, PAGE_READWRITE));
-        if (!s_WriteableSharedBuffer)
-        {
-            FAIL_FAST_MSG("VirtualAlloc alloc failed: %u", GetLastError());
-        }
+        FAIL_FAST_IF_MSG(!s_WriteableSharedBuffer, "VirtualAlloc alloc failed: %u", GetLastError());
 
         // fill in this allocated buffer while we can write to it
         char* protected_destination = s_ProtectedSharedBuffer;
@@ -111,19 +105,13 @@ namespace ctsTraffic {
 
         // guarantee noone will write to our s_ProtectedSharedBuffer
         DWORD old_setting;
-        if (!VirtualProtect(s_ProtectedSharedBuffer, s_SharedBufferSize, PAGE_READONLY, &old_setting))
-        {
-            FAIL_FAST_MSG("VirtualProtect failed: %u", GetLastError());
-        }
+        FAIL_FAST_IF_MSG(!VirtualProtect(s_ProtectedSharedBuffer, s_SharedBufferSize, PAGE_READONLY, &old_setting), "VirtualProtect failed: %u", GetLastError());
 
         // establish a RIO ID for the writable shared buffer if we're using RIO APIs
         if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
         {
             s_SharedBufferId = ctRIORegisterBuffer(s_WriteableSharedBuffer, s_SharedBufferSize);
-            if (RIO_INVALID_BUFFERID == s_SharedBufferId)
-            {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-                FAIL_FAST_MSG("RIORegisterBuffer failed: %d", WSAGetLastError());
-            }
+            FAIL_FAST_IF_MSG(RIO_INVALID_BUFFERID == s_SharedBufferId, "RIORegisterBuffer failed: %d", WSAGetLastError());
         }
 
         return TRUE;
@@ -379,6 +367,7 @@ namespace ctsTraffic {
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIOStatus ctsIOPattern::complete_io(const ctsIOTask& original_task, unsigned long current_transfer, unsigned long status_code) noexcept
+    try
     {
         const auto lock = m_cs.lock();
 
@@ -553,6 +542,7 @@ namespace ctsTraffic {
 
         return this->current_status();
     }
+    CATCH_FAIL_FAST()
 
     ctsIOTask ctsIOPattern::tracked_task(IOTaskAction _action, unsigned long max_transfer) noexcept
     {
@@ -1120,7 +1110,7 @@ namespace ctsTraffic {
             case IOTaskAction::Abort:
             case IOTaskAction::FatalAbort:
             default:;
-            // fall through to return NoError
+                // fall through to return NoError
         }
 
         return ctsIOPatternProtocolError::NoError;

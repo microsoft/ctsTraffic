@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <WinSock2.h>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctException.hpp>
 #include <ctString.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"

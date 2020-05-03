@@ -30,8 +30,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsConfig.h"
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
         thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
         listening_socket(std::move(_listening_socket)),

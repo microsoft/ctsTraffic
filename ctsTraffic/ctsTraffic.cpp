@@ -42,10 +42,9 @@ BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
     return TRUE;
 }
 
-int
-__cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
+int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
-    WSADATA wsadata;
+    WSADATA wsadata{};
     const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
     if (wsError != 0)
     {

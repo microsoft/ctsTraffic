@@ -29,7 +29,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsSocket.h"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     //
     // Requirements:
     // - must be able to accept a connection from all listening sockets (cannot round-robin listeners)
@@ -57,8 +58,8 @@ namespace ctsTraffic {
     // - if the callback is called and the counter reflects no request arrived yet,
     // --- the new connection is added to a queue and AcceptEx is not reposted
     //
-
-    namespace details {
+    namespace details
+    {
         //
         // constant defining how many acceptex requests we want maintained per listener
         //
@@ -77,7 +78,8 @@ namespace ctsTraffic {
         /// struct to capture relevant details of an accepted connection
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        struct ctsAcceptedConnection {
+        struct ctsAcceptedConnection
+        {
             wil::unique_socket accept_socket;
             ctl::ctSockaddr local_addr;
             ctl::ctSockaddr remote_addr;
@@ -90,7 +92,8 @@ namespace ctsTraffic {
         /// - must have a unique IOCP class for each listener
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        struct ctsListenSocketInfo {
+        struct ctsListenSocketInfo
+        {
             // c'tor throws a ctException or bad_alloc on failure
             explicit ctsListenSocketInfo(ctl::ctSockaddr _addr) : addr(std::move(_addr))
             {
@@ -98,15 +101,18 @@ namespace ctsTraffic {
                     ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags));
 
                 const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
-                if (error != 0) {
+                if (error != 0)
+                {
                     throw ctl::ctException(error, L"ctsConfig::SetPreBindOptions", L"ctsAcceptEx", false);
                 }
 
-                if (SOCKET_ERROR == bind(tempsocket.get(), addr.sockaddr(), addr.length())) {
+                if (SOCKET_ERROR == bind(tempsocket.get(), addr.sockaddr(), addr.length()))
+                {
                     throw ctl::ctException(WSAGetLastError(), L"bind", L"ctsAcceptEx", false);
                 }
 
-                if (SOCKET_ERROR == listen(tempsocket.get(), ctsConfig::GetListenBacklog())) {
+                if (SOCKET_ERROR == listen(tempsocket.get(), ctsConfig::GetListenBacklog()))
+                {
                     throw ctl::ctException(WSAGetLastError(), L"listen", L"ctsAcceptEx", false);
                 }
 
@@ -141,10 +147,11 @@ namespace ctsTraffic {
         /// - preallocates the buffer to use for AcceptEx calls
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        class ctsAcceptSocketInfo {
+        class ctsAcceptSocketInfo
+        {
         public:
             // c'tor throws ctException on failure
-            explicit ctsAcceptSocketInfo(std::shared_ptr<ctsListenSocketInfo> _listen_socket) noexcept
+            explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket) noexcept
                 : listening_socket_info(_listen_socket)
             {
             }
@@ -182,7 +189,8 @@ namespace ctsTraffic {
         // Impl object to carry around the real member data of ctsAcceptEx
         // - the shared_ptr to the Impl allows an instance of ctsAcceptEx to be copyable
         //
-        struct ctsAcceptExImpl {
+        struct ctsAcceptExImpl
+        {
             // must guard access to internal containers
             wil::critical_section cs;
             std::vector<std::shared_ptr<ctsListenSocketInfo>> listeners;
@@ -205,14 +213,16 @@ namespace ctsTraffic {
                 std::vector<std::shared_ptr<ctsListenSocketInfo>> temp_listeners;
 
                 // listen to each address
-                for (const auto& addr : ctsConfig::Settings->ListenAddresses) {
+                for (const auto& addr : ctsConfig::Settings->ListenAddresses)
+                {
                     // Make the structures for the listener and its accept sockets
                     std::shared_ptr<ctsListenSocketInfo> listen_socket_info(std::make_shared<ctsListenSocketInfo>(addr));
                     PrintDebugInfo(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
-                    for (unsigned accept_counter = 0; accept_counter < PendedAcceptRequests; ++accept_counter) {
+                    for (unsigned accept_counter = 0; accept_counter < PendedAcceptRequests; ++accept_counter)
+                    {
                         std::shared_ptr<ctsAcceptSocketInfo> accept_socket_info = std::make_shared<ctsAcceptSocketInfo>(listen_socket_info);
                         listen_socket_info->accept_sockets.push_back(accept_socket_info);
                         // post AcceptEx on this socket
@@ -223,7 +233,8 @@ namespace ctsTraffic {
                     temp_listeners.push_back(listen_socket_info);
                 }
 
-                if (temp_listeners.empty()) {
+                if (temp_listeners.empty())
+                {
                     throw std::exception("ctsAcceptEx invoked with no listening addresses specified");
                 }
 
@@ -239,17 +250,20 @@ namespace ctsTraffic {
                     shutting_down = true;
 
                     // close out all caller requests for new accepted sockets
-                    while (!pended_accept_requests.empty()) {
+                    while (!pended_accept_requests.empty())
+                    {
                         auto weak_socket = pended_accept_requests.front();
                         auto shared_socket(weak_socket.lock());
-                        if (shared_socket) {
+                        if (shared_socket)
+                        {
                             shared_socket->complete_state(WSAECONNABORTED);
                         }
 
                         pended_accept_requests.pop();
                     }
 
-                    while (!accepted_connections.empty()) {
+                    while (!accepted_connections.empty())
+                    {
                         accepted_connections.pop();
                     }
                 }
@@ -282,7 +296,8 @@ namespace ctsTraffic {
 
             const auto lock = cs.lock();
 
-            if (accept_socket.get() != INVALID_SOCKET) {
+            if (accept_socket.get() != INVALID_SOCKET)
+            {
                 return;
             }
 
@@ -296,17 +311,18 @@ namespace ctsTraffic {
             // since not inheriting from the listening socket, must explicity set options on the accept socket
             // - passing the listening address since that will be the local address of this accepted socket
             auto error = ctsConfig::SetPreBindOptions(new_accept_socket.get(), listening_socket_object->addr);
-            if (error != 0) {
+            if (error != 0)
+            {
                 throw ctl::ctException(error, L"SetPreBindOptions", L"ctsAcceptEx", false);
             }
             error = ctsConfig::SetPreConnectOptions(new_accept_socket.get());
-            if (error != 0) {
+            if (error != 0)
+            {
                 throw ctl::ctException(error, L"SetPreConnectOptions", L"ctsAcceptEx", false);
             }
 
             pov = listening_socket_object->iocp->new_request(
-                [this](OVERLAPPED* _ov) noexcept
-                { ctsAcceptExIoCompletionCallback(_ov, this); });
+                [this](OVERLAPPED* _ov) noexcept { ctsAcceptExIoCompletionCallback(_ov, this); });
 
             ::ZeroMemory(OutputBuffer, SingleOutputBufferSize * 2);
             DWORD bytes_received{};
@@ -319,7 +335,8 @@ namespace ctsTraffic {
                 pov))
             {
                 error = WSAGetLastError();
-                if (ERROR_IO_PENDING != error) {
+                if (ERROR_IO_PENDING != error)
+                {
                     // a real failure - must abort the IO
                     listening_socket_object->iocp->cancel_request(pov);
                     pov = nullptr;
@@ -328,7 +345,8 @@ namespace ctsTraffic {
                 }
 
             }
-            else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP) {
+            else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)
+            {
                 // AcceptEx completed inline - directly invoke the callback to handle the completion
                 // - after canceling the TP request
                 listening_socket_object->iocp->cancel_request(pov);
@@ -358,7 +376,8 @@ namespace ctsTraffic {
 
             // if the OVERLAPPED* is null, it means it completed inline (no OVERLAPPED async completion)
             // - thus we know it already succeeded
-            if (pov) {
+            if (pov)
+            {
                 DWORD transferred{};
                 DWORD flags{};
                 if (!WSAGetOverlappedResult(
@@ -443,7 +462,8 @@ namespace ctsTraffic {
                 return;
             }
 
-            if (!s_pimpl.pended_accept_requests.empty()) {
+            if (!s_pimpl.pended_accept_requests.empty())
+            {
                 //
                 // we have unfulfilled requests for more connections
                 // return a previously accepted socket
@@ -452,14 +472,17 @@ namespace ctsTraffic {
                 s_pimpl.pended_accept_requests.pop();
 
                 auto shared_socket(weak_socket.lock());
-                if (shared_socket) {
+                if (shared_socket)
+                {
                     ctsConfig::PrintErrorIfFailed("AcceptEx", accepted_socket.gle);
 
-                    if (0 == accepted_socket.gle) {
+                    if (0 == accepted_socket.gle)
+                    {
                         // set the local addr
                         const ctl::ctSockaddr local_addr;
                         int local_addr_len = local_addr.length();
-                        if (0 == getsockname(accepted_socket.accept_socket.get(), local_addr.sockaddr(), &local_addr_len)) {
+                        if (0 == getsockname(accepted_socket.accept_socket.get(), local_addr.sockaddr(), &local_addr_len))
+                        {
                             shared_socket->set_local_address(local_addr);
                         }
 
@@ -470,16 +493,19 @@ namespace ctsTraffic {
 
                         ctsConfig::PrintNewConnection(local_addr, accepted_socket.remote_addr);
                     }
-                    else {
+                    else
+                    {
                         shared_socket->complete_state(accepted_socket.gle);
                     }
                 }
-                else {
+                else
+                {
                     // socket was closed from beneath us
                     ctsConfig::PrintErrorIfFailed("AcceptEx", WSAECONNABORTED);
                 }
             }
-            else {
+            else
+            {
                 //
                 // else, we have no requests for another connection,
                 // - queue this one for when a request comes in
@@ -509,16 +535,19 @@ namespace ctsTraffic {
     void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         DWORD error = 0;
-        if (!InitOnceExecuteOnce(&details::s_ctsAcceptExImplInitOnce, details::s_ctsAcceptExImplInitFn, &error, nullptr)) {
+        if (!InitOnceExecuteOnce(&details::s_ctsAcceptExImplInitOnce, details::s_ctsAcceptExImplInitFn, &error, nullptr))
+        {
             auto shared_socket(_weak_socket.lock());
-            if (shared_socket) {
+            if (shared_socket)
+            {
                 shared_socket->complete_state(error);
             }
             return;
         }
 
         auto shared_socket(_weak_socket.lock());
-        if (!shared_socket) {
+        if (!shared_socket)
+        {
             return;
         }
 
@@ -528,16 +557,19 @@ namespace ctsTraffic {
         {
             const auto lock = details::s_pimpl.cs.lock();
             // guard access to internal queues
-            if (details::s_pimpl.accepted_connections.empty()) {
+            if (details::s_pimpl.accepted_connections.empty())
+            {
                 // no accepted connections yet -- save the weak_ptr, *not* the shared_ptr
                 try { details::s_pimpl.pended_accept_requests.push(_weak_socket); }
-                catch (...) {
+                catch (...)
+                {
                     // fail the caller if can't save this request
                     error = WSAENOBUFS;
                 }
 
             }
-            else {
+            else
+            {
                 // pull the next connection off the queue
                 accepted_connection = std::move(details::s_pimpl.accepted_connections.front());
                 details::s_pimpl.accepted_connections.pop();
@@ -549,7 +581,8 @@ namespace ctsTraffic {
         // complete this socket state if something failed
         //
         ctsConfig::PrintErrorIfFailed("AcceptEx", error);
-        if (error != 0) {
+        if (error != 0)
+        {
             shared_socket->complete_state(error);
             return;
         }
@@ -558,11 +591,13 @@ namespace ctsTraffic {
         // if did not defer the accept request and we have a new accepted socket,
         // complete this socket state
         //
-        if (accepted_connection.accept_socket.get() != INVALID_SOCKET) {
+        if (accepted_connection.accept_socket.get() != INVALID_SOCKET)
+        {
             // set the local addr
             const ctl::ctSockaddr local_addr;
             int local_addr_len = local_addr.length();
-            if (0 == getsockname(accepted_connection.accept_socket.get(), local_addr.sockaddr(), &local_addr_len)) {
+            if (0 == getsockname(accepted_connection.accept_socket.get(), local_addr.sockaddr(), &local_addr_len))
+            {
                 shared_socket->set_local_address(local_addr);
             }
 

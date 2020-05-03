@@ -29,33 +29,31 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
 
-namespace ctsTraffic {
-
-    ///
-    /// constants for everything related to ctsRioIocp
-    ///
+namespace ctsTraffic
+{
+    //
+    // constants for everything related to ctsRioIocp
+    //
     constexpr LONG RioResultArrayLength = 20;
     constexpr LONG RioRQGrowthFactor = 2;
     constexpr LONG RioMaxDataBuffers = 1; // this is the only value accepted as of Win8
     constexpr LONG RioDefaultCQSize = 1000;
     constexpr ULONG_PTR ExitCompletionKey = 0xffffffff;
-
-    ///
-    /// forward-declaring CQ-functions leveraging the below variables
-    ///
+    //
+    // forward-declaring CQ-functions leveraging the below variables
+    //
     static void  s_make_room_in_cq(ULONG _new_slots);
     static void  s_release_room_in_cq(ULONG _slots) noexcept;
     static ULONG s_deque_from_cq(_Out_writes_(RioResultArrayLength) RIORESULT* _rio_results) noexcept;
     static void  s_delete_all_cqs() noexcept;
-    ///
-    /// Forward-declaring the IOCP threadpool function
-    ///
+    //
+    // Forward-declaring the IOCP threadpool function
+    //
     static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept;
-
-    ///
-    /// Management of the CQ and its corresponding threadpool implemented in this unnamed namespace
-    /// - initialized with InitOneExecuteOnce
-    /// 
+    //
+    // Management of the CQ and its corresponding threadpool implemented in this unnamed namespace
+    // - initialized with InitOneExecuteOnce
+    // 
     static BOOL CALLBACK s_init_once_cq(PINIT_ONCE, PVOID, PVOID*) noexcept;
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE s_sharedbuffer_initializer = INIT_ONCE_STATIC_INIT;
@@ -374,7 +372,8 @@ namespace ctsTraffic {
     /// Including encapsulating the RIO_RQ associated with the socket
     /// 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class RioSocketContext {
+    class RioSocketContext
+    {
     private:
         std::weak_ptr<ctsSocket> weak_socket;
         ctl::ctSockaddr remote_sockaddr;
@@ -564,6 +563,8 @@ namespace ctsTraffic {
                     case IOTaskAction::Send:
                         function_name = "RIOSend";
                         break;
+
+                    default: FAIL_FAST();
                 }
             }
             else
@@ -577,6 +578,8 @@ namespace ctsTraffic {
                     case IOTaskAction::Send:
                         function_name = "RIOSendEx";
                         break;
+
+                    default: FAIL_FAST();
                 }
             }
             _Analysis_assume_(function_name != nullptr);
@@ -725,6 +728,8 @@ namespace ctsTraffic {
                                     error = WSAGetLastError();
                                 }
                                 break;
+
+                            default: FAIL_FAST();
                         }
                     }
                     else
@@ -740,6 +745,7 @@ namespace ctsTraffic {
                                 }
                                 break;
                             case IOTaskAction::Send:
+                            {
                                 RIOFunction = L"RIOSendEx";
                                 const auto pRemote = &this->rio_remote_address;
                                 if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, pRemote, nullptr, nullptr, 0, request_context.get()))
@@ -747,6 +753,9 @@ namespace ctsTraffic {
                                     error = WSAGetLastError();
                                 }
                                 break;
+                            }
+
+                            default: FAIL_FAST();
                         }
                     }
                 }
@@ -807,7 +816,7 @@ namespace ctsTraffic {
 
                 // no IO was dequeued from the IOCP
                 // - no idea why this failed
-                // break to see what's going on in case it's a real bug
+                // - break to see what's going on
                 FAIL_FAST_IF_MSG(
                     nullptr == pov,
                     "GetQueuedCompletionStatus(%p) failed [%u] without dequeing any IO",

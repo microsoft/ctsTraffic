@@ -26,7 +26,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsStatistics.hpp"
 #include <mswsock.h>
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -47,7 +48,8 @@ namespace ctsTraffic {
     constexpr int ctsStatusErrorDataDidNotMatchBitPattern = MAXINT - 3;
     constexpr int ctsStatusMinimumValue = MAXINT - 3;
 
-    class ctsIOPattern {
+    class ctsIOPattern
+    {
     public:
         constexpr static bool IsProtocolError(unsigned long _status) noexcept
         {
@@ -378,7 +380,8 @@ namespace ctsTraffic {
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     template <typename S>
-    class ctsIOPatternStatistics : public ctsIOPattern {
+    class ctsIOPatternStatistics : public ctsIOPattern
+    {
     public:
         explicit ctsIOPatternStatistics(unsigned long _recv_count) : ctsIOPattern(_recv_count)
         {
@@ -464,7 +467,8 @@ namespace ctsTraffic {
     ///    -- The client pulls data in 'segments'
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPull final : public ctsIOPatternStatistics<ctsTcpStatistics> {
+    class ctsIOPatternPull final : public ctsIOPatternStatistics<ctsTcpStatistics>
+    {
     public:
         ctsIOPatternPull();
         ~ctsIOPatternPull() noexcept override = default;
@@ -492,7 +496,8 @@ namespace ctsTraffic {
     ///    -- The server pulls data in 'segments'
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPush final : public ctsIOPatternStatistics<ctsTcpStatistics> {
+    class ctsIOPatternPush final : public ctsIOPatternStatistics<ctsTcpStatistics>
+    {
     public:
         ctsIOPatternPush();
         ~ctsIOPatternPush() noexcept override = default;
@@ -521,7 +526,8 @@ namespace ctsTraffic {
     ///    -- At each segment, roles swap (pusher/puller)
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternPushPull final : public ctsIOPatternStatistics<ctsTcpStatistics> {
+    class ctsIOPatternPushPull final : public ctsIOPatternStatistics<ctsTcpStatistics>
+    {
     public:
         ctsIOPatternPushPull();
         ~ctsIOPatternPushPull() noexcept override = default;
@@ -553,7 +559,8 @@ namespace ctsTraffic {
     ///    -- The server both pushes and pulls data concurrently
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternDuplex final : public ctsIOPatternStatistics<ctsTcpStatistics> {
+    class ctsIOPatternDuplex final : public ctsIOPatternStatistics<ctsTcpStatistics>
+    {
     public:
         ctsIOPatternDuplex();
         ~ctsIOPatternDuplex() noexcept override = default;
@@ -585,7 +592,8 @@ namespace ctsTraffic {
     ///    -- Remains alive until the DONE message is sent from the client
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternMediaStreamServer final : public ctsIOPatternStatistics<ctsUdpStatistics> {
+    class ctsIOPatternMediaStreamServer final : public ctsIOPatternStatistics<ctsUdpStatistics>
+    {
     public:
         ctsIOPatternMediaStreamServer();
         ~ctsIOPatternMediaStreamServer() noexcept override = default;
@@ -626,7 +634,8 @@ namespace ctsTraffic {
     ///    -- Sends a DONE message to the server after processing all frames
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    class ctsIOPatternMediaStreamClient final : public ctsIOPatternStatistics<ctsUdpStatistics> {
+    class ctsIOPatternMediaStreamClient final : public ctsIOPatternStatistics<ctsUdpStatistics>
+    {
     public:
         ctsIOPatternMediaStreamClient();
         ~ctsIOPatternMediaStreamClient() noexcept override;

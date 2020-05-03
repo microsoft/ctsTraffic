@@ -20,7 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     enum class ctsIOPatternProtocolTask
     {
@@ -44,7 +45,8 @@ namespace ctsTraffic {
         SuccessfullyCompleted
     };
 
-    class ctsIOPatternState {
+    class ctsIOPatternState
+    {
     private:
         enum class InternalPatternState
         {
@@ -79,15 +81,15 @@ namespace ctsTraffic {
     public:
         ctsIOPatternState() noexcept;
 
-        ctsUnsignedLongLong get_remaining_transfer() const noexcept;
-        ctsUnsignedLongLong get_max_transfer() const noexcept;
+        [[nodiscard]] ctsUnsignedLongLong get_remaining_transfer() const noexcept;
+        [[nodiscard]] ctsUnsignedLongLong get_max_transfer() const noexcept;
         void set_max_transfer(const ctsUnsignedLongLong& _new_max_transfer) noexcept;
-        ctsUnsignedLong get_ideal_send_backlog() const noexcept;
+        [[nodiscard]] ctsUnsignedLong get_ideal_send_backlog() const noexcept;
         void set_ideal_send_backlog(const ctsUnsignedLong& _new_isb) noexcept;
 
-        bool is_completed() const noexcept;
+        [[nodiscard]] bool is_completed() const noexcept;
 
-        bool is_current_task_more_io() const noexcept;
+        [[nodiscard]] bool is_current_task_more_io() const noexcept;
         ctsIOPatternProtocolTask get_next_task() noexcept;
         void notify_next_task(const ctsIOTask& _next_task) noexcept;
         ctsIOPatternProtocolError completed_task(const ctsIOTask& _completed_task, unsigned long _completed_transfer_bytes) noexcept;

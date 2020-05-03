@@ -101,7 +101,7 @@ namespace ctsTraffic
         }
         else
         {
-             // failed during socket creation, bind, or connect
+            // failed during socket creation, bind, or connect
             ctsConfig::PrintConnectionResults(
                 _last_error);
         }
@@ -320,7 +320,7 @@ namespace ctsTraffic
         SetThreadpoolTimer(tp_timer.get(), &relativeTimeout, 0, 0);
     }
 
-    void NTAPI ctsSocket:: ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER)
+    void NTAPI ctsSocket::ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER)
     {
         auto* pThis = static_cast<ctsSocket*>(pContext);
 

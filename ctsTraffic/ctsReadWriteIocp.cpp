@@ -62,7 +62,7 @@ namespace ctsTraffic
             }
         }
 
-        PCSTR function_name = IOTaskAction::Send == _io_task.ioAction ? "WriteFile" : "ReadFile";
+        const char* function_name = IOTaskAction::Send == _io_task.ioAction ? "WriteFile" : "ReadFile";
         if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, gle);
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
@@ -164,8 +164,7 @@ namespace ctsTraffic
                     // these are the only calls which can throw in this function
                     io_thread_pool = shared_socket->thread_pool();
                     pov = io_thread_pool->new_request(
-                        [_weak_socket, next_io](OVERLAPPED* _ov) noexcept
-                    { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
+                        [_weak_socket, next_io](OVERLAPPED* _ov) noexcept { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                 }
                 catch (const std::exception& e)
                 {
@@ -211,7 +210,7 @@ namespace ctsTraffic
                     // decrement the IO count since it was not pended
                     io_count = shared_socket->decrement_io();
 
-                    PCSTR function_name = IOTaskAction::Send == next_io.ioAction ? "WriteFile" : "ReadFile";
+                    const char* function_name = IOTaskAction::Send == next_io.ioAction ? "WriteFile" : "ReadFile";
                     PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, io_error);
 
                     // call back to the socket that it failed to see if wants more IO

@@ -30,238 +30,246 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-	namespace details
-	{
-		struct ctThreadpoolTimerCallbackInfo
-		{
-			std::function<void()> Callback;
-			FILETIME TimerExpiration{0, 0};
-			unsigned long ReoccuringPeriod = 0;
+    namespace details
+    {
+        struct ctThreadpoolTimerCallbackInfo
+        {
+            std::function<void()> Callback;
+            FILETIME TimerExpiration{ 0, 0 };
+            unsigned long ReoccuringPeriod = 0;
 
-			ctThreadpoolTimerCallbackInfo() = default;
-			~ctThreadpoolTimerCallbackInfo() = default;
-			// non-copyable
-			ctThreadpoolTimerCallbackInfo(const ctThreadpoolTimerCallbackInfo&) = delete;
-			ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
+            ctThreadpoolTimerCallbackInfo() = default;
+            ~ctThreadpoolTimerCallbackInfo() = default;
+            // non-copyable
+            ctThreadpoolTimerCallbackInfo(const ctThreadpoolTimerCallbackInfo&) = delete;
+            ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
 
-			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, long long milliseconds, unsigned long period) noexcept :
-				Callback(std::move(callback)),
-				ReoccuringPeriod(period)
-			{
-				using namespace ctTimer;
-				TimerExpiration = ctConvertMillisToAbsoluteFiletime(ctSnapSystemTimeInMillis() + milliseconds);
-			}
+            explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, long long milliseconds, unsigned long period) noexcept :
+                Callback(std::move(callback)),
+                ReoccuringPeriod(period)
+            {
+                using namespace ctTimer;
+                TimerExpiration = ctConvertMillisToAbsoluteFiletime(ctSnapSystemTimeInMillis() + milliseconds);
+            }
 
-			// supporting only move semantics
-			ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
-			{
-				Callback = std::move(callback_info.Callback);
-				TimerExpiration = callback_info.TimerExpiration;
-				ReoccuringPeriod = callback_info.ReoccuringPeriod;
-			}
-			ctThreadpoolTimerCallbackInfo& operator=(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
-			{
-				Callback = std::move(callback_info.Callback);
-				TimerExpiration = callback_info.TimerExpiration;
-				ReoccuringPeriod = callback_info.ReoccuringPeriod;
-				return *this;
-			}
+            // supporting only move semantics
+            ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
+            {
+                Callback = std::move(callback_info.Callback);
+                TimerExpiration = callback_info.TimerExpiration;
+                ReoccuringPeriod = callback_info.ReoccuringPeriod;
+            }
+            ctThreadpoolTimerCallbackInfo& operator=(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
+            {
+                Callback = std::move(callback_info.Callback);
+                TimerExpiration = callback_info.TimerExpiration;
+                ReoccuringPeriod = callback_info.ReoccuringPeriod;
+                return *this;
+            }
 
-			// update FILETIME to the next time based off the reoccuring period
-			void update_expiration() noexcept
-			{
-				// addition in hundredNs to avoid loss of precision if were to convert to milliseconds
-				using namespace ctTimer;
-				const auto nextTimerHundredNs = ctConvertFiletimeToHundredNs(TimerExpiration) + ctConvertMillisToHundredNs(ReoccuringPeriod);
-				TimerExpiration = ctConvertHundredNsToAbsoluteFiletime(nextTimerHundredNs);
-			}
+            // update FILETIME to the next time based off the reoccuring period
+            void update_expiration() noexcept
+            {
+                // addition in hundredNs to avoid loss of precision if were to convert to milliseconds
+                using namespace ctTimer;
+                const auto nextTimerHundredNs = ctConvertFiletimeToHundredNs(TimerExpiration) + ctConvertMillisToHundredNs(ReoccuringPeriod);
+                TimerExpiration = ctConvertHundredNsToAbsoluteFiletime(nextTimerHundredNs);
+            }
 
-			void swap(ctThreadpoolTimerCallbackInfo& rhs) noexcept
-			{
-				using std::swap;
-				swap(this->Callback, rhs.Callback);
-				swap(this->TimerExpiration, rhs.TimerExpiration);
-				swap(this->ReoccuringPeriod, rhs.ReoccuringPeriod);
-			}
-		};
-	}
+            void swap(ctThreadpoolTimerCallbackInfo& rhs) noexcept
+            {
+                using std::swap;
+                swap(this->Callback, rhs.Callback);
+                swap(this->TimerExpiration, rhs.TimerExpiration);
+                swap(this->ReoccuringPeriod, rhs.ReoccuringPeriod);
+            }
+        };
+    }
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// ctThreadpoolTimer
-	///
-	/// class that encapsulates the new-to-Vista ThreadPool APIs around Timer usage
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	class ctThreadpoolTimer
-	{
-	public:
-		explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON ptp_env = nullptr) noexcept :  // NOLINT(misc-misplaced-const)
-			m_tpEnvironment(ptp_env)
-		{
-		}
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// ctThreadpoolTimer
+    ///
+    /// class that encapsulates the new-to-Vista ThreadPool APIs around Timer usage
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class ctThreadpoolTimer
+    {
+    public:
+        explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON ptp_env = nullptr) noexcept :  // NOLINT(misc-misplaced-const)
+            m_tpEnvironment(ptp_env)
+        {
+        }
 
-		~ctThreadpoolTimer() noexcept
-		{
+        ~ctThreadpoolTimer() noexcept
+        {
             // wait for all callbacks
             auto lock_timer = this->m_timerLock.lock();
             // block any more items being scheduled
             m_exiting = true;
             lock_timer.reset();
-			stop_all_timers();
+            stop_all_timers();
 
-			for (const auto& timer : m_tpTimers) {
-				CloseThreadpoolTimer(timer);
-			}
-		}
+            for (const auto& timer : m_tpTimers)
+            {
+                CloseThreadpoolTimer(timer);
+            }
+        }
 
-		// non-copyable
-		ctThreadpoolTimer(const ctThreadpoolTimer&) = delete;
-		ctThreadpoolTimer& operator=(const ctThreadpoolTimer&) = delete;
-		ctThreadpoolTimer(ctThreadpoolTimer&&) = delete;
-		ctThreadpoolTimer& operator=(ctThreadpoolTimer&&) = delete;
+        // non-copyable
+        ctThreadpoolTimer(const ctThreadpoolTimer&) = delete;
+        ctThreadpoolTimer& operator=(const ctThreadpoolTimer&) = delete;
+        ctThreadpoolTimer(ctThreadpoolTimer&&) = delete;
+        ctThreadpoolTimer& operator=(ctThreadpoolTimer&&) = delete;
 
-		void schedule_reoccuring(std::function<void()> function, long long millisecond_offset, unsigned long period)
-		{
-			// capture the caller's context in a lambda to be invoked in the callback
-			this->insert_callback_info(
-				details::ctThreadpoolTimerCallbackInfo(
-					std::move(function),
-					millisecond_offset,
-					period));
-		}
+        void schedule_reoccuring(std::function<void()> function, long long millisecond_offset, unsigned long period)
+        {
+            // capture the caller's context in a lambda to be invoked in the callback
+            this->insert_callback_info(
+                details::ctThreadpoolTimerCallbackInfo(
+                    std::move(function),
+                    millisecond_offset,
+                    period));
+        }
 
-		void stop_all_timers() noexcept
-		{
+        void stop_all_timers() noexcept
+        {
             auto lock_timer = this->m_timerLock.lock();
-            for (const auto& timer : m_tpTimers) {
-				SetThreadpoolTimer(timer, nullptr, 0, 0);
-			}
+            for (const auto& timer : m_tpTimers)
+            {
+                SetThreadpoolTimer(timer, nullptr, 0, 0);
+            }
             lock_timer.reset();
 
-			for (const auto& timer : m_tpTimers) {
-				WaitForThreadpoolTimerCallbacks(timer, TRUE);
-			}
-		}
+            for (const auto& timer : m_tpTimers)
+            {
+                WaitForThreadpoolTimerCallbacks(timer, TRUE);
+            }
+        }
 
-	private:
-		//
-		// Private members
-		//
-		wil::critical_section m_timerLock;
-		const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr;  // NOLINT(misc-misplaced-const)
-		std::vector<PTP_TIMER> m_tpTimers;
-		std::vector<details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
-		bool m_exiting = false;
+    private:
+        //
+        // Private members
+        //
+        wil::critical_section m_timerLock;
+        const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr;  // NOLINT(misc-misplaced-const)
+        std::vector<PTP_TIMER> m_tpTimers;
+        std::vector<details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
+        bool m_exiting = false;
 
-		PTP_TIMER create_tp()
-		{
-			const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, this->m_tpEnvironment); // NOLINT(misc-misplaced-const)
-			if (!ptp_timer) {
-				throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctl::ctThreadpoolTimer", false);
-			}
-			return ptp_timer;
-		}
+        PTP_TIMER create_tp()
+        {
+            const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, this->m_tpEnvironment); // NOLINT(misc-misplaced-const)
+            if (!ptp_timer)
+            {
+                throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctl::ctThreadpoolTimer", false);
+            }
+            return ptp_timer;
+        }
 
-		//
-		// must insert the callback info sorted based of the expected time to complete
-		//
-		void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& new_request)
-		{
+        //
+        // must insert the callback info sorted based of the expected time to complete
+        //
+        void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& new_request)
+        {
             const auto lock_timer = this->m_timerLock.lock();
-			if (m_exiting) {
-				return;
-			}
+            if (m_exiting)
+            {
+                return;
+            }
 
-			// compare each callback_object to check if it contains a null function ptr
-			auto unused_callback = std::find_if(
-				std::begin(this->m_callbackObjects),
-				std::end(this->m_callbackObjects),
-				[](const details::ctThreadpoolTimerCallbackInfo& info) noexcept {
-					// returns if a null callback (not being used)
-					return !static_cast<bool>(info.Callback);
-				});
+            // compare each callback_object to check if it contains a null function ptr
+            auto unused_callback = std::find_if(
+                std::begin(this->m_callbackObjects),
+                std::end(this->m_callbackObjects),
+                [](const details::ctThreadpoolTimerCallbackInfo& info) noexcept {
+                    // returns if a null callback (not being used)
+                    return !static_cast<bool>(info.Callback);
+                });
 
-			if (unused_callback == std::end(this->m_callbackObjects)) {
-				//
-				// need room in both the callback_objects && tp_timers vector for a new timer
-				//
-				this->m_callbackObjects.emplace_back(std::move(new_request));
-				// ensure this is exception safe with a scope guard
-				auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { this->m_callbackObjects.pop_back(); });
+            if (unused_callback == std::end(this->m_callbackObjects))
+            {
+                //
+                // need room in both the callback_objects && tp_timers vector for a new timer
+                //
+                this->m_callbackObjects.emplace_back(std::move(new_request));
+                // ensure this is exception safe with a scope guard
+                auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { this->m_callbackObjects.pop_back(); });
 
-				PTP_TIMER temp_timer = this->create_tp();
-				// ensure the timer is closed (is exception safe) with a scope guard
-				auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() noexcept { CloseThreadpoolTimer(temp_timer); });
+                PTP_TIMER temp_timer = this->create_tp();
+                // ensure the timer is closed (is exception safe) with a scope guard
+                auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() noexcept { CloseThreadpoolTimer(temp_timer); });
 
-				// now attempt to store the new timer
-				this->m_tpTimers.push_back(temp_timer);
+                // now attempt to store the new timer
+                this->m_tpTimers.push_back(temp_timer);
 
-				// all succeeded : dismiss the scope guards
-				deleteTemporaryTimerOnFailure.release();
-				removeCallbackObjectOnFailure.release();
+                // all succeeded : dismiss the scope guards
+                deleteTemporaryTimerOnFailure.release();
+                removeCallbackObjectOnFailure.release();
 
-				unused_callback = this->m_callbackObjects.end() - 1;
-			} else {
-				// if we found an empty slot, swap in the user's new object
-				unused_callback->swap(new_request);
-			}
+                unused_callback = this->m_callbackObjects.end() - 1;
+            }
+            else
+            {
+                // if we found an empty slot, swap in the user's new object
+                unused_callback->swap(new_request);
+            }
 
-			// using iterator_offect to directly express the relationship between tp_timers and callback_objects
-			// - each of the vector offsets are functionally paired together
-			const auto iterator_offset = unused_callback - this->m_callbackObjects.begin();
-			SetThreadpoolTimer(
-				this->m_tpTimers[iterator_offset],
-				&this->m_callbackObjects[iterator_offset].TimerExpiration,
-				this->m_callbackObjects[iterator_offset].ReoccuringPeriod,
-				0); // specifying window length of zero for now: not a need to be less precise -> more power efficient yet
-		}
+            // using iterator_offect to directly express the relationship between tp_timers and callback_objects
+            // - each of the vector offsets are functionally paired together
+            const auto iterator_offset = unused_callback - this->m_callbackObjects.begin();
+            SetThreadpoolTimer(
+                this->m_tpTimers[iterator_offset],
+                &this->m_callbackObjects[iterator_offset].TimerExpiration,
+                this->m_callbackObjects[iterator_offset].ReoccuringPeriod,
+                0); // specifying window length of zero for now: not a need to be less precise -> more power efficient yet
+        }
 
-		static void CALLBACK ThreadPoolTimerCallback(
-			PTP_CALLBACK_INSTANCE,
-			PVOID context,
-			PTP_TIMER timer) noexcept
-		try
-		{
-			auto this_ptr = static_cast<ctThreadpoolTimer*>(context);
+        static void CALLBACK ThreadPoolTimerCallback(
+            PTP_CALLBACK_INSTANCE,
+            PVOID context,
+            PTP_TIMER timer) noexcept
+            try
+        {
+            auto this_ptr = static_cast<ctThreadpoolTimer*>(context);
 
-			// save off the functor to invoke outside the lock
-			std::function<void()> functor;
+            // save off the functor to invoke outside the lock
+            std::function<void()> functor;
 
-			// scope for the CS lock
-			{
+            // scope for the CS lock
+            {
                 const auto lock_timer = this_ptr->m_timerLock.lock();
-				if (this_ptr->m_exiting) {
-					return;
-				}
+                if (this_ptr->m_exiting)
+                {
+                    return;
+                }
 
 
-			    // find the timer that was fired to run its callback
-				const auto found_timer = std::find_if(
-					std::begin(this_ptr->m_tpTimers),
-					std::end(this_ptr->m_tpTimers),
-					[timer](PTP_TIMER callback_timer) noexcept
-					{
-						// returns if a null callback (not being used)
-						return timer == callback_timer;
-					});
-				FAIL_FAST_IF_MSG(
-					found_timer == std::end(this_ptr->m_tpTimers),
-					"ctThreadPoolTimer - failed to find the PTP_TIMER (%p) which initiated this timer callback (ctl::ctThreadPoolTimer %p)",
-					timer, this_ptr);
+                // find the timer that was fired to run its callback
+                const auto found_timer = std::find_if(
+                    std::begin(this_ptr->m_tpTimers),
+                    std::end(this_ptr->m_tpTimers),
+                    [timer](PTP_TIMER callback_timer) noexcept {
+                        // returns if a null callback (not being used)
+                        return timer == callback_timer;
+                    });
+                FAIL_FAST_IF_MSG(
+                    found_timer == std::end(this_ptr->m_tpTimers),
+                    "ctThreadPoolTimer - failed to find the PTP_TIMER (%p) which initiated this timer callback (ctl::ctThreadPoolTimer %p)",
+                    timer, this_ptr);
 
-				const auto iterator_offset = found_timer - this_ptr->m_tpTimers.begin();
-				functor = this_ptr->m_callbackObjects[iterator_offset].Callback;
+                const auto iterator_offset = found_timer - this_ptr->m_tpTimers.begin();
+                functor = this_ptr->m_callbackObjects[iterator_offset].Callback;
 
-				// recalculate the next time this scheduled event will fire
-				this_ptr->m_callbackObjects[iterator_offset].update_expiration();
-			}
+                // recalculate the next time this scheduled event will fire
+                this_ptr->m_callbackObjects[iterator_offset].update_expiration();
+            }
 
-			// now run the user's callback outside the internal lock
-			functor();
-		}
-		catch (...)
-		{
-		}
-	};
+            // now run the user's callback outside the internal lock
+            functor();
+        }
+        catch (...)
+        {
+        }
+    };
 } // namespace

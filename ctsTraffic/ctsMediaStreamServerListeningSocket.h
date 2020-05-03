@@ -22,8 +22,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
 
-namespace ctsTraffic {
-    class ctsMediaStreamServerListeningSocket {
+namespace ctsTraffic
+{
+    class ctsMediaStreamServerListeningSocket
+    {
     private:
         static const size_t RecvBufferSize = 1024;
 

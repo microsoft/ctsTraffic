@@ -157,7 +157,7 @@ namespace ctl
                 if (m_index != END_ITERATOR_INDEX)
                 {
                     return m_index == iter.m_index &&
-                           m_wbemClassObject == iter.m_wbemClassObject;
+                        m_wbemClassObject == iter.m_wbemClassObject;
                 }
                 return m_index == iter.m_index;
             }
@@ -239,8 +239,7 @@ namespace ctl
                         break;
                     }
 
-                    default:
-                        FAIL_FAST();
+                    default: FAIL_FAST();
                 }
             }
         };

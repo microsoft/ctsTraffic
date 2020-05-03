@@ -32,7 +32,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace ctl;
 using std::vector;
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -60,7 +61,8 @@ namespace ctsTraffic {
         m_frameRateMsPerFrame(1000.0 / static_cast<unsigned long>(ctsConfig::GetMediaStream().FramesPerSecond))
     {
         // if the entire session fits in the inital buffer, update accordingly
-        if (m_finalFrame < m_initialBufferFrames) {
+        if (m_finalFrame < m_initialBufferFrames)
+        {
             m_initialBufferFrames = m_finalFrame;
         }
         m_timerWheelOffsetFrames = m_initialBufferFrames;
@@ -68,7 +70,8 @@ namespace ctsTraffic {
         constexpr long c_ExtraBufferDepthFactor = 2;
         // queue_size is intentionally a signed long: will catch overflows
         const ctsSignedLong queue_size = c_ExtraBufferDepthFactor * m_initialBufferFrames;
-        if (queue_size < c_ExtraBufferDepthFactor) {
+        if (queue_size < c_ExtraBufferDepthFactor)
+        {
             throw ctException(
                 ERROR_INVALID_DATA,
                 L"BufferDepth & FrameSize don't allow for enough buffered stream",
@@ -84,7 +87,8 @@ namespace ctsTraffic {
 
         // pre-populate the queue of frames with the initial seq numbers
         ctsSignedLong last_used_sequence_number = 1;
-        for (auto& entry : m_frameEntries) {
+        for (auto& entry : m_frameEntries)
+        {
             entry.sequence_number = last_used_sequence_number;
             ++last_used_sequence_number;
         }
@@ -93,19 +97,18 @@ namespace ctsTraffic {
         m_rendererTimer = CreateThreadpoolTimer(TimerCallback, this, nullptr);
         THROW_LAST_ERROR_IF(!m_rendererTimer);
 
-        auto deleteTimerCallbackOnError = wil::scope_exit([&]() noexcept
-        {
+        auto deleteTimerCallbackOnError = wil::scope_exit([&]() noexcept {
             SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
             WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
             CloseThreadpoolTimer(m_rendererTimer);
-        });
+            });
 
         m_startTimer = CreateThreadpoolTimer(StartCallback, this, nullptr);
         THROW_LAST_ERROR_IF(!m_startTimer);
         // no errors, dismiss the scope guard
         deleteTimerCallbackOnError.release();
     }
-    
+
     ctsIOPatternMediaStreamClient::~ctsIOPatternMediaStreamClient() noexcept
     {
         PTP_TIMER original_timer = nullptr;
@@ -126,7 +129,8 @@ namespace ctsTraffic {
 
     ctsIOTask ctsIOPatternMediaStreamClient::next_task() noexcept
     {
-        if (0 == m_baseTimeMilliseconds) {
+        if (0 == m_baseTimeMilliseconds)
+        {
             // initiate the timers the first time the object is used
             m_baseTimeMilliseconds = ctTimer::ctSnapQpcInMillis();
             this->set_next_start_timer();
@@ -135,12 +139,16 @@ namespace ctsTraffic {
 
         // defaulting to an empty task (do nothing)
         ctsIOTask return_task;
-        if (m_recvNeeded > 0) {
+        if (m_recvNeeded > 0)
+        {
             // don't try posting more than UdpDatagramMaximumSizeBytes at a time
             unsigned long max_size_buffer = 0ul;
-            if (m_frameSizeBytes > UdpDatagramMaximumSizeBytes) {
+            if (m_frameSizeBytes > UdpDatagramMaximumSizeBytes)
+            {
                 max_size_buffer = UdpDatagramMaximumSizeBytes;
-            } else {
+            }
+            else
+            {
                 max_size_buffer = m_frameSizeBytes;
             }
 
@@ -157,7 +165,8 @@ namespace ctsTraffic {
         LARGE_INTEGER qpc;
         QueryPerformanceCounter(&qpc);
 
-        if (task.ioAction == IOTaskAction::Abort) {
+        if (task.ioAction == IOTaskAction::Abort)
+        {
             // the stream should now be done
             FAIL_FAST_IF_MSG(
                 !m_finishedStream,
@@ -165,24 +174,31 @@ namespace ctsTraffic {
             return ctsIOPatternProtocolError::SuccessfullyCompleted;
         }
 
-        if (task.ioAction == IOTaskAction::Recv) {
-            if (0 == bytes_received) {
-                if (m_finishedStream) {
+        if (task.ioAction == IOTaskAction::Recv)
+        {
+            if (0 == bytes_received)
+            {
+                if (m_finishedStream)
+                {
                     // the final WSARecvFrom can complete with a zero-byte recv on loopback after the sender closes
                     // TODO: verify on non-loopback
                     return ctsIOPatternProtocolError::NoError;
-                } else {
+                }
+                else
+                {
                     ctsConfig::PrintErrorInfo("ctsIOPatternMediaStreamClient received a zero-byte datagram");
                     return ctsIOPatternProtocolError::TooFewBytes;
                 }
             }
 
-            if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(task, bytes_received)) {
+            if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(task, bytes_received))
+            {
                 ctsConfig::PrintErrorInfo("MediaStreamClient received an invalid datagram trying to parse the protocol header");
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
 
-            if (ctsMediaStreamMessage::GetProtocolHeaderFromTask(task) == UdpDatagramProtocolHeaderFlagId) {
+            if (ctsMediaStreamMessage::GetProtocolHeaderFromTask(task) == UdpDatagramProtocolHeaderFlagId)
+            {
                 // save off the connection ID when we receive it
                 ctsMediaStreamMessage::SetConnectionIdFromTask(this->connection_id(), task);
                 // since a recv completed, will need to request another
@@ -194,7 +210,8 @@ namespace ctsTraffic {
             ctsIOTask validation_task(task);
             validation_task.buffer_offset = UdpDatagramDataHeaderLength; // skip the UdpDatagramDataHeaderLength since we use them for our own stuff
             validation_task.buffer_length -= UdpDatagramDataHeaderLength;
-            if (!VerifyBuffer(validation_task, bytes_received - UdpDatagramDataHeaderLength)) {
+            if (!VerifyBuffer(validation_task, bytes_received - UdpDatagramDataHeaderLength))
+            {
                 // exit early if the buffers don't match
                 return ctsIOPatternProtocolError::CorruptedBytes;
             }
@@ -204,7 +221,8 @@ namespace ctsTraffic {
             this->stats.bits_received.add(bytes_received * 8);
 
             const long long received_seq_number = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
-            if (received_seq_number > m_finalFrame) {
+            if (received_seq_number > m_finalFrame)
+            {
                 ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
                 this->stats.error_frames.increment();
 
@@ -212,13 +230,16 @@ namespace ctsTraffic {
                     L"\t\tctsIOPatternMediaStreamClient recevieved **an unknown** seq number (%lld) (outside the final frame %lu)\n",
                     received_seq_number,
                     m_finalFrame);
-            } else {
+            }
+            else
+            {
                 //
                 // search our circular queue (starting at the head_entry)
                 // for the seq number we just received, and if found, tag as received
                 //
                 const auto found_slot = this->find_sequence_number(received_seq_number);
-                if (found_slot != m_frameEntries.end()) {
+                if (found_slot != m_frameEntries.end())
+                {
                     const long long buffered_qpc = *reinterpret_cast<long long*>(task.buffer + 8);
                     const long long buffered_qpf = *reinterpret_cast<long long*>(task.buffer + 16);
 
@@ -234,26 +255,32 @@ namespace ctsTraffic {
                         found_slot->sequence_number,
                         bytes_received,
                         found_slot->bytes_received
-                        );
+                    );
 
                     // stop the timer once we receive the last frame
                     // - it's not perfect (e.g. might have received them out of order)
                     // - but it will be very close for tracking the total bits/sec
-                    if (static_cast<unsigned long>(received_seq_number) == m_finalFrame) {
+                    if (static_cast<unsigned long>(received_seq_number) == m_finalFrame)
+                    {
                         this->end_stats();
                     }
 
-                } else {
+                }
+                else
+                {
                     // didn't find a slot for the received seq. number
                     ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
                     this->stats.error_frames.increment();
 
-                    if (received_seq_number < m_headEntry->sequence_number) {
+                    if (received_seq_number < m_headEntry->sequence_number)
+                    {
                         PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
                             received_seq_number,
                             static_cast<long long>(m_headEntry->sequence_number));
-                    } else {
+                    }
+                    else
+                    {
                         PrintDebugInfo(
                             L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
                             received_seq_number,
@@ -277,19 +304,21 @@ namespace ctsTraffic {
     /// If the sequence number was not found, will return end(frame_entries)
     ///
     _Requires_lock_held_(cs)
-    vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long seq_number) noexcept
+        vector<ctsConfig::JitterFrameEntry>::iterator ctsIOPatternMediaStreamClient::find_sequence_number(long long seq_number) noexcept
     {
         const ctsSignedLongLong head_sequence_number = m_headEntry->sequence_number;
         const ctsSignedLongLong tail_sequence_number = head_sequence_number + m_frameEntries.size() - 1;
         const ctsSignedLongLong vector_end_sequence_number = m_frameEntries.rbegin()->sequence_number;
 
-        if (seq_number > tail_sequence_number || seq_number < head_sequence_number) {
+        if (seq_number > tail_sequence_number || seq_number < head_sequence_number)
+        {
             // sequence number was out of range of our circular queue
             // - return end(frame_entries) to indicate it could not be found
             return end(m_frameEntries);
         }
 
-        if (seq_number <= vector_end_sequence_number) {
+        if (seq_number <= vector_end_sequence_number)
+        {
             // offset just from the head since it hasn't wrapped around the end
             const auto offset = static_cast<size_t>(seq_number - head_sequence_number);
             return m_headEntry + offset;
@@ -300,19 +329,23 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::received_buffered_frames() noexcept
+        bool ctsIOPatternMediaStreamClient::received_buffered_frames() noexcept
     {
-        if (m_frameEntries[0].sequence_number > 1) {
+        if (m_frameEntries[0].sequence_number > 1)
+        {
             // we've already received enough datagrams to fill one buffer
             return true;
         }
-        if (m_headEntry != m_frameEntries.begin()) {
+        if (m_headEntry != m_frameEntries.begin())
+        {
             // we've already moved the head entry after processing a frame
             return true;
         }
 
-        for (const auto& udp_frame : m_frameEntries) {
-            if (udp_frame.bytes_received > 0UL) {
+        for (const auto& udp_frame : m_frameEntries)
+        {
+            if (udp_frame.bytes_received > 0UL)
+            {
                 return true;
             }
         }
@@ -320,11 +353,12 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) const noexcept
+        bool ctsIOPatternMediaStreamClient::set_next_timer(bool initial_timer) const noexcept
     {
         bool timer_scheduled = false;
         // only schedule the next timer instance if the d'tor hasn't indicated it's wanting to exit
-        if (m_rendererTimer != nullptr) {
+        if (m_rendererTimer != nullptr)
+        {
             // calculate when that time should be relative to base_time_milliseconds 
             // (base_time_milliseconds is the start milliseconds from ctTimer::snap_qpc_msec())
             long long timer_offset = m_baseTimeMilliseconds;
@@ -334,7 +368,8 @@ namespace ctsTraffic {
             // subtract out the current time to get the delta # of milliseconds
             timer_offset -= ctTimer::ctSnapQpcInMillis();
             // only set the timer if we have time to wait
-            if (initial_timer || timer_offset > 2) {
+            if (initial_timer || timer_offset > 2)
+            {
                 // convert to filetime from milliseconds
                 // - make a 'relative' for SetThreadpoolTimer
                 FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(timer_offset));
@@ -348,9 +383,10 @@ namespace ctsTraffic {
     }
 
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::set_next_start_timer() const noexcept
+        void ctsIOPatternMediaStreamClient::set_next_start_timer() const noexcept
     {
-        if (m_startTimer != nullptr) {
+        if (m_startTimer != nullptr)
+        {
             // convert to filetime from milliseconds
             // - make a 'relative' for SetThreadpoolTimer
             FILETIME file_time(ctTimer::ctConvertMillisToRelativeFiletime(static_cast<long long>(m_frameRateMsPerFrame) + 500LL));
@@ -362,7 +398,7 @@ namespace ctsTraffic {
     // "render the current frame"
     // - update the current frame as "read" and move the head to the next frame
     _Requires_lock_held_(cs)
-    void ctsIOPatternMediaStreamClient::render_frame() noexcept
+        void ctsIOPatternMediaStreamClient::render_frame() noexcept
     {
         // estimating time in flight for this frame by determining how much time since the first send was just 'waiting' to send this frame
         // and subtracing that from how much time since the first receive - since time between receives should at least be time between sends
@@ -443,11 +479,13 @@ namespace ctsTraffic {
         // take the base lock before touching any internal members
         const auto lock = this_ptr->base_lock();
 
-        if (this_ptr->m_finishedStream) {
+        if (this_ptr->m_finishedStream)
+        {
             return;
         }
 
-        if (!this_ptr->received_buffered_frames()) {
+        if (!this_ptr->received_buffered_frames())
+        {
             // send another start message
             PrintDebugInfo(L"\t\tctsIOPatternMediaStreamClient re-requesting START\n");
 
@@ -471,11 +509,13 @@ namespace ctsTraffic {
 
         // process frames until the timer is scheduled in the future to process more frames
         bool timer_scheduled = false;
-        while (!timer_scheduled) {
+        while (!timer_scheduled)
+        {
             // take the base lock before touching any internal members
             const auto lock = this_ptr->base_lock();
 
-            if (this_ptr->m_finishedStream) {
+            if (this_ptr->m_finishedStream)
+            {
                 return;
             }
 
@@ -483,9 +523,11 @@ namespace ctsTraffic {
 
             bool fatal_aborted = false;
             if (this_ptr->m_timerWheelOffsetFrames >= this_ptr->m_initialBufferFrames &&
-                this_ptr->m_headEntry->sequence_number <= this_ptr->m_finalFrame) {
+                this_ptr->m_headEntry->sequence_number <= this_ptr->m_finalFrame)
+            {
                 // if we haven't yet received *anything* from the server, abort this connection
-                if (!this_ptr->received_buffered_frames()) {
+                if (!this_ptr->received_buffered_frames())
+                {
                     ctsConfig::PrintErrorInfo("ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
 
                     // indicate all frames were dropped
@@ -498,18 +540,24 @@ namespace ctsTraffic {
                     this_ptr->send_callback(abort_task);
                     fatal_aborted = true;
 
-                } else {
+                }
+                else
+                {
                     // if the initial buffer has already been filled, "render" the frame
                     this_ptr->render_frame();
                 }
             }
 
-            if (!fatal_aborted) {
+            if (!fatal_aborted)
+            {
                 // wait for the precise number of milliseconds for the next frame
-                if (this_ptr->m_headEntry->sequence_number <= this_ptr->m_finalFrame) {
+                if (this_ptr->m_headEntry->sequence_number <= this_ptr->m_finalFrame)
+                {
                     timer_scheduled = this_ptr->set_next_timer(false);
 
-                } else {
+                }
+                else
+                {
                     this_ptr->m_finishedStream = true;
                     ctsIOTask abort_task;
                     abort_task.ioAction = IOTaskAction::Abort;

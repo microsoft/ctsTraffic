@@ -18,7 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     enum class ctsIOPatternProtocolTask
     {

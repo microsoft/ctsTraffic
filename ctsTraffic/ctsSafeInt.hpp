@@ -18,12 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <wil/resource.h>
 
-namespace ctsTraffic {
-    ///
-    /// 'SafeInt' support differs across toolsets
-    /// - using typedefs to differentiate between the various options in one place
-    ///
-    struct ctsSafeIntErrorPolicy {
+namespace ctsTraffic
+{
+    struct ctsSafeIntErrorPolicy
+    {
         static __declspec(noreturn) void __stdcall SafeIntOnOverflow() noexcept
         {
             FAIL_FAST_MSG("SafeInt has detected an integer overflow");
@@ -33,7 +31,7 @@ namespace ctsTraffic {
             FAIL_FAST_MSG("SafeInt has detected divide by zero");
         }
     };
-    /// Visual Studio build system using safeint.h
+
     using ctsUnsignedLong = msl::utilities::SafeInt<unsigned long, ctsSafeIntErrorPolicy>;
     using ctsUnsignedLongLong = msl::utilities::SafeInt<unsigned long long, ctsSafeIntErrorPolicy>;
     using ctsSignedLong = msl::utilities::SafeInt<signed long, ctsSafeIntErrorPolicy>;
@@ -42,10 +40,10 @@ namespace ctsTraffic {
 
     using ctsSafeIntException = msl::utilities::SafeIntException;
 
-    inline
-    PCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
+    inline PCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
     {
-        switch (_ex.m_code) {
+        switch (_ex.m_code)
+        {
             case msl::utilities::SafeIntNoError: return L"SafeInt - No Error";
             case msl::utilities::SafeIntArithmeticOverflow: return L"SafeInt - Arithmetic Overflow";
             case msl::utilities::SafeIntDivideByZero: return L"SafeInt - Divide By Zero";

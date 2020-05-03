@@ -27,11 +27,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsWinsockLayer.h"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
     class ctsMediaStreamServerConnectedSocket;
     typedef std::function<wsIOResult(ctsMediaStreamServerConnectedSocket*)> ctsMediaStreamConnectedSocketIoFunctor;
 
-    class ctsMediaStreamServerConnectedSocket {
+    class ctsMediaStreamServerConnectedSocket
+    {
     private:
         // the CS is mutable so we can take a lock / release a lock in const methods
         mutable wil::critical_section object_guard;
@@ -57,9 +59,9 @@ namespace ctsTraffic {
 
     public:
         ctsMediaStreamServerConnectedSocket(
-            std::weak_ptr<ctsSocket> _weak_socket, 
+            std::weak_ptr<ctsSocket> _weak_socket,
             SOCKET _sending_socket,
-            ctl::ctSockaddr _remote_addr, 
+            ctl::ctSockaddr _remote_addr,
             ctsMediaStreamConnectedSocketIoFunctor _io_functor);
 
         ~ctsMediaStreamServerConnectedSocket() noexcept;

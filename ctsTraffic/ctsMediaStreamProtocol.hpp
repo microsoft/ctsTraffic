@@ -22,24 +22,22 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctString.hpp>
 #include <ctTimer.hpp>
-#include <ctException.hpp>
 // local headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
 
-namespace ctsTraffic {
-    ///
-    /// ctsMediaStreamMessage encapsulates requests sent from clients
-    ///
-    ///
-    /// Grammar:
-    ///
-    ///   REQUEST_ID
-    ///   START
-    ///
-
+namespace ctsTraffic
+{
+    //
+    // ctsMediaStreamMessage encapsulates requests sent from clients
+    //
+    // Grammar:
+    //
+    //   REQUEST_ID
+    //   START
+    //
     constexpr unsigned short UdpDatagramProtocolHeaderFlagData = 0x0000;
     constexpr unsigned short UdpDatagramProtocolHeaderFlagId = 0x1000;
 
@@ -85,11 +83,11 @@ namespace ctsTraffic {
             /// - allows <algorithm> functions to be used
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            typedef std::forward_iterator_tag              iterator_category;
-            typedef std::array<WSABUF, BufferArraySize>    value_type;
-            typedef size_t                                 difference_type;
-            typedef std::array<WSABUF, BufferArraySize>*   pointer;
-            typedef std::array<WSABUF, BufferArraySize>&   reference;
+            typedef std::forward_iterator_tag iterator_category;
+            typedef std::array<WSABUF, BufferArraySize> value_type;
+            typedef size_t difference_type;
+            typedef std::array<WSABUF, BufferArraySize>* pointer;
+            typedef std::array<WSABUF, BufferArraySize>& reference;
 
             ~iterator() = default;
             iterator(const iterator&) = default;
@@ -168,8 +166,8 @@ namespace ctsTraffic {
         private:
             // c'tor is only available to the begin() and end() methods of ctsMediaStreamSendRequests
             friend class ctsMediaStreamSendRequests;
-            iterator(_In_opt_ LARGE_INTEGER* _qpc_address, long long _bytes_to_send, const std::array<WSABUF, BufferArraySize>& _wsa_buf_array) noexcept
-                : qpc_address(_qpc_address),
+            iterator(_In_opt_ LARGE_INTEGER* _qpc_address, long long _bytes_to_send, const std::array<WSABUF, BufferArraySize>& _wsa_buf_array) noexcept :
+                qpc_address(_qpc_address),
                 bytes_to_send(_bytes_to_send),
                 wsa_buf_array(_wsa_buf_array)
             {
@@ -225,9 +223,7 @@ namespace ctsTraffic {
         /// - the total # of bytes to send (across X number of send requests)
         /// - the sequence number to tag in every send request
         ///
-        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, const char* _send_buffer) noexcept
-            : wsabuf(),
-            qpc_value(),
+        ctsMediaStreamSendRequests(long long _bytes_to_send, long long _sequence_number, const char* _send_buffer) noexcept :
             qpf(ctl::ctTimer::ctSnapQpf()),
             bytes_to_send(_bytes_to_send),
             sequence_number(_sequence_number)
@@ -266,25 +262,27 @@ namespace ctsTraffic {
 
 
     private:
-        std::array<WSABUF, BufferArraySize> wsabuf;
-        LARGE_INTEGER qpc_value;
-        long long qpf;
-        long long bytes_to_send;
-        long long sequence_number;
+        std::array<WSABUF, BufferArraySize> wsabuf{};
+        LARGE_INTEGER qpc_value{};
+        long long qpf{};
+        long long bytes_to_send{};
+        long long sequence_number{};
     };
 
 
     struct ctsMediaStreamMessage
     {
-        long long sequence_number;
-        MediaStreamAction action;
+        long long sequence_number = 0ll;
+        MediaStreamAction action{};
 
-        explicit ctsMediaStreamMessage(MediaStreamAction _action) noexcept
-            : sequence_number(0LL),
-            action(_action)
+        explicit ctsMediaStreamMessage(MediaStreamAction _action) noexcept : action(_action)
         {
         }
-
+        ~ctsMediaStreamMessage() noexcept = default;
+        ctsMediaStreamMessage(const ctsMediaStreamMessage&) = default;
+        ctsMediaStreamMessage& operator=(const ctsMediaStreamMessage&) = default;
+        ctsMediaStreamMessage(ctsMediaStreamMessage&&) = default;
+        ctsMediaStreamMessage& operator=(ctsMediaStreamMessage&&) = default;
 
         static bool ValidateBufferLengthFromTask(const ctsIOTask& _task, unsigned long _completed_bytes) noexcept
             try
@@ -429,8 +427,7 @@ namespace ctsTraffic {
                     return_task.buffer_length = UdpDatagramStartStringLength;
                     break;
 
-                default:
-                    FAIL_FAST();
+                default: FAIL_FAST();
             }
 
             return return_task;

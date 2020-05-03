@@ -28,40 +28,30 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //   but also simplifying the logic behind the code to make reasoning over the code more straight forward
 //
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     struct wsIOResult
     {
         int error_code = 0;
         unsigned long bytes_transferred = 0;
 
-        wsIOResult() noexcept
-        = default;
-
+        wsIOResult() noexcept = default;
         explicit wsIOResult(int _error) noexcept
         {
             error_code = _error;
         }
     };
 
-    //
-    // WSARecvFrom
-    //
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)>&& _callback) noexcept;
 
-    //
-    // WSASendTo
-    //
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& _shared_socket,
         const ctsIOTask& _task,
         std::function<void(OVERLAPPED*)>&& _callback) noexcept;
 
-    //
     // Set LINGER options to force a RST when the socket is closed
-    //
     wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept;
 }

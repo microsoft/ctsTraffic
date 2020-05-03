@@ -21,74 +21,48 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
 
-///
-/// We register both of these functions with ctsConfig:
-/// - ctsMediaStreamServerListener is the "Accepting" function
-///   - it will complete 'Create' ctsSocket requests as clients send in START requests
-///     it will be assumed that a client is unique when its IP:PORT are unique
-///
-/// - ctsMediaStreamServerIo is the 'IO' function
-///   - it queues up IO to a central prioritized queue of work
-///     since all IO is triggered to occur at a future point, the queue is sorted by work that comes soonest
-///
+// We register both of these functions with ctsConfig:
+// - ctsMediaStreamServerListener is the "Accepting" function
+//   - it will complete 'Create' ctsSocket requests as clients send in START requests
+//     it will be assumed that a client is unique when its IP:PORT are unique
+//
+// - ctsMediaStreamServerIo is the 'IO' function
+//   - it queues up IO to a central prioritized queue of work
+//     since all IO is triggered to occur at a future point, the queue is sorted by work that comes soonest
 
-namespace ctsTraffic {
-    namespace ctsMediaStreamServerImpl {
+namespace ctsTraffic
+{
+    namespace ctsMediaStreamServerImpl
+    {
         void init_once();
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Schedule the first IO on the specified ctsSocket
-        /// 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Schedule the first IO on the specified ctsSocket
         void schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task);
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Process a new ctsSocket from the ctsSocketBroker
-        /// - accept_socket takes the ctsSocket to create a new entry
-        ///   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
-        /// 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // Process a new ctsSocket from the ctsSocketBroker
+        // - accept_socket takes the ctsSocket to create a new entry
+        //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
         void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket);
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Process the removal of a connected socket once it is completed
-        /// - remove_socket takes the remote address to find the socket
-        /// - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
-        ///   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
-        ///   (which will wait for all TP threads to complete in the d'tor)
-        /// 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // Process the removal of a connected socket once it is completed
+        // - remove_socket takes the remote address to find the socket
+        // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
+        //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
+        //   (which will wait for all TP threads to complete in the d'tor)
         void remove_socket(const ctl::ctSockaddr& _target_addr);
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Processes the incoming START request from the client
-        /// - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
-        /// - else we'll queue it to awaiting_endpoints
-        ///
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // Processes the incoming START request from the client
+        // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
+        // - else we'll queue it to awaiting_endpoints
         void Start(SOCKET _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr);
     }
 
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called to 'accept' incoming connections
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Called to 'accept' incoming connections
     void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called initiate IO on a datagram socket
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Called initiate IO on a datagram socket
     void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Called to remove that socket from the tracked vector of connected sockets
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Called to remove that socket from the tracked vector of connected sockets
     void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
-} // ctsTraffic namespace
+}

@@ -22,8 +22,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 
-namespace ctsTraffic {
-
+namespace ctsTraffic
+{
     static long long s_BindCounter = 0LL;
     static long long s_TargetCounter = 0LL;
     static long long s_PortCounter = 0LL;

@@ -33,8 +33,7 @@ namespace ctsTraffic
     using namespace ctl;
     using namespace std;
 
-    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker)
-        : broker(move(_broker))
+    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) : broker(move(_broker))
     {
         thread_pool_worker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment));
         THROW_LAST_ERROR_IF_NULL(thread_pool_worker.get());

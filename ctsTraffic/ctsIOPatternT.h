@@ -23,7 +23,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPatternProtocolPolicy.hpp"
 #include "ctsIOPatternRateLimitPolicy.hpp"
 
-namespace ctsTraffic {
+namespace ctsTraffic
+{
 
     enum class ctsIOStatus
     {
@@ -77,9 +78,9 @@ namespace ctsTraffic {
 
 
     template <typename Stats,
-              typename ProtocolPolicy,
-              typename RateLimitPolicy>
-    class ctsIOPatternT : public ctsIOPattern
+        typename ProtocolPolicy,
+        typename RateLimitPolicy>
+        class ctsIOPatternT : public ctsIOPattern
     {
     public:
         ctsIOPatternT() = default;
@@ -88,7 +89,8 @@ namespace ctsTraffic {
         void print_stats(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept final
         {
             // before printing the final results, make sure the timers are stopped
-            if (0 == this->get_last_error() && 0 == m_stats.current_bytes()) {
+            if (0 == this->get_last_error() && 0 == m_stats.current_bytes())
+            {
                 PrintDebugInfo(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n");
                 this->m_protocolPolicy.update_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }

@@ -1,4 +1,4 @@
-  /*
+/*
 
 Copyright (c) Microsoft Corporation
 All rights reserved.
@@ -34,13 +34,15 @@ namespace ctsTraffic
         {
             UUID connection_id;
             RPC_STATUS status = UuidCreate(&connection_id);
-            if (status != RPC_S_OK) {
+            if (status != RPC_S_OK)
+            {
                 throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
             }
 
             RPC_CSTR connection_id_string = nullptr;
             status = UuidToStringA(&connection_id, &connection_id_string);
-            if (status != RPC_S_OK) {
+            if (status != RPC_S_OK)
+            {
                 throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
             }
             FAIL_FAST_IF_MSG(
@@ -63,7 +65,8 @@ namespace ctsTraffic
             // only calculate the QPC the first time
             // - willing to take the cost of 2 interlocked operations the first time this is initialized
             //   versus taking a QPC hit on every IO request
-            if (0LL == _statistics_object.start_time.get()) {
+            if (0LL == _statistics_object.start_time.get())
+            {
                 _statistics_object.start_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
             }
         }
@@ -75,33 +78,36 @@ namespace ctsTraffic
         }
     }
 
-    struct ctStatsTracking {
+    struct ctStatsTracking
+    {
     private:
-        long long current_value;
-        long long previous_value;
+        long long current_value = 0ll;
+        long long previous_value = 0ll;
 
     public:
-        ctStatsTracking() noexcept :
-            current_value(0),
-            previous_value(0)
-        {
-        }
+        ctStatsTracking() noexcept = default;
         explicit ctStatsTracking(long long _initial_value) noexcept :
             current_value(_initial_value),
             previous_value(_initial_value)
         {
         }
+        ~ctStatsTracking() noexcept = default;
+
         ctStatsTracking(const ctStatsTracking& _in) noexcept :
+            current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
+            previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
+        {
+        }
+        ctStatsTracking(ctStatsTracking&& _in) noexcept :
             current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
             previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
         {
         }
         // not allowing assignment operator - must be explicit
         ctStatsTracking& operator=(const ctStatsTracking&) = delete;
-        ctStatsTracking(ctStatsTracking&&) = delete;
         ctStatsTracking& operator=(ctStatsTracking&&) = delete;
 
-        long long get() const noexcept
+        [[nodiscard]] long long get() const noexcept
         {
             return ctl::ctMemoryGuardRead(&current_value);
         }
@@ -169,7 +175,7 @@ namespace ctsTraffic
         // Returns the difference (current_value - previous_value)
         // - without modifying either value
         //
-        long long read_value_difference() const noexcept
+        [[nodiscard]] long long read_value_difference() const noexcept
         {
             const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
             const long long capture_prior_value = ctl::ctMemoryGuardRead(&previous_value);
@@ -178,8 +184,8 @@ namespace ctsTraffic
     };
 
 
-    struct ctsConnectionStatistics {
-    public:
+    struct ctsConnectionStatistics
+    {
         ctStatsTracking start_time;
         ctStatsTracking end_time;
         ctStatsTracking active_connection_count;
@@ -188,18 +194,17 @@ namespace ctsTraffic
         ctStatsTracking protocol_error_count;
 
         explicit ctsConnectionStatistics(long long _start_time = 0LL) noexcept :
-            start_time(_start_time),
-            end_time(0LL),
-            active_connection_count(0LL),
-            successful_completion_count(0LL),
-            connection_error_count(0LL),
-            protocol_error_count(0LL)
+            start_time(_start_time)
         {
         }
+        ~ctsConnectionStatistics() noexcept = default;
         ctsConnectionStatistics(const ctsConnectionStatistics&) = default;
+        ctsConnectionStatistics(ctsConnectionStatistics&&) = default;
         // not implementing the assignment operator
         // only implemeting the copy c'tor (due to maintaining memory barriers)
         ctsConnectionStatistics& operator=(const ctsConnectionStatistics& _in) = delete;
+        ctsConnectionStatistics& operator=(ctsConnectionStatistics&&) = delete;
+
         //
         // snap_view() will return a statistics object capturing the current values
         // - resetting only the start_time value if the _In_ bool is true
@@ -226,8 +231,8 @@ namespace ctsTraffic
         }
     };
 
-    struct ctsUdpStatistics {
-    public:
+    struct ctsUdpStatistics
+    {
         ctStatsTracking start_time;
         ctStatsTracking end_time;
         ctStatsTracking bits_received;
@@ -239,36 +244,19 @@ namespace ctsTraffic
         char connection_identifier[ctsStatistics::ConnectionIdLength]{};
 
         explicit ctsUdpStatistics(long long _start_time = 0LL) noexcept :
-            start_time(_start_time),
-            end_time(0LL),
-            bits_received(0LL),
-            successful_frames(0LL),
-            dropped_frames(0LL),
-            duplicate_frames(0LL),
-            error_frames(0LL)
+            start_time(_start_time)
         {
             connection_identifier[0] = '\0';
         }
-        //
-        // implementing the copy c'tor with memory barriers in place
-        //
-        ctsUdpStatistics(const ctsUdpStatistics& _in) noexcept :
-            start_time(_in.start_time),
-            end_time(_in.end_time),
-            bits_received(_in.bits_received),
-            successful_frames(_in.successful_frames),
-            dropped_frames(_in.dropped_frames),
-            duplicate_frames(_in.duplicate_frames),
-            error_frames(_in.error_frames)
-        {
-            // not needing to guard this string: it's created exactly once
-            memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
-            connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
-        }
+        ~ctsUdpStatistics() noexcept = default;
+
+        ctsUdpStatistics(const ctsUdpStatistics& _in) noexcept = default;
+        ctsUdpStatistics(ctsUdpStatistics&& _in) noexcept = default;
 
         ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
+        ctsUdpStatistics& operator=(ctsUdpStatistics&&) = delete;
 
-        long long current_bytes() const noexcept
+        [[nodiscard]] long long current_bytes() const noexcept
         {
             return this->bits_received.get() / 8;
         }
@@ -286,14 +274,17 @@ namespace ctsTraffic
             ctsUdpStatistics return_stats(prior_time_read);
             return_stats.end_time.set(current_time);
 
-            if (_clear_settings) {
+            if (_clear_settings)
+            {
                 return_stats.bits_received.set(this->bits_received.snap_value_difference());
                 return_stats.successful_frames.set(this->successful_frames.snap_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.snap_value_difference());
                 return_stats.duplicate_frames.set(this->duplicate_frames.snap_value_difference());
                 return_stats.error_frames.set(this->duplicate_frames.snap_value_difference());
 
-            } else {
+            }
+            else
+            {
                 return_stats.bits_received.set(this->bits_received.read_value_difference());
                 return_stats.successful_frames.set(this->successful_frames.read_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.read_value_difference());
@@ -305,8 +296,8 @@ namespace ctsTraffic
         }
     };
 
-    struct ctsTcpStatistics {
-    public:
+    struct ctsTcpStatistics
+    {
         ctStatsTracking start_time;
         ctStatsTracking end_time;
         ctStatsTracking bytes_sent;
@@ -320,28 +311,20 @@ namespace ctsTraffic
             bytes_sent(0LL),
             bytes_recv(0LL)
         {
-            static const char * NULL_GUID_STRING = "00000000-0000-0000-0000-000000000000";
+            static const char* NULL_GUID_STRING = "00000000-0000-0000-0000-000000000000";
             strcpy_s(
                 connection_identifier,
                 NULL_GUID_STRING);
         }
-        //
-        // implementing the copy c'tor with memory barriers in place
-        //
-        ctsTcpStatistics(const ctsTcpStatistics& _in) noexcept :
-            start_time(_in.start_time),
-            end_time(_in.end_time),
-            bytes_sent(_in.bytes_sent),
-            bytes_recv(_in.bytes_recv)
-        {
-            // not needing to guard this string: it's created exactly once
-            memcpy_s(connection_identifier, ctsStatistics::ConnectionIdLength, _in.connection_identifier, ctsStatistics::ConnectionIdLength);
-            connection_identifier[ctsStatistics::ConnectionIdLength - 1] = '\0';
-        }
+        ~ctsTcpStatistics() noexcept = default;
+
+        ctsTcpStatistics(const ctsTcpStatistics& _in) noexcept = default;
+        ctsTcpStatistics(ctsTcpStatistics&& _in) noexcept = default;
 
         ctsTcpStatistics operator=(const ctsTcpStatistics& _in) = delete;
+        ctsTcpStatistics operator=(ctsTcpStatistics&&) = delete;
 
-        long long current_bytes() const noexcept
+        [[nodiscard]] long long current_bytes() const noexcept
         {
             return this->bytes_recv.get() + this->bytes_sent.get();
         }
@@ -360,11 +343,14 @@ namespace ctsTraffic
             ctsTcpStatistics return_stats(prior_time_read);
             return_stats.end_time.set(current_time);
 
-            if (_clear_settings) {
+            if (_clear_settings)
+            {
                 return_stats.bytes_sent.set(this->bytes_sent.snap_value_difference());
                 return_stats.bytes_recv.set(this->bytes_recv.snap_value_difference());
 
-            } else {
+            }
+            else
+            {
                 return_stats.bytes_sent.set(this->bytes_sent.read_value_difference());
                 return_stats.bytes_recv.set(this->bytes_recv.read_value_difference());
             }
