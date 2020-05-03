@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <safeint.h>
 // ctl headers
-#include <ctException.hpp>
+#include <wil/resource.h>
 
 namespace ctsTraffic {
     ///
@@ -26,11 +26,11 @@ namespace ctsTraffic {
     struct ctsSafeIntErrorPolicy {
         static __declspec(noreturn) void __stdcall SafeIntOnOverflow() noexcept
         {
-            ctl::ctAlwaysFatalCondition(L"SafeInt has detected an integer overflow");
+            FAIL_FAST_MSG("SafeInt has detected an integer overflow");
         }
         static __declspec(noreturn) void __stdcall SafeIntOnDivZero() noexcept
         {
-            ctl::ctAlwaysFatalCondition(L"SafeInt has detected divide by zero");
+            FAIL_FAST_MSG("SafeInt has detected divide by zero");
         }
     };
     /// Visual Studio build system using safeint.h

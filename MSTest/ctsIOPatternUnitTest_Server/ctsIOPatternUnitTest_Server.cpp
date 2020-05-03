@@ -103,7 +103,7 @@ namespace ctsTraffic::ctsConfig
     void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -137,7 +137,7 @@ namespace ctsTraffic::ctsConfig
 
     float GetStatusTimeStamp() noexcept
     {
-        return static_cast<float>((ctl::ctTimer::ctSnapQpcInMillis() - static_cast<long long>(Settings->StartTimeMilliseconds)) / 1000.0);
+        return static_cast<float>(ctl::ctTimer::ctSnapQpcInMillis() - Settings->StartTimeMilliseconds) / 1000.0f;
     }
     bool ShutdownCalled() noexcept
     {
@@ -273,11 +273,11 @@ namespace ctsUnitTest
             this->SetTestBaseClassDefaults(Server);
 
             std::shared_ptr<ctsIOPattern> test_pattern(ctsIOPattern::MakeIOPattern());
-            ctsIOTask test_task = test_pattern->initiate_io();
+            const ctsIOTask test_task = test_pattern->initiate_io();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailRecv)
@@ -295,7 +295,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestServerBaseClass_FailFINAfterRecv)
@@ -330,7 +330,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestServerBaseClass_TooManyBytesOnFINAfterSend)
@@ -365,7 +365,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 1, 0));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, test_pattern->get_last_error());
+            Assert::AreEqual(static_cast<unsigned long>(ctsStatusErrorTooMuchDataTransferred), test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestServerBaseClass_TooManyBytesOnFINAfterRecv)
@@ -400,7 +400,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 1, 0));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, test_pattern->get_last_error());
+            Assert::AreEqual(static_cast<unsigned long>(ctsStatusErrorTooMuchDataTransferred), test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_InvalidBytesOnRecv)
@@ -420,7 +420,7 @@ namespace ctsUnitTest
             // not returning the correct bytes
             ::ZeroMemory(test_task.buffer, test_task.buffer_length);
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
-            Assert::AreEqual(ctsStatusErrorDataDidNotMatchBitPattern, test_pattern->get_last_error());
+            Assert::AreEqual(static_cast<unsigned long>(ctsStatusErrorDataDidNotMatchBitPattern), test_pattern->get_last_error());
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

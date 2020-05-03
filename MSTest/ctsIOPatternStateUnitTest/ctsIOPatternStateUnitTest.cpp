@@ -104,7 +104,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -180,7 +180,7 @@ namespace ctsUnitTest
 
         ctsIOTask RequestConnectionId() const
         {
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             if (s_Listening)
             {
                 Assert::AreEqual(ctsIOPatternProtocolTask::SendConnectionId, task);
@@ -210,7 +210,7 @@ namespace ctsUnitTest
 
         ctsIOTask RequestMoreIo(unsigned long _buffer_length) const
         {
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::MoreIo, task);
 
             ctsIOTask test_task;
@@ -227,7 +227,7 @@ namespace ctsUnitTest
         ctsIOTask RequestSendStatus(_In_ unsigned long* _status_buffer)
         {
             // get_next_task
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::SendCompletion, task);
 
             ctsIOTask test_task;
@@ -249,7 +249,7 @@ namespace ctsUnitTest
         ctsIOTask RequestRecvStatus(_In_ unsigned long* _status_buffer)
         {
             // get_next_task
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::RecvCompletion, task);
 
             ctsIOTask test_task;
@@ -271,7 +271,7 @@ namespace ctsUnitTest
         ctsIOTask RequestFin()
         {
             // get_next_task
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::RequestFIN, task);
 
             ctsIOTask test_task;
@@ -292,7 +292,7 @@ namespace ctsUnitTest
         ctsIOTask RequestGracefulShutdown()
         {
             // get_next_task
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::GracefulShutdown, task);
 
             ctsIOTask test_task;
@@ -313,7 +313,7 @@ namespace ctsUnitTest
         ctsIOTask RequestHardShutdown()
         {
             // get_next_task
-            auto task = this->ioPatternState->get_next_task();
+            const auto task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::HardShutdown, task);
 
             ctsIOTask test_task;
@@ -333,7 +333,7 @@ namespace ctsUnitTest
 
         void VerifyNoMoreIo() const
         {
-            auto no_io_task = this->ioPatternState->get_next_task();
+            const auto no_io_task = this->ioPatternState->get_next_task();
             Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, no_io_task);
         }
 
@@ -421,7 +421,7 @@ namespace ctsUnitTest
         TEST_METHOD(TestSuccessfullySendConnectionId)
         {
             this->InitGracefulShutdownTest(100, Server);
-            ctsIOTask test_task = this->RequestConnectionId();
+            const ctsIOTask test_task = this->RequestConnectionId();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             Assert::AreEqual(ctsIOPatternProtocolError::NoError, this->ioPatternState->completed_task(test_task, ctsStatistics::ConnectionIdLength));
             Assert::IsFalse(this->ioPatternState->is_completed());
@@ -430,7 +430,7 @@ namespace ctsUnitTest
         TEST_METHOD(TestFailedSendConnectionId)
         {
             this->InitGracefulShutdownTest(100, Server);
-            ctsIOTask test_task = this->RequestConnectionId();
+            const ctsIOTask test_task = this->RequestConnectionId();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             // indicate an error
             Assert::AreEqual(ctsIOPatternProtocolError::ErrorIOFailed, this->ioPatternState->update_error(1));
@@ -1113,16 +1113,16 @@ namespace ctsUnitTest
         TEST_METHOD(TestServerOverlappingMultipleIo)
         {
             this->InitGracefulShutdownTest(100 * 3, Server);
-            ctsIOTask test_task = this->RequestConnectionId();
+            const ctsIOTask test_task = this->RequestConnectionId();
             Assert::AreEqual(ctsIOPatternProtocolError::NoError, this->ioPatternState->completed_task(test_task, ctsStatistics::ConnectionIdLength));
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(100);
             Assert::AreEqual(ctsUnsignedLongLong(200), this->ioPatternState->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(100);
             Assert::AreEqual(ctsUnsignedLongLong(100), this->ioPatternState->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(100);
             Assert::AreEqual(ctsUnsignedLongLong(0), this->ioPatternState->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1154,14 +1154,14 @@ namespace ctsUnitTest
             // Send server status
             //
             unsigned long status = NO_ERROR;
-            ctsIOTask send_status_task = this->RequestSendStatus(&status);
+            const ctsIOTask send_status_task = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIOPatternProtocolError::NoError, this->ioPatternState->completed_task(send_status_task, 100));
             Assert::IsFalse(this->ioPatternState->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(0), this->ioPatternState->get_remaining_transfer());
             //
             // Request FIN task
             //
-            ctsIOTask fin_task = this->RequestFin();
+            const ctsIOTask fin_task = this->RequestFin();
             Assert::AreEqual(ctsIOPatternProtocolError::SuccessfullyCompleted, this->ioPatternState->completed_task(fin_task, 0));
             Assert::IsTrue(this->ioPatternState->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(0), this->ioPatternState->get_remaining_transfer());

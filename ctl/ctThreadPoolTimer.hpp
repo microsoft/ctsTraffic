@@ -35,7 +35,7 @@ namespace ctl
 		struct ctThreadpoolTimerCallbackInfo
 		{
 			std::function<void()> Callback;
-			FILETIME TimerExpiration = {0, 0};
+			FILETIME TimerExpiration{0, 0};
 			unsigned long ReoccuringPeriod = 0;
 
 			ctThreadpoolTimerCallbackInfo() = default;
@@ -43,13 +43,6 @@ namespace ctl
 			// non-copyable
 			ctThreadpoolTimerCallbackInfo(const ctThreadpoolTimerCallbackInfo&) = delete;
 			ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
-
-			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, long long milliseconds) noexcept :
-				Callback(std::move(callback))
-			{
-				using namespace ctTimer;
-				TimerExpiration = ctConvertMillisToAbsoluteFiletime(ctSnapSystemTimeInMillis() + milliseconds);
-			}
 
 			explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, long long milliseconds, unsigned long period) noexcept :
 				Callback(std::move(callback)),
@@ -128,15 +121,6 @@ namespace ctl
 		ctThreadpoolTimer(ctThreadpoolTimer&&) = delete;
 		ctThreadpoolTimer& operator=(ctThreadpoolTimer&&) = delete;
 
-		void schedule_singleton(std::function<void()> function, long long millisecond_offset)
-		{
-			// capture the caller's context in a lambda to be invoked in the callback
-			this->insert_callback_info(
-				details::ctThreadpoolTimerCallbackInfo(
-					std::move(function),
-					millisecond_offset));
-		}
-
 		void schedule_reoccuring(std::function<void()> function, long long millisecond_offset, unsigned long period)
 		{
 			// capture the caller's context in a lambda to be invoked in the callback
@@ -185,7 +169,6 @@ namespace ctl
 		void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& new_request)
 		{
             const auto lock_timer = this->m_timerLock.lock();
-
 			if (m_exiting) {
 				return;
 			}
@@ -238,6 +221,7 @@ namespace ctl
 			PTP_CALLBACK_INSTANCE,
 			PVOID context,
 			PTP_TIMER timer) noexcept
+		try
 		{
 			auto this_ptr = static_cast<ctThreadpoolTimer*>(context);
 
@@ -247,7 +231,11 @@ namespace ctl
 			// scope for the CS lock
 			{
                 const auto lock_timer = this_ptr->m_timerLock.lock();
-                
+				if (this_ptr->m_exiting) {
+					return;
+				}
+
+
 			    // find the timer that was fired to run its callback
 				const auto found_timer = std::find_if(
 					std::begin(this_ptr->m_tpTimers),
@@ -257,29 +245,23 @@ namespace ctl
 						// returns if a null callback (not being used)
 						return timer == callback_timer;
 					});
-				ctFatalCondition(
+				FAIL_FAST_IF_MSG(
 					found_timer == std::end(this_ptr->m_tpTimers),
-					L"ctThreadPoolTimer - failed to find the PTP_TIMER (%p) which initiated this timer callback (ctl::ctThreadPoolTimer %p)",
+					"ctThreadPoolTimer - failed to find the PTP_TIMER (%p) which initiated this timer callback (ctl::ctThreadPoolTimer %p)",
 					timer, this_ptr);
 
 				const auto iterator_offset = found_timer - this_ptr->m_tpTimers.begin();
 				functor = this_ptr->m_callbackObjects[iterator_offset].Callback;
 
-				if (0 == this_ptr->m_callbackObjects[iterator_offset].ReoccuringPeriod)
-				{
-                    this_ptr->m_callbackObjects.erase(this_ptr->m_callbackObjects.begin() + iterator_offset);
-                    CloseThreadpoolTimer(*(this_ptr->m_tpTimers.begin() + iterator_offset));
-                    this_ptr->m_tpTimers.erase(this_ptr->m_tpTimers.begin() + iterator_offset);
-				}
-				else
-				{
-					// recalculate the next time this scheduled event will fire
-					this_ptr->m_callbackObjects[iterator_offset].update_expiration();
-				}
+				// recalculate the next time this scheduled event will fire
+				this_ptr->m_callbackObjects[iterator_offset].update_expiration();
 			}
 
 			// now run the user's callback outside the internal lock
 			functor();
+		}
+		catch (...)
+		{
 		}
 	};
 } // namespace

@@ -323,7 +323,7 @@ namespace ctsTraffic {
                     // a real failure - must abort the IO
                     listening_socket_object->iocp->cancel_request(pov);
                     pov = nullptr;
-                    ctsConfig::PrintErrorIfFailed(L"AcceptEx", error);
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", error);
                     return;
                 }
 
@@ -369,7 +369,7 @@ namespace ctsTraffic {
                     &flags))
                 {
                     return_details.gle = WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed(L"AcceptEx", return_details.gle);
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", return_details.gle);
                     accept_socket.reset();
                     // return empty/failed details object
                     return return_details;
@@ -384,12 +384,10 @@ namespace ctsTraffic {
                 SO_UPDATE_ACCEPT_CONTEXT,
                 reinterpret_cast<const char*>(&listening_socket),
                 sizeof(listening_socket));
-            ctl::ctFatalCondition(
-                (err != 0),
-                L"setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
-                WSAGetLastError(),
-                accept_socket.get(),
-                listening_socket);
+            FAIL_FAST_IF_MSG(
+                err != 0,
+                "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
+                WSAGetLastError(), accept_socket.get(), listening_socket);
 
             SOCKADDR_INET* local_addr{};
             auto local_addr_len = int{ sizeof SOCKADDR_INET };
@@ -455,7 +453,7 @@ namespace ctsTraffic {
 
                 auto shared_socket(weak_socket.lock());
                 if (shared_socket) {
-                    ctsConfig::PrintErrorIfFailed(L"AcceptEx", accepted_socket.gle);
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", accepted_socket.gle);
 
                     if (0 == accepted_socket.gle) {
                         // set the local addr
@@ -478,7 +476,7 @@ namespace ctsTraffic {
                 }
                 else {
                     // socket was closed from beneath us
-                    ctsConfig::PrintErrorIfFailed(L"AcceptEx", WSAECONNABORTED);
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", WSAECONNABORTED);
                 }
             }
             else {
@@ -550,7 +548,7 @@ namespace ctsTraffic {
         //
         // complete this socket state if something failed
         //
-        ctsConfig::PrintErrorIfFailed(L"AcceptEx", error);
+        ctsConfig::PrintErrorIfFailed("AcceptEx", error);
         if (error != 0) {
             shared_socket->complete_state(error);
             return;

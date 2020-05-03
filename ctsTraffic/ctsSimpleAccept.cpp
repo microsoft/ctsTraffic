@@ -189,7 +189,7 @@ namespace ctsTraffic {
 
                 // if failed complete the ctsSocket and return
                 if (new_socket == INVALID_SOCKET) {
-                    ctsConfig::PrintErrorIfFailed(L"accept", gle);
+                    ctsConfig::PrintErrorIfFailed("accept", gle);
                     accept_socket->complete_state(gle);
                     return;
                 }
@@ -208,14 +208,14 @@ namespace ctsTraffic {
 
                 gle = ctsConfig::SetPreBindOptions(new_socket, local_addr);
                 if (gle != NO_ERROR) {
-                    ctsConfig::PrintErrorIfFailed(L"SetPreBindOptions", gle);
+                    ctsConfig::PrintErrorIfFailed("SetPreBindOptions", gle);
                     accept_socket->complete_state(gle);
                     return;
                 }
 
                 gle = ctsConfig::SetPreConnectOptions(new_socket);
                 if (gle != NO_ERROR) {
-                    ctsConfig::PrintErrorIfFailed(L"SetPreConnectOptions", gle);
+                    ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", gle);
                     accept_socket->complete_state(gle);
                     return;
                 }

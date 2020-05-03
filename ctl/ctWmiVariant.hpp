@@ -332,7 +332,7 @@ namespace ctl
         {
             // SafeArrayPutElement requires an array of indexes for each dimension of the array
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
-            long index[1] = { static_cast<long>(loop) };
+            long index[1]{ static_cast<long>(loop) };
 
             const auto bstr = SysAllocString(data[loop].c_str());
             THROW_IF_NULL_ALLOC(bstr);
@@ -375,7 +375,7 @@ namespace ctl
         {
             // SafeArrayPutElement requires an array of indexes for each dimension of the array
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
-            long index[1] = { static_cast<long>(loop) };
+            long index[1]{ static_cast<long>(loop) };
 
             unsigned long value = data[loop];
             THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
@@ -418,7 +418,7 @@ namespace ctl
         {
             // SafeArrayPutElement requires an array of indexes for each dimension of the array
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
-            long index[1] = { static_cast<long>(loop) };
+            long index[1]{ static_cast<long>(loop) };
 
             // Expand unsigned short to long because the SAFEARRAY created assumes VT_I4 elements
             long value = data[loop];
@@ -463,7 +463,7 @@ namespace ctl
         {
             // SafeArrayPutElement requires an array of indexes for each dimension of the array
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
-            long index[1] = { static_cast<long>(loop) };
+            long index[1]{ static_cast<long>(loop) };
 
             unsigned char value = data[loop];
             THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));

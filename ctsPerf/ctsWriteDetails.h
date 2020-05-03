@@ -22,7 +22,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/resource.h>
 // project headers
-#include "ctException.hpp"
 #include "ctString.hpp"
 #include "ctMath.hpp"
 
@@ -141,10 +140,8 @@ namespace ctsPerf {
 
             const std::wstring formattedData(PrintDetails(data));
             const auto length = static_cast<DWORD>(formattedData.length() * sizeof(wchar_t));
-            DWORD written;
-            if (!::WriteFile(m_fileHandle.get(), formattedData.c_str(), length, &written, nullptr)) {
-                throw ctl::ctException(::GetLastError(), L"WriteFile", false);
-            }
+            DWORD written{};
+            THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), formattedData.c_str(), length, &written, nullptr));
 
             end_row();
         }
@@ -162,10 +159,8 @@ namespace ctsPerf {
             // [2] == last
             const std::wstring difference = Details::Write(data[0], data[2] - data[1]);
             const auto length = static_cast<DWORD>(difference.length() * sizeof(wchar_t));
-            DWORD written;
-            if (!::WriteFile(m_fileHandle.get(), difference.c_str(), length, &written, nullptr)) {
-                throw ctl::ctException(::GetLastError(), L"WriteFile", false);
-            }
+            DWORD written{};
+            THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), difference.c_str(), length, &written, nullptr));
 
             end_row();
         }
@@ -185,10 +180,8 @@ namespace ctsPerf {
             // [3] == mean
             const std::wstring meanString = Details::Write(data[0], data[1]) + Details::Write(data[2], data[3]);
             const auto length = static_cast<DWORD>(meanString.length() * sizeof(wchar_t));
-            DWORD written;
-            if (!::WriteFile(m_fileHandle.get(), meanString.c_str(), length, &written, nullptr)) {
-                throw ctl::ctException(::GetLastError(), L"WriteFile", false);
-            }
+            DWORD written{};
+            THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), meanString.c_str(), length, &written, nullptr));
 
             end_row();
         }

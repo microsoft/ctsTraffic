@@ -108,7 +108,7 @@ namespace ctsTraffic::ctsConfig
     void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -408,7 +408,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailMultipleSends)
@@ -435,9 +435,9 @@ namespace ctsUnitTest
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task2).c_str());
 
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task1, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task2, ctsUnitTest::ctsIOPatternUnitTest_Client::DefaultTransferSize, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailReceivingConnectionId)
@@ -449,7 +449,7 @@ namespace ctsUnitTest
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailGracefulShutdownAfterSend)
@@ -479,7 +479,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailHardShutdownAfterSend)
@@ -509,7 +509,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::HardShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailGracefulShutdownAFterRecv)
@@ -539,7 +539,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::GracefulShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailHardShutdownAFterRecv)
@@ -569,7 +569,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::HardShutdown, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestBaseClass_FailFINAfterSend)
@@ -605,7 +605,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestClientBaseClass_FailFINAfterRecv)
@@ -641,7 +641,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 0, 1));
-            Assert::AreEqual(1, test_pattern->get_last_error());
+            Assert::AreEqual(1UL, test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestClientBaseClass_TooManyBytesOnFINAfterSend)
@@ -677,7 +677,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 1, 0));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, test_pattern->get_last_error());
+            Assert::AreEqual(static_cast<unsigned long>(ctsStatusErrorTooMuchDataTransferred), test_pattern->get_last_error());
         }
 
         TEST_METHOD(TestClientBaseClass_TooManyBytesOnFINAfterRecv)
@@ -713,7 +713,7 @@ namespace ctsUnitTest
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
             Logger::WriteMessage(ToString<ctsTraffic::ctsIOTask>(test_task).c_str());
             Assert::AreEqual(ctsIOStatus::FailedIo, test_pattern->complete_io(test_task, 1, 0));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, test_pattern->get_last_error());
+            Assert::AreEqual(static_cast<unsigned long>(ctsStatusErrorTooMuchDataTransferred), test_pattern->get_last_error());
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

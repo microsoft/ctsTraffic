@@ -48,7 +48,7 @@ namespace ctsTraffic {
             va_list args;
             va_start(args, _text);
 
-            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+            const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
             Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
@@ -69,10 +69,10 @@ namespace ctsTraffic {
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintErrorIfFailed(const wchar_t* , unsigned long _value) noexcept
+        void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
         }
         void PrintException(const std::exception& e) noexcept
         {
@@ -143,7 +143,7 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> _socket) noexcept
 
     Assert::AreNotEqual(s_ShouldNeverHitErrorCode, s_ConnectReturnCode);
 
-    SOCKET s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    const SOCKET s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     Assert::AreNotEqual(INVALID_SOCKET, s);
     shared_socket->set_socket(s);
 
@@ -174,7 +174,7 @@ namespace ctsUnitTest {
         TEST_CLASS_INITIALIZE(Setup)
         {
             WSADATA wsadata;
-            int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+            const int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
             Assert::AreEqual(0, wsError);
 
             ctsConfig::Settings = new ctsConfig::ctsConfigSettings;

@@ -64,14 +64,13 @@ namespace ctsTraffic
         if (NO_ERROR == gle)
         {
             const int err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
-            ctl::ctFatalCondition(
-                (err != 0),
-                L"setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
-                WSAGetLastError(),
-                static_cast<long long>(socket_ref.socket()));
+            FAIL_FAST_IF_MSG(
+                err != 0,
+                "setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
+                WSAGetLastError(), static_cast<long long>(socket_ref.socket()));
         }
 
-        ctsConfig::PrintErrorIfFailed(L"ConnecteEx", gle);
+        ctsConfig::PrintErrorIfFailed("ConnecteEx", gle);
 
         if (NO_ERROR == gle)
         {
@@ -99,7 +98,7 @@ namespace ctsTraffic
             return;
         }
 
-        int error;
+        int error = 0;
         try
         {
             const auto socket_ref(shared_socket->socket_reference());
@@ -117,7 +116,7 @@ namespace ctsTraffic
                 const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
                 OVERLAPPED* pov = connect_iocp->new_request(
                     [_weak_socket, targetAddress](OVERLAPPED* _ov) noexcept
-                { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
+                    { ctsConnectExIoCompletionCallback(_ov, _weak_socket, targetAddress); });
 
                 if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pov))
                 {
@@ -143,7 +142,7 @@ namespace ctsTraffic
                     ctsConnectExIoCompletionCallback(nullptr, _weak_socket, targetAddress);
                 }
 
-                ctsConfig::PrintErrorIfFailed(L"ConnectEx", error);
+                ctsConfig::PrintErrorIfFailed("ConnectEx", error);
                 if (NO_ERROR == error)
                 {
                     PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());

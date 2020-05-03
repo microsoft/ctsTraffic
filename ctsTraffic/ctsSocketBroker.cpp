@@ -14,8 +14,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // parent header
 #include "ctsSocketBroker.h"
 // cpp headers
-#include <exception>
-#include <algorithm>
 #include <memory>
 #include <iterator>
 // os headers
@@ -126,9 +124,9 @@ namespace ctsTraffic
     {
         const auto lock = this->cs.lock();
 
-        ctFatalCondition(
-            (this->pending_sockets == 0),
-            L"ctsSocketBroker::initiating_io - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
+        FAIL_FAST_IF_MSG(
+            this->pending_sockets == 0,
+            "ctsSocketBroker::initiating_io - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
             this->active_sockets);
 
         --this->pending_sockets;
@@ -144,17 +142,17 @@ namespace ctsTraffic
 
         if (_was_active)
         {
-            ctFatalCondition(
-                (this->active_sockets == 0),
-                L"ctsSocketBroker::closing - About to decrement active_sockets, but active_sockets == 0 (pending_sockets == %u)",
+            FAIL_FAST_IF_MSG(
+                this->active_sockets == 0,
+                "ctsSocketBroker::closing - About to decrement active_sockets, but active_sockets == 0 (pending_sockets == %u)",
                 this->pending_sockets);
             --this->active_sockets;
         }
         else
         {
-            ctFatalCondition(
-                (this->pending_sockets == 0),
-                L"ctsSocketBroker::closing - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
+            FAIL_FAST_IF_MSG(
+                this->pending_sockets == 0,
+                "ctsSocketBroker::closing - About to decrement pending_sockets, but pending_sockets == 0 (active_sockets == %u)",
                 this->active_sockets);
             --this->pending_sockets;
         }
@@ -162,7 +160,7 @@ namespace ctsTraffic
 
     bool ctsSocketBroker::wait(DWORD _milliseconds) const noexcept
     {
-        HANDLE arWait[2] = { this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
+        HANDLE arWait[2]{ this->done_event.get(), ctsConfig::Settings->CtrlCHandle };
 
         bool fReturn = false;
         switch (WaitForMultipleObjects(2, arWait, FALSE, _milliseconds))
@@ -179,8 +177,8 @@ namespace ctsTraffic
                 break;
 
             default:
-                ctAlwaysFatalCondition(
-                    L"ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
+                FAIL_FAST_MSG(
+                    "ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
                     arWait, GetLastError());
         }
         return fReturn;

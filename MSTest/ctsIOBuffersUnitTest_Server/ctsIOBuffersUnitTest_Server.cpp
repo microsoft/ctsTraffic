@@ -49,7 +49,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -212,7 +212,7 @@ namespace ctsUnitTest
         {
             ::SYSTEM_INFO sysInfo;         // Useful information about the system
             ::GetSystemInfo(&sysInfo);     // Initialize the structure.
-            unsigned long buffersToAdd = (sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength);
+            const unsigned long buffersToAdd = (sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength);
 
             std::vector<char*> test_buffers;
             std::vector<ctsIOTask> test_tasks;
@@ -280,7 +280,7 @@ namespace ctsUnitTest
         {
             ::SYSTEM_INFO sysInfo;         // Useful information about the system
             ::GetSystemInfo(&sysInfo);     // Initialize the structure.
-            unsigned long buffersToAdd = (sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength) + 1;
+            const unsigned long buffersToAdd = (sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength) + 1;
 
             std::vector<char*> test_buffers;
             std::vector<ctsIOTask> test_tasks;
@@ -348,7 +348,7 @@ namespace ctsUnitTest
         {
             ::SYSTEM_INFO sysInfo;         // Useful information about the system
             ::GetSystemInfo(&sysInfo);     // Initialize the structure.
-            unsigned long buffersToAdd = ((sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength) + 1) * 2;
+            const unsigned long buffersToAdd = ((sysInfo.dwPageSize / ctsStatistics::ConnectionIdLength) + 1) * 2;
 
             std::vector<char*> test_buffers;
             std::vector<ctsIOTask> test_tasks;

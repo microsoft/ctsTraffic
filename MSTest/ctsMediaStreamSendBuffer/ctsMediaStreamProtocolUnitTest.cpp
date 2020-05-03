@@ -15,18 +15,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 #include <string>
-
-#include "ctString.hpp"
+#include <ctString.hpp>
 #include "ctsMediaStreamProtocol.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace ctsTraffic;
 
-template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<unsigned short>(const unsigned short& _value)
+template <>
+std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<unsigned short>(const unsigned short& _value)
 {
     return std::to_wstring(_value);
 }
-template <> static std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<ctsTraffic::MediaStreamAction>(const ctsTraffic::MediaStreamAction& _message)
+template <>
+std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<ctsTraffic::MediaStreamAction>(const ctsTraffic::MediaStreamAction& _message)
 {
     switch (_message) {
         case ctsTraffic::MediaStreamAction::START:
@@ -53,7 +54,7 @@ namespace ctsUnitTest
                 L"begin(iterator) cannot equal end(iterator)");
 
             auto starting = std::begin(testbuffer);
-            auto ending = std::end(testbuffer);
+            const auto ending = std::end(testbuffer);
             while (starting != ending) {
                 // verify operator->
                 Assert::AreEqual(static_cast<size_t>(5), starting->size());
@@ -72,7 +73,7 @@ namespace ctsUnitTest
                 L"begin(iterator) cannot equal end(iterator)");
 
             auto starting = std::begin(testbuffer);
-            auto ending = std::end(testbuffer);
+            const auto ending = std::end(testbuffer);
             while (starting != ending) {
                 // verify operator->
                 Assert::AreEqual(static_cast<size_t>(5), starting->size());
@@ -89,7 +90,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -101,7 +102,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -113,7 +114,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, 1, nullptr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -125,7 +126,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 2;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -137,7 +138,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 2;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -148,7 +149,7 @@ namespace ctsUnitTest
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
-            auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
+            const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
             static const unsigned long expected_datagram_count = 1930;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
@@ -158,10 +159,10 @@ namespace ctsUnitTest
         {
             Assert::AreEqual(UdpDatagramStartStringLength, static_cast<unsigned long>(::strlen(UdpDatagramStartString)));
 
-            ctsIOTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
+            const ctsIOTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
             Assert::AreEqual(UdpDatagramStartStringLength, test_task.buffer_length);
 
-            ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(test_task.buffer, test_task.buffer_length));
+            const ctsMediaStreamMessage round_trip(ctsMediaStreamMessage::Extract(test_task.buffer, test_task.buffer_length));
             Assert::AreEqual(MediaStreamAction::START, round_trip.action);
         }
 

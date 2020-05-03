@@ -69,7 +69,7 @@ namespace ctsTraffic
         void PrintException(const std::exception&) noexcept
         {
         }
-        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+        void PrintErrorInfo(_In_ PCSTR) noexcept
         {
         }
 
@@ -124,8 +124,8 @@ namespace ctsTraffic
     {
         Logger::WriteMessage(L"ctsIOPattern::initiate_io\n");
 
-        unsigned long pended_io = s_IOPended.load();
-        unsigned long remaining_io = s_IOCount.load();
+        const unsigned long pended_io = s_IOPended.load();
+        const unsigned long remaining_io = s_IOCount.load();
 
         ctsIOTask return_task;
         if (pended_io == 0 && remaining_io > 0)
@@ -250,7 +250,7 @@ namespace ctsUnitTest
         TEST_CLASS_INITIALIZE(Setup)
         {
             WSADATA wsadata;
-            auto startup = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+            const auto startup = ::WSAStartup(WINSOCK_VERSION, &wsadata);
             Assert::AreEqual(0, startup);
 
             s_RemovedSocketEvent = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
@@ -293,11 +293,9 @@ namespace ctsUnitTest
             {
                 ++callback_invoked;
 
-                auto socket_guard(test_socket->socket_reference());
-                SOCKET cts_socket = socket_guard.socket();
-
-                auto connected_socket_guard(_socket_object->lock_object());
-                SOCKET connected_socket = _socket_object->get_sending_socket();
+                const auto socket_guard(test_socket->socket_reference());
+                const SOCKET cts_socket = socket_guard.socket();
+                const SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -341,11 +339,9 @@ namespace ctsUnitTest
             {
                 ++callback_invoked;
 
-                auto socket_guard(test_socket->socket_reference());
-                SOCKET cts_socket = socket_guard.socket();
-
-                auto connected_socket_guard(_socket_object->lock_object());
-                SOCKET connected_socket = _socket_object->get_sending_socket();
+                const auto socket_guard(test_socket->socket_reference());
+                const SOCKET cts_socket = socket_guard.socket();
+                const SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -388,11 +384,9 @@ namespace ctsUnitTest
                 [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
-                auto socket_guard(test_socket->socket_reference());
-                SOCKET cts_socket = socket_guard.socket();
-
-                auto connected_socket_guard(_socket_object->lock_object());
-                SOCKET connected_socket = _socket_object->get_sending_socket();
+                const auto socket_guard(test_socket->socket_reference());
+                const SOCKET cts_socket = socket_guard.socket();
+                const SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -440,11 +434,9 @@ namespace ctsUnitTest
             {
                 ++callback_invoked;
 
-                auto socket_guard(test_socket->socket_reference());
-                SOCKET cts_socket = socket_guard.socket();
-
-                auto connected_socket_guard(_socket_object->lock_object());
-                SOCKET connected_socket = _socket_object->get_sending_socket();
+                const auto socket_guard(test_socket->socket_reference());
+                const SOCKET cts_socket = socket_guard.socket();
+                const SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);
@@ -488,11 +480,9 @@ namespace ctsUnitTest
                 [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult {
                 ++callback_invoked;
 
-                auto socket_guard(test_socket->socket_reference());
-                SOCKET cts_socket = socket_guard.socket();
-
-                auto connected_socket_guard(_socket_object->lock_object());
-                SOCKET connected_socket = _socket_object->get_sending_socket();
+                const auto socket_guard(test_socket->socket_reference());
+                const SOCKET cts_socket = socket_guard.socket();
+                const SOCKET connected_socket = _socket_object->get_sending_socket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->get_address());
                 Assert::AreEqual(cts_socket, connected_socket);

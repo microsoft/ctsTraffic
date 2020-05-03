@@ -51,11 +51,12 @@ namespace ctsTraffic {
     public:
         constexpr static bool IsProtocolError(unsigned long _status) noexcept
         {
-            return (_status >= ctsStatusMinimumValue && _status < ctsStatusIORunning);
+            return _status >= ctsStatusMinimumValue && _status < ctsStatusIORunning;
         }
         static const wchar_t* BuildProtocolErrorString(unsigned long _status) noexcept
         {
-            switch (_status) {
+            switch (_status)
+            {
                 case ctsStatusErrorNotAllDataTransferred:
                     return L"ErrorNotAllDataTransferred";
 
@@ -66,9 +67,8 @@ namespace ctsTraffic {
                     return L"ErrorDataDidNotMatchBitPattern";
 
                 default:
-                    ctl::ctAlwaysFatalCondition(
-                        L"ctsIOPattern: internal inconsistency - expecting a protocol error ctsIOProtocolState (%u)", _status);
-                    return nullptr;
+                    FAIL_FAST_MSG(
+                        "ctsIOPattern: internal inconsistency - expecting a protocol error ctsIOProtocolState (%u)", _status);
             }
         }
 
@@ -149,11 +149,13 @@ namespace ctsTraffic {
     private:
         ctsIOStatus current_status() const noexcept
         {
-            if (ctsStatusIORunning == m_lastError) {
+            if (ctsStatusIORunning == m_lastError)
+            {
                 return ctsIOStatus::ContinueIo;
             }
 
-            if (NO_ERROR == m_lastError) {
+            if (NO_ERROR == m_lastError)
+            {
                 return ctsIOStatus::CompletedIo;
             }
 
@@ -285,7 +287,8 @@ namespace ctsTraffic {
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         void send_callback(const ctsIOTask& task) const noexcept
         {
-            if (m_callback) {
+            if (m_callback)
+            {
                 m_callback(task);
             }
         }
@@ -301,14 +304,20 @@ namespace ctsTraffic {
         unsigned long update_last_error(const DWORD error) noexcept
         {
             const auto lock = m_cs.lock();
-            if (ctsStatusIORunning == m_lastError) {
+            if (ctsStatusIORunning == m_lastError)
+            {
                 const auto status_error = m_patternState.update_error(error);
-                if (NO_ERROR == error) {
-                    if (status_error != ctsIOPatternProtocolError::ErrorIOFailed) {
+                if (NO_ERROR == error)
+                {
+                    if (status_error != ctsIOPatternProtocolError::ErrorIOFailed)
+                    {
                         m_lastError = NO_ERROR;
                     }
-                } else {
-                    if (ctsIOPatternProtocolError::ErrorIOFailed == status_error) {
+                }
+                else
+                {
+                    if (status_error == ctsIOPatternProtocolError::ErrorIOFailed)
+                    {
                         m_lastError = error;
                     }
                 }
@@ -317,7 +326,8 @@ namespace ctsTraffic {
         }
         void update_last_protocol_error(ctsIOPatternProtocolError protocol_error) noexcept
         {
-            switch (protocol_error) {
+            switch (protocol_error)
+            {
                 case ctsIOPatternProtocolError::CorruptedBytes:
                     this->update_last_error(ctsStatusErrorDataDidNotMatchBitPattern);
                     break;
@@ -334,9 +344,9 @@ namespace ctsTraffic {
                     this->update_last_error(NO_ERROR);
                     break;
 
-            case ctsIOPatternProtocolError::NoError: break;  // NOLINT(bugprone-branch-clone)
-            case ctsIOPatternProtocolError::ErrorIOFailed: break;
-            default: break;
+                case ctsIOPatternProtocolError::NoError: break;  // NOLINT(bugprone-branch-clone)
+                case ctsIOPatternProtocolError::ErrorIOFailed: break;
+                default: break;
             }
         }
 
@@ -373,7 +383,8 @@ namespace ctsTraffic {
         explicit ctsIOPatternStatistics(unsigned long _recv_count) : ctsIOPattern(_recv_count)
         {
             // servers need to generate a unique connection ID
-            if (ctsConfig::IsListening()) {
+            if (ctsConfig::IsListening())
+            {
                 ctsStatistics::GenerateConnectionId(this->stats);
             }
         }
@@ -395,7 +406,8 @@ namespace ctsTraffic {
         void print_stats(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept override
         {
             // before printing the final results, make sure the timers are stopped
-            if (0 == this->get_last_error() && 0 == stats.current_bytes()) {
+            if (0 == this->get_last_error() && 0 == stats.current_bytes())
+            {
                 PrintDebugInfo(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n");
                 this->update_last_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }
@@ -412,7 +424,8 @@ namespace ctsTraffic {
         ///
         void start_stats() noexcept override
         {
-            if (0LL == stats.start_time.get()) {
+            if (0LL == stats.start_time.get())
+            {
                 // only calculate the QPC the first time
                 // - willing to take the cost of 2 interlocked operations the first time this is initialized
                 //   versus taking a QPC hit on every IO request
@@ -647,10 +660,10 @@ namespace ctsTraffic {
 
         // member variables that require the base lock
         _Requires_lock_held_(cs)
-        std::vector<ctsConfig::JitterFrameEntry> m_frameEntries;
+            std::vector<ctsConfig::JitterFrameEntry> m_frameEntries;
 
         _Requires_lock_held_(cs)
-        std::vector<ctsConfig::JitterFrameEntry>::iterator m_headEntry;
+            std::vector<ctsConfig::JitterFrameEntry>::iterator m_headEntry;
 
         // tracking for jitter information
         ctsConfig::JitterFrameEntry m_firstFrame;
@@ -660,26 +673,26 @@ namespace ctsTraffic {
 
         // member functions - all require the base lock
         _Requires_lock_held_(cs)
-        std::vector<ctsConfig::JitterFrameEntry>::iterator find_sequence_number(long long seq_number) noexcept;
+            std::vector<ctsConfig::JitterFrameEntry>::iterator find_sequence_number(long long seq_number) noexcept;
 
         _Requires_lock_held_(cs)
-        bool received_buffered_frames() noexcept;
+            bool received_buffered_frames() noexcept;
 
         _Requires_lock_held_(cs)
-        bool set_next_timer(bool initial_timer) const noexcept;
+            bool set_next_timer(bool initial_timer) const noexcept;
 
         _Requires_lock_held_(cs)
-        void set_next_start_timer() const noexcept;
+            void set_next_start_timer() const noexcept;
 
         _Requires_lock_held_(cs)
-        void render_frame() noexcept;
+            void render_frame() noexcept;
 
         /// The "Renderer" processes frames at the specified frame rate
         static
-        VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID context, PTP_TIMER) noexcept;
+            VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID context, PTP_TIMER) noexcept;
         /// Callback to track when the server has actually started sending
         static
-        VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID context, PTP_TIMER) noexcept;
+            VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID context, PTP_TIMER) noexcept;
     };
 
 } //namespace

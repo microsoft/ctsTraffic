@@ -270,7 +270,7 @@ namespace ctl
                 UNREFERENCED_PARAMETER(_rhs_size);
                 UNREFERENCED_PARAMETER(_case_insensitive);
 
-                ctl::ctAlwaysFatalCondition(L"ctString: cannot compare char* strings in modern apps: CompareStringA is not supported");
+                FAIL_FAST_MSG("ctString: cannot compare char* strings in modern apps: CompareStringA is not supported");
             }
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
 #pragma endregion
@@ -525,7 +525,8 @@ namespace ctl
             if (unescapedString.size() > 1)
             {
                 // greater than one as we need begin *and* end quotes before trimming
-                if ((*unescapedString.begin() == L'\'' && *unescapedString.rbegin() == L'\'') ||
+                if ((*unescapedString.begin() == L'\'' && *unescapedString.rbegin() == L'\'')
+                    ||
                     (*unescapedString.begin() == L'"' && *unescapedString.rbegin() == L'"'))
                 {
                     // trim off single quotes or double before replacing
@@ -560,7 +561,57 @@ namespace ctl
         /// Can throw std::bad_alloc
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline std::wstring __cdecl ctFormatStringVa(_Printf_format_string_ PCWSTR _format_string, va_list _args)
+        inline std::string __cdecl ctFormatStringVa(_In_ _Printf_format_string_ PCSTR _format_string, va_list _args)
+        {
+            std::string formatted_string(_format_string);
+            // loop until the formatted string will fit
+            for (;;)
+            {
+                const auto new_size = _vsnprintf_s(
+                    &formatted_string[0],
+                    formatted_string.size(),
+                    _TRUNCATE,
+                    _format_string,
+                    _args);
+                if (new_size != -1)
+                {
+                    // strip off the null-terminator at the end
+                    formatted_string.resize(new_size);
+                    break;
+                }
+
+                auto size_to_grow = static_cast<size_t>(formatted_string.size() * 1.5);
+                // overflow comparison so we don't overflow MAXINT32
+                if (size_to_grow > MAXINT32 - formatted_string.size())
+                {
+                    // can't grow any larger - take off the null at the end wherever it is
+                    formatted_string.resize(formatted_string.find('\0'));
+                    break;
+                }
+
+                if (size_to_grow < 64)
+                {
+                    size_to_grow = formatted_string.size() + 64;
+                }
+                else
+                {
+                    size_to_grow = formatted_string.size() + size_to_grow;
+                }
+                formatted_string.resize(size_to_grow, L'\0');
+            }
+            return formatted_string;
+        }
+
+        inline std::string __cdecl ctFormatString(_In_ _Printf_format_string_ PCSTR format_string, ...)
+        {
+            va_list args;
+            va_start(args, format_string);
+            std::string formatted_string(ctFormatStringVa(format_string, args));
+            va_end(args);
+            return formatted_string;
+        }
+
+        inline std::wstring __cdecl ctFormatStringVa(_In_ _Printf_format_string_ PCWSTR _format_string, va_list _args)
         {
             std::wstring formatted_string(_format_string);
             // loop until the formatted string will fit
@@ -601,7 +652,7 @@ namespace ctl
             return formatted_string;
         }
 
-        inline std::wstring __cdecl ctFormatString(_Printf_format_string_ PCWSTR format_string, ...)
+        inline std::wstring __cdecl ctFormatString(_In_ _Printf_format_string_ PCWSTR format_string, ...)
         {
             va_list args;
             va_start(args, format_string);
@@ -643,8 +694,8 @@ namespace ctl
         inline std::wstring ctFormatException(const std::exception& exception)
         {
             // ReSharper disable once CppUseAuto
-            const ctException* ctex = dynamic_cast<const ctException*>(&exception);
-            if (ctex != nullptr)
+            const auto* ctex = dynamic_cast<const ctException*>(&exception);
+            if (ctex)
             {
                 return ctFormatException(*ctex);
             }

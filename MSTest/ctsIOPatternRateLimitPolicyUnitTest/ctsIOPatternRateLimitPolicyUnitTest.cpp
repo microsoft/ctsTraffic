@@ -72,7 +72,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -124,7 +124,7 @@ namespace ctsUnitTest
             s_TcpBytesPerSecond = 1LL;
             s_QpcTime = 1LL;
 
-            auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
+            const auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
 
             ctsIOTask test_task;
             test_task.ioAction = IOTaskAction::Send;
@@ -142,7 +142,7 @@ namespace ctsUnitTest
             s_TcpBytesPerSecond = 1LL;
             s_QpcTime = 1LL;
 
-            auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
+            const auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
 
             ctsIOTask test_task;
             test_task.ioAction = IOTaskAction::Recv;
@@ -522,7 +522,7 @@ namespace ctsUnitTest
             test_timer->update_time_offset(test_task, TestBytes);
             Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
 
-            long long ExpectedTimeOffset = 199LL;
+            const long long ExpectedTimeOffset = 199LL;
 
             s_QpcTime = 1LL;
             test_timer->update_time_offset(test_task, TestBytes);

@@ -26,10 +26,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Iphlpapi.h>
 #include <Tcpestats.h>
 
+// wil headers
+#include <wil/resource.h>
+#include <wil/win32_helpers.h>
+
 // ctl headers
 #include <ctString.hpp>
 #include <ctSockaddr.hpp>
-#include <ctThreadPoolTimer.hpp>
 
 namespace ctsPerf
 {
@@ -784,6 +787,8 @@ namespace ctsPerf
             m_senderCongestionWriter(L"EstatsSenderCongestion.csv"),
             m_tcpTable(c_StartingTableSize)
         {
+            m_timer.reset(CreateThreadpoolTimer(TimerCallback, this, nullptr));
+            THROW_LAST_ERROR_IF(!m_timer);
         }
         ctsEstats(const ctsEstats&) = delete;
         ctsEstats& operator=(const ctsEstats&) = delete;
@@ -792,7 +797,8 @@ namespace ctsPerf
 
         ~ctsEstats() noexcept
         {
-            m_timer.stop_all_timers();
+            FlagTimerStopping();
+            m_timer.reset();
 
             try
             {
@@ -835,7 +841,8 @@ namespace ctsPerf
 
         bool start() noexcept
         {
-            // ReSharper disable once CppInitializedValueIsAlwaysRewritten
+            ResetTimerFlag();
+
             auto started = false;
             try
             {
@@ -861,14 +868,17 @@ namespace ctsPerf
 
             if (!started)
             {
-                m_timer.stop_all_timers();
+                FlagTimerStopping();
+                m_timer.reset();
             }
 
             return started;
         }
 
     private:
-        ctl::ctThreadpoolTimer m_timer;
+        wil::unique_threadpool_timer m_timer;
+        wil::critical_section m_timerLock;
+        bool m_timersStopping = false;
 
         std::set<Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>> m_synOptsData;
         std::set<Details::EstatsDataPoint<TcpConnectionEstatsData>> m_byteTrackingData;
@@ -882,9 +892,38 @@ namespace ctsPerf
         ctsWriteDetails m_senderCongestionWriter;
 
         // since updates are always serialized on a timer, just reuse the same buffer
-        static const ULONG c_StartingTableSize = 4096;
+        const ULONG c_StartingTableSize = 4096;
         std::vector<char> m_tcpTable;
         ULONG m_tableCounter = 0;
+        const DWORD OneSecondTimeoutMs = 1000;
+        FILETIME m_timerInterval = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * OneSecondTimeoutMs);
+
+        static void NTAPI TimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER) noexcept
+        {
+            auto* pThis = static_cast<ctsEstats*>(pContext);
+            pThis->UpdateEstats();
+        }
+
+        void ResetTimerFlag() noexcept
+        {
+            auto lock = m_timerLock.lock();
+            m_timersStopping = false;
+        }
+
+        void FlagTimerStopping() noexcept
+        {
+            auto lock = m_timerLock.lock();
+            m_timersStopping = true;
+        }
+
+        void ScheduleTimer() noexcept
+        {
+            auto lock = m_timerLock.lock();
+            if (!m_timersStopping)
+            {
+                SetThreadpoolTimer(m_timer.get(), &m_timerInterval, 0, 0);
+            }
+        }
 
         bool UpdateEstats() noexcept try
         {
@@ -966,7 +1005,7 @@ namespace ctsPerf
             if (!accessDenied)
             {
                 // schedule timer from this moment
-                m_timer.schedule_singleton([this]() noexcept { UpdateEstats(); }, 1000);
+                ScheduleTimer();
             }
 
             return !accessDenied;

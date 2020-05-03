@@ -106,7 +106,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ PCSTR) noexcept
     {
     }
 
@@ -414,7 +414,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(GracefulShutdownSetMaxTransfer)
         {
-            ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong TestTransferSize(100);
 
             auto io_pattern = this->InitClientGracefulShutdownTest(250);
             Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
@@ -427,7 +427,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(HardShutdownSetMaxTransfer)
         {
-            ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong TestTransferSize(100);
 
             auto io_pattern = this->InitClientHardShutdownTest(250);
             Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
@@ -440,7 +440,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(TCPServerShutdownSetMaxTransfer)
         {
-            ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong TestTransferSize(100);
 
             auto io_pattern = this->InitServerGracefulShutdownTest(250);
             Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
@@ -453,7 +453,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(UdpClientSetMaxTransfer)
         {
-            ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong TestTransferSize(100);
 
             auto io_pattern = this->InitUdpClientTest(250);
             Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
@@ -466,7 +466,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(UdpServerSetMaxTransfer)
         {
-            ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong TestTransferSize(100);
 
             auto io_pattern = this->InitUdpServerTest(250);
             Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
@@ -481,7 +481,7 @@ namespace ctsUnitTest
         TEST_METHOD(SuccessfullySendConnectionGuid)
         {
             auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(io_pattern->is_completed());
         }
@@ -489,7 +489,7 @@ namespace ctsUnitTest
         TEST_METHOD(UDPSuccessfullySendConnectionGuid)
         {
             auto io_pattern = this->InitUdpServerTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(io_pattern->is_completed());
         }
@@ -513,7 +513,7 @@ namespace ctsUnitTest
         TEST_METHOD(GracefulShutdownSuccessfullyReceiveConnectionGuid)
         {
             auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(io_pattern->is_completed());
         }
@@ -521,7 +521,7 @@ namespace ctsUnitTest
         TEST_METHOD(HardShutdownSuccessfullyReceiveConnectionGuid)
         {
             auto io_pattern = this->InitClientHardShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(io_pattern->is_completed());
         }
@@ -529,7 +529,7 @@ namespace ctsUnitTest
         TEST_METHOD(UDPSuccessfullyReceiveConnectionGuid)
         {
             auto io_pattern = this->InitUdpClientTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(io_pattern->is_completed());
         }
@@ -585,7 +585,7 @@ namespace ctsUnitTest
         TEST_METHOD(GracefulShutdownReceivedTooFewBytesForConnectionGuid)
         {
             auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -595,7 +595,7 @@ namespace ctsUnitTest
         TEST_METHOD(HardShutdownReceivedTooFewBytesForConnectionGuid)
         {
             auto io_pattern = this->InitClientHardShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -605,7 +605,7 @@ namespace ctsUnitTest
         TEST_METHOD(UDPReceivedTooFewBytesForConnectionGuid)
         {
             auto io_pattern = this->InitUdpClientTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -615,7 +615,7 @@ namespace ctsUnitTest
         TEST_METHOD(GracefulShutdownReceivedZeroBytes)
         {
             auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -625,7 +625,7 @@ namespace ctsUnitTest
         TEST_METHOD(HardShutdownReceivedZeroBytes)
         {
             auto io_pattern = this->InitClientHardShutdownTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -635,7 +635,7 @@ namespace ctsUnitTest
         TEST_METHOD(UDPReceivedZeroBytes)
         {
             auto io_pattern = this->InitUdpClientTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
+            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -647,7 +647,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitClientGracefulShutdownTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -659,7 +659,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitClientHardShutdownTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -671,7 +671,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitServerGracefulShutdownTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsTrue(io_pattern->is_completed());
@@ -684,7 +684,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitUdpClientTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             io_pattern->completed_task(test_task, 0);
             Assert::AreEqual(ctsIOPatternProtocolError::NotProtocolError, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
             Assert::IsFalse(io_pattern->is_completed());
@@ -695,7 +695,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitClientGracefulShutdownTest(250);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
             this->FailIoAndVerify(io_pattern);
             io_pattern->completed_task(test_task, 50);
             Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
@@ -710,7 +710,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitClientHardShutdownTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
             this->FailIoAndVerify(io_pattern);
             io_pattern->completed_task(test_task, 50);
             Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
@@ -725,7 +725,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitServerGracefulShutdownTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
             this->FailIoAndVerify(io_pattern);
             io_pattern->completed_task(test_task, 50);
             Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
@@ -740,7 +740,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitUdpClientTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
             this->FailIoAndVerify(io_pattern);
             io_pattern->completed_task(test_task, 50);
             Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
@@ -755,7 +755,7 @@ namespace ctsUnitTest
             auto io_pattern = this->InitUdpServerTest(100);
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
             this->FailIoAndVerify(io_pattern);
             io_pattern->completed_task(test_task, 50);
             Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
@@ -1104,7 +1104,7 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
             Assert::IsTrue(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
@@ -1117,7 +1117,7 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
             this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
             Assert::IsTrue(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
@@ -1453,13 +1453,13 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1497,21 +1497,21 @@ namespace ctsUnitTest
             // Recv server status
             //
             unsigned long status_buffer = ZERO;
-            ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
+            const ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
             this->CompleteIoAndVerifySuccess(io_pattern, server_status_task, 4);
             Assert::IsFalse(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // Shutdown Task
             //
-            ctsIOTask shutdown_task = this->RequestGracefulShutdown(io_pattern);
+            const ctsIOTask shutdown_task = this->RequestGracefulShutdown(io_pattern);
             this->CompleteIoAndVerifySuccess(io_pattern, shutdown_task, 0);
             Assert::IsFalse(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // Request FIN task
             //
-            ctsIOTask final_fin_task = this->RequestFin(io_pattern);
+            const ctsIOTask final_fin_task = this->RequestFin(io_pattern);
             this->CompleteIoAndVerifySuccess(io_pattern, final_fin_task, 0);
             Assert::IsTrue(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
@@ -1525,13 +1525,13 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1569,14 +1569,14 @@ namespace ctsUnitTest
             // Recv server status
             //
             unsigned long status_buffer = ZERO;
-            ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
+            const ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
             this->CompleteIoAndVerifySuccess(io_pattern, server_status_task, 4);
             Assert::IsFalse(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // Shutdown Task
             //
-            ctsIOTask shutdown_task = this->RequestHardShutdown(io_pattern);
+            const ctsIOTask shutdown_task = this->RequestHardShutdown(io_pattern);
             this->CompleteIoAndVerifySuccess(io_pattern, shutdown_task, 4);
             Assert::IsTrue(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
@@ -1590,13 +1590,13 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1634,14 +1634,14 @@ namespace ctsUnitTest
             // Send server status
             //
             unsigned long status = ZERO;
-            ctsIOTask send_status_task = this->RequestSendStatus(io_pattern, &status);
+            const ctsIOTask send_status_task = this->RequestSendStatus(io_pattern, &status);
             this->CompleteIoAndVerifySuccess(io_pattern, send_status_task, 4);
             Assert::IsFalse(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // Request FIN task
             //
-            ctsIOTask fin_task = this->RequestFin(io_pattern);
+            const ctsIOTask fin_task = this->RequestFin(io_pattern);
             this->CompleteIoAndVerifySuccess(io_pattern, fin_task, 0);
             Assert::IsTrue(io_pattern->is_completed());
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
@@ -1655,13 +1655,13 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1704,13 +1704,13 @@ namespace ctsUnitTest
             this->RequestAndCompleteConnectionGuid(io_pattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1757,10 +1757,10 @@ namespace ctsUnitTest
             ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             //
@@ -1815,10 +1815,10 @@ namespace ctsUnitTest
             ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1872,10 +1872,10 @@ namespace ctsUnitTest
             ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1929,10 +1929,10 @@ namespace ctsUnitTest
             ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted
@@ -1986,10 +1986,10 @@ namespace ctsUnitTest
             ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
             // IO Task #2
-            ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
             // IO Task #3
-            ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
+            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
             Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
             //
             // all IO is now posted

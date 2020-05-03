@@ -15,8 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 // project headers
@@ -69,7 +67,7 @@ namespace ctsTraffic {
         /// - else we'll queue it to awaiting_endpoints
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void start(SOCKET _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr);
+        void Start(SOCKET _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr);
     }
 
 

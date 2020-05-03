@@ -17,8 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <cwchar>
 // os headers
 #include <windows.h>
-// ctl headers
-#include <ctException.hpp>
 // project headers
 #include "ctsConfig.h"
 
@@ -98,18 +96,18 @@ namespace ctsTraffic {
 
         void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, PCWSTR _value) noexcept
         {
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 0 == _left_justified_offset,
-                L"ctsStatusInformation was given a zero offset in left_justify_output : must be at least 1");
-            ctl::ctFatalCondition(
+                "ctsStatusInformation was given a zero offset in left_justify_output : must be at least 1");
+            FAIL_FAST_IF_MSG(
                 _left_justified_offset > OutputBufferSize,
-                L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
+                "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _left_justified_offset);
 
             const size_t value_length = wcslen(_value);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 value_length > _max_length,
-                L"ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
+                "ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
                 _max_length, _value);
 
             wmemcpy_s(
@@ -123,15 +121,15 @@ namespace ctsTraffic {
             constexpr unsigned long CoversionBufferLength = 16;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _right_justified_offset > OutputBufferSize,
-                L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
+                "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _right_justified_offset);
             _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _max_length > CoversionBufferLength - 1, // minus one for the null terminator
-                L"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
+                "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
@@ -140,10 +138,7 @@ namespace ctsTraffic {
                 CoversionBufferLength,
                 L"%.3f",
                 _value);
-            ctl::ctFatalCondition(
-                -1 == converted,
-                L"_snwprintf_s failed (value == %f), errno == %d",
-                _value, errno);
+            FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
@@ -157,15 +152,15 @@ namespace ctsTraffic {
             constexpr unsigned long CoversionBufferLength = 12;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _right_justified_offset > OutputBufferSize,
-                L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
+                "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _right_justified_offset);
             _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _max_length > CoversionBufferLength - 1, // minus one for the null terminator
-                L"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
+                "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length > CoversionBufferLength - 1);
 
@@ -174,10 +169,7 @@ namespace ctsTraffic {
                 CoversionBufferLength,
                 L"%u",
                 _value);
-            ctl::ctFatalCondition(
-                -1 == converted,
-                L"_snwprintf_s failed (value == %u), errno == %d",
-                _value, errno);
+            FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
@@ -191,21 +183,21 @@ namespace ctsTraffic {
             constexpr unsigned long CoversionBufferLength = 20;
             wchar_t conversionBuffer[CoversionBufferLength]{};
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _value < 0LL,
-                L"ctsStatusInformation output was given a negative value to print (or greater than MAXLONGLONG): %llx",
+                "ctsStatusInformation output was given a negative value to print (or greater than MAXLONGLONG): %llx",
                 _value);
             _Analysis_assume_(_value >= 0LL);
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _right_justified_offset > OutputBufferSize,
-                L"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
+                "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
                 OutputBufferSize, _right_justified_offset);
             _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 _max_length > CoversionBufferLength - 1, // minus one for the null terminator
-                L"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
+                "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
                 CoversionBufferLength - 1, _max_length);
             _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
 
@@ -214,10 +206,7 @@ namespace ctsTraffic {
                 CoversionBufferLength,
                 L"%lld",
                 _value);
-            ctl::ctFatalCondition(
-                -1 == converted,
-                L"_snwprintf_s failed (value == %lld), errno == %d",
-                _value, errno);
+            FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
@@ -252,9 +241,7 @@ namespace ctsTraffic {
                 _add_comma ? _value_length + 1 : _value_length,
                 _add_comma ? L"%.3f," : L"%.3f",
                 _value);
-            ctl::ctFatalCondition(
-                -1 == converted,
-                L"_snwprintf_s failed to convert this (%p) ctsUdpStatusInformation", this);
+            FAIL_FAST_IF(-1 == converted);
             return converted;
         }
 
@@ -265,9 +252,9 @@ namespace ctsTraffic {
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 10);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 error != 0,
-                L"_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %u", this, _value);
+                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %u", this, _value);
 
             // find how many characters were printed
             unsigned long converted = 0;
@@ -277,12 +264,12 @@ namespace ctsTraffic {
                 ++output_reference;
             }
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 converted > (OutputBufferSize - _offset),
-                L"Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
-            ctl::ctFatalCondition(
+                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
+            FAIL_FAST_IF_MSG(
                 converted > _value_length,
-                L"Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
+                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
 
             if (_add_comma) {
                 ++converted;
@@ -298,9 +285,9 @@ namespace ctsTraffic {
                 OutputBuffer + _offset,
                 OutputBufferSize - _offset,
                 10);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 error != 0,
-                L"_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %lld", this, _value);
+                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %lld", this, _value);
 
             // find how many characters were printed
             unsigned long converted = 0;
@@ -310,12 +297,12 @@ namespace ctsTraffic {
                 ++output_reference;
             }
 
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 converted > (OutputBufferSize - _offset),
-                L"Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
-            ctl::ctFatalCondition(
+                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
+            FAIL_FAST_IF_MSG(
                 converted > _value_length,
-                L"Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
+                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
 
             if (_add_comma) {
                 ++converted;
@@ -332,9 +319,7 @@ namespace ctsTraffic {
                 _add_comma ? _value_length + 1 : _value_length,
                 _add_comma ? L"%ws," : L"%ws",
                 _value);
-            ctl::ctFatalCondition(
-                -1 == converted,
-                L"_snwprintf_s failed to convert this (%p) ctsUdpStatusInformation\n", this);
+            FAIL_FAST_IF(-1 == converted);
             return converted;
         }
     };
@@ -417,7 +402,7 @@ namespace ctsTraffic {
             if (ctsConfig::StatusFormatting::Csv == _format) {
                 unsigned long characters_written = 0;
                 // converting milliseconds to seconds before printing
-                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
+                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
                 characters_written += this->append_csvoutput(
@@ -434,7 +419,7 @@ namespace ctsTraffic {
 
             } else {
                 // converting milliseconds to seconds before printing
-                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
+                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
                 this->right_justify_output(
@@ -508,7 +493,7 @@ namespace ctsTraffic {
             if (_format == ctsConfig::StatusFormatting::Csv) {
                 unsigned long characters_written = 0;
                 // converting milliseconds to seconds before printing
-                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
+                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
 
                 // calculating # of bytes that were sent between the previous format() and current call to format()
                 characters_written += this->append_csvoutput(
@@ -529,7 +514,7 @@ namespace ctsTraffic {
 
             } else {
                 // converting milliseconds to seconds before printing
-                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time / 1000.0));
+                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
 
                 // calculating # of bytes that were sent between the previous format() and current call to format()
                 this->right_justify_output(

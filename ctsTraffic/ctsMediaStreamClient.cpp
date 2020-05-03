@@ -19,6 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctException.hpp>
+#include <ctString.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -58,12 +59,12 @@ namespace ctsTraffic
         const ctl::ctSockaddr& _target_address
     ) noexcept;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
-/// - with the specified ctsSocket
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
+    /// - with the specified ctsSocket
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
     {
         // attempt to get a reference to the socket
@@ -79,44 +80,44 @@ namespace ctsTraffic
         // this callback can be invoked out-of-band directly from the IO Pattern class
         shared_pattern->register_callback(
             [_weak_socket](const ctsIOTask& _task) noexcept {
-            // attempt to get a reference to the socket
-            auto lambda_shared_socket(_weak_socket.lock());
-            if (!lambda_shared_socket)
-            {
-                return;
-            }
-
-            //
-            // the below check with increment_io avoids a possible race-condition: 
-            // - if increment_io() returns 1, it means our IO count in the main loop
-            //   hit an io_count of 0 : which means that main thread will be completing this socket
-            // - if this OOB callback ever returns 1, we cannot use this socket, since this socket
-            //   will either be completed soon, or will have already been completed
-            //
-            // this special scenario exists because the callback doesn't hold a ref-count
-            // - so this callback could be invoked after the mainline completed
-            // this is still 'safe' due to the above socket locks
-            //
-
-            // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
-            if (lambda_shared_socket->increment_io() > 1)
-            {
-                // only running this one task in the OOB callback
-                const IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
-                // decrement the IO count that we added before calling the Impl
-                // - complete_state if this happened to be the final IO refcount
-                if (lambda_shared_socket->decrement_io() == 0)
+                // attempt to get a reference to the socket
+                auto lambda_shared_socket(_weak_socket.lock());
+                if (!lambda_shared_socket)
                 {
-                    lambda_shared_socket->complete_state(status.errorCode);
+                    return;
                 }
-            }
-            else
-            {
-                 // in this case, the io_count in the ctsSocket was zero, so no IO was in flight to interrupt
-                 // just decrement the IO count that we added before calling the Impl (no IO attempted)
-                lambda_shared_socket->decrement_io();
-            }
-        });
+
+                //
+                // the below check with increment_io avoids a possible race-condition: 
+                // - if increment_io() returns 1, it means our IO count in the main loop
+                //   hit an io_count of 0 : which means that main thread will be completing this socket
+                // - if this OOB callback ever returns 1, we cannot use this socket, since this socket
+                //   will either be completed soon, or will have already been completed
+                //
+                // this special scenario exists because the callback doesn't hold a ref-count
+                // - so this callback could be invoked after the mainline completed
+                // this is still 'safe' due to the above socket locks
+                //
+
+                // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
+                if (lambda_shared_socket->increment_io() > 1)
+                {
+                    // only running this one task in the OOB callback
+                    const IoImplStatus status = ctsMediaStreamClientIoImpl(lambda_shared_socket, _task);
+                    // decrement the IO count that we added before calling the Impl
+                    // - complete_state if this happened to be the final IO refcount
+                    if (lambda_shared_socket->decrement_io() == 0)
+                    {
+                        lambda_shared_socket->complete_state(status.errorCode);
+                    }
+                }
+                else
+                {
+                    // in this case, the io_count in the ctsSocket was zero, so no IO was in flight to interrupt
+                    // just decrement the IO count that we added before calling the Impl (no IO attempted)
+                    lambda_shared_socket->decrement_io();
+                }
+            });
 
         // increment IO count while issuing this Impl so we hold a ref-count during this out of band callback
         shared_socket->increment_io();
@@ -158,7 +159,7 @@ namespace ctsTraffic
             }
 
             const auto error = ctsConfig::SetPreConnectOptions(socket);
-            ctsConfig::PrintErrorIfFailed(L"SetPreConnectOptions", error);
+            ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
             if (error != NO_ERROR)
             {
                 shared_socket->complete_state(error);
@@ -174,8 +175,8 @@ namespace ctsTraffic
             shared_socket,
             start_task,
             [_weak_socket, targetAddress](OVERLAPPED* ov) noexcept {
-            ctsMediaStreamClientConnectionCompletionCallback(ov, _weak_socket, targetAddress);
-        });
+                ctsMediaStreamClientConnectionCompletionCallback(ov, _weak_socket, targetAddress);
+            });
 
         if (NO_ERROR == response.error_code)
         {
@@ -234,22 +235,22 @@ namespace ctsTraffic
                     ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, nextio);
                 };
 
-                PCWSTR function_name = nullptr;
+                PCSTR function_name{};
                 wsIOResult result;
                 if (IOTaskAction::Send == _next_io.ioAction)
                 {
-                    function_name = L"WSASendTo";
+                    function_name = "WSASendTo";
                     result = ctsWSASendTo(_shared_socket, _next_io, std::move(callback));
                 }
                 else if (IOTaskAction::Recv == _next_io.ioAction)
                 {
-                    function_name = L"WSARecvFrom";
+                    function_name = "WSARecvFrom";
                     result = ctsWSARecvFrom(_shared_socket, _next_io, std::move(callback));
                 }
                 else
                 {
-                    ctl::ctAlwaysFatalCondition(
-                        L"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)", &_next_io);
+                    FAIL_FAST_MSG(
+                        "ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)", &_next_io);
                 }
 
                 if (WSA_IO_PENDING == result.error_code)
@@ -260,9 +261,9 @@ namespace ctsTraffic
                 }
                 else
                 {
-                     // IO successfully completed inline and the async completion won't be invoke
-                     // - or the IO failed
-                    if (result.error_code != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsMediaStreamClient]\n", function_name, result.error_code);
+                    // IO successfully completed inline and the async completion won't be invoke
+                    // - or the IO failed
+                    if (result.error_code != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", function_name, result.error_code);
 
                     // hold a reference on the iopattern
                     auto shared_pattern(_shared_socket->io_pattern());
@@ -291,20 +292,20 @@ namespace ctsTraffic
                             ctsConfig::PrintErrorIfFailed(function_name, result.error_code);
                             // the protocol acknoledged the failure - socket is done with IO
                             _shared_socket->close_socket();
-                            return_status.errorCode = shared_pattern->get_last_error();
+                            return_status.errorCode = static_cast<int>(shared_pattern->get_last_error());
                             return_status.continueIo = false;
                             break;
 
                         default:
-                            ctl::ctAlwaysFatalCondition(L"ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                            FAIL_FAST_MSG("ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                     }
 
                     // decrement the IO count if failed and/or inlined-completed
                     const auto io_count = _shared_socket->decrement_io();
                     // IO count should never be zero: callers should be guaranteeing a refcount before calling Impl
-                    ctl::ctFatalCondition(
+                    FAIL_FAST_IF_MSG(
                         0 == io_count,
-                        L"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
+                        "ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
                         _shared_socket.get());
                 }
 
@@ -338,13 +339,13 @@ namespace ctsTraffic
                 shared_pattern->complete_io(_next_io, 0, 0);
                 _shared_socket->close_socket();
 
-                return_status.errorCode = shared_pattern->get_last_error();
+                return_status.errorCode = static_cast<int>(shared_pattern->get_last_error());
                 return_status.continueIo = false;
                 break;
             }
 
-            case IOTaskAction::GracefulShutdown: break;
-            case IOTaskAction::HardShutdown: break;
+            case IOTaskAction::GracefulShutdown:
+            case IOTaskAction::HardShutdown:
             default: break;
         }
 
@@ -385,8 +386,8 @@ namespace ctsTraffic
             }
             else
             {
-                 // we're intentionally ignoring the error when we have closed it early
-                 // - doing this because that's how we shutdown the client after processing all frames
+                // we're intentionally ignoring the error when we have closed it early
+                // - doing this because that's how we shutdown the client after processing all frames
                 gle = NO_ERROR;
             }
         }
@@ -403,7 +404,7 @@ namespace ctsTraffic
                 IoImplStatus status;
                 do
                 {
-                // invoke the new IO call while holding a refcount to the prior IO in a tight loop
+                    // invoke the new IO call while holding a refcount to the prior IO in a tight loop
                     status = ctsMediaStreamClientIoImpl(shared_socket, shared_pattern->initiate_io());
                 }
                 while (status.continueIo);
@@ -418,28 +419,34 @@ namespace ctsTraffic
                 break;
 
             case ctsIOStatus::FailedIo:
-                if (gle != 0)
+                try
                 {
-                    // the failure may have been a protocol error - in which case gle would just be NO_ERROR
-                    ctsConfig::PrintErrorInfo(
-                        L"MediaStream Client: IO failed (%ws) with error %d",
-                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
-                        gle);
+                    if (gle != 0)
+                    {
+                        // the failure may have been a protocol error - in which case gle would just be NO_ERROR
+                        ctsConfig::PrintErrorInfo(
+                            ctl::ctString::ctFormatString("MediaStream Client: IO failed (%ws) with error %d",
+                                _io_task.ioAction == IOTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo", gle).c_str());
+                    }
+                    else
+                    {
+                        ctsConfig::PrintErrorInfo(
+                            ctl::ctString::ctFormatString("MediaStream Client: IO succeeded (%ws) but the ctsIOProtocol failed the stream (%u)",
+                                _io_task.ioAction == IOTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo",
+                                shared_pattern->get_last_error()).c_str());
+                    }
                 }
-                else
+                catch (...)
                 {
-                    ctsConfig::PrintErrorInfo(
-                        L"MediaStream Client: IO succeeded (%ws) but the ctsIOProtocol failed the stream (%u)",
-                        (_io_task.ioAction == IOTaskAction::Recv) ? L"WSARecvFrom" : L"WSASendTo",
-                        shared_pattern->get_last_error());
                 }
+
                 shared_socket->close_socket();
-                gle = shared_pattern->get_last_error();
+                gle = static_cast<int>(shared_pattern->get_last_error());
                 break;
 
             default:
-                ctl::ctAlwaysFatalCondition(
-                    L"ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n",
+                FAIL_FAST_MSG(
+                    "ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n",
                     static_cast<unsigned>(protocol_status));
         }
 
@@ -484,7 +491,7 @@ namespace ctsTraffic
             }
         }
 
-        ctsConfig::PrintErrorIfFailed(L"\tWSASendTo (START request)", gle);
+        ctsConfig::PrintErrorIfFailed("\tWSASendTo (START request)", gle);
 
         if (NO_ERROR == gle)
         {

@@ -133,7 +133,7 @@ namespace ctl
 						break;
 					}
 					default:
-						ctAlwaysFatalCondition(L"Unknown ctSocketExtension function number");
+						FAIL_FAST_MSG("Unknown ctSocketExtension function number");
 				}
 
 				if (0 != WSAIoctl(

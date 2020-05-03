@@ -92,7 +92,7 @@ namespace ctsTraffic
         // private members of ctsSocketState
         // - CS's are mutable to allow taking a CS in a const function
         //
-        PTP_WORK thread_pool_worker = nullptr;
+        wil::unique_threadpool_work thread_pool_worker;
         mutable wil::critical_section state_guard{};
         std::weak_ptr<ctsSocketBroker> broker{};
         std::shared_ptr<ctsSocket> socket{};

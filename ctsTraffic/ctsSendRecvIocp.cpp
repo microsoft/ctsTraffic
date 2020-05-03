@@ -27,7 +27,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
 
-/// forward delcaration
+    /// forward delcaration
     void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept;
 
     struct ctsSendRecvStatus
@@ -84,8 +84,8 @@ namespace ctsTraffic
         }
 
         // write to PrintError if the IO failed
-        const wchar_t* function = (IOTaskAction::Send == _io_task.ioAction) ? L"WSASend" : L"WSARecv";
-        if (gle != 0) { PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsSendRecvIocp]\n", function, gle); }
+        PCSTR function_name = IOTaskAction::Send == _io_task.ioAction ? "WSASend" : "WSARecv";
+        if (gle != 0) { PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", function_name, gle); }
 
         if (shared_pattern)
         {
@@ -105,20 +105,20 @@ namespace ctsTraffic
 
                 case ctsIOStatus::FailedIo:
                     // write out the error to the error log since the protocol sees this as a hard error
-                    ctsConfig::PrintErrorIfFailed(function, gle);
+                    ctsConfig::PrintErrorIfFailed(function_name, gle);
                     // protocol sees this as a failure : capture the error the protocol recorded
-                    gle = shared_pattern->get_last_error();
+                    gle = static_cast<int>(shared_pattern->get_last_error());
                     break;
 
                 default:
-                    ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
+                    FAIL_FAST_MSG("ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocol_status));
             }
         }
 
         // always decrement *after* attempting new IO : the prior IO is now formally "done"
         if (shared_socket->decrement_io() == 0)
         {
-// if we have no more IO pended, complete the state
+            // if we have no more IO pended, complete the state
             shared_socket->complete_state(gle);
         }
     }
@@ -151,7 +151,7 @@ namespace ctsTraffic
             {
                 return_status.ioErrorcode = WSAGetLastError();
             }
-            return_status.ioDone = (_shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo);
+            return_status.ioDone = _shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo;
             return_status.ioStarted = false;
 
         }
@@ -159,7 +159,7 @@ namespace ctsTraffic
         {
             // pass through -1 to force an RST with the closesocket
             return_status.ioErrorcode = _shared_socket->close_socket(-1);
-            return_status.ioDone = (_shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo);
+            return_status.ioDone = _shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo;
             return_status.ioStarted = false;
 
         }
@@ -179,10 +179,10 @@ namespace ctsTraffic
                 wsabuf.buf = next_io.buffer + next_io.buffer_offset;
                 wsabuf.len = next_io.buffer_length;
 
-                const wchar_t* function_name;
+                PCSTR function_name{};
                 if (IOTaskAction::Send == next_io.ioAction)
                 {
-                    function_name = L"WSASend";
+                    function_name = "WSASend";
                     if (WSASend(_socket, &wsabuf, 1, nullptr, 0, pov, nullptr) != 0)
                     {
                         return_status.ioErrorcode = WSAGetLastError();
@@ -190,8 +190,8 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    function_name = L"WSARecv";
-                    DWORD flags = (ctsConfig::Settings->Options & ctsConfig::OptionType::MSG_WAIT_ALL) ? MSG_WAITALL : 0;
+                    function_name = "WSARecv";
+                    DWORD flags = ctsConfig::Settings->Options & ctsConfig::OptionType::MSG_WAIT_ALL ? MSG_WAITALL : 0;
                     if (WSARecv(_socket, &wsabuf, 1, nullptr, &flags, pov, nullptr) != 0)
                     {
                         return_status.ioErrorcode = WSAGetLastError();
@@ -201,7 +201,7 @@ namespace ctsTraffic
                 // not calling complete_io if returned IO pended 
                 // not calling complete_io if returned success but not handling inline completions
                 //
-                if ((WSA_IO_PENDING == return_status.ioErrorcode) ||
+                if (WSA_IO_PENDING == return_status.ioErrorcode ||
                     (NO_ERROR == return_status.ioErrorcode && !(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)))
                 {
                     return_status.ioErrorcode = NO_ERROR;
@@ -220,8 +220,8 @@ namespace ctsTraffic
                         DWORD flags;
                         if (!WSAGetOverlappedResult(_socket, pov, &bytes_transferred, FALSE, &flags))
                         {
-                            ctl::ctAlwaysFatalCondition(
-                                L"WSAGetOverlappedResult failed (%d) after the IO request (%ws) succeeded", WSAGetLastError(), function_name);
+                            FAIL_FAST_MSG(
+                                "WSAGetOverlappedResult failed (%d) after the IO request (%hs) succeeded", WSAGetLastError(), function_name);
                         }
                     }
                     // must cancel the IOCP TP since IO is not pended
@@ -253,7 +253,7 @@ namespace ctsTraffic
                             break;
 
                         default:
-                            ctl::ctAlwaysFatalCondition(L"ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                            FAIL_FAST_MSG("ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                     }
                 }
             }
@@ -261,7 +261,7 @@ namespace ctsTraffic
             {
                 ctsConfig::PrintException(e);
                 return_status.ioErrorcode = ctl::ctErrorCode(e);
-                return_status.ioDone = (_shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo);
+                return_status.ioDone = _shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo;
                 return_status.ioStarted = false;
             }
         }
@@ -296,8 +296,8 @@ namespace ctsTraffic
             if (0 == shared_socket->decrement_io())
             {
                 // this should never be zero since we should be holding a refcount for this callback
-                ctl::ctAlwaysFatalCondition(
-                    L"The refcount of the ctsSocket object (%p) fell to zero during a scheduled callback", shared_socket.get());
+                FAIL_FAST_MSG(
+                    "The refcount of the ctsSocket object (%p) fell to zero during a scheduled callback", shared_socket.get());
             }
         }
         // continue requesting IO if this connection still isn't done with all IO after scheduling the prior IO
@@ -357,6 +357,7 @@ namespace ctsTraffic
                 {
                     shared_socket->set_timer(next_io, ctsProcessIOTaskCallback);
                     status.ioStarted = true; // IO started in the context of keeping the count incremented
+                    status.ioDone = true;
                 }
                 catch (const std::exception& e)
                 {
@@ -378,8 +379,8 @@ namespace ctsTraffic
                 if (0 == shared_socket->decrement_io())
                 {
                     // this should never be zero as we are holding a reference outside the loop
-                    ctl::ctAlwaysFatalCondition(
-                        L"The ctsSocket (%p) refcount fell to zero while this function was holding a reference", shared_socket.get());
+                    FAIL_FAST_MSG(
+                        "The ctsSocket (%p) refcount fell to zero while this function was holding a reference", shared_socket.get());
                 }
             }
         }

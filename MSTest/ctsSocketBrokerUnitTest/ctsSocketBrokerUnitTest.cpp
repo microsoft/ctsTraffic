@@ -63,7 +63,7 @@ namespace ctsTraffic::ctsConfig
         va_list args;
         va_start(args, _text);
 
-        auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+        const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
         Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
         va_end(args);

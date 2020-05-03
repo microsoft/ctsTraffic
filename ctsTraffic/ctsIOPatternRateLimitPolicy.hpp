@@ -93,7 +93,7 @@ namespace ctsTraffic {
                 } else {
                     // time is already in a new quantum - start over
                     this->bytes_sent_this_quantum = _buffer_size;
-                    this->quantum_start_time_ms += ((current_time_ms - this->quantum_start_time_ms) / this->QuantumPeriodMs) * this->QuantumPeriodMs;
+                    this->quantum_start_time_ms += (current_time_ms - this->quantum_start_time_ms);
                 }
             } else {
                 // have already fulfilled the prior quantum
@@ -105,7 +105,7 @@ namespace ctsTraffic {
                     this->quantum_start_time_ms = new_quantum_start_time_ms;
                 } else {
                     this->bytes_sent_this_quantum = _buffer_size;
-                    this->quantum_start_time_ms += ((current_time_ms - this->quantum_start_time_ms) / this->QuantumPeriodMs) * this->QuantumPeriodMs;
+                    this->quantum_start_time_ms += (current_time_ms - this->quantum_start_time_ms);
                 }
             }
 #ifdef CTSTRAFFIC_UNIT_TESTS
@@ -121,9 +121,9 @@ namespace ctsTraffic {
         }
 
     private:
-        long long newQuantumStartTime() const
+        [[nodiscard]] long long newQuantumStartTime() const
         {
-            return this->quantum_start_time_ms + (this->bytes_sent_this_quantum / this->BytesSendingPerQuantum * this->QuantumPeriodMs);
+            return this->quantum_start_time_ms + this->bytes_sent_this_quantum / this->BytesSendingPerQuantum * this->QuantumPeriodMs;
         }
     };
 }

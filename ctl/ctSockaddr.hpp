@@ -22,6 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
 // wil headers
+// ReSharper disable once CppUnusedIncludeDirective
 #include <wil/resource.h>
 // ctl headers
 #include "ctException.hpp"
@@ -71,7 +72,7 @@ namespace ctl
         // - one must map the v4 address to its mapped v6 address
         static ctSockaddr MapDualMode4To6(const ctSockaddr& inV4) noexcept
         {
-            const IN6_ADDR v4MappedPrefix = { {IN6ADDR_V4MAPPEDPREFIX_INIT} };
+            const IN6_ADDR v4MappedPrefix{ {IN6ADDR_V4MAPPEDPREFIX_INIT} };
 
             ctSockaddr outV6(AF_INET6);
             const auto a6 = outV6.in6_addr();
@@ -206,8 +207,7 @@ namespace ctl
             }
             else
             {
-                ctAlwaysFatalCondition(
-                    L"ctSockaddr: unknown family creating a loopback sockaddr");
+                FAIL_FAST_MSG("ctSockaddr: unknown family creating a loopback sockaddr");
             }
         }
     }

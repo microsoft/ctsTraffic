@@ -20,9 +20,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <windows.h>
 #include <Winsock2.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
-#include <ctThreadPoolTimer.hpp>
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsIOPattern.h"
@@ -159,7 +160,7 @@ namespace ctsTraffic
         // set_timer stores a weak_ptr to 'this' ctsSocket object
         // - so that the object lifetime is not maintained just from a scheduled work item
         //
-        void set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> _func);
+        void set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)>&& _func);
 
         // not copyable or movable
         ctsSocket(const ctsSocket&) = delete;
@@ -191,9 +192,13 @@ namespace ctsTraffic
 
         /// only guarded when returning to the caller
         std::shared_ptr<ctl::ctThreadIocp> tp_iocp;
-        std::shared_ptr<ctl::ctThreadpoolTimer> tp_timer;
+        wil::unique_threadpool_timer tp_timer;
+        ctsIOTask timer_task{};
+        std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> timer_callback;
 
         ctl::ctSockaddr local_sockaddr;
         ctl::ctSockaddr target_sockaddr;
+
+        static void NTAPI ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER);
     };
 } // namespace

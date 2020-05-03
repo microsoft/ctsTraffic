@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <cstdlib>
 #include <cwchar>
-#include <intrin.h>
 #include <string>
 #include <exception>
 // os headers
@@ -608,11 +607,11 @@ namespace ctl
 	inline int ctErrorCode(const std::exception& _exception) noexcept
 	{
 		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
-		if (ctex) {
-			return ctex->why() == 0 ? ERROR_OUTOFMEMORY : ctex->why();
-		} else {
+		if (!ctex) {
 			return ERROR_OUTOFMEMORY;
 		}
+
+		return ctex->why() == 0 ? ERROR_OUTOFMEMORY : static_cast<int>(ctex->why());
 	}
 #else
 	inline int ctErrorCode(const std::exception&) noexcept
@@ -621,133 +620,4 @@ namespace ctl
 	}
 #endif
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	// ctFatalCondition
-	//
-	// Functions which serve as an "assert" to RaiseException should a condition be false.
-	// Useful to when expressing invariants in ones code to make them more easily debuggable.
-	// The relevant string details of the failed condition is written to the debugger before it breaks.
-	// The string is additionally written to the STDERR file handle - if a console is waiting for it
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	// NTSTATUS being used: 1110 (E) for severity, c71f00d for facility & code (ctl)
-	constexpr unsigned long ctFatalConditionExceptionCode = 0xec71f00d;
-
-	namespace failfast_details
-	{
-		///
-		/// the call to RaiseFailFastException is put into its own function
-		///  - so it can be described __analysis_noreturn for SAL
-		///
-		__analysis_noreturn
-		inline
-		void FailFast(_In_ EXCEPTION_RECORD* _exr) noexcept
-		{
-			RaiseFailFastException(_exr, nullptr, 0);
-		}
-	}
-
-	inline
-	void __cdecl ctFatalConditionVa(bool _condition, _Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) noexcept
-	{
-		if (_condition) {
-			// write everyting out into a single string
-			constexpr size_t exception_length = 512;
-			wchar_t exception_text[exception_length] = {L'\0'};
-			_vsnwprintf_s(exception_text, exception_length, _TRUNCATE, _text, _argptr);
-
-			// first print it to the output stream
-			fwprintf_s(stderr, exception_text);
-
-			// then write it out to the debugger
-			::OutputDebugString(exception_text);
-
-			// then raise the exception to break
-			EXCEPTION_RECORD exr;
-			::ZeroMemory(&exr, static_cast<DWORD>(sizeof exr));
-			exr.ExceptionCode = ctFatalConditionExceptionCode;
-			exr.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
-			exr.ExceptionRecord = nullptr;
-			exr.ExceptionAddress = _ReturnAddress();
-			exr.NumberParameters = 1;
-			exr.ExceptionInformation[0] = reinterpret_cast<ULONG_PTR>(exception_text);
-			failfast_details::FailFast(&exr);
-		}
-	}
-
-	inline
-	__analysis_noreturn
-	void __cdecl ctAlwaysFatalConditionVa(_Printf_format_string_ const wchar_t* _text, _In_ va_list _argptr) noexcept
-	{
-		ctFatalConditionVa(true, _text, _argptr);
-	}
-
-	inline
-	void __cdecl ctFatalCondition(bool _condition, _Printf_format_string_ const wchar_t* _text, ...) noexcept
-	{
-		if (_condition) {
-			va_list argptr;
-			va_start(argptr, _text);
-			ctFatalConditionVa(_condition, _text, argptr);
-			// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-			va_end(argptr);
-		}
-	}
-
-	inline
-	__analysis_noreturn
-	void __cdecl ctAlwaysFatalCondition(_Printf_format_string_ const wchar_t* _text, ...) noexcept
-	{
-		va_list argptr;
-		va_start(argptr, _text);
-		ctFatalConditionVa(true, _text, argptr);
-		// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-		va_end(argptr);
-	}
-
-	///
-	/// If enabled Runtime Type Information, will detect which exception based off the actual type
-	/// - this is the /GR flag to the compiler
-	/// - in the sources makefile: USE_RTTI = 1
-	///
-	inline
-	__analysis_noreturn
-	void ctFatalCondition(const ctException& _exception) noexcept
-	{
-		ctFatalCondition(
-			true,
-			L"ctException : %ws at %ws [%u / 0x%x - %ws]",
-			_exception.what_w(),
-			_exception.where_w(),
-			_exception.why(),
-			_exception.why(),
-			_exception.translation_w());
-	}
-
-#ifdef _CPPRTTI
-	inline
-	__analysis_noreturn
-	void ctFatalCondition(const std::exception& _exception) noexcept
-	{
-		const auto* ctex = dynamic_cast<const ctException*>(&_exception);
-		if (ctex) {
-			ctFatalCondition(*ctex);
-		} else {
-			ctFatalCondition(
-				true,
-				L"std::exception : %hs",
-				_exception.what());
-		}
-	}
-#else
-    inline
-    __analysis_noreturn
-    void ctFatalCondition(const std::exception& _exception) noexcept
-    {
-        ctFatalCondition(
-            true,
-            L"std::exception : %hs",
-            _exception.what());
-    }
-#endif
 } // namespace ctl

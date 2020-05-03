@@ -91,9 +91,8 @@ namespace ctsTraffic {
 
         // after creating, refer to the timers under the lock
         m_rendererTimer = CreateThreadpoolTimer(TimerCallback, this, nullptr);
-        if (!m_rendererTimer) {
-            throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
-        }
+        THROW_LAST_ERROR_IF(!m_rendererTimer);
+
         auto deleteTimerCallbackOnError = wil::scope_exit([&]() noexcept
         {
             SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
@@ -102,9 +101,7 @@ namespace ctsTraffic {
         });
 
         m_startTimer = CreateThreadpoolTimer(StartCallback, this, nullptr);
-        if (!m_startTimer) {
-            throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctsIOPatternMediaStreamClient", false);
-        }
+        THROW_LAST_ERROR_IF(!m_startTimer);
         // no errors, dismiss the scope guard
         deleteTimerCallbackOnError.release();
     }
@@ -140,7 +137,7 @@ namespace ctsTraffic {
         ctsIOTask return_task;
         if (m_recvNeeded > 0) {
             // don't try posting more than UdpDatagramMaximumSizeBytes at a time
-            unsigned long max_size_buffer;
+            unsigned long max_size_buffer = 0ul;
             if (m_frameSizeBytes > UdpDatagramMaximumSizeBytes) {
                 max_size_buffer = UdpDatagramMaximumSizeBytes;
             } else {
@@ -149,7 +146,7 @@ namespace ctsTraffic {
 
             return_task = this->untracked_task(IOTaskAction::Recv, max_size_buffer);
             // always write in a zero for the seq number to initialize the buffer
-            *(reinterpret_cast<long long*>(return_task.buffer)) = 0LL;
+            *reinterpret_cast<long long*>(return_task.buffer) = 0LL;
             --m_recvNeeded;
         }
         return return_task;
@@ -162,9 +159,9 @@ namespace ctsTraffic {
 
         if (task.ioAction == IOTaskAction::Abort) {
             // the stream should now be done
-            ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 !m_finishedStream,
-                L"ctsIOPatternMediaStreamClient (dt %p ctsTraffic!ctsTraffic::ctsIOPatternMediaStreamClient) processed an Abort before the stream was finished", this);
+                "ctsIOPatternMediaStreamClient (dt %p ctsTraffic!ctsTraffic::ctsIOPatternMediaStreamClient) processed an Abort before the stream was finished", this);
             return ctsIOPatternProtocolError::SuccessfullyCompleted;
         }
 
@@ -175,13 +172,13 @@ namespace ctsTraffic {
                     // TODO: verify on non-loopback
                     return ctsIOPatternProtocolError::NoError;
                 } else {
-                    ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient received a zero-byte datagram");
+                    ctsConfig::PrintErrorInfo("ctsIOPatternMediaStreamClient received a zero-byte datagram");
                     return ctsIOPatternProtocolError::TooFewBytes;
                 }
             }
 
             if (!ctsMediaStreamMessage::ValidateBufferLengthFromTask(task, bytes_received)) {
-                ctsConfig::PrintErrorInfo(L"MediaStreamClient received an invalid datagram trying to parse the protocol header");
+                ctsConfig::PrintErrorInfo("MediaStreamClient received an invalid datagram trying to parse the protocol header");
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
 
@@ -372,11 +369,11 @@ namespace ctsTraffic {
         if (m_headEntry->receiver_qpf != 0 && m_firstFrame.receiver_qpf != 0)
         {
             const double ms_since_first_receive =
-                m_headEntry->receiver_qpc * 1000.0 / m_headEntry->receiver_qpf -
-                m_firstFrame.receiver_qpc * 1000.0 / m_firstFrame.receiver_qpf;
+                (static_cast<double>(m_headEntry->receiver_qpc) * 1000.0f / static_cast<double>(m_headEntry->receiver_qpf)) -
+                (static_cast<double>(m_firstFrame.receiver_qpc) * 1000.0f / static_cast<double>(m_firstFrame.receiver_qpf));
             const double ms_since_first_send =
-                (m_headEntry->sender_qpc * 1000.0 / m_headEntry->sender_qpf) -
-                (m_firstFrame.sender_qpc * 1000.0 / m_firstFrame.sender_qpf);
+                (static_cast<double>(m_headEntry->sender_qpc) * 1000.0f / static_cast<double>(m_headEntry->sender_qpf)) -
+                (static_cast<double>(m_firstFrame.sender_qpc) * 1000.0f / static_cast<double>(m_firstFrame.sender_qpf));
             m_headEntry->estimated_time_in_flight_ms = ms_since_first_receive - ms_since_first_send;
         }
 
@@ -489,7 +486,7 @@ namespace ctsTraffic {
                 this_ptr->m_headEntry->sequence_number <= this_ptr->m_finalFrame) {
                 // if we haven't yet received *anything* from the server, abort this connection
                 if (!this_ptr->received_buffered_frames()) {
-                    ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
+                    ctsConfig::PrintErrorInfo("ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
 
                     // indicate all frames were dropped
                     ctsConfig::Settings->UdpStatusDetails.dropped_frames.add(this_ptr->m_finalFrame);

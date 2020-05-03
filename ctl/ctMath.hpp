@@ -17,8 +17,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <numeric>
 #include <cmath>
 
-#include <ctException.hpp>
-
 namespace ctl
 {
 	///
@@ -119,7 +117,7 @@ namespace ctl
 		const auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
 			const BidirectionalIterator& lhs = std::get<0>(split);
 			const BidirectionalIterator& rhs = std::get<1>(split);
-			ctl::ctFatalCondition(rhs < lhs, L"ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
+			FAIL_FAST_IF_MSG(rhs < lhs, "ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
 
 			double median_value = 0.0;
 			switch (rhs - lhs) {
@@ -131,7 +129,8 @@ namespace ctl
 					const double sum = static_cast<double>(lhs_value) + static_cast<double>(rhs_value);
 					if (sum < lhs_value || sum < rhs_value) {
 						// overflow - divide first, then add
-						median_value = (static_cast<double>(lhs_value) / 2.0) + (static_cast<double>(rhs_value) / 2.0);
+						median_value = static_cast<double>(lhs_value) / 2.0;
+						median_value += static_cast<double>(rhs_value) / 2.0;
 					} else {
 						median_value = static_cast<double>(sum) / 2.0;
 					}
@@ -145,7 +144,7 @@ namespace ctl
 				}
 
 			default:
-				ctl::ctAlwaysFatalCondition(L"ctInterquartileRange internal error - returned iterators more than two apart [%Iu]", rhs - lhs);
+				FAIL_FAST_MSG("ctInterquartileRange internal error - returned iterators more than two apart [%Iu]", rhs - lhs);
 			}
 
 			return median_value;

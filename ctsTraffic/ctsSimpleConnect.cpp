@@ -61,7 +61,7 @@ namespace ctsTraffic
                 if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
                 {
                     error = WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed(L"connect", error);
+                    ctsConfig::PrintErrorIfFailed("connect", error);
                 }
                 else
                 {

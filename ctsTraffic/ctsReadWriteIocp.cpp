@@ -62,8 +62,8 @@ namespace ctsTraffic
             }
         }
 
-        const wchar_t* Function = (IOTaskAction::Send == _io_task.ioAction) ? L"WriteFile" : L"ReadFile";
-        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, gle);
+        PCSTR function_name = IOTaskAction::Send == _io_task.ioAction ? "WriteFile" : "ReadFile";
+        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, gle);
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
         const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
@@ -82,13 +82,13 @@ namespace ctsTraffic
 
             case ctsIOStatus::FailedIo:
                 // write out the error
-                ctsConfig::PrintErrorIfFailed(Function, gle);
+                ctsConfig::PrintErrorIfFailed(function_name, gle);
                 // protocol sees this as a failure - capture the error the protocol recorded
                 readwrite_status = shared_pattern->get_last_error();
                 break;
 
             default:
-                ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
         }
 
         // always decrement *after* attempting new IO - the prior IO is now formally "done"
@@ -122,7 +122,7 @@ namespace ctsTraffic
         if (socket != INVALID_SOCKET)
         {
             // loop until failure or initiate_io returns None
-            while (!io_done && (NO_ERROR == io_error))
+            while (!io_done && NO_ERROR == io_error)
             {
                 // each loop requests the next task
                 ctsIOTask next_io = shared_pattern->initiate_io();
@@ -139,7 +139,7 @@ namespace ctsTraffic
                     {
                         io_error = WSAGetLastError();
                     }
-                    io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);
+                    io_done = shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo;
                     continue;
                 }
 
@@ -149,7 +149,7 @@ namespace ctsTraffic
                     io_error = shared_socket->close_socket(-1);
                     socket = INVALID_SOCKET;
 
-                    io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);
+                    io_done = shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo;
                     continue;
                 }
 
@@ -177,7 +177,7 @@ namespace ctsTraffic
                 if (io_error != NO_ERROR)
                 {
                     io_count = shared_socket->decrement_io();
-                    io_done = (shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo);
+                    io_done = shared_pattern->complete_io(next_io, 0, io_error) != ctsIOStatus::ContinueIo;
                     continue;
                 }
 
@@ -211,8 +211,8 @@ namespace ctsTraffic
                     // decrement the IO count since it was not pended
                     io_count = shared_socket->decrement_io();
 
-                    const wchar_t* Function = (IOTaskAction::Send == next_io.ioAction) ? L"WriteFile" : L"ReadFile";
-                    PrintDebugInfo(L"\t\tIO Failed: %ws (%d) [ctsReadWriteIocp]\n", Function, io_error);
+                    PCSTR function_name = IOTaskAction::Send == next_io.ioAction ? "WriteFile" : "ReadFile";
+                    PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, io_error);
 
                     // call back to the socket that it failed to see if wants more IO
                     const ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);
@@ -232,14 +232,14 @@ namespace ctsTraffic
 
                         case ctsIOStatus::FailedIo:
                             // print the error on failure
-                            ctsConfig::PrintErrorIfFailed(Function, io_error);
+                            ctsConfig::PrintErrorIfFailed(function_name, io_error);
                             // the protocol acknoledged the failure - socket is done with IO
-                            io_error = shared_pattern->get_last_error();
+                            io_error = static_cast<int>(shared_pattern->get_last_error());
                             io_done = true;
                             break;
 
                         default:
-                            ctl::ctAlwaysFatalCondition(L"ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
+                            FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocol_status));
                     }
                 }
             }

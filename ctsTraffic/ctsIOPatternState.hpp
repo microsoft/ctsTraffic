@@ -15,8 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <Windows.h>
-// ctl headers
-#include <ctException.hpp>
 // project headers
 #include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
@@ -70,8 +68,8 @@ namespace ctsTraffic {
         // need to know in-flight bytes
         ctsUnsignedLongLong inflight_bytes = 0UL;
         // ideal send backlog value
-        ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ? 
-            ctsConfig::GetMaxBufferSize() : 
+        ctsUnsignedLong isb = (ctsConfig::Settings->PrePostSends == 0) ?
+            ctsConfig::GetMaxBufferSize() :
             ctsConfig::GetMaxBufferSize() * ctsConfig::Settings->PrePostSends;
 
         InternalPatternState internal_state = InternalPatternState::Initialized;
@@ -100,7 +98,8 @@ namespace ctsTraffic {
 
     inline ctsIOPatternState::ctsIOPatternState() noexcept
     {
-        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol) {
+        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol)
+        {
             internal_state = InternalPatternState::MoreIo;
         }
     }
@@ -111,19 +110,19 @@ namespace ctsTraffic {
         // Guard our internal tracking - all protocol logic assumes these rules
         //
         const auto already_transferred = this->confirmed_bytes + this->inflight_bytes;
-        ctl::ctFatalCondition(
-            ((already_transferred < this->confirmed_bytes) || (already_transferred < this->inflight_bytes)),
-            L"ctsIOPatternState internal overflow (already_transferred = this->current_transfer + this->inflight_bytes)\n"
-            L"already_transferred: %llu\n"
-            L"this->current_transfer: %llu\n"
-            L"this->inflight_bytes: %llu\n",
+        FAIL_FAST_IF_MSG(
+            (already_transferred < this->confirmed_bytes) || (already_transferred < this->inflight_bytes),
+            "ctsIOPatternState internal overflow (already_transferred = this->current_transfer + this->inflight_bytes)\n"
+            "already_transferred: %llu\n"
+            "this->current_transfer: %llu\n"
+            "this->inflight_bytes: %llu\n",
             static_cast<unsigned long long>(already_transferred),
             static_cast<unsigned long long>(this->confirmed_bytes),
             static_cast<unsigned long long>(this->inflight_bytes));
 
-        ctl::ctFatalCondition(
-            (already_transferred > this->max_transfer),
-            L"ctsIOPatternState internal error: bytes already transferred (%llu) is >= the total we're expected to transfer (%llu)\n",
+        FAIL_FAST_IF_MSG(
+            already_transferred > this->max_transfer,
+            "ctsIOPatternState internal error: bytes already transferred (%llu) is >= the total we're expected to transfer (%llu)\n",
             static_cast<unsigned long long>(already_transferred), static_cast<unsigned long long>(this->max_transfer));
 
         return this->max_transfer - already_transferred;
@@ -157,19 +156,24 @@ namespace ctsTraffic {
 
     inline ctsIOPatternProtocolTask ctsIOPatternState::get_next_task() noexcept
     {
-        if (this->pended_state) {
+        if (this->pended_state)
+        {
             // already indicated the next state: waiting for it to complete
             return ctsIOPatternProtocolTask::NoIo;
         }
 
-        switch (this->internal_state) {
+        switch (this->internal_state)
+        {
             case InternalPatternState::Initialized:
-                if (ctsConfig::IsListening()) {
+                if (ctsConfig::IsListening())
+                {
                     PrintDebugInfo(L"\t\tctsIOPatternState::get_next_task : ServerSendConnectionId\n");
                     this->pended_state = true;
                     this->internal_state = InternalPatternState::ServerSendConnectionId;
                     return ctsIOPatternProtocolTask::SendConnectionId;
-                } else {
+                }
+                else
+                {
                     PrintDebugInfo(L"\t\tctsIOPatternState::get_next_task : RecvConnectionId\n");
                     this->pended_state = true;
                     this->internal_state = InternalPatternState::ClientRecvConnectionId;
@@ -183,9 +187,12 @@ namespace ctsTraffic {
                 return ctsIOPatternProtocolTask::MoreIo;
 
             case InternalPatternState::MoreIo:
-                if ((this->confirmed_bytes + this->inflight_bytes) < this->max_transfer) {
+                if ((this->confirmed_bytes + this->inflight_bytes) < this->max_transfer)
+                {
                     return ctsIOPatternProtocolTask::MoreIo;
-                } else {
+                }
+                else
+                {
                     return ctsIOPatternProtocolTask::NoIo;
                 }
 
@@ -214,17 +221,17 @@ namespace ctsTraffic {
                 return ctsIOPatternProtocolTask::NoIo;
 
             default:
-                ctl::ctAlwaysFatalCondition(
-                    L"ctsIOPatternState::get_next_task was called in an invalid state (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
+                FAIL_FAST_MSG(
+                    "ctsIOPatternState::get_next_task was called in an invalid state (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
                     static_cast<unsigned long>(this->internal_state), this);
-                return ctsIOPatternProtocolTask::NoIo;
         }
     }
 
 
     inline void ctsIOPatternState::notify_next_task(const ctsIOTask& _next_task) noexcept
     {
-        if (_next_task.track_io) {
+        if (_next_task.track_io)
+        {
             this->inflight_bytes += _next_task.buffer_length;
         }
     }
@@ -232,26 +239,35 @@ namespace ctsTraffic {
     inline ctsIOPatternProtocolError ctsIOPatternState::update_error(DWORD _error_code) noexcept
     {
         // if we have already failed, return early
-        if (InternalPatternState::ErrorIOFailed == this->internal_state) {
+        if (InternalPatternState::ErrorIOFailed == this->internal_state)
+        {
             return ctsIOPatternProtocolError::ErrorIOFailed;
         }
 
-        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol) {
-            if (_error_code != 0) {
+        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol)
+        {
+            if (_error_code != 0)
+            {
                 PrintDebugInfo(L"\t\tctsIOPatternState::update_error : ErrorIOFailed\n");
                 this->internal_state = InternalPatternState::ErrorIOFailed;
                 return ctsIOPatternProtocolError::ErrorIOFailed;
             }
 
-        } else {
+        }
+        else
+        {
             // ctsConfig::ProtocolType::TCP
-            if (_error_code != 0 && !this->is_completed()) {
-                if (ctsConfig::IsListening() && 
-                    InternalPatternState::RequestFIN == this->internal_state && 
-                    (WSAETIMEDOUT == _error_code || WSAECONNRESET == _error_code || WSAECONNABORTED == _error_code)) {
+            if (_error_code != 0 && !this->is_completed())
+            {
+                if (ctsConfig::IsListening() &&
+                    InternalPatternState::RequestFIN == this->internal_state &&
+                    (WSAETIMEDOUT == _error_code || WSAECONNRESET == _error_code || WSAECONNABORTED == _error_code))
+                {
                     // this is actually OK - the client may have just RST instead of a graceful FIN after receiving our status
                     return ctsIOPatternProtocolError::NoError;
-                } else {
+                }
+                else
+                {
                     PrintDebugInfo(L"\t\tctsIOPatternState::update_error : ErrorIOFailed\n");
                     this->internal_state = InternalPatternState::ErrorIOFailed;
                     return ctsIOPatternProtocolError::ErrorIOFailed;
@@ -267,7 +283,8 @@ namespace ctsTraffic {
         //
         // If already failed, don't continue processing
         //
-        if (InternalPatternState::ErrorIOFailed == this->internal_state) {
+        if (InternalPatternState::ErrorIOFailed == this->internal_state)
+        {
             return ctsIOPatternProtocolError::ErrorIOFailed;
         }
 
@@ -275,14 +292,16 @@ namespace ctsTraffic {
         // if completed our connection id request, immediately return
         // (not validating IO below)
         //
-        if (InternalPatternState::ServerSendConnectionId == this->internal_state || InternalPatternState::ClientRecvConnectionId == this->internal_state) {
+        if (InternalPatternState::ServerSendConnectionId == this->internal_state || InternalPatternState::ClientRecvConnectionId == this->internal_state)
+        {
             // must have received the full id
-            if (_completed_transfer_bytes != ctsStatistics::ConnectionIdLength) {
+            if (_completed_transfer_bytes != ctsStatistics::ConnectionIdLength)
+            {
                 PrintDebugInfo(
                     L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooFewBytes) [transfered %llu, Expected ConnectionID (%u)]\n",
                     static_cast<unsigned long long>(_completed_transfer_bytes),
                     ctsStatistics::ConnectionIdLength)
-;
+                    ;
                 this->internal_state = InternalPatternState::ErrorIOFailed;
                 return ctsIOPatternProtocolError::TooFewBytes;
             }
@@ -290,21 +309,22 @@ namespace ctsTraffic {
             this->pended_state = false;
         }
 
-        if (_completed_task.track_io) {
+        if (_completed_task.track_io)
+        {
             // 
             // Checking for an inconsistent internal state 
             //
-            ctl::ctFatalCondition(
-                (_completed_transfer_bytes > this->inflight_bytes),
-                L"ctsIOPatternState::completed_task : ctsIOTask (%p) returned more bytes (%u) than were in flight (%llu)",
+            FAIL_FAST_IF_MSG(
+                _completed_transfer_bytes > this->inflight_bytes,
+                "ctsIOPatternState::completed_task : ctsIOTask (%p) returned more bytes (%u) than were in flight (%llu)",
                 &_completed_task, _completed_transfer_bytes, static_cast<unsigned long long>(this->inflight_bytes));
-            ctl::ctFatalCondition(
-                (_completed_task.buffer_length > this->inflight_bytes),
-                L"ctsIOPatternState::completed_task : the ctsIOTask (%p) had requested more bytes (%u) than were in-flight (%llu)\n",
+            FAIL_FAST_IF_MSG(
+                _completed_task.buffer_length > this->inflight_bytes,
+                "ctsIOPatternState::completed_task : the ctsIOTask (%p) had requested more bytes (%u) than were in-flight (%llu)\n",
                 &_completed_task, _completed_task.buffer_length, static_cast<unsigned long long>(this->inflight_bytes));
-            ctl::ctFatalCondition(
-                (_completed_transfer_bytes > _completed_task.buffer_length),
-                L"ctsIOPatternState::completed_task : ctsIOTask (%p) returned more bytes (%u) than were posted (%u)\n",
+            FAIL_FAST_IF_MSG(
+                _completed_transfer_bytes > _completed_task.buffer_length,
+                "ctsIOPatternState::completed_task : ctsIOTask (%p) returned more bytes (%u) than were posted (%u)\n",
                 &_completed_task, _completed_transfer_bytes, _completed_task.buffer_length);
 
             //
@@ -322,8 +342,10 @@ namespace ctsTraffic {
         //
         // Udp just tracks bytes
         //
-        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol) {
-            if (already_transferred == this->max_transfer) {
+        if (ctsConfig::ProtocolType::UDP == ctsConfig::Settings->Protocol)
+        {
+            if (already_transferred == this->max_transfer)
+            {
                 return ctsIOPatternProtocolError::SuccessfullyCompleted;
             }
             return ctsIOPatternProtocolError::NoError;
@@ -332,9 +354,11 @@ namespace ctsTraffic {
         //
         // Tcp has a full state machine
         //
-        if (already_transferred < this->max_transfer) {
+        if (already_transferred < this->max_transfer)
+        {
             // guard against the client gracefully exiting before the completion of the transfer
-            if (0 == _completed_transfer_bytes) {
+            if (0 == _completed_transfer_bytes)
+            {
                 PrintDebugInfo(
                     L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooFewBytes) [transferred %llu, expected transfer %llu]\n",
                     static_cast<unsigned long long>(already_transferred),
@@ -344,16 +368,20 @@ namespace ctsTraffic {
             }
         }
 
-        else if (already_transferred == this->max_transfer) {
+        else if (already_transferred == this->max_transfer)
+        {
             // With TCP, if inflight_bytes > 0, we are not yet done
             // - we need to wait for that pended IO to complete
-            if (0 == this->inflight_bytes) {
+            if (0 == this->inflight_bytes)
+            {
                 //
                 // All TCP data has been sent/received
                 //
-                if (ctsConfig::IsListening()) {
+                if (ctsConfig::IsListening())
+                {
                     // servers will first send their final status before starting their shutdown sequence
-                    switch (this->internal_state) {
+                    switch (this->internal_state)
+                    {
                         case InternalPatternState::MoreIo:
                             PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (MoreIo) : ServerSendCompletion\n");
                             this->internal_state = InternalPatternState::ServerSendCompletion;
@@ -367,24 +395,30 @@ namespace ctsTraffic {
                             break;
 
                         case InternalPatternState::RequestFIN:
-                            if (_completed_transfer_bytes != 0) {
+                            if (_completed_transfer_bytes != 0)
+                            {
                                 PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (RequestFIN) : ErrorIOFailed (TooManyBytes)\n");
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooManyBytes;
-                            } else {
+                            }
+                            else
+                            {
                                 PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (RequestFIN) : CompletedTransfer\n");
                                 this->internal_state = InternalPatternState::CompletedTransfer;
                                 return ctsIOPatternProtocolError::SuccessfullyCompleted;
                             }
 
                         default:
-                            ctl::ctAlwaysFatalCondition(
-                                L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
+                            FAIL_FAST_MSG(
+                                "ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
                                 static_cast<unsigned long>(this->internal_state), this);
                     }
-                } else {
+                }
+                else
+                {
                     // clients will recv the server status, then process their shutdown sequence
-                    switch (this->internal_state) {
+                    switch (this->internal_state)
+                    {
                         case InternalPatternState::MoreIo:
                             PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (MoreIo) : ClientRecvCompletion\n");
                             this->internal_state = InternalPatternState::ClientRecvCompletion;
@@ -393,7 +427,8 @@ namespace ctsTraffic {
 
                         case InternalPatternState::ClientRecvCompletion:
                             // process the server's returned status
-                            if (_completed_transfer_bytes != 4) {
+                            if (_completed_transfer_bytes != 4)
+                            {
                                 PrintDebugInfo(
                                     L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : ErrorIOFailed (Server didn't return a completion - returned %u bytes)\n",
                                     _completed_transfer_bytes);
@@ -401,11 +436,14 @@ namespace ctsTraffic {
                                 return ctsIOPatternProtocolError::TooFewBytes;
                             }
 
-                            if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::Settings->TcpShutdown) {
+                            if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::Settings->TcpShutdown)
+                            {
                                 PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : GracefulShutdown\n");
                                 this->internal_state = InternalPatternState::GracefulShutdown;
                                 this->pended_state = false;
-                            } else {
+                            }
+                            else
+                            {
                                 PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (ClientRecvCompletion) : HardShutdown\n");
                                 this->internal_state = InternalPatternState::HardShutdown;
                                 this->pended_state = false;
@@ -419,7 +457,8 @@ namespace ctsTraffic {
                             break;
 
                         case InternalPatternState::RequestFIN:
-                            if (_completed_transfer_bytes != 0) {
+                            if (_completed_transfer_bytes != 0)
+                            {
                                 PrintDebugInfo(L"\t\tctsIOPatternState::completed_task (RequestFIN) : ErrorIOFailed (TooManyBytes)\n");
                                 this->internal_state = InternalPatternState::ErrorIOFailed;
                                 return ctsIOPatternProtocolError::TooManyBytes;
@@ -435,8 +474,8 @@ namespace ctsTraffic {
                             return ctsIOPatternProtocolError::SuccessfullyCompleted;
 
                         default:
-                            ctl::ctAlwaysFatalCondition(
-                                L"ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
+                            FAIL_FAST_MSG(
+                                "ctsIOPatternState::completed_task - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
                                 static_cast<unsigned long>(this->internal_state), this, &_completed_task);
                     }
                 }
@@ -444,7 +483,8 @@ namespace ctsTraffic {
             }
         }
 
-        else if (already_transferred > this->max_transfer) {
+        else if (already_transferred > this->max_transfer)
+        {
             PrintDebugInfo(
                 L"\t\tctsIOPatternState::completed_task : ErrorIOFailed (TooManyBytes) [transferred %llu, expected transfer %llu]\n",
                 static_cast<unsigned long long>(already_transferred),

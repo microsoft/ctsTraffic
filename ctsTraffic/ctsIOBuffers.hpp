@@ -21,8 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <MSWSock.h>
 // wil headers
 #include <wil/resource.h>
-// ctl headers
-#include <ctException.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsStatistics.hpp"
@@ -50,7 +48,7 @@ namespace ctsTraffic {
         static RIO_BUFFERID ConnectionIdRioBufferId = RIO_INVALID_BUFFERID;
         static wil::critical_section ConnectionIdLock;
 
-        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID *) noexcept
+        static BOOL CALLBACK InitOnceIOPatternCallback(PINIT_ONCE, PVOID, PVOID*) noexcept
         {
             using ctsConfig::Settings;
             using ctsConfig::IsListening;
@@ -60,33 +58,40 @@ namespace ctsTraffic {
             GetSystemInfo(&sysInfo);     // Initialize the structure.
             SystemPageSize = sysInfo.dwPageSize;
 
-            if (!IsListening()) {
+            if (!IsListening())
+            {
                 ConnectionIdBuffer = static_cast<char*>(VirtualAlloc(
                     nullptr,
                     ConnectionIdLength * Settings->ConnectionLimit,
                     MEM_RESERVE | MEM_COMMIT,
                     PAGE_READWRITE));
-                if (!ConnectionIdBuffer) {
-                    ctl::ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", GetLastError());
+                if (!ConnectionIdBuffer)
+                {
+                    FAIL_FAST_MSG("VirtualAlloc alloc failed: %u", GetLastError());
                 }
 
                 // assign a buffer* for each connection_id buffer
                 unsigned long connection_count = 0;
                 ConnectionIdVector = new std::vector<char*>(Settings->ConnectionLimit);
-                for (auto& buffer : *ConnectionIdVector) {
+                for (auto& buffer : *ConnectionIdVector)
+                {
                     buffer = ConnectionIdBuffer + (connection_count * ConnectionIdLength);
                     ++connection_count;
                 }
 
-                if (Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
+                if (Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
+                {
                     ConnectionIdRioBufferId = ctl::ctRIORegisterBuffer(
                         ConnectionIdBuffer,
                         ConnectionIdLength * Settings->ConnectionLimit);
-                    if (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId) {
-                        ctl::ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", WSAGetLastError());
+                    if (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId)
+                    {
+                        FAIL_FAST_MSG("RIORegisterBuffer failed: %d", WSAGetLastError());
                     }
                 }
-            } else {
+            }
+            else
+            {
                 //
                 // since servers don't know beforehand exactly how many connections they might be fielding
                 // - they'll need to ensure they can grow their # of Connection ID buffers as necessary
@@ -100,14 +105,16 @@ namespace ctsTraffic {
                     ConnectionIdLength * ServerMaxConnections,
                     MEM_RESERVE,
                     PAGE_READWRITE));
-                if (!ConnectionIdBuffer) {
-                    ctl::ctAlwaysFatalCondition(L"VirtualAlloc alloc failed: %u", GetLastError());
+                if (!ConnectionIdBuffer)
+                {
+                    FAIL_FAST_MSG("VirtualAlloc alloc failed: %u", GetLastError());
                 }
 
                 ConnectionIdVector = new std::vector<char*>();
                 CurrentAllocatedConnectionCount = 0;
-                if (!GrowConnectionIdBuffer()) {
-                    ctl::ctAlwaysFatalCondition(L"VirtualAlloc or new vector<char*> failed");
+                if (!GrowConnectionIdBuffer())
+                {
+                    FAIL_FAST_MSG("VirtualAlloc or new vector<char*> failed");
                 }
 
                 // TODO: how will we track the RIO Buffer Id across regrowths of this address space?
@@ -115,12 +122,14 @@ namespace ctsTraffic {
                 // - and once all buffers are returned from the old Id, we can release it?
                 // must take into account that we could potentially regrow it before all of N-1 RIO buffers are returned
                 // - so we'll have to be prepared to refcount N number of RIO buffer Id's
-                if ((Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) && (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId)) {
+                if ((Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) && (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId))
+                {
                     ConnectionIdRioBufferId = ctl::ctRIORegisterBuffer(
                         ConnectionIdBuffer,
                         CurrentAllocatedConnectionCount * ConnectionIdLength);
-                    if (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId) {
-                        ctl::ctAlwaysFatalCondition(L"RIORegisterBuffer failed: %d", WSAGetLastError());
+                    if (RIO_INVALID_BUFFERID == ConnectionIdRioBufferId)
+                    {
+                        FAIL_FAST_MSG("RIORegisterBuffer failed: %d", WSAGetLastError());
                     }
                 }
 
@@ -143,11 +152,13 @@ namespace ctsTraffic {
             const ctsUnsignedLong original_connections = CurrentAllocatedConnectionCount;
             const ctsUnsignedLong increased_available_connections = CurrentAllocatedConnectionCount + ServerConnectionGrowthRate;
             const ctsUnsignedLongLong commit_size_bytes = increased_available_connections * ConnectionIdLength;
-            if (!VirtualAlloc(ConnectionIdBuffer, commit_size_bytes, MEM_COMMIT, PAGE_READWRITE)) {
+            if (!VirtualAlloc(ConnectionIdBuffer, commit_size_bytes, MEM_COMMIT, PAGE_READWRITE))
+            {
                 return false;
             }
 
-            try {
+            try
+            {
                 // work on a temp vector: not risking our currently used vector
                 // copy what pointers are still in our static buffer
                 std::vector<char*> temp_connection_id_vector(*ConnectionIdVector);
@@ -162,14 +173,16 @@ namespace ctsTraffic {
                 // - and only add buffers that were added with this new commit
                 char* iter_buffer_value = ConnectionIdBuffer + static_cast<unsigned long>(original_connections * ConnectionIdLength);
                 char* end_buffer_value = ConnectionIdBuffer + static_cast<unsigned long>(commit_size_bytes);
-                for (; iter_buffer_value < end_buffer_value; iter_buffer_value += ConnectionIdLength) {
+                for (; iter_buffer_value < end_buffer_value; iter_buffer_value += ConnectionIdLength)
+                {
                     temp_connection_id_vector.push_back(iter_buffer_value);
                 }
 
                 // no-fail: swap the temp vector into our static vector
                 ConnectionIdVector->swap(temp_connection_id_vector);
             }
-            catch (...) {
+            catch (...)
+            {
                 return false;
             }
             return true;
@@ -187,22 +200,24 @@ namespace ctsTraffic {
         inline ctsIOTask NewConnectionIdBuffer(_In_reads_(ctsStatistics::ConnectionIdLength) char* _connection_id)
         {
             // this init-once call is no-fail
-            (void) InitOnceExecuteOnce(&statics::ConnectionIdInitOnce, statics::InitOnceIOPatternCallback, nullptr, nullptr);
+            (void)InitOnceExecuteOnce(&statics::ConnectionIdInitOnce, statics::InitOnceIOPatternCallback, nullptr, nullptr);
 
             ctsIOTask return_task;
-            char* next_buffer;
+            char* next_buffer = nullptr;
             {
                 const auto connection_id_lock = statics::ConnectionIdLock.lock();
-                if (statics::ConnectionIdVector->empty()) {
-                    ctl::ctFatalCondition(
+                if (statics::ConnectionIdVector->empty())
+                {
+                    FAIL_FAST_IF_MSG(
                         !ctsConfig::IsListening(),
-                        L"The ConnectionId vector should never be empty for clients: it should be pre-allocated with exactly the number necessary");
-                    if (!statics::GrowConnectionIdBuffer()) {
+                        "The ConnectionId vector should never be empty for clients: it should be pre-allocated with exactly the number necessary");
+                    if (!statics::GrowConnectionIdBuffer())
+                    {
                         throw std::bad_alloc();
                     }
-                    ctl::ctFatalCondition(
+                    FAIL_FAST_IF_MSG(
                         statics::ConnectionIdVector->empty(),
-                        L"The ConnectionId vector should never be empty after re-growing it");
+                        "The ConnectionId vector should never be empty after re-growing it");
                 }
 
                 next_buffer = *statics::ConnectionIdVector->rbegin();
@@ -210,13 +225,13 @@ namespace ctsTraffic {
             }
 
             const auto copy_error = memcpy_s(next_buffer, ctsStatistics::ConnectionIdLength, _connection_id, ctsStatistics::ConnectionIdLength);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 copy_error != 0,
-                L"ctsIOBuffers::NewConnectionIdBuffer : memcpy_s failed trying to copy the connection ID - buffer (%p) (error : %d)",
-                next_buffer,
-                copy_error);
+                "ctsIOBuffers::NewConnectionIdBuffer : memcpy_s failed trying to copy the connection ID - buffer (%p) (error : %d)",
+                next_buffer, copy_error);
 
-            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
+            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
+            {
                 // RIO is registered at the ConnectionIdBuffer address
                 // - thus needs to specify the offset to get to the unique buffer for this request
                 return_task.buffer = statics::ConnectionIdBuffer;
@@ -225,7 +240,9 @@ namespace ctsTraffic {
                 return_task.rio_bufferid = statics::ConnectionIdRioBufferId;
                 return_task.buffer_type = ctsIOTask::BufferType::TcpConnectionId;
                 return_task.track_io = false;
-            } else {
+            }
+            else
+            {
                 return_task.buffer = next_buffer;
                 return_task.buffer_offset = 0;
                 return_task.buffer_length = ctsStatistics::ConnectionIdLength;
@@ -242,20 +259,25 @@ namespace ctsTraffic {
             const auto connection_id_lock = statics::ConnectionIdLock.lock();
             // the vector was initially reserved to be large enough to hold all possible buffers
             // - push-back() is no-throw in these cases
-            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
+            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
+            {
                 // RIO gives out offsets from the base address of the buffers
                 statics::ConnectionIdVector->push_back(statics::ConnectionIdBuffer + _task.buffer_offset);
-            } else {
+            }
+            else
+            {
                 statics::ConnectionIdVector->push_back(_task.buffer);
             }
         }
-        catch (...) {
-            ctl::ctAlwaysFatalCondition(L"Returning buffer* back to the vector should never fail: the vector is always pre-allocated");
+        catch (...)
+        {
+            FAIL_FAST_MSG("Returning buffer* back to the vector should never fail: the vector is always pre-allocated");
         }
 
         inline bool SetConnectionId(_Inout_updates_(ctsStatistics::ConnectionIdLength) char* _target_buffer, const ctsIOTask& _task, unsigned long _current_transfer) noexcept
         {
-            if (_current_transfer != ctsStatistics::ConnectionIdLength) {
+            if (_current_transfer != ctsStatistics::ConnectionIdLength)
+            {
                 PrintDebugInfo(
                     L"\t\tctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)\n",
                     _current_transfer, ctsStatistics::ConnectionIdLength);
@@ -263,19 +285,18 @@ namespace ctsTraffic {
             }
 
             char* io_buffer = _task.buffer;
-            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO) {
+            if (ctsConfig::Settings->SocketFlags & WSA_FLAG_REGISTERED_IO)
+            {
                 // RIO is registered at the ConnectionIdBuffer address
                 // - thus needs to specify the offset to get to the unique buffer for this request
                 io_buffer = statics::ConnectionIdBuffer + _task.buffer_offset;
             }
 
             const auto copy_error = memcpy_s(_target_buffer, ctsStatistics::ConnectionIdLength, io_buffer, ctsStatistics::ConnectionIdLength);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 copy_error != 0,
-                L"ctsIOBuffers::SetConnectionId : memcpy_s failed trying to copy the connection ID - target buffer (%p) ctsIOTask (%p) (error : %d)",
-                _target_buffer,
-                &_task,
-                copy_error);
+                "ctsIOBuffers::SetConnectionId : memcpy_s failed trying to copy the connection ID - target buffer (%p) ctsIOTask (%p) (error : %d)",
+                _target_buffer, &_task, copy_error);
             return true;
         }
     }

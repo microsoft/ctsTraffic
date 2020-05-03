@@ -13,6 +13,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsSocket.h"
+// OS headers
+#include <windows.h>
+// ctl headers
+#include <wil/win32_helpers.h>
 // ctl headers
 #include <ctThreadPoolTimer.hpp>
 #include <ctMemoryGuard.hpp>
@@ -48,9 +52,9 @@ namespace ctsTraffic
     {
         const auto lock = socket_cs.lock();
 
-        ctFatalCondition(
+        FAIL_FAST_IF_MSG(
             !!socket,
-            L"ctsSocket::set_socket trying to set a SOCKET (%Iu) when it has already been set in this object (%Iu)",
+            "ctsSocket::set_socket trying to set a SOCKET (%Iu) when it has already been set in this object (%Iu)",
             _socket, socket.get());
 
         socket.reset(_socket);
@@ -106,9 +110,9 @@ namespace ctsTraffic
     void ctsSocket::complete_state(DWORD _error_code) noexcept
     {
         const auto current_io_count = ctMemoryGuardRead(&io_count);
-        ctFatalCondition(
-            (current_io_count != 0),
-            L"ctsSocket::complete_state is called with outstanding IO (%d)", current_io_count);
+        FAIL_FAST_IF_MSG(
+            current_io_count != 0,
+            "ctsSocket::complete_state is called with outstanding IO (%d)", current_io_count);
 
         DWORD recorded_error = _error_code;
         if (pattern)
@@ -181,7 +185,7 @@ namespace ctsTraffic
                 const auto gle = WSAGetLastError();
                 if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
                 {
-                    ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
+                    ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
                 }
             }
         }
@@ -212,7 +216,7 @@ namespace ctsTraffic
                         if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
                         {
                             // aborted is expected whenever the socket is closed
-                            ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                            ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
                         }
                     }
                 }
@@ -245,7 +249,7 @@ namespace ctsTraffic
                         shared_iocp->cancel_request(ov);
                         if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
                         {
-                            ctsConfig::PrintErrorIfFailed(L"WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                            ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
                         }
                     }
                 }
@@ -270,9 +274,9 @@ namespace ctsTraffic
     long ctsSocket::decrement_io() noexcept
     {
         const auto io_value = ctMemoryGuardDecrement(&io_count);
-        ctFatalCondition(
-            (io_value < 0),
-            L"ctsSocket: io count fell below zero (%d)\n", io_value);
+        FAIL_FAST_IF_MSG(
+            io_value < 0,
+            "ctsSocket: io count fell below zero (%d)\n", io_value);
         return io_value;
     }
 
@@ -300,18 +304,35 @@ namespace ctsTraffic
     /// - note that the timer 
     /// - can throw under low resource conditions
     ///
-    void ctsSocket::set_timer(const ctsIOTask& _task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> _func)
+    void ctsSocket::set_timer(const ctsIOTask& task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)>&& func)
     {
         const auto lock = socket_cs.lock();
+        timer_task = task;
+        timer_callback = std::move(func);
+
         if (!tp_timer)
         {
-            tp_timer = make_shared<ctThreadpoolTimer>(ctsConfig::Settings->PTPEnvironment);
+            tp_timer.reset(CreateThreadpoolTimer(ThreadPoolTimerCallback, this, ctsConfig::Settings->PTPEnvironment));
+            THROW_LAST_ERROR_IF(!tp_timer);
         }
 
-        // register a weak pointer after creating a shared_ptr from the 'this' ptry
-        tp_timer->schedule_singleton(
-            [_func = std::move(_func), weak_reference = shared_from_this(), _task]() { _func(weak_reference, _task); },
-            _task.time_offset_milliseconds);
+        FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * task.time_offset_milliseconds);
+        SetThreadpoolTimer(tp_timer.get(), &relativeTimeout, 0, 0);
     }
 
+    void NTAPI ctsSocket:: ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER)
+    {
+        auto* pThis = static_cast<ctsSocket*>(pContext);
+
+        ctsIOTask task{};
+        function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> callback;
+        {
+            const auto lock = pThis->socket_cs.lock();
+            task = pThis->timer_task;
+            callback = std::move(pThis->timer_callback);
+        }
+
+        // invoke the callback outside the lock
+        callback(pThis->weak_from_this(), task);
+    }
 } // namespace

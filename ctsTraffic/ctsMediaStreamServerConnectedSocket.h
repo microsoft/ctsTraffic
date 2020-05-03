@@ -64,7 +64,7 @@ namespace ctsTraffic {
 
         ~ctsMediaStreamServerConnectedSocket() noexcept;
 
-        const ctl::ctSockaddr& get_address() const noexcept
+        const ctl::ctSockaddr& get_remote_address() const noexcept
         {
             return remote_addr;
         }

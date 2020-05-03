@@ -18,8 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <windows.h>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
@@ -31,8 +29,8 @@ namespace ctsTraffic {
 
         std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
 
-        mutable wil::critical_section socket_lock;
-        _Requires_lock_held_(socket_lock) wil::unique_socket listening_socket;
+        mutable wil::critical_section listeningsocket_lock;
+        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket listening_socket;
 
         const ctl::ctSockaddr listening_addr;
         std::array<char, RecvBufferSize> recv_buffer{};

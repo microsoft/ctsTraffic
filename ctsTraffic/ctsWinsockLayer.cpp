@@ -151,7 +151,7 @@ namespace ctsTraffic {
         linger linger_option{};
         linger_option.l_onoff = 1;
         linger_option.l_linger = 0;
-        if (setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof(linger_option))) != 0) {
+        if (setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof linger_option)) != 0) {
             return_result.error_code = WSAGetLastError();
         }
 

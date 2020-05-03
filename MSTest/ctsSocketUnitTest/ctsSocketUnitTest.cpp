@@ -71,7 +71,7 @@ namespace ctsTraffic
             va_list args;
             va_start(args, _text);
 
-            auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
+            const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
             Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
 
             va_end(args);
@@ -92,10 +92,10 @@ namespace ctsTraffic
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintErrorIfFailed(const wchar_t*, unsigned long _value) noexcept
+        void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%u)", _value).c_str());
+                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
         }
         void PrintException(const std::exception& e) noexcept
         {
@@ -128,7 +128,7 @@ namespace ctsUnitTest
         TEST_CLASS_INITIALIZE(Setup)
         {
             WSADATA wsa;
-            int startup = ::WSAStartup(WINSOCK_VERSION, &wsa);
+            const int startup = ::WSAStartup(WINSOCK_VERSION, &wsa);
             Assert::AreEqual(0, startup);
 
             ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
@@ -141,7 +141,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(SocketGuardReturnsSocket)
         {
-            auto socket_value(this->create_socket());
+            const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
@@ -150,13 +150,13 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // get the socket under lock
-            auto socket_guard(test->socket_reference());
+            const auto socket_guard(test->socket_reference());
             Assert::AreEqual(socket_value, socket_guard.socket());
         }
 
         TEST_METHOD(SocketGuardIsMovable)
         {
-            auto socket_value(this->create_socket());
+            const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
@@ -165,40 +165,40 @@ namespace ctsUnitTest
             test->set_socket(socket_value);
 
             // validate the object guard
-            auto socket_guard(test->socket_reference());
+            const auto socket_guard(test->socket_reference());
             Assert::AreEqual(socket_value, socket_guard.socket());
         }
 
         TEST_METHOD(CloseSocket)
         {
-            auto socket_value(this->create_socket());
+            const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(test->socket_reference());
+                const auto socket_guard(test->socket_reference());
                 Assert::AreEqual(socket_value, socket_guard.socket());
             }
 
             test->close_socket();
             {
-                auto socket_guard(test->socket_reference());
+                const auto socket_guard(test->socket_reference());
                 Assert::AreEqual(INVALID_SOCKET, socket_guard.socket());
             }
         }
 
         TEST_METHOD(DtorClosesSocket)
         {
-            auto socket_value(this->create_socket());
+            const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             test->set_socket(socket_value);
             {
-                auto socket_guard(test->socket_reference());
+                const auto socket_guard(test->socket_reference());
                 Assert::AreEqual(socket_value, socket_guard.socket());
             }
 
@@ -208,26 +208,26 @@ namespace ctsUnitTest
             // - trying to use it should fail with an invalid socket error
             ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
             local_addr.SetPort(55555);
-            auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
-            auto gle = ::WSAGetLastError();
+            const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
+            const auto gle = ::WSAGetLastError();
             Assert::AreEqual(SOCKET_ERROR, error);
             Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);
         }
 
         TEST_METHOD(ThreadPool)
         {
-            auto socket_value(this->create_socket());
+            const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
             shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // when the socket is INVALID_SOCKET, should return a nullptr
-            auto tp1(test->thread_pool());
+            const auto tp1(test->thread_pool());
             Assert::AreEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp1);
 
             // once given a real socket, should return a valid TP handle
             test->set_socket(socket_value);
-            auto tp2(test->thread_pool());
+            const auto tp2(test->thread_pool());
             Assert::AreNotEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp2);
         }
 
@@ -285,8 +285,8 @@ namespace ctsUnitTest
         SOCKET create_socket() const
         {
             // create a valid UDP socket
-            SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
-            auto gle = ::WSAGetLastError();
+            const SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+            const auto gle = ::WSAGetLastError();
             Logger::WriteMessage(ctl::ctString::ctFormatString(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
             Assert::AreNotEqual(INVALID_SOCKET, socket_value);
 

@@ -153,9 +153,7 @@ namespace ctsTraffic::ctsConfig
     }
     static void ctsConfigInitOnce() noexcept
     {
-        ctFatalCondition(
-            !InitOnceExecuteOnce(&g_InitImpl, InitOncectsConfigImpl, nullptr, nullptr),
-            L"ctsConfig InitOnceExecuteOnce failed: %lu", GetLastError());
+        FAIL_FAST_IF(!InitOnceExecuteOnce(&g_InitImpl, InitOncectsConfigImpl, nullptr, nullptr));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -164,7 +162,7 @@ namespace ctsTraffic::ctsConfig
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
     static void check_system_settings() noexcept
-    try
+        try
     {
         // Windows 10+ exposes a new socket option: SO_REUSE_UNICASTPORT
         // - this allows for much greater reuse of local ports, but also requires
@@ -253,6 +251,7 @@ namespace ctsTraffic::ctsConfig
     template <typename T>
     T as_integral(const wstring&)
     {
+        // ReSharper disable once CppStaticAssertFailure
         static_assert(false, "Only supports the below specializations");
         return {};
     }
@@ -261,7 +260,7 @@ namespace ctsTraffic::ctsConfig
     template <>
     long as_integral<long>(const wstring& inputString)
     {
-        long return_value;
+        long return_value = 0l;
         size_t first_unconverted_offset = 0;
         if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
         {
@@ -281,7 +280,7 @@ namespace ctsTraffic::ctsConfig
     template <>
     unsigned long as_integral<unsigned long>(const wstring& inputString)
     {
-        unsigned long return_value;
+        unsigned long return_value = 0ul;
         size_t first_unconverted_offset = 0;
         if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
         {
@@ -335,7 +334,7 @@ namespace ctsTraffic::ctsConfig
     template <>
     long long as_integral<long long>(const wstring& inputString)
     {
-        long long return_value;
+        long long return_value = 0ll;
         size_t first_unconverted_offset = 0;
         if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
         {
@@ -355,7 +354,7 @@ namespace ctsTraffic::ctsConfig
     template <>
     unsigned long long as_integral<unsigned long long>(const wstring& inputString)
     {
-        unsigned long long return_value;
+        unsigned long long return_value = 0ull;
         size_t first_unconverted_offset = 0;
         if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
         {
@@ -402,7 +401,7 @@ namespace ctsTraffic::ctsConfig
         bool connect_specifed = false;
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-conn");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -466,7 +465,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-acc");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -527,7 +526,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-io");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -605,7 +604,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-inlinecompletions");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -638,7 +637,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-msgwaitall");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -672,7 +671,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-Protocol");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -713,7 +712,7 @@ namespace ctsTraffic::ctsConfig
             // loop until cannot fine -Options
             const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
                 const auto value = ParseArgument(parameter, L"-Options");
-                return (value != nullptr);
+                return value != nullptr;
                 });
 
             if (found_arg != end(args))
@@ -766,7 +765,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-keepalivevalue");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -802,7 +801,7 @@ namespace ctsTraffic::ctsConfig
     {
         auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-pattern");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -853,7 +852,7 @@ namespace ctsTraffic::ctsConfig
         // Now look for options tightly coupled to Protocol
         const auto found_pushbytes = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-pushbytes");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_pushbytes != end(args))
         {
@@ -872,7 +871,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_pullbytes = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-pullbytes");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_pullbytes != end(args))
         {
@@ -895,7 +894,7 @@ namespace ctsTraffic::ctsConfig
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-BitsPerSecond");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -915,7 +914,7 @@ namespace ctsTraffic::ctsConfig
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-FrameRate");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -930,7 +929,7 @@ namespace ctsTraffic::ctsConfig
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-BufferDepth");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -945,7 +944,7 @@ namespace ctsTraffic::ctsConfig
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-StreamLength");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1008,7 +1007,7 @@ namespace ctsTraffic::ctsConfig
         {
             found_listen = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
                 const auto value = ParseArgument(parameter, L"-listen");
-                return (value != nullptr);
+                return value != nullptr;
                 });
             if (found_listen != end(args))
             {
@@ -1044,7 +1043,7 @@ namespace ctsTraffic::ctsConfig
         {
             found_target = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
                 const auto value = ParseArgument(parameter, L"-target");
-                return (value != nullptr);
+                return value != nullptr;
                 });
             if (found_target != end(args))
             {
@@ -1073,7 +1072,7 @@ namespace ctsTraffic::ctsConfig
         {
             found_bind = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
                 const auto value = ParseArgument(parameter, L"-bind");
-                return (value != nullptr);
+                return value != nullptr;
                 });
             if (found_bind != end(args))
             {
@@ -1223,7 +1222,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-Port");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1248,7 +1247,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-connections");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1276,7 +1275,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-ServerExitLimit");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1305,7 +1304,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-throttleconnections");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1331,7 +1330,7 @@ namespace ctsTraffic::ctsConfig
         // - find the ',' the '[', and the ']'
         const auto value_length = wcslen(_value);
         const auto value_end = _value + value_length;
-        if ((value_length < 5) || (_value[0] != L'[') || (_value[value_length - 1] != L']'))
+        if (value_length < 5 || _value[0] != L'[' || _value[value_length - 1] != L']')
         {
             throw invalid_argument("range value [###,###]");
         }
@@ -1370,7 +1369,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-buffer");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1416,7 +1415,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-transfer");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1455,7 +1454,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-LocalPort");
-            return (value != nullptr);
+            return value != nullptr;
             });
 
         if (found_arg != end(args))
@@ -1491,7 +1490,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-IfIndex");
-            return (value != nullptr);
+            return value != nullptr;
             });
 
         if (found_arg != end(args))
@@ -1521,7 +1520,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_ratelimit = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-RateLimit");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_ratelimit != end(args))
         {
@@ -1549,7 +1548,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_ratelimit_period = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-RateLimitPeriod");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_ratelimit_period != end(args))
         {
@@ -1578,7 +1577,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-Iterations");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1608,7 +1607,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_verbosity = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-ConsoleVerbosity");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_verbosity != end(args))
         {
@@ -1623,7 +1622,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_status_update = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-StatusUpdate");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_status_update != end(args))
         {
@@ -1643,7 +1642,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_connection_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-ConnectionFilename");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_connection_filename != end(args))
         {
@@ -1654,7 +1653,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_error_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-ErrorFilename");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_error_filename != end(args))
         {
@@ -1665,7 +1664,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_status_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-StatusFilename");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_status_filename != end(args))
         {
@@ -1676,7 +1675,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_jitter_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-JitterFilename");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_jitter_filename != end(args))
         {
@@ -1781,7 +1780,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-OnError");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1814,7 +1813,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-PrePostRecvs");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1828,7 +1827,7 @@ namespace ctsTraffic::ctsConfig
         }
         else
         {
-            Settings->PrePostRecvs = (ProtocolType::TCP == Settings->Protocol) ? 1 : 2;
+            Settings->PrePostRecvs = ProtocolType::TCP == Settings->Protocol ? 1 : 2;
         }
     }
 
@@ -1843,7 +1842,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-PrePostSends");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1873,7 +1872,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-RecvBufValue");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1895,7 +1894,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-SendBufValue");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1917,7 +1916,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-Compartment");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -1930,16 +1929,11 @@ namespace ctsTraffic::ctsConfig
                 [&value](const IP_ADAPTER_ADDRESSES& _adapter_address) {
                     return ctString::ctOrdinalEqualsCaseInsensative(value, _adapter_address.FriendlyName);
                 });
-            if (found_interface == s_NetAdapterAddresses->end())
-            {
-                throw ctException(
-                    ERROR_NOT_FOUND,
-                    ctString::ctFormatString(
-                        L"GetAdaptersAddresses could not find the interface alias '%ws'",
-                        value).c_str(),
-                    L"ctsConfig::set_compartment",
-                    true);
-            }
+            THROW_HR_IF_MSG(
+                HRESULT_FROM_WIN32(ERROR_NOT_FOUND),
+                found_interface == s_NetAdapterAddresses->end(),
+                "GetAdaptersAddresses could not find the interface alias '%ws'",
+                value);
 
             s_CompartmentId = found_interface->CompartmentId;
             // always remove the arg from our vector
@@ -1991,7 +1985,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-verify");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -2031,7 +2025,7 @@ namespace ctsTraffic::ctsConfig
 
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-shutdown");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -2068,7 +2062,7 @@ namespace ctsTraffic::ctsConfig
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-timelimit");
-            return (value != nullptr);
+            return value != nullptr;
             });
         if (found_arg != end(args))
         {
@@ -2095,372 +2089,372 @@ namespace ctsTraffic::ctsConfig
 
         switch (option)
         {
-        case PrintUsageOption::Default:
-            usage.append(L"\n\n"
-                L"ctsTraffic is a utility to generate and validate the integrity of network traffic. It is a client / server application "
-                L"with the ability to send and receive traffic in a variety of protocol patterns, utilizing a variety of API calling patterns. "
-                L"The protocol is validated in bytes sent and received for every connection established. Should there be any API failure, any "
-                L"connection lost prematurely, any protocol failure in bytes sent or received, ctsTraffic will capture and log that error information. "
-                L"Any errors will additionally cause ctsTraffic to return a non-zero error code.\n"
-                L"Once started, ctrl-c or ctrl-break will cleanly shutdown the client or server\n"
-                L"\n\n"
-                L"For issues or questions, please contact 'ctsSupport'\n"
-                L"\n\n"
-                L"ctsTraffic -Help:[tcp] [udp] [logging] [advanced]\n"
-                L"\t- <default> == prints this usage statement\n"
-                L"\t- tcp : prints usage for TCP-specific options\n"
-                L"\t- udp : prints usage for UDP-specific options\n"
-                L"\t- logging : prints usage for logging options\n"
-                L"\t- advanced : prints the usage for advanced and experimental options\n"
-                L"\n\n"
-                L"Server-side usage:\n"
-                L"\tctsTraffic -Listen:<addr or *> [-Port:####] [-ServerExitLimit:<####>] [-Protocol:<tcp/udp>] [-Verify:####] [Protocol-specific options]\n"
-                L"\n"
-                L"Client-side usage:\n"
-                L"\tctsTraffic -Target:<addr or name> [-Port:####] [-Connections:<####>] [-Iterations:<####>] [-Protocol:<tcp/udp>] [-Verify:####] [Protocol-specific options]\n"
-                L"\n"
-                L"The Server-side and Client-side may have fully independent settings *except* for the following:\n"
-                L" (these must match exactly between the client and the server)\n"
-                L"\t-Port\n"
-                L"\t-Protocol\n"
-                L"\t-Verify\n"
-                L"\t-Pattern (on TCP)\n"
-                L"\t-Transfer (on TCP)\n"
-                L"\t-BitsPerSecond (on UDP)\n"
-                L"\t-FrameRate (on UDP)\n"
-                L"\t-StreamLength (on UDP)\n"
-                L"\n\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    Common Server-side options                        \n"
-                L"----------------------------------------------------------------------\n"
-                L"-Listen:<addr or *> [-Listen:<addr> -Listen:<addr>]\n"
-                L"   - the specific IP Address for the server-side to listen, or '*' for all IP Addresses\n"
-                L"\t- <required>\n"
-                L"\t  note : can specify multiple addresses by providing -Listen for each address\n"
-                L"-ServerExitLimit:####\n"
-                L"   - the total # of accepted connections before server gracefully exits\n"
-                L"\t- <default> == 0  (infinite)\n"
-                L"\n\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    Common Client-side options                        \n"
-                L"----------------------------------------------------------------------\n"
-                L"-Connections:####\n"
-                L"   - the total # of connections at any one time\n"
-                L"\t- <default> == 8  (there will always be 8 connections doing IO)\n"
-                L"-Iterations:####\n"
-                L"   - the number of times to iterate across the number of '-Connections'\n"
-                L"\t- <default> == 0  (infinite)\n"
-                L"\t  note : the total # of connections to be made before exit == Iterations * Connections\n"
-                L"-Target:<addr or name>\n"
-                L"   - the server-side IP Address, FQDN, or hostname to connect\n"
-                L"\t- <required>\n"
-                L"\t  note : given a FQDN or hostname, each new connection will iterate across\n"
-                L"\t       : all IPv4 and IPv6 addresses which the name resolved\n"
-                L"\t  note : one can specify '-Target:localhost' when client and server are both local\n"
-                L"\t  note : one can specify multiple targets by providing -Target for each address or name\n"
-                L"\n\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    Common options for all roles                      \n"
-                L"----------------------------------------------------------------------\n"
-                L"-Port:####\n"
-                L"   - the port # the server will listen and the client will connect\n"
-                L"\t- <default> == 4444\n"
-                L"-Protocol:<tcp,udp>\n"
-                L"   - the protocol used for connectivity and IO\n"
-                L"\t- tcp : see -help:TCP for usage options\n"
-                L"\t- udp : see -help:UDP for usage options\n"
-                L"-Verify:<connection,data>\n"
-                L"   - an enumeration to indicate the level of integrity verification\n"
-                L"\t- <default> == data\n"
-                L"\t- connection : the integrity of every connection is verified\n"
-                L"\t             : including the precise # of bytes to send and receive\n"
-                L"\t- data : the integrity of every received data buffer is verified against the an expected bit-pattern\n"
-                L"\t       : this validation is a superset of 'connection' integrity validation\n"
-                L"\n");
-            break;
+            case PrintUsageOption::Default:
+                usage.append(L"\n\n"
+                    L"ctsTraffic is a utility to generate and validate the integrity of network traffic. It is a client / server application "
+                    L"with the ability to send and receive traffic in a variety of protocol patterns, utilizing a variety of API calling patterns. "
+                    L"The protocol is validated in bytes sent and received for every connection established. Should there be any API failure, any "
+                    L"connection lost prematurely, any protocol failure in bytes sent or received, ctsTraffic will capture and log that error information. "
+                    L"Any errors will additionally cause ctsTraffic to return a non-zero error code.\n"
+                    L"Once started, ctrl-c or ctrl-break will cleanly shutdown the client or server\n"
+                    L"\n\n"
+                    L"For issues or questions, please contact 'ctsSupport'\n"
+                    L"\n\n"
+                    L"ctsTraffic -Help:[tcp] [udp] [logging] [advanced]\n"
+                    L"\t- <default> == prints this usage statement\n"
+                    L"\t- tcp : prints usage for TCP-specific options\n"
+                    L"\t- udp : prints usage for UDP-specific options\n"
+                    L"\t- logging : prints usage for logging options\n"
+                    L"\t- advanced : prints the usage for advanced and experimental options\n"
+                    L"\n\n"
+                    L"Server-side usage:\n"
+                    L"\tctsTraffic -Listen:<addr or *> [-Port:####] [-ServerExitLimit:<####>] [-Protocol:<tcp/udp>] [-Verify:####] [Protocol-specific options]\n"
+                    L"\n"
+                    L"Client-side usage:\n"
+                    L"\tctsTraffic -Target:<addr or name> [-Port:####] [-Connections:<####>] [-Iterations:<####>] [-Protocol:<tcp/udp>] [-Verify:####] [Protocol-specific options]\n"
+                    L"\n"
+                    L"The Server-side and Client-side may have fully independent settings *except* for the following:\n"
+                    L" (these must match exactly between the client and the server)\n"
+                    L"\t-Port\n"
+                    L"\t-Protocol\n"
+                    L"\t-Verify\n"
+                    L"\t-Pattern (on TCP)\n"
+                    L"\t-Transfer (on TCP)\n"
+                    L"\t-BitsPerSecond (on UDP)\n"
+                    L"\t-FrameRate (on UDP)\n"
+                    L"\t-StreamLength (on UDP)\n"
+                    L"\n\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    Common Server-side options                        \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-Listen:<addr or *> [-Listen:<addr> -Listen:<addr>]\n"
+                    L"   - the specific IP Address for the server-side to listen, or '*' for all IP Addresses\n"
+                    L"\t- <required>\n"
+                    L"\t  note : can specify multiple addresses by providing -Listen for each address\n"
+                    L"-ServerExitLimit:####\n"
+                    L"   - the total # of accepted connections before server gracefully exits\n"
+                    L"\t- <default> == 0  (infinite)\n"
+                    L"\n\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    Common Client-side options                        \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-Connections:####\n"
+                    L"   - the total # of connections at any one time\n"
+                    L"\t- <default> == 8  (there will always be 8 connections doing IO)\n"
+                    L"-Iterations:####\n"
+                    L"   - the number of times to iterate across the number of '-Connections'\n"
+                    L"\t- <default> == 0  (infinite)\n"
+                    L"\t  note : the total # of connections to be made before exit == Iterations * Connections\n"
+                    L"-Target:<addr or name>\n"
+                    L"   - the server-side IP Address, FQDN, or hostname to connect\n"
+                    L"\t- <required>\n"
+                    L"\t  note : given a FQDN or hostname, each new connection will iterate across\n"
+                    L"\t       : all IPv4 and IPv6 addresses which the name resolved\n"
+                    L"\t  note : one can specify '-Target:localhost' when client and server are both local\n"
+                    L"\t  note : one can specify multiple targets by providing -Target for each address or name\n"
+                    L"\n\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    Common options for all roles                      \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-Port:####\n"
+                    L"   - the port # the server will listen and the client will connect\n"
+                    L"\t- <default> == 4444\n"
+                    L"-Protocol:<tcp,udp>\n"
+                    L"   - the protocol used for connectivity and IO\n"
+                    L"\t- tcp : see -help:TCP for usage options\n"
+                    L"\t- udp : see -help:UDP for usage options\n"
+                    L"-Verify:<connection,data>\n"
+                    L"   - an enumeration to indicate the level of integrity verification\n"
+                    L"\t- <default> == data\n"
+                    L"\t- connection : the integrity of every connection is verified\n"
+                    L"\t             : including the precise # of bytes to send and receive\n"
+                    L"\t- data : the integrity of every received data buffer is verified against the an expected bit-pattern\n"
+                    L"\t       : this validation is a superset of 'connection' integrity validation\n"
+                    L"\n");
+                break;
 
-        case PrintUsageOption::Tcp:
-            usage.append(L"\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    TCP-specific usage options                        \n"
-                L"----------------------------------------------------------------------\n"
-                L"-Buffer:#####\n"
-                L"   - the # of bytes in the buffer used for each send/recv IO\n"
-                L"\t- <default> == 65536  (each send or recv will post a 64KB buffer)\n"
-                L"\t- supports range : [low,high]  (each connection will randomly choose a buffer size from within this range)\n"
-                L"\t  note : Buffer is note required when -Pattern:MediaStream is specified,\n"
-                L"\t       : FrameSize is the effective buffer size in that traffic pattern\n"
-                L"-IO:<iocp,rioiocp>\n"
-                L"   - the API set and usage for processing the protocol pattern\n"
-                L"\t- <default> == iocp\n"
-                L"\t- iocp : leverages WSARecv/WSASend using IOCP for async completions\n"
-                L"\t- rioiocp : registered i/o using an overlapped IOCP for completion notification\n"
-                L"-Pattern:<push,pull,pushpull,duplex>\n"
-                L"   - the protocol pattern to send & recv over the TCP connection\n"
-                L"\t- <default> == push\n"
-                L"\t- push : client pushes data to server\n"
-                L"\t- pull : client pulls data from server\n"
-                L"\t- pushpull : client/server alternates sending/receiving data\n"
-                L"\t- duplex : client/server sends and receives concurrently throughout the entire connection\n"
-                L"-PullBytes:#####\n"
-                L"   - applied only with -Pattern:PushPull - the number of bytes to 'pull'\n"
-                L"\t- <default> == 1048576 (1MB)\n"
-                L"\t  note : pullbytes are the bytes received on the client and sent from the server\n"
-                L"-PushBytes:#####\n"
-                L"   - applied only with -Pattern:PushPull - the number of bytes to 'push'\n"
-                L"\t- <default> == 1048576 (1MB)\n"
-                L"\t  note : pushbytes are the bytes sent from the client and received on the server\n"
-                L"-RateLimit:#####\n"
-                L"   - rate limits the number of bytes/sec being *sent* on each individual connection\n"
-                L"\t- <default> == 0 (no rate limits)\n"
-                L"\t- supports range : [low,high]  (each connection will randomly choose a rate limit setting from within this range)\n"
-                L"-Transfer:#####\n"
-                L"   - the total bytes to transfer per TCP connection\n"
-                L"\t- <default> == 1073741824  (each connection will transfer a sum total of 1GB)\n"
-                L"\t- supports range : [low,high]  (each connection will randomly choose a total transfer size send across)\n"
-                L"\t  note : specifying a range *will* create failures (used to test TCP failures paths)\n"
-                L"-Shutdown:<graceful,rude>\n"
-                L"   - controls how clients terminate the TCP connection - note this is a client-only option\n"
-                L"\t- <default> == graceful\n"
-                L"\t- graceful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
-                L"\t- rude : client will immediately close the connection once it receives the 'done' response from the server\n"
-                L"         : this will deliberately tell TCP to linger for zero seconds and close the socket\n"
-                L"         : this may reesult in a RST instead of a FIN\n"
-                L"\n");
-            break;
+            case PrintUsageOption::Tcp:
+                usage.append(L"\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    TCP-specific usage options                        \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-Buffer:#####\n"
+                    L"   - the # of bytes in the buffer used for each send/recv IO\n"
+                    L"\t- <default> == 65536  (each send or recv will post a 64KB buffer)\n"
+                    L"\t- supports range : [low,high]  (each connection will randomly choose a buffer size from within this range)\n"
+                    L"\t  note : Buffer is note required when -Pattern:MediaStream is specified,\n"
+                    L"\t       : FrameSize is the effective buffer size in that traffic pattern\n"
+                    L"-IO:<iocp,rioiocp>\n"
+                    L"   - the API set and usage for processing the protocol pattern\n"
+                    L"\t- <default> == iocp\n"
+                    L"\t- iocp : leverages WSARecv/WSASend using IOCP for async completions\n"
+                    L"\t- rioiocp : registered i/o using an overlapped IOCP for completion notification\n"
+                    L"-Pattern:<push,pull,pushpull,duplex>\n"
+                    L"   - the protocol pattern to send & recv over the TCP connection\n"
+                    L"\t- <default> == push\n"
+                    L"\t- push : client pushes data to server\n"
+                    L"\t- pull : client pulls data from server\n"
+                    L"\t- pushpull : client/server alternates sending/receiving data\n"
+                    L"\t- duplex : client/server sends and receives concurrently throughout the entire connection\n"
+                    L"-PullBytes:#####\n"
+                    L"   - applied only with -Pattern:PushPull - the number of bytes to 'pull'\n"
+                    L"\t- <default> == 1048576 (1MB)\n"
+                    L"\t  note : pullbytes are the bytes received on the client and sent from the server\n"
+                    L"-PushBytes:#####\n"
+                    L"   - applied only with -Pattern:PushPull - the number of bytes to 'push'\n"
+                    L"\t- <default> == 1048576 (1MB)\n"
+                    L"\t  note : pushbytes are the bytes sent from the client and received on the server\n"
+                    L"-RateLimit:#####\n"
+                    L"   - rate limits the number of bytes/sec being *sent* on each individual connection\n"
+                    L"\t- <default> == 0 (no rate limits)\n"
+                    L"\t- supports range : [low,high]  (each connection will randomly choose a rate limit setting from within this range)\n"
+                    L"-Transfer:#####\n"
+                    L"   - the total bytes to transfer per TCP connection\n"
+                    L"\t- <default> == 1073741824  (each connection will transfer a sum total of 1GB)\n"
+                    L"\t- supports range : [low,high]  (each connection will randomly choose a total transfer size send across)\n"
+                    L"\t  note : specifying a range *will* create failures (used to test TCP failures paths)\n"
+                    L"-Shutdown:<graceful,rude>\n"
+                    L"   - controls how clients terminate the TCP connection - note this is a client-only option\n"
+                    L"\t- <default> == graceful\n"
+                    L"\t- graceful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
+                    L"\t- rude : client will immediately close the connection once it receives the 'done' response from the server\n"
+                    L"         : this will deliberately tell TCP to linger for zero seconds and close the socket\n"
+                    L"         : this may reesult in a RST instead of a FIN\n"
+                    L"\n");
+                break;
 
-        case PrintUsageOption::Udp:
-            usage.append(L"\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    UDP-specific usage options                        \n"
-                L"                                                                      \n"
-                L"  * UDP datagrams are streamed in a controlled pattern                \n"
-                L"    similarly to audio/video streaming solutions                      \n"
-                L"  * In all cases, the client-side receives and server-side sends      \n"
-                L"    at a fixed bit-rate and frame-size                                \n"
-                L"----------------------------------------------------------------------\n"
-                L"-BitsPerSecond:####\n"
-                L"   - the number of bits per second to stream split across '-FrameRate' # of frames\n"
-                L"\t- <required>\n"
-                L"-FrameRate:####\n"
-                L"   - the number of frames per second being streamed\n"
-                L"\t- <required>\n"
-                L"\t  note : for server-side this is the specific frequency that datagrams are sent\n"
-                L"\t       : for client-side this is the frequency that frames are processed and verified\n"
-                L"-BufferDepth:####\n"
-                L"   - the number of seconds to buffer before processing the stream\n"
-                L"\t- <required>\n"
-                L"\t  note : this affects the client-side buffering of frames\n"
-                L"\t       : this also affects how far the client-side will peek at frames to resend if missing\n"
-                L"\t       : the client will look ahead at 1/2 the buffer depth to request a resend if missing\n"
-                L"-StreamLength:####\n"
-                L"   - the total number of seconds to run the entire stream\n"
-                L"\t- <required>\n"
-                L"\n");
-            break;
+            case PrintUsageOption::Udp:
+                usage.append(L"\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    UDP-specific usage options                        \n"
+                    L"                                                                      \n"
+                    L"  * UDP datagrams are streamed in a controlled pattern                \n"
+                    L"    similarly to audio/video streaming solutions                      \n"
+                    L"  * In all cases, the client-side receives and server-side sends      \n"
+                    L"    at a fixed bit-rate and frame-size                                \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-BitsPerSecond:####\n"
+                    L"   - the number of bits per second to stream split across '-FrameRate' # of frames\n"
+                    L"\t- <required>\n"
+                    L"-FrameRate:####\n"
+                    L"   - the number of frames per second being streamed\n"
+                    L"\t- <required>\n"
+                    L"\t  note : for server-side this is the specific frequency that datagrams are sent\n"
+                    L"\t       : for client-side this is the frequency that frames are processed and verified\n"
+                    L"-BufferDepth:####\n"
+                    L"   - the number of seconds to buffer before processing the stream\n"
+                    L"\t- <required>\n"
+                    L"\t  note : this affects the client-side buffering of frames\n"
+                    L"\t       : this also affects how far the client-side will peek at frames to resend if missing\n"
+                    L"\t       : the client will look ahead at 1/2 the buffer depth to request a resend if missing\n"
+                    L"-StreamLength:####\n"
+                    L"   - the total number of seconds to run the entire stream\n"
+                    L"\t- <required>\n"
+                    L"\n");
+                break;
 
-        case PrintUsageOption::Logging:
-            usage.append(L"\n"
-                L"----------------------------------------------------------------------\n"
-                L"                    Logging options                                   \n"
-                L"----------------------------------------------------------------------\n"
-                L"Logging in ctsTraffic:\n"
-                L"Information available to be logged is grouped into 4 basic buckets:\n"
-                L"  - Connection information : this will write a data point for every successful connection established\n"
-                L"                             -ConnectionFilename specifies the file written with this data\n"
-                L"                             the IP address and port tuples for the source and destination will be written\n"
-                L"                             this will also write a data point at the point of every connection completion\n"
-                L"                             information unique to the protocol that was used will be included on success\n"
-                L"  - Error information      : this will write error strings at the point of failure of any connection\n"
-                L"                             -ErrorFilename specifies the file written with this data\n"
-                L"                             error information will include the specific point of failure (function that failed)\n"
-                L"                             as well as which connection the failure occured (based off of IP address and port)\n"
-                L"  - Status information     : this will write out status information as applicable to the protocol being used\n"
-                L"                             -StatusFilename specifies the file written with this data\n"
-                L"                             the status information will be printed at a frequency set by -StatusUpdate\n"
-                L"                             the details printed are aggregate values from all connections for that time slice\n"
-                L"  - Jitter information     : for UDP-patterns only, the jitter logging information will write out data per-datagram\n"
-                L"                             -JitterFilename specifies the file written with this data\n"
-                L"                             this information is formatted specifically to calculate jitter between packets\n"
-                L"                             it follows the same format used with the published tool ntttcp.exe:\n"
-                L"                             [frame#],[sender.qpc],[sender.qpf],[receiver.qpc],[receiver.qpf]\n"
-                L"                             - qpc is the result of QueryPerformanceCounter\n"
-                L"                             - qpf is the result of QueryPerformanceFrequency\n"
-                L"                             the algorithm to apply to this data can be found on this site under 'Performance Metrics'\n"
-                L"                             http://msdn.microsoft.com/en-us/library/windows/hardware/dn247504.aspx \n"
-                L"\n"
-                L"The format in which the above data is logged is based off of the file extension of the filename specified above\n"
-                L"  - There are 2 possible file types:\n"
-                L"\t - txt : plain text format is used with the file extension .txt, or for an unrecognized file extension\n"
-                L"\t         text output is formatted as one would see it printed to the console in UTF8 format\n"
-                L"\t - csv : comma-separated value format is used with the file extension .csv\n"
-                L"\t         information is separated into columns separated by a comma for easier post-processing\n"
-                L"\t         the column layout of the data is specific to the type of output and protocol being used\n"
-                L"\t         NOTE: csv formatting will only apply to status updates and jitter, not connection or error information\n"
-                L"\n"
-                L"\n"
-                L"-ConsoleVerbosity:<0-5>\n"
-                L"\t - logging verbosity for all information to be written to the console\n"
-                L"\t   <default> == 4\n"
-                L"\t   - 0 : off (nothing written to the console)\n"
-                L"\t   - 1 : status updates\n"
-                L"\t   - 2 : error information only\n"
-                L"\t   - 3 : connection information only\n"
-                L"\t   - 4 : connection information + error information\n"
-                L"\t   - 5 : connection information + error information + status updates\n"
-                // L"\t   - 6 : above + debug output\n" // Not exposing debug information to users
-                L"-ConnectionFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
-                L"-ErrorFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
-                L"-StatusFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
-                L"-JitterFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
-                L"-StatusUpdate:####\n"
-                L"\t - the millisecond frequency which real-time status updates are written\n"
-                L"\t   <default> == 5000 (milliseconds)\n"
-                L"\n");
-            break;
+            case PrintUsageOption::Logging:
+                usage.append(L"\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                    Logging options                                   \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"Logging in ctsTraffic:\n"
+                    L"Information available to be logged is grouped into 4 basic buckets:\n"
+                    L"  - Connection information : this will write a data point for every successful connection established\n"
+                    L"                             -ConnectionFilename specifies the file written with this data\n"
+                    L"                             the IP address and port tuples for the source and destination will be written\n"
+                    L"                             this will also write a data point at the point of every connection completion\n"
+                    L"                             information unique to the protocol that was used will be included on success\n"
+                    L"  - Error information      : this will write error strings at the point of failure of any connection\n"
+                    L"                             -ErrorFilename specifies the file written with this data\n"
+                    L"                             error information will include the specific point of failure (function that failed)\n"
+                    L"                             as well as which connection the failure occured (based off of IP address and port)\n"
+                    L"  - Status information     : this will write out status information as applicable to the protocol being used\n"
+                    L"                             -StatusFilename specifies the file written with this data\n"
+                    L"                             the status information will be printed at a frequency set by -StatusUpdate\n"
+                    L"                             the details printed are aggregate values from all connections for that time slice\n"
+                    L"  - Jitter information     : for UDP-patterns only, the jitter logging information will write out data per-datagram\n"
+                    L"                             -JitterFilename specifies the file written with this data\n"
+                    L"                             this information is formatted specifically to calculate jitter between packets\n"
+                    L"                             it follows the same format used with the published tool ntttcp.exe:\n"
+                    L"                             [frame#],[sender.qpc],[sender.qpf],[receiver.qpc],[receiver.qpf]\n"
+                    L"                             - qpc is the result of QueryPerformanceCounter\n"
+                    L"                             - qpf is the result of QueryPerformanceFrequency\n"
+                    L"                             the algorithm to apply to this data can be found on this site under 'Performance Metrics'\n"
+                    L"                             http://msdn.microsoft.com/en-us/library/windows/hardware/dn247504.aspx \n"
+                    L"\n"
+                    L"The format in which the above data is logged is based off of the file extension of the filename specified above\n"
+                    L"  - There are 2 possible file types:\n"
+                    L"\t - txt : plain text format is used with the file extension .txt, or for an unrecognized file extension\n"
+                    L"\t         text output is formatted as one would see it printed to the console in UTF8 format\n"
+                    L"\t - csv : comma-separated value format is used with the file extension .csv\n"
+                    L"\t         information is separated into columns separated by a comma for easier post-processing\n"
+                    L"\t         the column layout of the data is specific to the type of output and protocol being used\n"
+                    L"\t         NOTE: csv formatting will only apply to status updates and jitter, not connection or error information\n"
+                    L"\n"
+                    L"\n"
+                    L"-ConsoleVerbosity:<0-5>\n"
+                    L"\t - logging verbosity for all information to be written to the console\n"
+                    L"\t   <default> == 4\n"
+                    L"\t   - 0 : off (nothing written to the console)\n"
+                    L"\t   - 1 : status updates\n"
+                    L"\t   - 2 : error information only\n"
+                    L"\t   - 3 : connection information only\n"
+                    L"\t   - 4 : connection information + error information\n"
+                    L"\t   - 5 : connection information + error information + status updates\n"
+                    // L"\t   - 6 : above + debug output\n" // Not exposing debug information to users
+                    L"-ConnectionFilename:<filename with/without path>\n"
+                    L"\t - <default> == (not written to a log file)\n"
+                    L"\t   note : the same filename can be specified for the different logging options\n"
+                    L"\t          in which case the same file will receive all the specified details\n"
+                    L"-ErrorFilename:<filename with/without path>\n"
+                    L"\t - <default> == (not written to a log file)\n"
+                    L"\t   note : the same filename can be specified for the different logging options\n"
+                    L"\t          in which case the same file will receive all the specified details\n"
+                    L"-StatusFilename:<filename with/without path>\n"
+                    L"\t - <default> == (not written to a log file)\n"
+                    L"\t   note : the same filename can be specified for the different logging options\n"
+                    L"\t          in which case the same file will receive all the specified details\n"
+                    L"-JitterFilename:<filename with/without path>\n"
+                    L"\t - <default> == (not written to a log file)\n"
+                    L"\t   note : the same filename can be specified for the different logging options\n"
+                    L"\t          in which case the same file will receive all the specified details\n"
+                    L"-StatusUpdate:####\n"
+                    L"\t - the millisecond frequency which real-time status updates are written\n"
+                    L"\t   <default> == 5000 (milliseconds)\n"
+                    L"\n");
+                break;
 
-        case PrintUsageOption::Advanced:
-            usage.append(L"\n"
-                L"----------------------------------------------------------------------\n"
-                L"                        Advanced Options                              \n"
-                L"                                                                      \n"
-                L"  * these options target specific scenario requirements               \n"
-                L"----------------------------------------------------------------------\n"
-                L"-Acc:<accept,AcceptEx>\n"
-                L"   - specifies the Winsock API to process accepting inbound connections\n"
-                L"    the default is appropriate unless deliberately needing to test other APIs\n"
-                L"\t- <default> == AcceptEx\n"
-                L"\t- AcceptEx : uses OVERLAPPED AcceptEx with IO Completion ports\n"
-                L"\t- accept : uses blocking calls to accept\n"
-                L"\t         : be careful using this as it will not scale out well as each call blocks a thread\n"
-                L"-Bind:<IP-address or *>\n"
-                L"   - a client-side option used to control what IP address is used for outgoing connections\n"
-                L"\t- <default> == *  (will implicitly bind to the correct IP to connect to the target IP)\n"
-                L"\t  note : this is typically only necessary when wanting to distribute traffic\n"
-                L"\t         over a specific interface for multi-homed configurations\n"
-                L"\t  note : can specify multiple addresses by providing -Bind for each address\n"
-                L"-Compartment:<ifAlias>\n"
-                L"   - specifies the interface alias of the compartment to use for all sockets\n"
-                L"    this is most commonly appropriate for servers configured with IP Compartments\n"
-                L"\t- <default> == using the default IP compartment\n"
-                L"\t  note : all systems use the default compartment unless explicitly configured otherwise\n"
-                L"\t  note : the IP addressese specified through -Bind (for clients) and -Listen (for servers)\n"
-                L"\t         will be directly affected by this Compartment value, including specifying '*'\n"
-                L"-Conn:<connect,ConnectEx>\n"
-                L"   - specifies the Winsock API to establish outbound connections\n"
-                L"    the default is appropriate unless deliberately needing to test other APIs\n"
-                L"\t- <default> == ConnectEx  (appropriate unless explicitly wanting to test other APIs)\n"
-                L"\t- ConnectEx : uses OVERLAPPED ConnectEx with IO Completion ports\n"
-                L"\t- connect : uses blocking calls to connect\n"
-                L"\t          : be careful using this as it will not scale out well as each call blocks a thread\n"
-                L"-IfIndex:####\n"
-                L"   - the interface index which to use for outbound connectivity\n"
-                L"     assigns the interface with IP_UNICAST_IF / IPV6_UNICAST_IF\n"
-                L"\t- <default> == not set (will not restrict binding to any specific interface)\n"
-                L"-InlineCompletions:<on,off>\n"
-                L"   - will set the below option on all SOCKETs for OVERLAPPED I/O calls so inline successful\n"
-                L"     completions will not be queued to the completion handler\n"
-                L"     ::SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)\n"
-                L"\t- <default> == on for TCP 'iocp' -IO option, and is on for UDP client receivers\n"
-                L"                 off for all other -IO options\n"
-                L"-IO:<readwritefile>\n"
-                L"   - an additional IO option beyond iocp and rioiocp\n"
-                L"\t- readwritefile : leverages ReadFile/WriteFile using IOCP for async completions\n"
-                L"-KeepAliveValue:####\n"
-                L"   - the # of milliseconds to set KeepAlive for TCP connections\n"
-                L"\t- <default> == not set\n"
-                L"\t  note : This setting is a more specific setting than -Options:keepalive\n"
-                L"\t         as -Options:keepalive will use the system default values for keep-alive timers\n"
-                L"-LocalPort:####\n"
-                L"   - the local port to bind to when initiating a connection\n"
-                L"\t- <default> == 0  (an ephemeral port will be chosen when making a connection)\n"
-                L"\t- supports range : [low,high] each new connection will sequentially choose a port within this range\n"
-                L"\t  note : You must provide a sufficiently large range to support the number of connections\n"
-                L"\t  note : Be very careful when using with TCP connections, as port values will not be immediately\n"
-                L"\t         reusable; TCP will hold an closed IP:port in a TIME_WAIT statue for a period of time\n"
-                L"\t         only after which will it be able to be reused (default is 4 minutes)\n"
-                L"-MsgWaitAll:<on,off>\n"
-                L"   - sets the MSG_WAITALL flag when calling WSARecv for receiving data over TCP connections\n"
-                L"     this flag instructs TCP to not complete the receive request until the entire buffer is full\n"
-                L"\t- <default> == off\n"
-                L"\t  note : the default behavior when not specified is for TCP to indicate data per RFC\n"
-                L"           thus apps generally only set this when they know precisely the number of bytes they are expecting\n"
-                L"-OnError:<log,break>\n"
-                L"   - policy to control how errors are handled at runtime\n"
-                L"\t- <default> == log \n"
-                L"\t- log : log error information only\n"
-                L"\t- break : break into the debugger with error information\n"
-                L"\t          useful when live-troubleshooting difficult failures\n"
-                L"-Options:<keepalive,tcpfastpath>  [-Options:<...>] [-Options:<...>]\n"
-                L"   - additional socket options and IOCTLS available to be set on connected sockets\n"
-                L"\t- <default> == None\n"
-                L"\t- keepalive : only for TCP sockets - enables default timeout Keep-Alive probes\n"
-                L"\t            : ctsTraffic servers have this enabled by default\n"
-                L"\t- tcpfastpath : a new option for Windows 8, only for TCP sockets over loopback\n"
-                L"\t              : the firewall must be disabled for the option to take effect\n"
-                L"-PrePostRecvs:#####\n"
-                L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
-                L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
-                L"\t     one after another, immediately posting a recv after the prior completed.\n"
-                L"\t     with -pattern:pull -PrePostRecvs:2, clients will keep 2 recv calls in-flight at all times.\n"
-                L"\t- <default> == 1 for TCP (one recv request at a time)\n"
-                L"\t- <default> == 2 for UDP (two recv requests kept in-flight)\n"
-                L"\t  note : with TCP patterns, -verify:connection must be specified in order to specify\n"
-                L"\t         more than one -PrePostRecvs (UDP can always support any number)\n"
-                L"-PrePostSends:#####\n"
-                L"   - specifies the number of send requests to issue concurrently within an IO Pattern\n"
-                L"   - for example, with the default -pattern:pull, the servers will post send calls \n"
-                L"\t     one after another, immediately posting a send after the prior completed.\n"
-                L"\t     With -pattern:pull -PrePostSends:2, servers will keep 2 send calls in-flight at all times.\n"
-                L"   - The value of '0' has special meaning: it indicates for ctsTraffic to keep as many sends\n"
-                L"\t     in flight as indicated by the Ideal Send Backlog (ISB) indicated by TCP. In this\n"
-                L"\t     configuration, ctsTraffic will maintain send calls until the number of bytes being sent\n"
-                L"\t     equals the number of byes indicates by ISB for that TCP connection.\n"
-                L"\t- <default> == 1 for non-RIO TCP (Winsock will adjust automatically according to ISB)\n"
-                L"\t- <default> == 0 (ISB) for RIO TCP (RIO doesn't user send buffers so callers must track ISB)\n"
-                L"\t- <default> == 1 for UDP (one send request on each timer tick)\n"
-                L"-RateLimitPeriod:#####\n"
-                L"   - the # of milliseconds describing the granularity by which -RateLimit bytes/second is enforced\n"
-                L"\t     the -RateLimit bytes/second will be evenly split across -RateLimitPeriod milliseconds\n"
-                L"\t     For example, -RateLimit:1000 -RateLimitPeriod:50 will limit send rates to 100 bytes every 20 ms\n"
-                L"\t- <default> == 100 (-RateLimit bytes/second will be split out across 100 ms. time slices)\n"
-                L"\t  note : only applicable to TCP connections\n"
-                L"\t  note : only applicable is -RateLimit is set (default is not to rate limit)\n"
-                L"-RecvBufValue:#####\n"
-                L"   - specifies the value to pass to the SO_RCVBUF socket option\n"
-                L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
-                L"\t     the default receive buffering is optimal for the majority of scenarios\n"
-                L"\t- <default> == <not set>\n"
-                L"-SendBufValue:#####\n"
-                L"   - specifies the value to pass to the SO_SNDBUF socket option\n"
-                L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
-                L"\t     the default send buffering is optimal for the majority of scenarios\n"
-                L"\t- <default> == <not set>\n"
-                L"-ThrottleConnections:####\n"
-                L"   - gates currently pended connection attempts\n"
-                L"\t- <default> == 1000  (there will be at most 1000 sockets trying to connect at any one time)\n"
-                L"\t  note : zero means no throttling  (will immediately try to connect all '-Connections')\n"
-                L"\t       : this is a client-only option\n"
-                L"-TimeLimit:#####\n"
-                L"   - the maximum number of milliseconds to run before the application is aborted and terminated\n"
-                L"\t- <default> == <no time limit>\n"
-                L"\t  note : this is to be used only to cap the maximum time to run, as this will log an error\n"
-                L"\t         if this timelimit is exceeded; predictable results should have the scenario finish\n"
-                L"\t         before this time limit is hit\n"
-                L"\n");
-            break;
+            case PrintUsageOption::Advanced:
+                usage.append(L"\n"
+                    L"----------------------------------------------------------------------\n"
+                    L"                        Advanced Options                              \n"
+                    L"                                                                      \n"
+                    L"  * these options target specific scenario requirements               \n"
+                    L"----------------------------------------------------------------------\n"
+                    L"-Acc:<accept,AcceptEx>\n"
+                    L"   - specifies the Winsock API to process accepting inbound connections\n"
+                    L"    the default is appropriate unless deliberately needing to test other APIs\n"
+                    L"\t- <default> == AcceptEx\n"
+                    L"\t- AcceptEx : uses OVERLAPPED AcceptEx with IO Completion ports\n"
+                    L"\t- accept : uses blocking calls to accept\n"
+                    L"\t         : be careful using this as it will not scale out well as each call blocks a thread\n"
+                    L"-Bind:<IP-address or *>\n"
+                    L"   - a client-side option used to control what IP address is used for outgoing connections\n"
+                    L"\t- <default> == *  (will implicitly bind to the correct IP to connect to the target IP)\n"
+                    L"\t  note : this is typically only necessary when wanting to distribute traffic\n"
+                    L"\t         over a specific interface for multi-homed configurations\n"
+                    L"\t  note : can specify multiple addresses by providing -Bind for each address\n"
+                    L"-Compartment:<ifAlias>\n"
+                    L"   - specifies the interface alias of the compartment to use for all sockets\n"
+                    L"    this is most commonly appropriate for servers configured with IP Compartments\n"
+                    L"\t- <default> == using the default IP compartment\n"
+                    L"\t  note : all systems use the default compartment unless explicitly configured otherwise\n"
+                    L"\t  note : the IP addressese specified through -Bind (for clients) and -Listen (for servers)\n"
+                    L"\t         will be directly affected by this Compartment value, including specifying '*'\n"
+                    L"-Conn:<connect,ConnectEx>\n"
+                    L"   - specifies the Winsock API to establish outbound connections\n"
+                    L"    the default is appropriate unless deliberately needing to test other APIs\n"
+                    L"\t- <default> == ConnectEx  (appropriate unless explicitly wanting to test other APIs)\n"
+                    L"\t- ConnectEx : uses OVERLAPPED ConnectEx with IO Completion ports\n"
+                    L"\t- connect : uses blocking calls to connect\n"
+                    L"\t          : be careful using this as it will not scale out well as each call blocks a thread\n"
+                    L"-IfIndex:####\n"
+                    L"   - the interface index which to use for outbound connectivity\n"
+                    L"     assigns the interface with IP_UNICAST_IF / IPV6_UNICAST_IF\n"
+                    L"\t- <default> == not set (will not restrict binding to any specific interface)\n"
+                    L"-InlineCompletions:<on,off>\n"
+                    L"   - will set the below option on all SOCKETs for OVERLAPPED I/O calls so inline successful\n"
+                    L"     completions will not be queued to the completion handler\n"
+                    L"     ::SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)\n"
+                    L"\t- <default> == on for TCP 'iocp' -IO option, and is on for UDP client receivers\n"
+                    L"                 off for all other -IO options\n"
+                    L"-IO:<readwritefile>\n"
+                    L"   - an additional IO option beyond iocp and rioiocp\n"
+                    L"\t- readwritefile : leverages ReadFile/WriteFile using IOCP for async completions\n"
+                    L"-KeepAliveValue:####\n"
+                    L"   - the # of milliseconds to set KeepAlive for TCP connections\n"
+                    L"\t- <default> == not set\n"
+                    L"\t  note : This setting is a more specific setting than -Options:keepalive\n"
+                    L"\t         as -Options:keepalive will use the system default values for keep-alive timers\n"
+                    L"-LocalPort:####\n"
+                    L"   - the local port to bind to when initiating a connection\n"
+                    L"\t- <default> == 0  (an ephemeral port will be chosen when making a connection)\n"
+                    L"\t- supports range : [low,high] each new connection will sequentially choose a port within this range\n"
+                    L"\t  note : You must provide a sufficiently large range to support the number of connections\n"
+                    L"\t  note : Be very careful when using with TCP connections, as port values will not be immediately\n"
+                    L"\t         reusable; TCP will hold an closed IP:port in a TIME_WAIT statue for a period of time\n"
+                    L"\t         only after which will it be able to be reused (default is 4 minutes)\n"
+                    L"-MsgWaitAll:<on,off>\n"
+                    L"   - sets the MSG_WAITALL flag when calling WSARecv for receiving data over TCP connections\n"
+                    L"     this flag instructs TCP to not complete the receive request until the entire buffer is full\n"
+                    L"\t- <default> == off\n"
+                    L"\t  note : the default behavior when not specified is for TCP to indicate data per RFC\n"
+                    L"           thus apps generally only set this when they know precisely the number of bytes they are expecting\n"
+                    L"-OnError:<log,break>\n"
+                    L"   - policy to control how errors are handled at runtime\n"
+                    L"\t- <default> == log \n"
+                    L"\t- log : log error information only\n"
+                    L"\t- break : break into the debugger with error information\n"
+                    L"\t          useful when live-troubleshooting difficult failures\n"
+                    L"-Options:<keepalive,tcpfastpath>  [-Options:<...>] [-Options:<...>]\n"
+                    L"   - additional socket options and IOCTLS available to be set on connected sockets\n"
+                    L"\t- <default> == None\n"
+                    L"\t- keepalive : only for TCP sockets - enables default timeout Keep-Alive probes\n"
+                    L"\t            : ctsTraffic servers have this enabled by default\n"
+                    L"\t- tcpfastpath : a new option for Windows 8, only for TCP sockets over loopback\n"
+                    L"\t              : the firewall must be disabled for the option to take effect\n"
+                    L"-PrePostRecvs:#####\n"
+                    L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
+                    L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
+                    L"\t     one after another, immediately posting a recv after the prior completed.\n"
+                    L"\t     with -pattern:pull -PrePostRecvs:2, clients will keep 2 recv calls in-flight at all times.\n"
+                    L"\t- <default> == 1 for TCP (one recv request at a time)\n"
+                    L"\t- <default> == 2 for UDP (two recv requests kept in-flight)\n"
+                    L"\t  note : with TCP patterns, -verify:connection must be specified in order to specify\n"
+                    L"\t         more than one -PrePostRecvs (UDP can always support any number)\n"
+                    L"-PrePostSends:#####\n"
+                    L"   - specifies the number of send requests to issue concurrently within an IO Pattern\n"
+                    L"   - for example, with the default -pattern:pull, the servers will post send calls \n"
+                    L"\t     one after another, immediately posting a send after the prior completed.\n"
+                    L"\t     With -pattern:pull -PrePostSends:2, servers will keep 2 send calls in-flight at all times.\n"
+                    L"   - The value of '0' has special meaning: it indicates for ctsTraffic to keep as many sends\n"
+                    L"\t     in flight as indicated by the Ideal Send Backlog (ISB) indicated by TCP. In this\n"
+                    L"\t     configuration, ctsTraffic will maintain send calls until the number of bytes being sent\n"
+                    L"\t     equals the number of byes indicates by ISB for that TCP connection.\n"
+                    L"\t- <default> == 1 for non-RIO TCP (Winsock will adjust automatically according to ISB)\n"
+                    L"\t- <default> == 0 (ISB) for RIO TCP (RIO doesn't user send buffers so callers must track ISB)\n"
+                    L"\t- <default> == 1 for UDP (one send request on each timer tick)\n"
+                    L"-RateLimitPeriod:#####\n"
+                    L"   - the # of milliseconds describing the granularity by which -RateLimit bytes/second is enforced\n"
+                    L"\t     the -RateLimit bytes/second will be evenly split across -RateLimitPeriod milliseconds\n"
+                    L"\t     For example, -RateLimit:1000 -RateLimitPeriod:50 will limit send rates to 100 bytes every 20 ms\n"
+                    L"\t- <default> == 100 (-RateLimit bytes/second will be split out across 100 ms. time slices)\n"
+                    L"\t  note : only applicable to TCP connections\n"
+                    L"\t  note : only applicable is -RateLimit is set (default is not to rate limit)\n"
+                    L"-RecvBufValue:#####\n"
+                    L"   - specifies the value to pass to the SO_RCVBUF socket option\n"
+                    L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
+                    L"\t     the default receive buffering is optimal for the majority of scenarios\n"
+                    L"\t- <default> == <not set>\n"
+                    L"-SendBufValue:#####\n"
+                    L"   - specifies the value to pass to the SO_SNDBUF socket option\n"
+                    L"\t     Note: this is only necessary to specify in carefully considered scenarios\n"
+                    L"\t     the default send buffering is optimal for the majority of scenarios\n"
+                    L"\t- <default> == <not set>\n"
+                    L"-ThrottleConnections:####\n"
+                    L"   - gates currently pended connection attempts\n"
+                    L"\t- <default> == 1000  (there will be at most 1000 sockets trying to connect at any one time)\n"
+                    L"\t  note : zero means no throttling  (will immediately try to connect all '-Connections')\n"
+                    L"\t       : this is a client-only option\n"
+                    L"-TimeLimit:#####\n"
+                    L"   - the maximum number of milliseconds to run before the application is aborted and terminated\n"
+                    L"\t- <default> == <no time limit>\n"
+                    L"\t  note : this is to be used only to cap the maximum time to run, as this will log an error\n"
+                    L"\t         if this timelimit is exceeded; predictable results should have the scenario finish\n"
+                    L"\t         before this time limit is hit\n"
+                    L"\n");
+                break;
         }
 
         fwprintf_s(stdout, L"%ws", usage.c_str());
@@ -2488,8 +2482,8 @@ namespace ctsTraffic::ctsConfig
             begin(args),
             end(args),
             [](const wchar_t* _arg) -> bool {
-                return (ctString::ctOrdinalStartsWithCaseInsensative(_arg, L"-Help") ||
-                    ctString::ctOrdinalEqualsCaseInsensative(_arg, L"-?"));
+                return ctString::ctOrdinalStartsWithCaseInsensative(_arg, L"-Help") ||
+                    ctString::ctOrdinalEqualsCaseInsensative(_arg, L"-?");
             });
         if (found_help != end(args))
         {
@@ -2671,13 +2665,13 @@ namespace ctsTraffic::ctsConfig
         }
 
         // validate localport usage
-        if (!Settings->ListenAddresses.empty() && (Settings->LocalPortLow != 0))
+        if (!Settings->ListenAddresses.empty() && Settings->LocalPortLow != 0)
         {
             throw invalid_argument("Cannot specify both -listen and -LocalPort. To listen on a specific port, use -Port:####");
         }
         if (Settings->LocalPortLow != 0)
         {
-            const USHORT numberOfPorts = (Settings->LocalPortHigh == 0) ? 1 : static_cast<USHORT>(Settings->LocalPortHigh - Settings->LocalPortLow + 1);
+            const USHORT numberOfPorts = Settings->LocalPortHigh == 0 ? 1 : static_cast<USHORT>(Settings->LocalPortHigh - Settings->LocalPortLow + 1);
             if (numberOfPorts < Settings->ConnectionLimit)
             {
                 throw invalid_argument(
@@ -2723,7 +2717,7 @@ namespace ctsTraffic::ctsConfig
         set_shutdownOption(args);
 
         set_prepostrecvs(args);
-        if ((ProtocolType::TCP == Settings->Protocol) && Settings->ShouldVerifyBuffers && (Settings->PrePostRecvs > 1))
+        if (ProtocolType::TCP == Settings->Protocol && Settings->ShouldVerifyBuffers && Settings->PrePostRecvs > 1)
         {
             throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
         }
@@ -2733,14 +2727,14 @@ namespace ctsTraffic::ctsConfig
 
         if (!args.empty())
         {
-            wstring error_string;
+            string error_string;
             for (const auto& arg_string : args)
             {
-                error_string.append(ctString::ctFormatString(L" %ws", arg_string));
+                error_string.append(ctString::ctFormatString(" %ws", arg_string));
             }
-            error_string.append(L"\n");
+            error_string.append("\n");
             PrintErrorInfoOverride(error_string.c_str());
-            throw invalid_argument(ctString::ctConvertToString(error_string));
+            throw invalid_argument(error_string);
         }
 
         if (ProtocolType::UDP == Settings->Protocol)
@@ -2766,8 +2760,8 @@ namespace ctsTraffic::ctsConfig
         {
             if (!SetEvent(Settings->CtrlCHandle))
             {
-                ctAlwaysFatalCondition(
-                    L"SetEvent(%p) failed [%u] when trying to shutdown",
+                FAIL_FAST_MSG(
+                    "SetEvent(%p) failed [%u] when trying to shutdown",
                     Settings->CtrlCHandle, GetLastError());
             }
         }
@@ -2793,15 +2787,15 @@ namespace ctsTraffic::ctsConfig
         switch (s_ConsoleVerbosity)  // NOLINT(hicpp-multiway-paths-covered)
         {
             // case 0: // nothing
-        case 1: // status updates
-            // case 2: // error info
-            // case 3: // connection info
-            // case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 1: // status updates
+                // case 2: // error info
+                // case 3: // connection info
+                // case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         if (s_PrintStatusInformation)
@@ -2850,7 +2844,7 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        ctFatalCondition(s_BreakOnError, L"[ctsTraffic] >> exception - %hs\n", e.what());
+        FAIL_FAST_IF_MSG(s_BreakOnError, "[ctsTraffic] >> exception - %hs\n", e.what());
 
         try
         {
@@ -2867,7 +2861,7 @@ namespace ctsTraffic::ctsConfig
                     ctString::ctFormatString(L"%ws\r\n", formatted_string.c_str()).c_str());
             }
         }
-        catch (const exception&)
+        catch (...)
         {
             fwprintf(stderr, L"Error : failed to allocate memory\n");
             if (s_ErrorLogger)
@@ -2891,18 +2885,19 @@ namespace ctsTraffic::ctsConfig
         {
             const wstring exception_text(ctString::ctFormatException(e));
 
-            if (!s_ShutdownCalled)
+            if (!s_ShutdownCalled && s_BreakOnError)
             {
-                ctFatalCondition(s_BreakOnError, L"Fatal exception: %ws", exception_text.c_str());
+                FAIL_FAST_MSG(
+                    "Fatal exception: %ws", exception_text.c_str());
             }
 
-            PrintErrorInfo(exception_text.c_str());
+            PrintErrorInfo(ctString::ctFormatString("%ws", exception_text.c_str()).c_str());
         }
-        catch (const exception&)
+        catch (...)
         {
             if (!s_ShutdownCalled)
             {
-                ctFatalCondition(s_BreakOnError, L"Fatal exception: %hs", e.what());
+                FAIL_FAST_IF_MSG(s_BreakOnError, "Fatal exception: %hs", e.what());
             }
 
             // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -2910,111 +2905,93 @@ namespace ctsTraffic::ctsConfig
             {
                 // case 0: // nothing
                 // case 1: // status updates
-            case 2: // error info
-                // case 3: // connection info
-            case 4: // connection info + error info
-            case 5: // connection info + error info + status updates
-            case 6: // above + debug info
-                wprintf(
-                    L"[%.3f] Exception thrown: %hs\n",
-                    GetStatusTimeStamp(),
-                    e.what());
+                case 2: // error info
+                    // case 3: // connection info
+                case 4: // connection info + error info
+                case 5: // connection info + error info + status updates
+                case 6: // above + debug info
+                    wprintf(
+                        L"[%.3f] Exception thrown: %hs\n",
+                        GetStatusTimeStamp(),
+                        e.what());
             }
         }
     }
     // Always print to console if override
-    void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
+    void __cdecl PrintErrorInfoOverride(_In_ PCSTR _text) noexcept
+        try
     {
         ctsConfigInitOnce();
 
-        va_list argptr;
-        va_start(argptr, _text);
-
-        ctFatalConditionVa(s_BreakOnError, _text, argptr);
-
-        vwprintf_s(_text, argptr);
-
-        if (s_ErrorLogger)
+        if (s_BreakOnError)
         {
-            try
-            {
-                s_ErrorLogger->LogError(
-                    ctString::ctFormatString(
-                        L"[%.3f] %ws\r\n",
-                        GetStatusTimeStamp(),
-                        ctString::ctFormatStringVa(_text, argptr).c_str()).c_str());
-            }
-            catch (const exception&)
-            {
-            }
+            FAIL_FAST_MSG(_text);
         }
 
-        va_end(argptr);
+        wprintf_s(L"%hs\n", _text);
+        if (s_ErrorLogger)
+        {
+            s_ErrorLogger->LogError(
+                ctString::ctFormatString(
+                    L"[%.3f] %hs\r\n",
+                    GetStatusTimeStamp(), _text).c_str());
+        }
     }
-    void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
+    catch (...)
+    {
+    }
+
+    void __cdecl PrintErrorInfo(_In_ PCSTR _text) noexcept
+        try
     {
         ctsConfigInitOnce();
 
         if (!s_ShutdownCalled)
         {
-            va_list argptr;
-            va_start(argptr, _text);
+            if (s_BreakOnError)
+            {
+                FAIL_FAST_MSG(_text);
+            }
 
-            ctFatalConditionVa(s_BreakOnError, _text, argptr);
-
-            bool write_to_console = false;
             // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
             switch (s_ConsoleVerbosity)  // NOLINT(hicpp-multiway-paths-covered)
             {
                 // case 0: // nothing
                 // case 1: // status updates
-            case 2: // error info
-                // case 3: // connection info
-            case 4: // connection info + error info
-            case 5: // connection info + error info + status updates
-            case 6: // above + debug info
-            {
-                write_to_console = true;
-            }
-            }
-
-            try
-            {
-                wstring formatted_string;
-                if (write_to_console)
-                {
-                    formatted_string = ctString::ctFormatStringVa(_text, argptr);
-                    wprintf_s(L"%ws\n", formatted_string.c_str());
-                }
-
-                if (s_ErrorLogger)
-                {
-                    if (formatted_string.empty())
-                    {
-                        formatted_string = ctString::ctFormatStringVa(_text, argptr);
-                    }
-                    s_ErrorLogger->LogError(
-                        ctString::ctFormatString(
-                            L"[%.3f] %ws\r\n",
-                            GetStatusTimeStamp(),
-                            formatted_string.c_str()).c_str());
-                }
-            }
-            catch (const exception&)
-            {
+                case 2: // error info
+                    // case 3: // connection info
+                case 4: // connection info + error info
+                case 5: // connection info + error info + status updates
+                case 6: // above + debug info
+                    wprintf_s(L"%hs\n", _text);
+                    break;
             }
 
-            va_end(argptr);
+            if (s_ErrorLogger)
+            {
+                s_ErrorLogger->LogError(
+                    ctString::ctFormatString(
+                        L"[%.3f] %hs\r\n",
+                        GetStatusTimeStamp(),
+                        _text).c_str());
+            }
         }
     }
-    void PrintErrorIfFailed(PCWSTR _what, unsigned long _why) noexcept
-    try
+    catch (...)
+    {
+    }
+
+    void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
+        try
     {
         ctsConfigInitOnce();
 
-        if (!s_ShutdownCalled && (_why != 0))
+        if (!s_ShutdownCalled && _why != 0)
         {
-            ctFatalCondition(s_BreakOnError, L"%ws failed (%u)\n", _what, _why);
+            if (s_BreakOnError)
+            {
+                FAIL_FAST_MSG("%hs failed (%u)\n", _text, _why);
+            }
 
             bool write_to_console = false;
             // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -3022,14 +2999,14 @@ namespace ctsTraffic::ctsConfig
             {
                 // case 0: // nothing
                 // case 1: // status updates
-            case 2: // error info
-                // case 3: // connection info
-            case 4: // connection info + error info
-            case 5: // connection info + error info + status updates
-            case 6: // above + debug info
-            {
-                write_to_console = true;
-            }
+                case 2: // error info
+                    // case 3: // connection info
+                case 4: // connection info + error info
+                case 5: // connection info + error info + status updates
+                case 6: // above + debug info
+                {
+                    write_to_console = true;
+                }
             }
 
             wstring error_string;
@@ -3042,11 +3019,11 @@ namespace ctsTraffic::ctsConfig
             }
             else
             {
-                const ctException error_details(_why, _what);
+                const ctException error_details(_why, _text);
                 error_string = ctString::ctFormatString(
-                    L"[%.3f] %ws failed (%u) %ws",
+                    L"[%.3f] %hs failed (%u) %ws",
                     GetStatusTimeStamp(),
-                    _what,
+                    _text,
                     _why,
                     error_details.translation_w());
             }
@@ -3078,15 +3055,15 @@ namespace ctsTraffic::ctsConfig
                 switch (s_ConsoleVerbosity)  // NOLINT(hicpp-multiway-paths-covered)
                 {
                     // case 0: // nothing
-                case 1: // status updates
-                    // case 2: // error info
-                    // case 3: // connection info
-                    // case 4: // connection info + error info
-                case 5: // connection info + error info + status updates
-                case 6: // above + debug info
-                {
-                    write_to_console = true;
-                }
+                    case 1: // status updates
+                        // case 2: // error info
+                        // case 3: // connection info
+                        // case 4: // connection info + error info
+                    case 5: // connection info + error info + status updates
+                    case 6: // above + debug info
+                    {
+                        write_to_console = true;
+                    }
                 }
 
                 const auto lock = s_StatusUpdateLock.try_lock();
@@ -3127,7 +3104,7 @@ namespace ctsTraffic::ctsConfig
                         if (write_to_console)
                         {
                             --status_count;
-                            const bool clear_status = (0 == status_count);
+                            const bool clear_status = 0 == status_count;
                             PCWSTR const print_string = s_PrintStatusInformation->print_status(
                                 StatusFormatting::ConsoleOutput,
                                 l_current_timeslice,
@@ -3141,7 +3118,7 @@ namespace ctsTraffic::ctsConfig
                         if (s_StatusLogger)
                         {
                             --status_count;
-                            const bool clear_status = (0 == status_count);
+                            const bool clear_status = 0 == status_count;
                             s_StatusLogger->LogStatus(
                                 s_PrintStatusInformation,
                                 l_current_timeslice,
@@ -3165,24 +3142,21 @@ namespace ctsTraffic::ctsConfig
             {
                 const auto jitter = std::abs(previous_frame.estimated_time_in_flight_ms - current_frame.estimated_time_in_flight_ms);
                 // long long ~= up to 20 characters long, 10 for each float, plus 10 for commas & CR
-                constexpr size_t formatted_text_length = (20 * 5) + (10 * 2) + 10;
+                constexpr size_t formatted_text_length = 20 * 5 + 10 * 2 + 10;
                 wchar_t formatted_text[formatted_text_length]{};
                 const auto converted = _snwprintf_s(
                     formatted_text,
                     formatted_text_length,
                     L"%lld,%lld,%lld,%lld,%lld,%.3f,%.3f\r\n",
                     current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf, current_frame.estimated_time_in_flight_ms, jitter);
-                ctFatalCondition(
-                    -1 == converted,
-                    L"_snwprintf_s failed to convert Jitter information: %lld, %lld, %lld, %lld, %lld, %.3f,%.3f",
-                    current_frame.sequence_number, current_frame.sender_qpc, current_frame.sender_qpf, current_frame.receiver_qpc, current_frame.receiver_qpf, current_frame.estimated_time_in_flight_ms, jitter);
+                FAIL_FAST_IF(-1 == converted);
                 s_JitterLogger->LogMessage(formatted_text);
             }
         }
     }
 
     void PrintNewConnection(const ctSockaddr& _local_addr, const ctSockaddr& _remote_addr) noexcept
-    try
+        try
     {
         ctsConfigInitOnce();
 
@@ -3194,19 +3168,19 @@ namespace ctsTraffic::ctsConfig
             // case 0: // nothing
             // case 1: // status updates
             // case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 3: // connection info
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         if (write_to_console)
         {
             wprintf_s(
-                (ProtocolType::TCP == Settings->Protocol) ?
+                ProtocolType::TCP == Settings->Protocol ?
                 L"[%.3f] TCP connection established [%ws - %ws]\n" :
                 L"[%.3f] UDP connection established [%ws - %ws]\n",
                 GetStatusTimeStamp(),
@@ -3218,7 +3192,7 @@ namespace ctsTraffic::ctsConfig
         {
             s_ConnectionLogger->LogMessage(
                 ctString::ctFormatString(
-                (ProtocolType::TCP == Settings->Protocol) ?
+                    ProtocolType::TCP == Settings->Protocol ?
                     L"[%.3f] TCP connection established [%ws - %ws]\r\n" :
                     L"[%.3f] UDP connection established [%ws - %ws]\r\n",
                     GetStatusTimeStamp(),
@@ -3231,7 +3205,7 @@ namespace ctsTraffic::ctsConfig
     }
 
     void PrintConnectionResults(unsigned long _error) noexcept
-    try
+        try
     {
         ctsConfigInitOnce();
 
@@ -3243,13 +3217,13 @@ namespace ctsTraffic::ctsConfig
             // case 0: // nothing
             // case 1: // status updates
             // case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 3: // connection info
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         enum class ErrorType
@@ -3257,7 +3231,7 @@ namespace ctsTraffic::ctsConfig
             Success,
             NetworkError,
             ProtocolError
-        } error_type;
+        } error_type = ErrorType::Success;
 
         if (0 == _error)
         {
@@ -3355,7 +3329,7 @@ namespace ctsTraffic::ctsConfig
     }
 
     void PrintConnectionResults(const ctSockaddr& _local_addr, const ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept
-    try
+        try
     {
         ctsConfigInitOnce();
 
@@ -3367,13 +3341,13 @@ namespace ctsTraffic::ctsConfig
             // case 0: // nothing
             // case 1: // status updates
             // case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 3: // connection info
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         enum class ErrorType
@@ -3381,7 +3355,7 @@ namespace ctsTraffic::ctsConfig
             Success,
             NetworkError,
             ProtocolError
-        } error_type;
+        } error_type = ErrorType::Success;
 
         if (0 == _error)
         {
@@ -3403,10 +3377,10 @@ namespace ctsTraffic::ctsConfig
         // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
         static PCWSTR TCPResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
 
-        const long long total_time = (_stats.end_time.get() - _stats.start_time.get());
-        ctFatalCondition(
+        const long long total_time = _stats.end_time.get() - _stats.start_time.get();
+        FAIL_FAST_IF_MSG(
             total_time < 0LL,
-            L"end_time is less than start_time in this ctsTcpStatistics object (%p)", &_stats);
+            "end_time is less than start_time in this ctsTcpStatistics object (%p)", &_stats);
         const float current_time = GetStatusTimeStamp();
 
         wstring csv_string;
@@ -3437,18 +3411,18 @@ namespace ctsTraffic::ctsConfig
                 _local_addr.WriteCompleteAddress().c_str(),
                 _remote_addr.WriteCompleteAddress().c_str(),
                 _stats.bytes_sent.get(),
-                (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
+                total_time > 0LL ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                 _stats.bytes_recv.get(),
-                (total_time > 0LL) ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
+                total_time > 0LL ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
                 total_time,
-                (ErrorType::ProtocolError == error_type) ?
+                ErrorType::ProtocolError == error_type ?
                 ctsIOPattern::BuildProtocolErrorString(_error) :
                 error_string.c_str(),
                 _stats.connection_identifier);
         }
         // we'll never write csv format to the console so we'll need a text string in that case
         // - and/or in the case the s_ConnectionLogger isn't writing to csv
-        if (write_to_console || (s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat()))
+        if (write_to_console || s_ConnectionLogger && !s_ConnectionLogger->IsCsvFormat())
         {
             if (0 == _error)
             {
@@ -3459,24 +3433,24 @@ namespace ctsTraffic::ctsConfig
                     _remote_addr.WriteCompleteAddress().c_str(),
                     _stats.connection_identifier,
                     _stats.bytes_sent.get(),
-                    (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
+                    total_time > 0LL ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                     _stats.bytes_recv.get(),
-                    (total_time > 0LL) ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
+                    total_time > 0LL ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
                     total_time);
             }
             else
             {
                 text_string = ctString::ctFormatString(
-                    (ErrorType::ProtocolError == error_type) ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
+                    ErrorType::ProtocolError == error_type ? TCPProtocolFailureResultTextFormat : TCPNetworkFailureResultTextFormat,
                     current_time,
-                    (ErrorType::ProtocolError == error_type) ? ctsIOPattern::BuildProtocolErrorString(_error) : error_string.c_str(),
+                    ErrorType::ProtocolError == error_type ? ctsIOPattern::BuildProtocolErrorString(_error) : error_string.c_str(),
                     _local_addr.WriteCompleteAddress().c_str(),
                     _remote_addr.WriteCompleteAddress().c_str(),
                     _stats.connection_identifier,
                     _stats.bytes_sent.get(),
-                    (total_time > 0LL) ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
+                    total_time > 0LL ? static_cast<long long>(_stats.bytes_sent.get() * 1000LL / total_time) : 0LL,
                     _stats.bytes_recv.get(),
-                    (total_time > 0LL) ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
+                    total_time > 0LL ? static_cast<long long>(_stats.bytes_recv.get() * 1000LL / total_time) : 0LL,
                     total_time);
             }
         }
@@ -3505,7 +3479,7 @@ namespace ctsTraffic::ctsConfig
     }
 
     void PrintConnectionResults(const ctSockaddr& _local_addr, const ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept
-    try
+        try
     {
         ctsConfigInitOnce();
 
@@ -3517,13 +3491,13 @@ namespace ctsTraffic::ctsConfig
             // case 0: // nothing
             // case 1: // status updates
             // case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 3: // connection info
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         enum class ErrorType
@@ -3555,7 +3529,7 @@ namespace ctsTraffic::ctsConfig
 
         const float current_time = GetStatusTimeStamp();
         const long long elapsed_time(_stats.end_time.get() - _stats.start_time.get());
-        const long long bits_per_second = (elapsed_time > 0LL) ? static_cast<long long>(_stats.bits_received.get() * 1000LL / elapsed_time) : 0LL;
+        const long long bits_per_second = elapsed_time > 0LL ? static_cast<long long>(_stats.bits_received.get() * 1000LL / elapsed_time) : 0LL;
 
         wstring csv_string;
         wstring text_string;
@@ -3589,7 +3563,7 @@ namespace ctsTraffic::ctsConfig
                 _stats.dropped_frames.get(),
                 _stats.duplicate_frames.get(),
                 _stats.error_frames.get(),
-                (ErrorType::ProtocolError == error_type) ?
+                ErrorType::ProtocolError == error_type ?
                 ctsIOPattern::BuildProtocolErrorString(_error) :
                 error_string.c_str(),
                 _stats.connection_identifier);
@@ -3615,9 +3589,9 @@ namespace ctsTraffic::ctsConfig
             else
             {
                 text_string = ctString::ctFormatString(
-                    (ErrorType::ProtocolError == error_type) ? UDPProtocolFailureResultTextFormat : UDPNetworkFailureResultTextFormat,
+                    ErrorType::ProtocolError == error_type ? UDPProtocolFailureResultTextFormat : UDPNetworkFailureResultTextFormat,
                     current_time,
-                    (ErrorType::ProtocolError == error_type) ?
+                    ErrorType::ProtocolError == error_type ?
                     ctsIOPattern::BuildProtocolErrorString(_error) :
                     error_string.c_str(),
                     _local_addr.WriteCompleteAddress().c_str(),
@@ -3676,15 +3650,15 @@ namespace ctsTraffic::ctsConfig
         switch (s_ConsoleVerbosity)  // NOLINT(hicpp-multiway-paths-covered)
         {
             // case 0: // nothing
-        case 1: // status updates
-        case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            write_to_console = true;
-        }
+            case 1: // status updates
+            case 2: // error info
+            case 3: // connection info
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            {
+                write_to_console = true;
+            }
         }
 
         va_list argptr;
@@ -3709,7 +3683,7 @@ namespace ctsTraffic::ctsConfig
                         formatted_string, L"\n", L"\r\n").c_str());
             }
         }
-        catch (const exception&)
+        catch (...)
         {
         }
         va_end(argptr);
@@ -3726,7 +3700,7 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        return (0 == s_BufferSizeHigh) ?
+        return 0 == s_BufferSizeHigh ?
             s_BufferSizeLow :
             s_RandomTwister.uniform_int(s_BufferSizeLow, s_BufferSizeHigh);
     }
@@ -3735,7 +3709,7 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        return (s_BufferSizeHigh == 0) ?
+        return s_BufferSizeHigh == 0 ?
             s_BufferSizeLow :
             s_BufferSizeHigh;
     }
@@ -3745,7 +3719,7 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        return (0 == s_TransferSizeHigh) ?
+        return 0 == s_TransferSizeHigh ?
             s_TransferSizeLow :
             s_RandomTwister.uniform_int(s_TransferSizeLow, s_TransferSizeHigh);
     }
@@ -3754,7 +3728,7 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        return (0 == s_RateLimitHigh) ?
+        return 0 == s_RateLimitHigh ?
             s_RateLimitLow :
             s_RandomTwister.uniform_int(s_RateLimitLow, s_RateLimitHigh);
     }
@@ -3776,9 +3750,9 @@ namespace ctsTraffic::ctsConfig
     {
         ctsConfigInitOnce();
 
-        ctFatalCondition(
+        FAIL_FAST_IF_MSG(
             0 == s_MediaStreamSettings.BitsPerSecond,
-            L"Internally requesting media stream settings when this was not specified by the user");
+            "Internally requesting media stream settings when this was not specified by the user");
 
         return s_MediaStreamSettings;
     }
@@ -3792,7 +3766,7 @@ namespace ctsTraffic::ctsConfig
 
     float GetStatusTimeStamp() noexcept
     {
-        return (ctTimer::ctSnapQpcInMillis() - Settings->StartTimeMilliseconds) / 1000.0f;  // NOLINT(bugprone-narrowing-conversions)
+        return static_cast<float>(ctTimer::ctSnapQpcInMillis() - Settings->StartTimeMilliseconds) / 1000.0f;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3824,7 +3798,7 @@ namespace ctsTraffic::ctsConfig
                 if (error != 0)
                 {
                     const auto gle = WSAGetLastError();
-                    PrintErrorIfFailed(L"setsockopt(IP_UNICAST_IF)", gle);
+                    PrintErrorIfFailed("setsockopt(IP_UNICAST_IF)", gle);
                     return gle;
                 }
 
@@ -3840,7 +3814,7 @@ namespace ctsTraffic::ctsConfig
                 if (error != 0)
                 {
                     const auto gle = WSAGetLastError();
-                    PrintErrorIfFailed(L"setsockopt(IPV6_UNICAST_IF)", gle);
+                    PrintErrorIfFailed("setsockopt(IPV6_UNICAST_IF)", gle);
                     return gle;
                 }
             }
@@ -3875,7 +3849,7 @@ namespace ctsTraffic::ctsConfig
                 if (error != 0)
                 {
                     const auto gle = WSAGetLastError();
-                    PrintErrorIfFailed(L"setsockopt(SO_REUSE_UNICASTPORT)", gle);
+                    PrintErrorIfFailed("setsockopt(SO_REUSE_UNICASTPORT)", gle);
                     return gle;
                 }
 
@@ -3894,7 +3868,7 @@ namespace ctsTraffic::ctsConfig
                 if (error != 0)
                 {
                     const auto gle = WSAGetLastError();
-                    PrintErrorIfFailed(L"setsockopt(SO_PORT_SCALABILITY)", gle);
+                    PrintErrorIfFailed("setsockopt(SO_PORT_SCALABILITY)", gle);
                     return gle;
                 }
             }
@@ -3908,7 +3882,7 @@ namespace ctsTraffic::ctsConfig
             const auto error = WSAIoctl(
                 _s,
                 SIO_LOOPBACK_FAST_PATH,
-                &in_value, static_cast<DWORD>(sizeof(in_value)),
+                &in_value, static_cast<DWORD>(sizeof in_value),
                 nullptr, 0,
                 &bytes_returned,
                 nullptr,
@@ -3916,7 +3890,7 @@ namespace ctsTraffic::ctsConfig
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"WSAIoctl(SIO_LOOPBACK_FAST_PATH)", gle);
+                PrintErrorIfFailed("WSAIoctl(SIO_LOOPBACK_FAST_PATH)", gle);
                 return gle;
             }
         }
@@ -3941,7 +3915,7 @@ namespace ctsTraffic::ctsConfig
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"WSAIoctl(SIO_KEEPALIVE_VALS)", gle);
+                PrintErrorIfFailed("WSAIoctl(SIO_KEEPALIVE_VALS)", gle);
                 return gle;
             }
         }
@@ -3959,7 +3933,7 @@ namespace ctsTraffic::ctsConfig
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"setsockopt(SO_KEEPALIVE)", gle);
+                PrintErrorIfFailed("setsockopt(SO_KEEPALIVE)", gle);
                 return gle;
             }
         }
@@ -3972,11 +3946,11 @@ namespace ctsTraffic::ctsConfig
                 SOL_SOCKET,
                 SO_RCVBUF,
                 reinterpret_cast<const char*>(&recv_buff),
-                static_cast<int>(sizeof(recv_buff)));
+                static_cast<int>(sizeof recv_buff));
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"setsockopt(SO_RCVBUF)", gle);
+                PrintErrorIfFailed("setsockopt(SO_RCVBUF)", gle);
                 return gle;
             }
         }
@@ -3989,11 +3963,11 @@ namespace ctsTraffic::ctsConfig
                 SOL_SOCKET,
                 SO_SNDBUF,
                 reinterpret_cast<const char*>(&send_buff),
-                static_cast<int>(sizeof(send_buff)));
+                static_cast<int>(sizeof send_buff));
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"setsockopt(SO_SNDBUF)", gle);
+                PrintErrorIfFailed("setsockopt(SO_SNDBUF)", gle);
                 return gle;
             }
         }
@@ -4008,7 +3982,7 @@ namespace ctsTraffic::ctsConfig
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"ioctlsocket(FIONBIO)", gle);
+                PrintErrorIfFailed("ioctlsocket(FIONBIO)", gle);
                 return gle;
             }
         }
@@ -4027,7 +4001,7 @@ namespace ctsTraffic::ctsConfig
             if (error != 0)
             {
                 const auto gle = WSAGetLastError();
-                PrintErrorIfFailed(L"WSAIoctl(SIO_ENABLE_CIRCULAR_QUEUEING)", gle);
+                PrintErrorIfFailed("WSAIoctl(SIO_ENABLE_CIRCULAR_QUEUEING)", gle);
                 return gle;
             }
         }
@@ -4037,7 +4011,7 @@ namespace ctsTraffic::ctsConfig
             if (!SetFileCompletionNotificationModes(reinterpret_cast<HANDLE>(_s), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS))
             {
                 const auto gle = GetLastError();
-                PrintErrorIfFailed(L"SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)", gle);
+                PrintErrorIfFailed("SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)", gle);
                 return gle;
             }
         }
@@ -4069,16 +4043,16 @@ namespace ctsTraffic::ctsConfig
         setting_string.append(L"\tProtocol: ");
         switch (Settings->Protocol)
         {
-        case ProtocolType::TCP:
-            setting_string.append(L"TCP");
-            break;
-        case ProtocolType::UDP:
-            setting_string.append(L"UDP");
-            break;
+            case ProtocolType::TCP:
+                setting_string.append(L"TCP");
+                break;
+            case ProtocolType::UDP:
+                setting_string.append(L"UDP");
+                break;
 
-        case ProtocolType::NoProtocolSet:// fall-through
-        default:
-            ctAlwaysFatalCondition(L"Unexpected Settings Protocol");
+            case ProtocolType::NoProtocolSet:// fall-through
+            default:
+                FAIL_FAST_MSG("Unexpected Settings Protocol");
         }
         setting_string.append(L"\n");
 
@@ -4135,27 +4109,27 @@ namespace ctsTraffic::ctsConfig
         setting_string.append(L"\tIoPattern: ");
         switch (Settings->IoPattern)
         {
-        case IoPatternType::Pull:
-            setting_string.append(L"Pull <TCP client recv/server send>\n");
-            break;
-        case IoPatternType::Push:
-            setting_string.append(L"Push <TCP client send/server recv>\n");
-            break;
-        case IoPatternType::PushPull:
-            setting_string.append(L"PushPull <TCP client/server alternate send/recv>\n");
-            setting_string.append(ctString::ctFormatString(L"\t\tPushBytes: %lu\n", static_cast<unsigned long>(Settings->PushBytes)));
-            setting_string.append(ctString::ctFormatString(L"\t\tPullBytes: %lu\n", static_cast<unsigned long>(Settings->PullBytes)));
-            break;
-        case IoPatternType::Duplex:
-            setting_string.append(L"Duplex <TCP client/server both sending and receiving>\n");
-            break;
-        case IoPatternType::MediaStream:
-            setting_string.append(L"MediaStream <UDP controlled stream from server to client>\n");
-            break;
+            case IoPatternType::Pull:
+                setting_string.append(L"Pull <TCP client recv/server send>\n");
+                break;
+            case IoPatternType::Push:
+                setting_string.append(L"Push <TCP client send/server recv>\n");
+                break;
+            case IoPatternType::PushPull:
+                setting_string.append(L"PushPull <TCP client/server alternate send/recv>\n");
+                setting_string.append(ctString::ctFormatString(L"\t\tPushBytes: %lu\n", static_cast<unsigned long>(Settings->PushBytes)));
+                setting_string.append(ctString::ctFormatString(L"\t\tPullBytes: %lu\n", static_cast<unsigned long>(Settings->PullBytes)));
+                break;
+            case IoPatternType::Duplex:
+                setting_string.append(L"Duplex <TCP client/server both sending and receiving>\n");
+                break;
+            case IoPatternType::MediaStream:
+                setting_string.append(L"MediaStream <UDP controlled stream from server to client>\n");
+                break;
 
-        case IoPatternType::NoIOSet: // fall-through
-        default:
-            ctAlwaysFatalCondition(L"Unexpected Settings IoPattern");
+            case IoPatternType::NoIOSet: // fall-through
+            default:
+                FAIL_FAST_MSG("Unexpected Settings IoPattern");
         }
 
         setting_string.append(ctString::ctFormatString(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(Settings->PrePostRecvs)));
@@ -4390,15 +4364,16 @@ namespace ctsTraffic::ctsConfig
         switch (s_ConsoleVerbosity)
         {
             // case 0: // nothing
-        case 1: // status updates
-        case 2: // error info
-        case 3: // error info + status updates
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            fwprintf(stdout, L"%ws", setting_string.c_str());
-        }
+            case 1: // status updates
+            case 2: // error info
+            case 3: // error info + status updates
+            case 4: // connection info + error info
+            case 5: // connection info + error info + status updates
+            case 6: // above + debug info
+            default:
+            {
+                fwprintf(stdout, L"%ws", setting_string.c_str());
+            }
         }
 
         // must manually convert all carriage returns to file-friendly carriage return/line feed
@@ -4412,7 +4387,7 @@ namespace ctsTraffic::ctsConfig
 
     SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags)
     {
-        NET_IF_COMPARTMENT_ID oldCompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
+        auto oldCompartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
         bool bCompartmentIdSet = FALSE;
 
         //
@@ -4427,7 +4402,7 @@ namespace ctsTraffic::ctsConfig
                 const auto dwErr = SetCurrentThreadCompartmentId(s_CompartmentId);
                 if (dwErr != NO_ERROR)
                 {
-                    PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", s_CompartmentId, dwErr);
+                    PrintErrorInfo(ctString::ctFormatString("SetCurrentThreadCompartmentId for ID %u failed err %u", s_CompartmentId, dwErr).c_str());
                 }
                 else
                 {
@@ -4444,7 +4419,7 @@ namespace ctsTraffic::ctsConfig
             const auto dwErr = SetCurrentThreadCompartmentId(oldCompartmentId);
             if (dwErr != NO_ERROR)
             {
-                PrintErrorInfo(L"SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, dwErr);
+                PrintErrorInfo(ctString::ctFormatString("SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, dwErr).c_str());
             }
         }
 

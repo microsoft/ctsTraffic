@@ -36,12 +36,8 @@ namespace ctsTraffic
     ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker)
         : broker(move(_broker))
     {
-        thread_pool_worker = CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment);
-        if (nullptr == thread_pool_worker)
-        {
-            const auto gle = GetLastError();
-            throw ctException(gle, L"CreateThreadpoolWork", L"ctsSocketState", false);
-        }
+        thread_pool_worker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment));
+        THROW_LAST_ERROR_IF_NULL(thread_pool_worker.get());
     }
 
     ctsSocketState::~ctsSocketState() noexcept
@@ -58,16 +54,15 @@ namespace ctsTraffic
         {
             this->socket->shutdown();
         }
-        WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
-        CloseThreadpoolWork(thread_pool_worker);
+        thread_pool_worker.reset();
     }
 
     void ctsSocketState::start() noexcept
     {
-        ctFatalCondition(
+        FAIL_FAST_IF_MSG(
             state != InternalState::Creating,
-            L"ctsSocketState::start must only be called once at the initial state of the object (this == %p)", this);
-        SubmitThreadpoolWork(this->thread_pool_worker);
+            "ctsSocketState::start must only be called once at the initial state of the object (this == %p)", this);
+        SubmitThreadpoolWork(this->thread_pool_worker.get());
     }
 
     void ctsSocketState::complete_state(DWORD _error) noexcept
@@ -125,8 +120,8 @@ namespace ctsTraffic
                     // case Connecting:
                     // case InitiatingIO:
                     //
-                    ctAlwaysFatalCondition(
-                        L"ctsSocketState::complete_state - invalid internal state [%d]",
+                    FAIL_FAST_MSG(
+                        "ctsSocketState::complete_state - invalid internal state [%d]",
                         this->state);
             }
 
@@ -143,7 +138,7 @@ namespace ctsTraffic
         //
         // schedule the next functor to run when not closing down the socket
         //
-        SubmitThreadpoolWork(this->thread_pool_worker);
+        SubmitThreadpoolWork(this->thread_pool_worker.get());
     }
 
     ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
@@ -258,8 +253,8 @@ namespace ctsTraffic
                 }
                 else
                 {
-                     // if this socket never started IO, it never created an io_pattern to track stats
-                     // - in this case, directly track the failures in the global stats
+                    // if this socket never started IO, it never created an io_pattern to track stats
+                    // - in this case, directly track the failures in the global stats
                     ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.increment();
                 }
 
@@ -290,10 +285,9 @@ namespace ctsTraffic
             default:
             {
                 // the callback should never see any other states
-                ctAlwaysFatalCondition(
-                    L"ctsSocketState::ThreadPoolWorker - invalid socket state [%d]",
+                FAIL_FAST_MSG(
+                    "ctsSocketState::ThreadPoolWorker - invalid socket state [%d]",
                     this_ptr->state);
-                break;
             }
         }
     }

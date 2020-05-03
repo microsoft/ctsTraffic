@@ -20,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
+#include <ctString.hpp>
 #include <ctException.hpp>
 #include <ctThreadPoolTimer.hpp>
 // local headers
@@ -46,35 +47,42 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
     const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
-    if (wsError != 0) {
+    if (wsError != 0)
+    {
         wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 
     DWORD err = ERROR_SUCCESS;
-    try {
-        if (!ctsConfig::Startup(argc, argv)) {
+    try
+    {
+        if (!ctsConfig::Startup(argc, argv))
+        {
             ctsConfig::Shutdown();
             err = ERROR_INVALID_DATA;
         }
     }
-    catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"Invalid parameters : %ws", ctsPrintSafeIntException(e));
+    catch (const ctsSafeIntException& e)
+    {
+        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("Invalid parameters : %ws", ctsPrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
-    catch (const invalid_argument& e) {
-        ctsConfig::PrintErrorInfoOverride(L"Invalid argument specified: %hs", e.what());
+    catch (const invalid_argument& e)
+    {
+        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("Invalid argument specified: %hs", e.what()).c_str());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         ctsConfig::PrintExceptionOverride(e);
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
 
-    if (err == ERROR_INVALID_DATA) {
+    if (err == ERROR_INVALID_DATA)
+    {
         wprintf(
             L"\n\n"
             L"For more information on command line options, specify -Help\n"
@@ -88,8 +96,10 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         return err;
     }
 
-    try {
-        if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE)) {
+    try
+    {
+        if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE))
+        {
             throw ctException(GetLastError(), L"SetConsoleCtrlHandler", false);
         }
 
@@ -104,27 +114,32 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         ctThreadpoolTimer status_timer;
         status_timer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::Settings->StatusUpdateFrequencyMilliseconds);
-        if (!broker->wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE)) {
+        if (!broker->wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE))
+        {
             ctsConfig::PrintSummary(L"\n ** Timelimit of %lu reached **\n", static_cast<unsigned long>(ctsConfig::Settings->TimeLimit));
         }
     }
-    catch (const ctsSafeIntException& e) {
-        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e));
+    catch (const ctsSafeIntException& e)
+    {
+        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
-    catch (const ctException& e) {
-        ctsConfig::PrintException(e);
+    catch (const ctException& e)
+    {
+        ctsConfig::PrintExceptionOverride(e);
         ctsConfig::Shutdown();
-        return (e.why() == 0) ? ERROR_CANCELLED : e.why();
+        return e.why() == 0 ? ERROR_CANCELLED : static_cast<int>(e.why());
     }
-    catch (const bad_alloc&) {
-        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: Out of Memory");
+    catch (const bad_alloc&)
+    {
+        ctsConfig::PrintErrorInfoOverride("ctsTraffic failed: Out of Memory");
         ctsConfig::Shutdown();
         return ERROR_OUTOFMEMORY;
     }
-    catch (const exception& e) {
-        ctsConfig::PrintErrorInfo(L"ctsTraffic failed: %hs", e.what());
+    catch (const exception& e)
+    {
+        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("ctsTraffic failed: %hs", e.what()).c_str());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;
     }
@@ -145,16 +160,20 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get(),
         ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get());
 
-    if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP) {
+    if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)
+    {
         ctsConfig::PrintSummary(
             L"\n"
             L"  Total Bytes Recv : %lld\n"
             L"  Total Bytes Sent : %lld\n",
             ctsConfig::Settings->TcpStatusDetails.bytes_recv.get(),
             ctsConfig::Settings->TcpStatusDetails.bytes_sent.get());
-    } else {
+    }
+    else
+    {
         // currently don't track UDP server stats
-        if (!ctsConfig::IsListening()) {
+        if (!ctsConfig::IsListening())
+        {
             const auto successfulFrames = ctsConfig::Settings->UdpStatusDetails.successful_frames.get();
             const auto droppedFrames = ctsConfig::Settings->UdpStatusDetails.dropped_frames.get();
             const auto duplicateFrames = ctsConfig::Settings->UdpStatusDetails.duplicate_frames.get();
@@ -190,7 +209,8 @@ __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     long long error_count =
         ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get() +
         ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get();
-    if (error_count > MAXINT) {
+    if (error_count > MAXINT)
+    {
         error_count = MAXINT;
     }
     return static_cast<int>(error_count);

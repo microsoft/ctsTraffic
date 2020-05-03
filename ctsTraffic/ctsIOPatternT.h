@@ -83,6 +83,7 @@ namespace ctsTraffic {
     {
     public:
         ctsIOPatternT() = default;
+        ~ctsIOPatternT() = default;
 
         void print_stats(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept final
         {
@@ -113,6 +114,8 @@ namespace ctsTraffic {
         /// no copy c'tor or copy assignment
         ctsIOPatternT(const ctsIOPatternT&) = delete;
         ctsIOPatternT& operator= (const ctsIOPatternT&) = delete;
+        ctsIOPatternT(ctsIOPatternT&&) = delete;
+        ctsIOPatternT& operator= (ctsIOPatternT&&) = delete;
 
     private:
         mutable wil::critical_section m_cs;

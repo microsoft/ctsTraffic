@@ -21,6 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctException.hpp>
 #include <ctMemoryGuard.hpp>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -42,15 +43,15 @@ namespace ctsTraffic
             if (status != RPC_S_OK) {
                 throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
             }
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
-                L"UuidToString returned a string not 36 characters long (%Iu)",
+                "UuidToString returned a string not 36 characters long (%Iu)",
                 strlen(reinterpret_cast<LPSTR>(connection_id_string)));
 
             const auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
-            ctl::ctFatalCondition(
+            FAIL_FAST_IF_MSG(
                 copy_error != 0,
-                L"memcpy_s failed trying to copy a UUID string (%d)", copy_error);
+                "memcpy_s failed trying to copy a UUID string (%d)", copy_error);
 
             RpcStringFreeA(&connection_id_string);
             _statistics_object.connection_identifier[ConnectionIdLength - 1] = '\0';

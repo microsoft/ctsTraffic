@@ -193,10 +193,10 @@ namespace ctsTraffic
             }                                                           \
         }
 
-        void PrintErrorIfFailed(PCWSTR _what, unsigned long _why) noexcept;
-        void __cdecl PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
+        void PrintErrorIfFailed(PCSTR _what, unsigned long _why) noexcept;
+        void __cdecl PrintErrorInfo(_In_ PCSTR _text) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void __cdecl PrintErrorInfoOverride(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
+        void __cdecl PrintErrorInfoOverride(_In_ PCSTR _text) noexcept;
 
         void PrintException(const std::exception& e) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
@@ -237,25 +237,25 @@ namespace ctsTraffic
 
             ctsUnsignedLongLong CalculateTransferSize()
             {
-                ctl::ctFatalCondition(
+                FAIL_FAST_IF_MSG(
                     0LL == BitsPerSecond,
-                    L"BitsPerSecond cannot be set to zero");
-                ctl::ctFatalCondition(
+                    "BitsPerSecond cannot be set to zero");
+                FAIL_FAST_IF_MSG(
                     0 == FramesPerSecond,
-                    L"FramesPerSecond cannot be set to zero");
-                ctl::ctFatalCondition(
+                    "FramesPerSecond cannot be set to zero");
+                FAIL_FAST_IF_MSG(
                     0 == StreamLengthSeconds,
-                    L"StreamLengthSeconds cannot be set to zero");
-                ctl::ctFatalCondition(
+                    "StreamLengthSeconds cannot be set to zero");
+                FAIL_FAST_IF_MSG(
                     BitsPerSecond % 8LL != 0LL,
-                    L"The BitsPerSecond value (%lld) must be evenly divisible by 8", static_cast<long long>(BitsPerSecond));
+                    "The BitsPerSecond value (%lld) must be evenly divisible by 8", static_cast<long long>(BitsPerSecond));
 
                 // number of frames to keep buffered - only relevant on the client
                 if (!IsListening())
                 {
-                    ctl::ctFatalCondition(
+                    FAIL_FAST_IF_MSG(
                         0 == BufferDepthSeconds,
-                        L"BufferDepthSeconds cannot be set to zero");
+                        "BufferDepthSeconds cannot be set to zero");
 
                     BufferedFrames = BufferDepthSeconds * FramesPerSecond;
                     if (BufferedFrames < BufferDepthSeconds || BufferedFrames < FramesPerSecond)
@@ -271,7 +271,7 @@ namespace ctsTraffic
                 }
 
                 // convert rate to bytes / second -> calculate the total # of bytes
-                ctsUnsignedLongLong total_stream_length_bytes = static_cast<unsigned long long>((static_cast<long long>(BitsPerSecond) / 8ULL) * static_cast<unsigned long>(StreamLengthSeconds));
+                ctsUnsignedLongLong total_stream_length_bytes = static_cast<unsigned long long>(static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds));
 
                 // guarantee that the total stream length aligns evenly with total_frames
                 if (total_stream_length_bytes % total_stream_length_frames != 0)
@@ -293,9 +293,9 @@ namespace ctsTraffic
                 StreamLengthFrames = static_cast<unsigned long>(total_stream_length_frames);
 
                 // guarantee frame alignment
-                ctl::ctFatalCondition(
+                FAIL_FAST_IF_MSG(
                     static_cast<unsigned long long>(FrameSizeBytes) * static_cast<unsigned long long>(StreamLengthFrames) != total_stream_length_bytes,
-                    L"FrameSizeBytes (%u) * StreamLengthFrames (%u) != TotalStreamLength (%llx)",
+                    "FrameSizeBytes (%u) * StreamLengthFrames (%u) != TotalStreamLength (%llx)",
                     static_cast<unsigned long>(FrameSizeBytes), static_cast<unsigned long>(StreamLengthFrames), static_cast<unsigned long long>(total_stream_length_bytes));
 
                 return total_stream_length_bytes;
