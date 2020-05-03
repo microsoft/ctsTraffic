@@ -179,7 +179,6 @@ namespace ctsTraffic {
                 if (!listening_socket)
                 {
                     // the listening socket was closed - just exit
-                    _Analysis_assume_lock_released_(socket_lock);
                     return;
                 }
 
