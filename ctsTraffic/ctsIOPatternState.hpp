@@ -254,7 +254,6 @@ namespace ctsTraffic
                 this->internal_state = InternalPatternState::ErrorIOFailed;
                 return ctsIOPatternProtocolError::ErrorIOFailed;
             }
-
         }
         else
         {

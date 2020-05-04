@@ -448,7 +448,6 @@ namespace ctsTraffic
                     }
                     return wsIOResult(error);
                 }
-
             }
             else
             {

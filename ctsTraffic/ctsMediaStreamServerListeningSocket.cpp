@@ -33,9 +33,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
     ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
-        thread_iocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
-        listening_socket(std::move(_listening_socket)),
-        listening_addr(std::move(_listening_addr))
+        threadIocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
+        listeningSocket(std::move(_listening_socket)),
+        listeningAddr(std::move(_listening_addr))
     {
         FAIL_FAST_IF_MSG(
             !!(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP),
@@ -46,21 +46,21 @@ namespace ctsTraffic
     {
         // close the socket, then end the TP
         {
-            const auto lock = listeningsocket_lock.lock();
-            listening_socket.reset();
+            const auto lock = listeningsocketLock.lock();
+            listeningSocket.reset();
         }
-        thread_iocp.reset();
+        threadIocp.reset();
     }
 
     SOCKET ctsMediaStreamServerListeningSocket::get_socket() const noexcept
     {
-        const auto lock = listeningsocket_lock.lock();
-        return listening_socket.get();
+        const auto lock = listeningsocketLock.lock();
+        return listeningSocket.get();
     }
 
     ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const noexcept
     {
-        return listening_addr;
+        return listeningAddr;
     }
 
     void ctsMediaStreamServerListeningSocket::initiate_recv() noexcept
@@ -72,29 +72,29 @@ namespace ctsTraffic
         {
             try
             {
-                const auto lock = listeningsocket_lock.lock();
-                if (listening_socket)
+                const auto lock = listeningsocketLock.lock();
+                if (listeningSocket)
                 {
                     WSABUF wsabuf;
                     wsabuf.buf = recv_buffer.data();
                     wsabuf.len = static_cast<ULONG>(recv_buffer.size());
                     ::ZeroMemory(recv_buffer.data(), recv_buffer.size());
 
-                    recv_flags = 0;
-                    remote_addr.set(remote_addr.family(), ctl::ctSockaddr::AddressType::Any);
-                    remote_addr_len = remote_addr.length();
-                    OVERLAPPED* pov = thread_iocp->new_request(
+                    recvFlags = 0;
+                    remoteAddr.set(remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
+                    remoteAddrLen = remoteAddr.length();
+                    OVERLAPPED* pov = threadIocp->new_request(
                         [this](OVERLAPPED* _ov) noexcept {
                             recv_completion(_ov); });
 
                     error = WSARecvFrom(
-                        listening_socket.get(),
+                        listeningSocket.get(),
                         &wsabuf,
                         1,
                         nullptr,
-                        &recv_flags,
-                        remote_addr.sockaddr(),
-                        &remote_addr_len,
+                        &recvFlags,
+                        remoteAddr.sockaddr(),
+                        &remoteAddrLen,
                         pov,
                         nullptr);
                     if (SOCKET_ERROR == error)
@@ -107,7 +107,7 @@ namespace ctsTraffic
                         }
                         else
                         {
-                            thread_iocp->cancel_request(pov);
+                            threadIocp->cancel_request(pov);
                             if (WSAECONNRESET == error)
                             {
                                 // when this fails on retry, it has already failed from a prior WSARecvFrom request
@@ -117,7 +117,7 @@ namespace ctsTraffic
                             {
                                 ctsConfig::PrintErrorInfo(
                                     ctl::ctString::ctFormatString("WSARecvFrom failed (SOCKET %Iu) with error (%d)",
-                                        listening_socket.get(),
+                                        listeningSocket.get(),
                                         error).c_str());
                             }
                         }
@@ -175,15 +175,15 @@ namespace ctsTraffic
             // scope to the object lock
             {
                 // must take the object lock before touching socket
-                const auto lock = listeningsocket_lock.lock();
-                if (!listening_socket)
+                const auto lock = listeningsocketLock.lock();
+                if (!listeningSocket)
                 {
                     // the listening socket was closed - just exit
                     return;
                 }
 
                 DWORD bytes_received;
-                if (!WSAGetOverlappedResult(listening_socket.get(), _ov, &bytes_received, FALSE, &recv_flags))
+                if (!WSAGetOverlappedResult(listeningSocket.get(), _ov, &bytes_received, FALSE, &recvFlags))
                 {
                     // recvfrom failed
                     try
@@ -191,15 +191,18 @@ namespace ctsTraffic
                         const auto gle = WSAGetLastError();
                         if (WSAECONNRESET == gle)
                         {
-                            ctsConfig::PrintErrorInfo(
-                                ctl::ctString::ctFormatString("ctsMediaStreamServer - WSARecvFrom failed as the prior WSASendTo(%ws) failed with port unreachable",
-                                    remote_addr.WriteCompleteAddress().c_str()).c_str());
+                            if (!priorFailureWasConectionReset)
+                            {
+                                ctsConfig::PrintErrorInfo("ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
+                            }
+                            priorFailureWasConectionReset = true;
                         }
                         else
                         {
+                            ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
+                            priorFailureWasConectionReset = false;
                             ctsConfig::PrintErrorInfo(
-                                ctl::ctString::ctFormatString("ctsMediaStreamServer - WSARecvFrom failed [%d]",
-                                    WSAGetLastError()).c_str());
+                                ctl::ctString::ctFormatString("ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError()).c_str());
                         }
                     }
                     catch (...)
@@ -211,17 +214,18 @@ namespace ctsTraffic
                 }
                 else
                 {
+                    priorFailureWasConectionReset = false;
                     const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(recv_buffer.data(), bytes_received));
                     switch (message.action)
                     {
                         case MediaStreamAction::START:
                             PrintDebugInfo(
                                 L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                                remote_addr.WriteCompleteAddress().c_str());
+                                remoteAddr.WriteCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods
                             pimpl_operation = [this]() {
-                                ctsMediaStreamServerImpl::Start(listening_socket.get(), listening_addr, remote_addr);
+                                ctsMediaStreamServerImpl::Start(listeningSocket.get(), listeningAddr, remoteAddr);
                             };
 #endif
                             break;

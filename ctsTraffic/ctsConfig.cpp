@@ -941,6 +941,11 @@ namespace ctsTraffic::ctsConfig
             // always remove the arg from our vector
             args.erase(found_arg);
         }
+        else
+        {
+            // default buffer depth to 1
+            s_MediaStreamSettings.BufferDepthSeconds = 1;
+        }
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
             const auto value = ParseArgument(parameter, L"-StreamLength");
@@ -967,11 +972,6 @@ namespace ctsTraffic::ctsConfig
             if (0 == s_MediaStreamSettings.FramesPerSecond)
             {
                 throw invalid_argument("-FrameRate is required");
-            }
-            // BufferDepth is only required on client
-            if (!IsListening() && 0 == s_MediaStreamSettings.BufferDepthSeconds)
-            {
-                throw invalid_argument("-BufferDepth is required");
             }
             if (0 == s_MediaStreamSettings.StreamLengthSeconds)
             {
@@ -2241,15 +2241,15 @@ namespace ctsTraffic::ctsConfig
                     L"\t- <required>\n"
                     L"\t  note : for server-side this is the specific frequency that datagrams are sent\n"
                     L"\t       : for client-side this is the frequency that frames are processed and verified\n"
-                    L"-BufferDepth:####\n"
-                    L"   - the number of seconds to buffer before processing the stream\n"
-                    L"\t- <required>\n"
-                    L"\t  note : this affects the client-side buffering of frames\n"
-                    L"\t       : this also affects how far the client-side will peek at frames to resend if missing\n"
-                    L"\t       : the client will look ahead at 1/2 the buffer depth to request a resend if missing\n"
                     L"-StreamLength:####\n"
                     L"   - the total number of seconds to run the entire stream\n"
                     L"\t- <required>\n"
+                    L"-BufferDepth:####\n"
+                    L"   - the number of seconds to buffer before processing the stream\n"
+                    L"\t- <default> = 1 (second)\n"
+                    L"\t  note : this affects the client-side buffering of frames\n"
+                    L"\t       : this also affects how far the client-side will peek at frames to resend if missing\n"
+                    L"\t       : the client will look ahead at 1/2 the buffer depth to request a resend if missing\n"
                     L"\n");
                 break;
 

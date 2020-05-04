@@ -29,16 +29,17 @@ namespace ctsTraffic
     private:
         static const size_t RecvBufferSize = 1024;
 
-        std::shared_ptr<ctl::ctThreadIocp> thread_iocp;
+        std::shared_ptr<ctl::ctThreadIocp> threadIocp;
 
-        mutable wil::critical_section listeningsocket_lock;
-        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket listening_socket;
+        mutable wil::critical_section listeningsocketLock;
+        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket listeningSocket;
 
-        const ctl::ctSockaddr listening_addr;
+        const ctl::ctSockaddr listeningAddr;
         std::array<char, RecvBufferSize> recv_buffer{};
-        DWORD recv_flags{};
-        ctl::ctSockaddr remote_addr;
-        int remote_addr_len{};
+        DWORD recvFlags{};
+        ctl::ctSockaddr remoteAddr;
+        int remoteAddrLen{};
+        bool priorFailureWasConectionReset = false;
 
         void recv_completion(OVERLAPPED* _ov) noexcept;
 
