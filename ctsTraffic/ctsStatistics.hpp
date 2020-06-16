@@ -290,14 +290,14 @@ namespace ctsTraffic
                 return_stats.successful_frames.set(this->successful_frames.snap_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.snap_value_difference());
                 return_stats.duplicate_frames.set(this->duplicate_frames.snap_value_difference());
-                return_stats.error_frames.set(this->duplicate_frames.snap_value_difference());
+                return_stats.error_frames.set(this->error_frames.snap_value_difference());
 
             } else {
                 return_stats.bits_received.set(this->bits_received.read_value_difference());
                 return_stats.successful_frames.set(this->successful_frames.read_value_difference());
                 return_stats.dropped_frames.set(this->dropped_frames.read_value_difference());
                 return_stats.duplicate_frames.set(this->duplicate_frames.read_value_difference());
-                return_stats.error_frames.set(this->duplicate_frames.read_value_difference());
+                return_stats.error_frames.set(this->error_frames.read_value_difference());
             }
 
             return return_stats;
