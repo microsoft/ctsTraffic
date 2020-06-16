@@ -400,7 +400,7 @@ namespace ctsTraffic::ctsConfig
     {
         bool connect_specifed = false;
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-conn");
+            const auto* const value = ParseArgument(parameter, L"-conn");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -410,7 +410,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-conn (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-conn");
+            const auto* const value = ParseArgument(*found_arg, L"-conn");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"ConnectEx", value))
             {
                 Settings->ConnectFunction = ctsConnectEx;
@@ -464,7 +464,7 @@ namespace ctsTraffic::ctsConfig
         Settings->AcceptLimit = c_DefaultAcceptExLimit;
 
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-acc");
+            const auto* const value = ParseArgument(parameter, L"-acc");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -474,7 +474,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-acc (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-acc");
+            const auto* const value = ParseArgument(*found_arg, L"-acc");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"accept", value))
             {
                 Settings->AcceptFunction = ctsSimpleAccept;
@@ -525,7 +525,7 @@ namespace ctsTraffic::ctsConfig
     static void set_ioFunction(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-io");
+            const auto* const value = ParseArgument(parameter, L"-io");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -535,7 +535,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-io (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-io");
+            const auto* const value = ParseArgument(*found_arg, L"-io");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"iocp", value))
             {
                 Settings->IoFunction = ctsSendRecvIocp;
@@ -603,12 +603,12 @@ namespace ctsTraffic::ctsConfig
     static void set_inlineCompletions(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-inlinecompletions");
+            const auto* const value = ParseArgument(parameter, L"-inlinecompletions");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-inlinecompletions");
+            const auto* const value = ParseArgument(*found_arg, L"-inlinecompletions");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
             {
                 Settings->Options |= HANDLE_INLINE_IOCP;
@@ -636,12 +636,12 @@ namespace ctsTraffic::ctsConfig
     static void set_msgWaitAll(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-msgwaitall");
+            const auto* const value = ParseArgument(parameter, L"-msgwaitall");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-msgwaitall");
+            const auto* const value = ParseArgument(*found_arg, L"-msgwaitall");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
             {
                 Settings->Options |= MSG_WAIT_ALL;
@@ -670,12 +670,12 @@ namespace ctsTraffic::ctsConfig
     static void set_protocol(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-Protocol");
+            const auto* const value = ParseArgument(parameter, L"-Protocol");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-Protocol");
+            const auto* const value = ParseArgument(*found_arg, L"-Protocol");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"tcp", value))
             {
                 Settings->Protocol = ProtocolType::TCP;
@@ -711,13 +711,13 @@ namespace ctsTraffic::ctsConfig
         {
             // loop until cannot fine -Options
             const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-                const auto value = ParseArgument(parameter, L"-Options");
+                const auto* const value = ParseArgument(parameter, L"-Options");
                 return value != nullptr;
                 });
 
             if (found_arg != end(args))
             {
-                const auto value = ParseArgument(*found_arg, L"-Options");
+                const auto* const value = ParseArgument(*found_arg, L"-Options");
                 if (ctString::ctOrdinalEqualsCaseInsensative(L"keepalive", value))
                 {
                     if (ProtocolType::TCP == Settings->Protocol)
@@ -764,7 +764,7 @@ namespace ctsTraffic::ctsConfig
     static void set_keepAliveValue(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-keepalivevalue");
+            const auto* const value = ParseArgument(parameter, L"-keepalivevalue");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -800,7 +800,7 @@ namespace ctsTraffic::ctsConfig
     static void set_ioPattern(vector<const wchar_t*>& args)
     {
         auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-pattern");
+            const auto* const value = ParseArgument(parameter, L"-pattern");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -810,7 +810,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-pattern (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-pattern");
+            const auto* const value = ParseArgument(*found_arg, L"-pattern");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"push", value))
             {
                 Settings->IoPattern = IoPatternType::Push;
@@ -851,7 +851,7 @@ namespace ctsTraffic::ctsConfig
 
         // Now look for options tightly coupled to Protocol
         const auto found_pushbytes = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-pushbytes");
+            const auto* const value = ParseArgument(parameter, L"-pushbytes");
             return value != nullptr;
             });
         if (found_pushbytes != end(args))
@@ -870,7 +870,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_pullbytes = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-pullbytes");
+            const auto* const value = ParseArgument(parameter, L"-pullbytes");
             return value != nullptr;
             });
         if (found_pullbytes != end(args))
@@ -893,7 +893,7 @@ namespace ctsTraffic::ctsConfig
         //
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-BitsPerSecond");
+            const auto* const value = ParseArgument(parameter, L"-BitsPerSecond");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -913,7 +913,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-FrameRate");
+            const auto* const value = ParseArgument(parameter, L"-FrameRate");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -928,7 +928,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-BufferDepth");
+            const auto* const value = ParseArgument(parameter, L"-BufferDepth");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -948,7 +948,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-StreamLength");
+            const auto* const value = ParseArgument(parameter, L"-StreamLength");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1006,12 +1006,12 @@ namespace ctsTraffic::ctsConfig
         while (found_listen != end(args))
         {
             found_listen = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-                const auto value = ParseArgument(parameter, L"-listen");
+                const auto* const value = ParseArgument(parameter, L"-listen");
                 return value != nullptr;
                 });
             if (found_listen != end(args))
             {
-                const auto value = ParseArgument(*found_listen, L"-listen");
+                const auto* const value = ParseArgument(*found_listen, L"-listen");
                 if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
                 {
                     // add both v4 and v6
@@ -1042,7 +1042,7 @@ namespace ctsTraffic::ctsConfig
         while (found_target != end(args))
         {
             found_target = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-                const auto value = ParseArgument(parameter, L"-target");
+                const auto* const value = ParseArgument(parameter, L"-target");
                 return value != nullptr;
                 });
             if (found_target != end(args))
@@ -1051,7 +1051,7 @@ namespace ctsTraffic::ctsConfig
                 {
                     throw invalid_argument("cannot specify both -Listen and -Target");
                 }
-                const auto value = ParseArgument(*found_target, L"-target");
+                const auto* const value = ParseArgument(*found_target, L"-target");
                 vector<ctSockaddr> temp_addresses(ctSockaddr::ResolveName(value));
                 if (temp_addresses.empty())
                 {
@@ -1071,12 +1071,12 @@ namespace ctsTraffic::ctsConfig
         while (found_bind != end(args))
         {
             found_bind = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-                const auto value = ParseArgument(parameter, L"-bind");
+                const auto* const value = ParseArgument(parameter, L"-bind");
                 return value != nullptr;
                 });
             if (found_bind != end(args))
             {
-                const auto value = ParseArgument(*found_bind, L"-bind");
+                const auto* const value = ParseArgument(*found_bind, L"-bind");
                 // check for a comma-delimited list of IP Addresses
                 if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
                 {
@@ -1221,7 +1221,7 @@ namespace ctsTraffic::ctsConfig
     static void set_port(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-Port");
+            const auto* const value = ParseArgument(parameter, L"-Port");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1246,7 +1246,7 @@ namespace ctsTraffic::ctsConfig
     static void set_connections(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-connections");
+            const auto* const value = ParseArgument(parameter, L"-connections");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1274,7 +1274,7 @@ namespace ctsTraffic::ctsConfig
     static void set_serverExitLimit(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-ServerExitLimit");
+            const auto* const value = ParseArgument(parameter, L"-ServerExitLimit");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1303,7 +1303,7 @@ namespace ctsTraffic::ctsConfig
     static void set_throttleConnections(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-throttleconnections");
+            const auto* const value = ParseArgument(parameter, L"-throttleconnections");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1329,12 +1329,12 @@ namespace ctsTraffic::ctsConfig
         // a range was specified
         // - find the ',' the '[', and the ']'
         const auto value_length = wcslen(_value);
-        const auto value_end = _value + value_length;
+        const auto* const value_end = _value + value_length;
         if (value_length < 5 || _value[0] != L'[' || _value[value_length - 1] != L']')
         {
             throw invalid_argument("range value [###,###]");
         }
-        const auto comma_delimiter = find(_value, value_end, L',');
+        const auto* const comma_delimiter = find(_value, value_end, L',');
         if (!(value_end > comma_delimiter + 1))
         {
             throw invalid_argument("range value [###,###]");
@@ -1342,12 +1342,12 @@ namespace ctsTraffic::ctsConfig
 
         // null-terminate the first number at the delimiter to do a string -> int conversion
         *const_cast<wchar_t*>(comma_delimiter) = L'\0';
-        const auto value_low = _value + 1; // move past the '['
+        const auto* const value_low = _value + 1; // move past the '['
         _out_low = as_integral<T>(value_low);
 
         // null-terminate for the 2nd number over the last ']' to doa string -> int conversion
         const_cast<wchar_t*>(_value)[value_length - 1] = L'\0';
-        const auto value_high = comma_delimiter + 1;
+        const auto* const value_high = comma_delimiter + 1;
         _out_high = as_integral<T>(value_high);
 
         // validate buffer values
@@ -1368,7 +1368,7 @@ namespace ctsTraffic::ctsConfig
     static void set_buffer(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-buffer");
+            const auto* const value = ParseArgument(parameter, L"-buffer");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1378,7 +1378,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-buffer (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-buffer");
+            const auto* const value = ParseArgument(*found_arg, L"-buffer");
             if (value[0] == L'[')
             {
                 get_range(value, s_BufferSizeLow, s_BufferSizeHigh);
@@ -1414,7 +1414,7 @@ namespace ctsTraffic::ctsConfig
     static void set_transfer(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-transfer");
+            const auto* const value = ParseArgument(parameter, L"-transfer");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1424,7 +1424,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-transfer (only applicable to TCP)");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-transfer");
+            const auto* const value = ParseArgument(*found_arg, L"-transfer");
             if (value[0] == L'[')
             {
                 get_range(value, s_TransferSizeLow, s_TransferSizeHigh);
@@ -1453,13 +1453,13 @@ namespace ctsTraffic::ctsConfig
     static void set_localport(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-LocalPort");
+            const auto* const value = ParseArgument(parameter, L"-LocalPort");
             return value != nullptr;
             });
 
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-LocalPort");
+            const auto* const value = ParseArgument(*found_arg, L"-LocalPort");
             if (value[0] == L'[')
             {
                 get_range(value, Settings->LocalPortLow, Settings->LocalPortHigh);
@@ -1489,13 +1489,13 @@ namespace ctsTraffic::ctsConfig
     static void set_ifindex(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-IfIndex");
+            const auto* const value = ParseArgument(parameter, L"-IfIndex");
             return value != nullptr;
             });
 
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-IfIndex");
+            const auto* const value = ParseArgument(*found_arg, L"-IfIndex");
             Settings->OutgoingIfIndex = as_integral<unsigned long>(value);
 
             if (0 == Settings->OutgoingIfIndex)
@@ -1519,7 +1519,7 @@ namespace ctsTraffic::ctsConfig
     static void set_ratelimit(vector<const wchar_t*>& args)
     {
         const auto found_ratelimit = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-RateLimit");
+            const auto* const value = ParseArgument(parameter, L"-RateLimit");
             return value != nullptr;
             });
         if (found_ratelimit != end(args))
@@ -1528,7 +1528,7 @@ namespace ctsTraffic::ctsConfig
             {
                 throw invalid_argument("-RateLimit (only applicable to TCP)");
             }
-            const auto value = ParseArgument(*found_ratelimit, L"-RateLimit");
+            const auto* const value = ParseArgument(*found_ratelimit, L"-RateLimit");
             if (value[0] == L'[')
             {
                 get_range(value, s_RateLimitLow, s_RateLimitLow);
@@ -1547,7 +1547,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_ratelimit_period = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-RateLimitPeriod");
+            const auto* const value = ParseArgument(parameter, L"-RateLimitPeriod");
             return value != nullptr;
             });
         if (found_ratelimit_period != end(args))
@@ -1576,7 +1576,7 @@ namespace ctsTraffic::ctsConfig
     static void set_iterations(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-Iterations");
+            const auto* const value = ParseArgument(parameter, L"-Iterations");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1606,7 +1606,7 @@ namespace ctsTraffic::ctsConfig
     static void set_logging(vector<const wchar_t*>& args)
     {
         const auto found_verbosity = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-ConsoleVerbosity");
+            const auto* const value = ParseArgument(parameter, L"-ConsoleVerbosity");
             return value != nullptr;
             });
         if (found_verbosity != end(args))
@@ -1621,7 +1621,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_status_update = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-StatusUpdate");
+            const auto* const value = ParseArgument(parameter, L"-StatusUpdate");
             return value != nullptr;
             });
         if (found_status_update != end(args))
@@ -1641,7 +1641,7 @@ namespace ctsTraffic::ctsConfig
         wstring jitterFilename;
 
         const auto found_connection_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-ConnectionFilename");
+            const auto* const value = ParseArgument(parameter, L"-ConnectionFilename");
             return value != nullptr;
             });
         if (found_connection_filename != end(args))
@@ -1652,7 +1652,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_error_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-ErrorFilename");
+            const auto* const value = ParseArgument(parameter, L"-ErrorFilename");
             return value != nullptr;
             });
         if (found_error_filename != end(args))
@@ -1663,7 +1663,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_status_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-StatusFilename");
+            const auto* const value = ParseArgument(parameter, L"-StatusFilename");
             return value != nullptr;
             });
         if (found_status_filename != end(args))
@@ -1674,7 +1674,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_jitter_filename = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-JitterFilename");
+            const auto* const value = ParseArgument(parameter, L"-JitterFilename");
             return value != nullptr;
             });
         if (found_jitter_filename != end(args))
@@ -1779,12 +1779,12 @@ namespace ctsTraffic::ctsConfig
     static void set_error(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-OnError");
+            const auto* const value = ParseArgument(parameter, L"-OnError");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-OnError");
+            const auto* const value = ParseArgument(*found_arg, L"-OnError");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"log", value))
             {
                 s_BreakOnError = false;
@@ -1812,7 +1812,7 @@ namespace ctsTraffic::ctsConfig
     static void set_prepostrecvs(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-PrePostRecvs");
+            const auto* const value = ParseArgument(parameter, L"-PrePostRecvs");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1841,7 +1841,7 @@ namespace ctsTraffic::ctsConfig
     static void set_prepostsends(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-PrePostSends");
+            const auto* const value = ParseArgument(parameter, L"-PrePostSends");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1871,7 +1871,7 @@ namespace ctsTraffic::ctsConfig
     static void set_recvbufvalue(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-RecvBufValue");
+            const auto* const value = ParseArgument(parameter, L"-RecvBufValue");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1893,7 +1893,7 @@ namespace ctsTraffic::ctsConfig
     static void set_sendbufvalue(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-SendBufValue");
+            const auto* const value = ParseArgument(parameter, L"-SendBufValue");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -1915,13 +1915,13 @@ namespace ctsTraffic::ctsConfig
     static void set_compartment(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-Compartment");
+            const auto* const value = ParseArgument(parameter, L"-Compartment");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
             // delay-load IPHLPAPI.DLL
-            const auto value = ParseArgument(*found_arg, L"-Compartment");
+            const auto* const value = ParseArgument(*found_arg, L"-Compartment");
             s_NetAdapterAddresses = new ctNetAdapterAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_COMPARTMENTS);
             const auto found_interface = find_if(
                 s_NetAdapterAddresses->begin(),
@@ -1984,12 +1984,12 @@ namespace ctsTraffic::ctsConfig
     static void set_shouldVerifyBuffers(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-verify");
+            const auto* const value = ParseArgument(parameter, L"-verify");
             return value != nullptr;
             });
         if (found_arg != end(args))
         {
-            const auto value = ParseArgument(*found_arg, L"-verify");
+            const auto* const value = ParseArgument(*found_arg, L"-verify");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"always", value) || ctString::ctOrdinalEqualsCaseInsensative(L"data", value))
             {
                 Settings->ShouldVerifyBuffers = true;
@@ -2024,7 +2024,7 @@ namespace ctsTraffic::ctsConfig
         }
 
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-shutdown");
+            const auto* const value = ParseArgument(parameter, L"-shutdown");
             return value != nullptr;
             });
         if (found_arg != end(args))
@@ -2034,7 +2034,7 @@ namespace ctsTraffic::ctsConfig
                 throw invalid_argument("-shutdown is a client-only option");
             }
 
-            const auto value = ParseArgument(*found_arg, L"-shutdown");
+            const auto* const value = ParseArgument(*found_arg, L"-shutdown");
             if (ctString::ctOrdinalEqualsCaseInsensative(L"graceful", value))
             {
                 Settings->TcpShutdown = TcpShutdownType::GracefulShutdown;
@@ -2061,7 +2061,7 @@ namespace ctsTraffic::ctsConfig
     static void set_timelimit(vector<const wchar_t*>& args)
     {
         const auto found_arg = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
-            const auto value = ParseArgument(parameter, L"-timelimit");
+            const auto* const value = ParseArgument(parameter, L"-timelimit");
             return value != nullptr;
             });
         if (found_arg != end(args))

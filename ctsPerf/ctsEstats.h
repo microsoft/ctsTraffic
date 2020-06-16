@@ -933,10 +933,10 @@ namespace ctsPerf
             {
                 // IPv4
                 RefreshIPv4Data();
-                const auto pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]);
+                auto* const pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]);
                 for (unsigned count = 0; count < pIpv4TcpTable->dwNumEntries; ++count)
                 {
-                    const auto tableEntry = &pIpv4TcpTable->table[count];
+                    auto* const tableEntry = &pIpv4TcpTable->table[count];
                     if (tableEntry->dwState == MIB_TCP_STATE_LISTEN ||
                         tableEntry->dwState == MIB_TCP_STATE_TIME_WAIT ||
                         tableEntry->dwState == MIB_TCP_STATE_DELETE_TCB)
@@ -965,10 +965,10 @@ namespace ctsPerf
 
                 // IPv6
                 RefreshIPv6Data();
-                const auto pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]);
+                auto* const pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]);
                 for (unsigned count = 0; count < pIpv6TcpTable->dwNumEntries; ++count)
                 {
-                    const auto tableEntry = &pIpv6TcpTable->table[count];
+                    auto* const tableEntry = &pIpv6TcpTable->table[count];
                     if (tableEntry->State == MIB_TCP_STATE_LISTEN ||
                         tableEntry->State == MIB_TCP_STATE_TIME_WAIT ||
                         tableEntry->State == MIB_TCP_STATE_DELETE_TCB)

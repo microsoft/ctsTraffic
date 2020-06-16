@@ -89,7 +89,7 @@ namespace ctsTraffic
 
     VOID CALLBACK ctsMediaStreamServerConnectedSocket::ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) noexcept
     {
-        auto this_ptr = static_cast<ctsMediaStreamServerConnectedSocket*>(_context);
+        auto* this_ptr = static_cast<ctsMediaStreamServerConnectedSocket*>(_context);
 
         // take a lock on the ctsSocket for this 'connection'
         const auto shared_socket = this_ptr->weak_socket.lock();

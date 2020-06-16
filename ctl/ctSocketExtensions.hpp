@@ -20,8 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <rpc.h> // for GUID
 // wil headers
 #include <wil/resource.h>
-// ctl headers
-#include "ctException.hpp"
 
 
 namespace ctl

@@ -49,7 +49,7 @@ namespace ctsTraffic
 
         void LogLegend(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
         {
-            const auto message = _status_info->print_legend(m_format);
+            const auto* const message = _status_info->print_legend(m_format);
             if (message != nullptr)
             {
                 log_message_impl(message);
@@ -58,7 +58,7 @@ namespace ctsTraffic
 
         void LogHeader(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
         {
-            const auto message = _status_info->print_header(m_format);
+            const auto* const message = _status_info->print_header(m_format);
             if (message != nullptr)
             {
                 log_message_impl(message);
@@ -67,7 +67,7 @@ namespace ctsTraffic
 
         void LogStatus(const std::shared_ptr<ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
         {
-            const auto message = _status_info->print_status(m_format, _current_time, _clear_status);
+            const auto* const message = _status_info->print_status(m_format, _current_time, _clear_status);
             if (message != nullptr)
             {
                 log_message_impl(message);
