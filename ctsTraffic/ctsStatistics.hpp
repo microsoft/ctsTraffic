@@ -141,7 +141,7 @@ namespace ctsTraffic
         //
         long long subtract(long long _value) noexcept
         {
-            return ctl::ctMemoryGuardAdd(&current_value, _value);
+            return ctl::ctMemoryGuardSubtract(&current_value, _value);
         }
         //
         // Get / Sets a new value to the 'previous' value, returning the prior 'previous' value
