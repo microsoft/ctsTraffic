@@ -194,7 +194,7 @@ namespace ctsTraffic
                     s_rio_notify_setttings.Iocp.IocpHandle,
                     0,
                     ExitCompletionKey,
-                    reinterpret_cast<OVERLAPPED*>(s_rio_notify_setttings.Iocp.Overlapped)))
+                    static_cast<OVERLAPPED*>(s_rio_notify_setttings.Iocp.Overlapped)))
                 {
                     // if can't indicate to exit, kill the process to see why
                     FAIL_FAST_MSG(
@@ -747,7 +747,7 @@ namespace ctsTraffic
                             case IOTaskAction::Send:
                             {
                                 RIOFunction = L"RIOSendEx";
-                                const auto pRemote = &this->rio_remote_address;
+                                auto* const pRemote = &this->rio_remote_address;
                                 if (!ctl::ctRIOSendEx(this->rio_rq, &rio_buffer, 1, nullptr, pRemote, nullptr, nullptr, 0, request_context.get()))
                                 {
                                     error = WSAGetLastError();

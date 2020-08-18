@@ -195,7 +195,7 @@ namespace ctsTraffic
     {
         try
         {
-            auto& shared_iocp = thread_pool();
+            const auto& shared_iocp = thread_pool();
             OVERLAPPED* ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* ov) noexcept {
                 DWORD gle = NO_ERROR;
 

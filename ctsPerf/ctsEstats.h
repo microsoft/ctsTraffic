@@ -115,7 +115,7 @@ namespace ctsPerf
         };
 
         template <TCP_ESTATS_TYPE TcpType>
-        void SetPerConnectionEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
+        void SetPerConnectionEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             const auto err = ::SetPerTcpConnectionEStats(
                 tcpRow,
@@ -128,7 +128,7 @@ namespace ctsPerf
             }
         }
         template <TCP_ESTATS_TYPE TcpType>
-        void SetPerConnectionEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
+        void SetPerConnectionEstats(MIB_TCP6ROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             const auto err = ::SetPerTcp6ConnectionEStats(
                 tcpRow,
@@ -142,7 +142,7 @@ namespace ctsPerf
         }
 
         // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
-        inline ULONG GetPerConnectionStaticEstats(const PMIB_TCPROW tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
+        inline ULONG GetPerConnectionStaticEstats(MIB_TCPROW* const tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
         {
             return ::GetPerTcpConnectionEStats(
                 tcpRow,
@@ -152,7 +152,7 @@ namespace ctsPerf
                 nullptr, 0, 0); // read-only dynamic information
         }
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionStaticEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
+        ULONG GetPerConnectionStaticEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
@@ -172,7 +172,7 @@ namespace ctsPerf
         }
 
         // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
-        inline ULONG GetPerConnectionStaticEstats(const PMIB_TCP6ROW tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
+        inline ULONG GetPerConnectionStaticEstats(MIB_TCP6ROW* const tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
         {
             return ::GetPerTcp6ConnectionEStats(
                 tcpRow,
@@ -182,7 +182,7 @@ namespace ctsPerf
                 nullptr, 0, 0); // read-only dynamic information
         }
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionStaticEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
+        ULONG GetPerConnectionStaticEstats(MIB_TCP6ROW* tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
@@ -203,7 +203,7 @@ namespace ctsPerf
 
 
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionDynamicEstats(const PMIB_TCPROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
+        ULONG GetPerConnectionDynamicEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
@@ -222,7 +222,7 @@ namespace ctsPerf
             return error;
         }
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionDynamicEstats(const PMIB_TCP6ROW tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
+        ULONG GetPerConnectionDynamicEstats(MIB_TCP6ROW* tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
@@ -741,7 +741,7 @@ namespace ctsPerf
             }
 
             template <typename T>
-            void StartTracking(T tcpRow) const noexcept
+            void StartTracking(T tcpRow) const
             {
                 m_data.StartTracking(tcpRow);
             }

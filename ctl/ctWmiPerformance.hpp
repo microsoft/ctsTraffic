@@ -1071,7 +1071,7 @@ namespace ctl
     class ctWmiPerformanceCounterImpl final : public ctWmiPerformanceCounter<TData>
     {
     public:
-        ctWmiPerformanceCounterImpl(ctWmiService wmi, _In_ PCWSTR className, _In_ PCWSTR counterName, const ctWmiPerformanceCollectionType collectionType) :
+        ctWmiPerformanceCounterImpl(const ctWmiService& wmi, _In_ PCWSTR className, _In_ PCWSTR counterName, const ctWmiPerformanceCollectionType collectionType) :
             ctWmiPerformanceCounter<TData>(counterName, collectionType),
             m_accessor(wmi, this->access_refresher(), className) // must qualify 'this' name lookup to access access_refresher since it's in the base class
         {
@@ -1130,7 +1130,7 @@ namespace ctl
     class ctWmiPerformance final
     {
     public:
-        ctWmiPerformance(const ctWmiService& wmiService) : m_wmiService(wmiService)
+        ctWmiPerformance(ctWmiService wmiService) : m_wmiService(std::move(wmiService))
         {
             m_lockedData = std::make_unique<LockedData>();
             m_refresher = wil::CoCreateInstance<WbemRefresher, IWbemRefresher>();

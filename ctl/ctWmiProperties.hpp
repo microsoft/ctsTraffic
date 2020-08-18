@@ -14,6 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // cpp headers
+#include <memory>
 #include <iterator>
 #include <exception>
 #include <stdexcept>
@@ -23,8 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <OleAuto.h>
 #include <Wbemidl.h>
 // wil headers
-#include <wil/resource.h>
 #include <wil/com.h>
+#include <wil/resource.h>
 // local headers
 #include "ctWmiService.hpp"
 

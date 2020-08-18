@@ -156,7 +156,7 @@ namespace ctsTraffic
         // - since this could complete inline if it fails, and complete_state
         //   needs to know that we already tried to run the functor for this state
         //
-        auto this_ptr = static_cast<ctsSocketState*>(_context);
+        auto* this_ptr = static_cast<ctsSocketState*>(_context);
         switch (this_ptr->state)
         {
             case InternalState::Creating:

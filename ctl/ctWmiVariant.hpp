@@ -324,7 +324,7 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<std::wstring>& data)
     {
-        const auto temp_safe_array = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
+        auto* const temp_safe_array = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
         auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
@@ -334,7 +334,7 @@ namespace ctl
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
             long index[1]{ static_cast<long>(loop) };
 
-            const auto bstr = SysAllocString(data[loop].c_str());
+            auto* const bstr = SysAllocString(data[loop].c_str());
             THROW_IF_NULL_ALLOC(bstr);
             THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, bstr));
         }
@@ -367,7 +367,7 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned long>& data)
     {
-        const auto temp_safe_array = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
+        auto* const temp_safe_array = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
         auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
@@ -410,7 +410,7 @@ namespace ctl
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& data)
     {
         // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
-        const auto temp_safe_array = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
+        auto* const temp_safe_array = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
         auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 
@@ -455,7 +455,7 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned char>& data)
     {
-        const auto temp_safe_array = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
+        auto* const temp_safe_array = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(temp_safe_array);
         auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
 

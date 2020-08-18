@@ -475,7 +475,7 @@ namespace ctsTraffic
     {
         static const char c_StartBuffer[] = "START";
 
-        auto this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(context);
+        auto* this_ptr = static_cast<ctsIOPatternMediaStreamClient*>(context);
         // take the base lock before touching any internal members
         const auto lock = this_ptr->base_lock();
 

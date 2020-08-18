@@ -728,7 +728,7 @@ namespace ctsTraffic
         // We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
         // which is more useful than memcmp's "sign of the difference between the first two differing elements"
         //
-        const auto pattern_buffer = s_ProtectedSharedBuffer + original_task.expected_pattern_offset;
+        const auto* const pattern_buffer = s_ProtectedSharedBuffer + original_task.expected_pattern_offset;
         const size_t length_matched = RtlCompareMemory(
             pattern_buffer,
             original_task.buffer + original_task.buffer_offset,

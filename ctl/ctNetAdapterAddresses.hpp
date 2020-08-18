@@ -229,9 +229,9 @@ namespace ctl
 
         bool operator ()(const IP_ADAPTER_ADDRESSES& ipAddress) const noexcept
         {
-            for (auto unicastAddress = ipAddress.FirstUnicastAddress;
-                unicastAddress != nullptr;
-                unicastAddress = unicastAddress->Next)
+            for (auto* unicastAddress = ipAddress.FirstUnicastAddress;
+                 unicastAddress != nullptr;
+                 unicastAddress = unicastAddress->Next)
             {
                 const ctSockaddr unicastSockaddr(&unicastAddress->Address);
                 if (unicastSockaddr == m_targetAddr)

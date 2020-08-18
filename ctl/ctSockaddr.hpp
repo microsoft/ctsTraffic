@@ -55,7 +55,7 @@ namespace ctl
             std::vector<ctSockaddr> return_addrs;
             if (0 == GetAddrInfoW(name, nullptr, nullptr, &addr_result))
             {
-                for (auto addrinfo = addr_result; addrinfo != nullptr; addrinfo = addrinfo->ai_next)
+                for (auto* addrinfo = addr_result; addrinfo != nullptr; addrinfo = addrinfo->ai_next)
                 {
                     return_addrs.emplace_back(addrinfo->ai_addr, static_cast<int>(addrinfo->ai_addrlen));
                 }
@@ -75,8 +75,8 @@ namespace ctl
             const IN6_ADDR v4MappedPrefix{ {IN6ADDR_V4MAPPEDPREFIX_INIT} };
 
             ctSockaddr outV6(AF_INET6);
-            const auto a6 = outV6.in6_addr();
-            const auto a4 = inV4.in_addr();
+            auto* const a6 = outV6.in6_addr();
+            const auto* const a4 = inV4.in_addr();
 
             *a6 = v4MappedPrefix;
             a6->u.Byte[12] = a4->S_un.S_un_b.s_b1;
@@ -189,7 +189,7 @@ namespace ctl
         {
             if (AF_INET == family)
             {
-                const auto in4 = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
+                auto* const in4 = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
                 const auto in4_port = in4->sin_port;
                 ::ZeroMemory(&m_saddr, m_saddrSize);
                 in4->sin_family = AF_INET;
@@ -198,7 +198,7 @@ namespace ctl
             }
             else if (AF_INET6 == family)
             {
-                const auto in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
+                auto* const in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
                 const auto in6_port = in6->sin6_port;
                 ::ZeroMemory(&m_saddr, m_saddrSize);
                 in6->sin6_family = AF_INET6;
@@ -526,20 +526,20 @@ namespace ctl
     inline void ctSockaddr::SetAddress(const IN_ADDR* inAddr) noexcept
     {
         m_saddr.si_family = AF_INET;
-        const auto addr_in = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
+        auto* const addr_in = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
         addr_in->sin_addr.S_un.S_addr = inAddr->S_un.S_addr;
     }
 
     inline void ctSockaddr::SetAddress(const IN6_ADDR* inAddr) noexcept
     {
         m_saddr.si_family = AF_INET6;
-        const auto addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
+        auto* const addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
         addr_in6->sin6_addr = *inAddr;
     }
 
     inline void ctSockaddr::SetPort(unsigned short port, ByteOrder byteOrder) noexcept
     {
-        const auto addr_in = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
+        auto* const addr_in = reinterpret_cast<PSOCKADDR_IN>(&m_saddr);
         addr_in->sin_port = byteOrder == ByteOrder::HostOrder ? htons(port) : port;
     }
 
@@ -547,7 +547,7 @@ namespace ctl
     {
         if (AF_INET6 == m_saddr.si_family)
         {
-            const auto addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
+            auto* const addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
             addr_in6->sin6_scope_id = scopeid;
         }
     }
@@ -556,7 +556,7 @@ namespace ctl
     {
         if (AF_INET6 == m_saddr.si_family)
         {
-            const auto addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
+            auto* const addr_in6 = reinterpret_cast<PSOCKADDR_IN6>(&m_saddr);
             addr_in6->sin6_flowinfo = flowinfo;
         }
     }
@@ -573,9 +573,9 @@ namespace ctl
     {
         ::ZeroMemory(address, IpStringMaxLength * sizeof(WCHAR));
 
-        const auto pAddr = AF_INET == m_saddr.si_family
-            ? reinterpret_cast<PVOID>(in_addr())
-            : reinterpret_cast<PVOID>(in6_addr());
+        const auto* const pAddr = AF_INET == m_saddr.si_family
+                                ? reinterpret_cast<PVOID>(in_addr())
+                                : reinterpret_cast<PVOID>(in6_addr());
         return nullptr != InetNtopW(m_saddr.si_family, pAddr, address, IpStringMaxLength);
     }
 
@@ -583,9 +583,9 @@ namespace ctl
     {
         ::ZeroMemory(address, IpStringMaxLength * sizeof(CHAR));
 
-        const auto pAddr = AF_INET == m_saddr.si_family
-            ? reinterpret_cast<PVOID>(in_addr())
-            : reinterpret_cast<PVOID>(in6_addr());
+        const auto* const pAddr = AF_INET == m_saddr.si_family
+                                ? reinterpret_cast<PVOID>(in_addr())
+                                : reinterpret_cast<PVOID>(in6_addr());
         return nullptr != ::InetNtopA(m_saddr.si_family, pAddr, address, IpStringMaxLength);
     }
 
@@ -606,8 +606,8 @@ namespace ctl
         {
             if (family() == AF_INET6 && trim_scope)
             {
-                const auto end = address + addressLength;
-                auto scope_ptr = std::find(address, end, L'%');
+                auto* const end = address + addressLength;
+                auto* scope_ptr = std::find(address, end, L'%');
                 if (scope_ptr != end)
                 {
                     const WCHAR* move_ptr = std::find(address, end, L']');
@@ -645,11 +645,11 @@ namespace ctl
         {
             if (family() == AF_INET6 && trim_scope)
             {
-                const auto end = address + addressLength;
-                auto scope_ptr = std::find(address, end, '%');
+                auto* const end = address + addressLength;
+                auto* scope_ptr = std::find(address, end, '%');
                 if (scope_ptr != end)
                 {
-                    auto move_ptr = std::find(address, end, ']');
+                    auto* move_ptr = std::find(address, end, ']');
                     if (move_ptr != end)
                     {
                         while (move_ptr != end)
@@ -688,7 +688,7 @@ namespace ctl
 
     inline unsigned short ctSockaddr::port() const noexcept
     {
-        const auto addr_in = reinterpret_cast<const SOCKADDR_IN*>(&m_saddr);
+        const auto* const addr_in = reinterpret_cast<const SOCKADDR_IN*>(&m_saddr);
         return ntohs(addr_in->sin_port);
     }
 
@@ -696,7 +696,7 @@ namespace ctl
     {
         if (AF_INET6 == m_saddr.si_family)
         {
-            const auto addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
+            const auto* const addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
             return addr_in6->sin6_flowinfo;
         }
         return 0;
@@ -706,7 +706,7 @@ namespace ctl
     {
         if (AF_INET6 == m_saddr.si_family)
         {
-            const auto addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
+            const auto* const addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
             return addr_in6->sin6_scope_id;
         }
         return 0;
@@ -738,13 +738,13 @@ namespace ctl
 
     inline IN_ADDR* ctSockaddr::in_addr() const noexcept
     {
-        const auto addr_in = reinterpret_cast<const SOCKADDR_IN*>(&m_saddr);
+        const auto* const addr_in = reinterpret_cast<const SOCKADDR_IN*>(&m_saddr);
         return const_cast<IN_ADDR*>(&addr_in->sin_addr);
     }
 
     inline IN6_ADDR* ctSockaddr::in6_addr() const noexcept
     {
-        const auto addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
+        const auto* const addr_in6 = reinterpret_cast<const SOCKADDR_IN6*>(&m_saddr);
         return const_cast<IN6_ADDR*>(&addr_in6->sin6_addr);
     }
 } // namespace ctl

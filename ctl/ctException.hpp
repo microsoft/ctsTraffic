@@ -569,7 +569,7 @@ namespace ctl
         }
 
         const auto tSize = strlen(tSrc) + 1;
-        auto tDest = static_cast<char*>(calloc(tSize, sizeof(char)));
+        auto* tDest = static_cast<char*>(calloc(tSize, sizeof(char)));
         if (tDest != nullptr)
         {
             const auto err = strcpy_s(tDest, tSize, tSrc);
@@ -601,7 +601,7 @@ namespace ctl
         }
 
         const auto tSize = wcslen(tSrc) + 1;
-        auto tDest = static_cast<wchar_t*>(calloc(tSize, sizeof(wchar_t)));
+        auto* tDest = static_cast<wchar_t*>(calloc(tSize, sizeof(wchar_t)));
         if (tDest != nullptr)
         {
             const auto err = wcscpy_s(tDest, tSize, tSrc);

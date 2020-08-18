@@ -231,7 +231,7 @@ namespace ctl
             PTP_TIMER timer) noexcept
             try
         {
-            auto this_ptr = static_cast<ctThreadpoolTimer*>(context);
+            auto* this_ptr = static_cast<ctThreadpoolTimer*>(context);
 
             // save off the functor to invoke outside the lock
             std::function<void()> functor;

@@ -168,7 +168,7 @@ namespace ctl
         {
             // this can fail by throwing std::bad_alloc
             // ReSharper disable CppNonReclaimedResourceAcquisition
-            auto new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
+            auto* new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
             // ReSharper restore CppNonReclaimedResourceAcquisition
 
             // once creating a new request succeeds, start the IO
@@ -189,7 +189,7 @@ namespace ctl
         void cancel_request(OVERLAPPED* _pov) const noexcept
         {
             CancelThreadpoolIo(ptp_io);
-            const auto old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);
+            const auto* const old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);
             delete old_request;
         }
 

@@ -415,7 +415,7 @@ namespace ctl
         void get_property(_In_ PCWSTR propertyName, _Inout_ VARIANT* pVariant) const
         {
             // since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
-            auto pInstance = const_cast<IWbemClassObject*>(m_instanceObject.get());
+            auto* pInstance = const_cast<IWbemClassObject*>(m_instanceObject.get());
             THROW_IF_FAILED(pInstance->Get(
                 propertyName,
                 0,
