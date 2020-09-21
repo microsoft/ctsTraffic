@@ -11,12 +11,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <vector>
 #include <algorithm>
 
+#include <wil/stl.h>
 #include <wil/resource.h>
 
 #include <ctString.hpp>
@@ -49,7 +50,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCSTR) noexcept
+    void PrintErrorInfo(_In_ PCWSTR) noexcept
     {
     }
 

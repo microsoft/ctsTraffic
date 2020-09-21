@@ -20,4 +20,4 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // defining _WIN32_WINNT_WIN7 in the project settings
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>

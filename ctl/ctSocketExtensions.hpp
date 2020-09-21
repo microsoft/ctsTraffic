@@ -15,10 +15,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
-#include <mswsock.h>
-#include <rpc.h> // for GUID
+#include <WinSock2.h>
+#include <MSWSock.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 
 

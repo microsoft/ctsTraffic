@@ -21,10 +21,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
-// ReSharper disable once CppUnusedIncludeDirective
 #include <wil/resource.h>
 // ctl headers
-#include "ctException.hpp"
 #include "ctTimer.hpp"
 
 
@@ -162,7 +160,7 @@ namespace ctl
             const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, this->m_tpEnvironment); // NOLINT(misc-misplaced-const)
             if (!ptp_timer)
             {
-                throw ctException(GetLastError(), L"CreateThreadpoolTimer", L"ctl::ctThreadpoolTimer", false);
+                THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolTimer");
             }
             return ptp_timer;
         }

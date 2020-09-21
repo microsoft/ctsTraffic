@@ -23,13 +23,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 // os headers
 #include <Windows.h>
-#include <Objbase.h>
+#include <objbase.h>
 #include <OleAuto.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
 // ctl headers
 #include <ctWmiInitialize.hpp>
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -374,7 +376,7 @@ namespace ctl
             : m_currentIterator(m_accessorObjects.end())
         {
             ctWmiEnumerate enum_instances(wmi);
-            enum_instances.query(ctString::ctFormatString(L"SELECT * FROM %ws", classname).c_str());
+            enum_instances.query(wil::str_printf<std::wstring>(L"SELECT * FROM %ws", classname).c_str());
             if (enum_instances.begin() == enum_instances.end())
             {
                 THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_NOT_FOUND),

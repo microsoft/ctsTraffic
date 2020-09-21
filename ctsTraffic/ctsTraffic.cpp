@@ -20,9 +20,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
-#include <ctString.hpp>
-#include <ctException.hpp>
 #include <ctThreadPoolTimer.hpp>
+// wil headers
+#include <wil/stl.h>
+#include <wil/resource.h>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocketBroker.h"
@@ -63,19 +64,19 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     catch (const ctsSafeIntException& e)
     {
-        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("Invalid parameters : %ws", ctsPrintSafeIntException(e)).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid parameters : %ws", ctsPrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
     catch (const invalid_argument& e)
     {
-        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("Invalid argument specified: %hs", e.what()).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
     catch (const exception& e)
     {
-        ctsConfig::PrintExceptionOverride(e);
+        ctsConfig::PrintExceptionOverride(e.what());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
@@ -99,7 +100,7 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     {
         if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE))
         {
-            throw ctException(GetLastError(), L"SetConsoleCtrlHandler", false);
+            THROW_WIN32_MSG(GetLastError(), "SetConsoleCtrlHandler");
         }
 
         ctsConfig::PrintSettings();
@@ -120,25 +121,25 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     catch (const ctsSafeIntException& e)
     {
-        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e)).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
-    catch (const ctException& e)
+    catch (const wil::ResultException& e)
     {
-        ctsConfig::PrintExceptionOverride(e);
+        ctsConfig::PrintExceptionOverride(e.what());
         ctsConfig::Shutdown();
-        return e.why() == 0 ? ERROR_CANCELLED : static_cast<int>(e.why());
+        return e.GetErrorCode();
     }
     catch (const bad_alloc&)
     {
-        ctsConfig::PrintErrorInfoOverride("ctsTraffic failed: Out of Memory");
+        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed: Out of Memory");
         ctsConfig::Shutdown();
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e)
     {
-        ctsConfig::PrintErrorInfoOverride(ctString::ctFormatString("ctsTraffic failed: %hs", e.what()).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed: %hs", e.what()).c_str());
         ctsConfig::Shutdown();
         return ERROR_CANCELLED;
     }

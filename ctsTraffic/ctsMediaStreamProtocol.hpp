@@ -17,16 +17,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <array>
 #include <string>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 #include <WinSock2.h>
 // ctl headers
-#include <ctString.hpp>
 #include <ctTimer.hpp>
 // local headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
+// wil headers
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -290,7 +292,7 @@ namespace ctsTraffic
             if (_completed_bytes < UdpDatagramProtocolHeaderFlagLength)
             {
                 ctsConfig::PrintErrorInfo(
-                    ctl::ctString::ctFormatString("ValidateBufferLengthFromTask rejecting the datagram: the datagram size (%u) is less than UdpDatagramProtocolHeaderFlagLength (%u)",
+                    wil::str_printf<std::wstring>(L"ValidateBufferLengthFromTask rejecting the datagram: the datagram size (%u) is less than UdpDatagramProtocolHeaderFlagLength (%u)",
                         _completed_bytes,
                         UdpDatagramProtocolHeaderFlagLength).c_str());
                 return false;
@@ -302,7 +304,7 @@ namespace ctsTraffic
                     if (_completed_bytes < UdpDatagramDataHeaderLength)
                     {
                         ctsConfig::PrintErrorInfo(
-                            ctl::ctString::ctFormatString("ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagData: the datagram size (%u) is less than UdpDatagramDataHeaderLength (%u)",
+                            wil::str_printf<std::wstring>(L"ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagData: the datagram size (%u) is less than UdpDatagramDataHeaderLength (%u)",
                                 _completed_bytes,
                                 UdpDatagramDataHeaderLength).c_str());
                         return false;
@@ -313,7 +315,7 @@ namespace ctsTraffic
                     if (_completed_bytes < UdpDatagramConnectionIdHeaderLength)
                     {
                         ctsConfig::PrintErrorInfo(
-                            ctl::ctString::ctFormatString("ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagId: the datagram size (%u) is less than UdpDatagramConnectionIdHeaderLength (%u)",
+                            wil::str_printf<std::wstring>(L"ValidateBufferLengthFromTask rejecting the datagram type UdpDatagramProtocolHeaderFlagId: the datagram size (%u) is less than UdpDatagramConnectionIdHeaderLength (%u)",
                                 _completed_bytes,
                                 UdpDatagramConnectionIdHeaderLength).c_str());
                         return false;
@@ -322,7 +324,7 @@ namespace ctsTraffic
 
                 default:
                     ctsConfig::PrintErrorInfo(
-                        ctl::ctString::ctFormatString("ValidateBufferLengthFromTask rejecting the datagram of unknown frame type (%u) - expecting UdpDatagramProtocolHeaderFlagData (%u) or UdpDatagramProtocolHeaderFlagId (%u)",
+                        wil::str_printf<std::wstring>(L"ValidateBufferLengthFromTask rejecting the datagram of unknown frame type (%u) - expecting UdpDatagramProtocolHeaderFlagData (%u) or UdpDatagramProtocolHeaderFlagId (%u)",
                             GetProtocolHeaderFromTask(_task),
                             UdpDatagramProtocolHeaderFlagData,
                             UdpDatagramProtocolHeaderFlagId).c_str());

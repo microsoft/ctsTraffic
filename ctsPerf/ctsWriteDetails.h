@@ -20,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // project headers
 #include "ctString.hpp"
@@ -37,39 +38,39 @@ namespace ctsPerf {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         inline std::wstring Write(ULONGLONG first_value)
         {
-            return ctl::ctString::ctFormatString(L",%llu", first_value);
+            return wil::str_printf<std::wstring>(L",%llu", first_value);
         }
         inline std::wstring Write(ULONG first_value)
         {
-            return ctl::ctString::ctFormatString(L",%lu", first_value);
+            return wil::str_printf<std::wstring>(L",%lu", first_value);
         }
         inline std::wstring Write(double first_value)
         {
-            return ctl::ctString::ctFormatString(L",%.3f", first_value);
+            return wil::str_printf<std::wstring>(L",%.3f", first_value);
         }
         inline std::wstring Write(ULONGLONG first_value, ULONGLONG second_value)
         {
-            return ctl::ctString::ctFormatString(L",%llu,%llu", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%llu,%llu", first_value, second_value);
         }
         inline std::wstring Write(ULONG first_value, ULONG second_value)
         {
-            return ctl::ctString::ctFormatString(L",%lu,%lu", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%lu,%lu", first_value, second_value);
         }
         inline std::wstring Write(double first_value, double second_value)
         {
-            return ctl::ctString::ctFormatString(L",%.3f,%.3f", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%.3f,%.3f", first_value, second_value);
         }
         inline std::wstring Write(ULONGLONG first_value, ULONGLONG second_value, ULONGLONG third_value)
         {
-            return ctl::ctString::ctFormatString(L",%llu,%llu,%llu", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%llu,%llu,%llu", first_value, second_value, third_value);
         }
         inline std::wstring Write(ULONG first_value, ULONG second_value, ULONG third_value)
         {
-            return ctl::ctString::ctFormatString(L",%lu,%lu,%lu", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%lu,%lu,%lu", first_value, second_value, third_value);
         }
         inline std::wstring Write(double first_value, double second_value, double third_value)
         {
-            return ctl::ctString::ctFormatString(L",%.3f,%.3f,%.3f", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%.3f,%.3f,%.3f", first_value, second_value, third_value);
         }
     }
 

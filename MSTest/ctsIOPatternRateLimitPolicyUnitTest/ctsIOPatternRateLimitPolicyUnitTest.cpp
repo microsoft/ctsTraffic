@@ -13,7 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #define CTSTRAFFIC_UNIT_TESTS
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <memory>
@@ -66,13 +66,15 @@ namespace ctsTraffic::ctsConfig
     {
         va_list va_args;
         va_start(va_args, _text);
-        Logger::WriteMessage(ctl::ctString::ctFormatStringVa(_text, va_args).c_str());
+        std::wstring outputString;
+        wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, va_args);
+        Logger::WriteMessage(outputString.c_str());
         va_end(va_args);
     }
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCSTR) noexcept
+    void PrintErrorInfo(_In_ PCWSTR) noexcept
     {
     }
 
@@ -562,7 +564,7 @@ namespace ctsUnitTest
             // send #5 : qpc_time 4 : time_offset 0 (sent 10 bytes) ** filled the quantum
             for (unsigned long counter = 0; counter < 5; ++counter)
             {
-                Logger::WriteMessage(ctl::ctString::ctFormatString(
+                Logger::WriteMessage(wil::str_printf<std::wstring>(
                     L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                     s_QpcTime, TestBytes, 0LL).c_str());
                 test_timer->update_time_offset(test_task, TestBytes);
@@ -588,7 +590,7 @@ namespace ctsUnitTest
                 if (counter % 5 == 0)
                 {
                     ++s_QpcTime;
-                    Logger::WriteMessage(ctl::ctString::ctFormatString(
+                    Logger::WriteMessage(wil::str_printf<std::wstring>(
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 95LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
@@ -599,7 +601,7 @@ namespace ctsUnitTest
                 {
        // the 2nd send should offset by 96ms to start 1m into the next quantum
                     s_QpcTime += 96;
-                    Logger::WriteMessage(ctl::ctString::ctFormatString(
+                    Logger::WriteMessage(wil::str_printf<std::wstring>(
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 0LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
@@ -609,7 +611,7 @@ namespace ctsUnitTest
                 else
                 {
                     ++s_QpcTime;
-                    Logger::WriteMessage(ctl::ctString::ctFormatString(
+                    Logger::WriteMessage(wil::str_printf<std::wstring>(
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 0LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
@@ -634,7 +636,7 @@ namespace ctsUnitTest
             s_QpcTime = 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
@@ -642,7 +644,7 @@ namespace ctsUnitTest
             s_QpcTime += 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(998LL, test_task.time_offset_milliseconds);
@@ -652,7 +654,7 @@ namespace ctsUnitTest
                 s_QpcTime += 1000LL;
                 test_timer->update_time_offset(test_task, TestBytes);
                 Logger::WriteMessage(
-                    ctl::ctString::ctFormatString(
+                    wil::str_printf<std::wstring>(
                         L"QPC %lld  -  offset %lld\n",
                         s_QpcTime, test_task.time_offset_milliseconds).c_str());
                 Assert::AreEqual(998LL, test_task.time_offset_milliseconds);
@@ -677,7 +679,7 @@ namespace ctsUnitTest
             s_QpcTime = 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
@@ -686,7 +688,7 @@ namespace ctsUnitTest
             s_QpcTime = 2LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(498LL, test_task.time_offset_milliseconds);
@@ -695,7 +697,7 @@ namespace ctsUnitTest
             s_QpcTime = 3LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(997LL, test_task.time_offset_milliseconds);
@@ -703,7 +705,7 @@ namespace ctsUnitTest
             s_QpcTime = 1000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(500LL, test_task.time_offset_milliseconds);
@@ -726,7 +728,7 @@ namespace ctsUnitTest
             // first can be sent immediately
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
@@ -734,7 +736,7 @@ namespace ctsUnitTest
             // second can be sent at one-thrid second
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(300LL, test_task.time_offset_milliseconds);
@@ -742,21 +744,21 @@ namespace ctsUnitTest
             // third must be sent at two-thrids second
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(600LL, test_task.time_offset_milliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(900LL, test_task.time_offset_milliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(1200LL, test_task.time_offset_milliseconds);
@@ -764,7 +766,7 @@ namespace ctsUnitTest
             s_QpcTime = 1000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(500LL, test_task.time_offset_milliseconds);
@@ -773,7 +775,7 @@ namespace ctsUnitTest
             s_QpcTime = 2000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
@@ -782,7 +784,7 @@ namespace ctsUnitTest
             s_QpcTime = 2000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(
+                wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
                     s_QpcTime, test_task.time_offset_milliseconds).c_str());
             Assert::AreEqual(300LL, test_task.time_offset_milliseconds);

@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 // ctl headers
-#include <ctException.hpp>
 #include <ctSockaddr.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>
@@ -140,7 +139,12 @@ namespace ctsTraffic
                     // done until the next send completes
                     break;
 
-                default:
+                case IOTaskAction::Recv: // fall-through
+                case IOTaskAction::GracefulShutdown: // fall-through
+                case IOTaskAction::HardShutdown: // fall-through
+                case IOTaskAction::Abort: // fall-through
+                case IOTaskAction::FatalAbort: // fall-through
+                default:  // NOLINT(clang-diagnostic-covered-switch-default)
                     FAIL_FAST_MSG(
                         "Unexpected task action returned from initiate_io - %u (dt %p ctsTraffic::ctsIOTask)",
                         static_cast<unsigned long>(current_task.ioAction),
@@ -162,7 +166,7 @@ namespace ctsTraffic
             try
             {
                 ctsConfig::PrintErrorInfo(
-                    ctl::ctString::ctFormatString("MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
+                    wil::str_printf<std::wstring>(L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
                         this_ptr->remote_addr.WriteCompleteAddress().c_str()).c_str());
             }
             catch (...)
@@ -177,9 +181,9 @@ namespace ctsTraffic
         {
             try
             {
-                PrintDebugInfo(
+                PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-                    this_ptr->remote_addr.WriteCompleteAddress().c_str());
+                    this_ptr->remote_addr.WriteCompleteAddress().c_str())
             }
             catch (...)
             {

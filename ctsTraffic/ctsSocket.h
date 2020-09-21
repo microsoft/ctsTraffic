@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 #include <type_traits>
 // os headers
-#include <windows.h>
-#include <Winsock2.h>
+#include <Windows.h>
+#include <WinSock2.h>
 // wil headers
 #include <wil/resource.h>
 // ctl headers
@@ -111,7 +111,7 @@ namespace ctsTraffic
         // - if not already association with the TP, will associate on the first call
         //
         // This can fail under low-resource conditions
-        // - can throw std::bad_alloc or ctl::ctException
+        // - can throw std::bad_alloc or wil::ResultException
         //
         const std::shared_ptr<ctl::ctThreadIocp>& thread_pool();
 

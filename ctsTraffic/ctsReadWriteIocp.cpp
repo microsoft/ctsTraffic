@@ -15,7 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
+#include <WinSock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
@@ -63,7 +63,7 @@ namespace ctsTraffic
         }
 
         const char* function_name = IOTaskAction::Send == _io_task.ioAction ? "WriteFile" : "ReadFile";
-        if (gle != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, gle);
+        if (gle != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, gle)
         // see if complete_io requests more IO
         DWORD readwrite_status = NO_ERROR;
         const ctsIOStatus protocol_status = shared_pattern->complete_io(_io_task, transferred, gle);
@@ -166,10 +166,9 @@ namespace ctsTraffic
                     pov = io_thread_pool->new_request(
                         [_weak_socket, next_io](OVERLAPPED* _ov) noexcept { ctsReadWriteIocpIoCompletionCallback(_ov, _weak_socket, next_io); });
                 }
-                catch (const std::exception& e)
+                catch (...)
                 {
-                    ctsConfig::PrintException(e);
-                    io_error = ctl::ctErrorCode(e);
+                    io_error = ctsConfig::PrintThrownException();
                 }
 
                 // if an exception prevented this IO from initiating,
@@ -211,7 +210,7 @@ namespace ctsTraffic
                     io_count = shared_socket->decrement_io();
 
                     const char* function_name = IOTaskAction::Send == next_io.ioAction ? "WriteFile" : "ReadFile";
-                    PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, io_error);
+                    PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, io_error)
 
                     // call back to the socket that it failed to see if wants more IO
                     const ctsIOStatus protocol_status = shared_pattern->complete_io(next_io, 0, io_error);

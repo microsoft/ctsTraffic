@@ -19,9 +19,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
-#include <ctException.hpp>
 #include <ctThreadPoolTimer.hpp>
 // project headers
 #include "ctsConfig.h"
@@ -84,9 +84,9 @@ namespace ctsTraffic
 
     void ctsSocketBroker::start()
     {
-        PrintDebugInfo(
+        PRINT_DEBUG_INFO(
             L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
-            total_connections_remaining, pending_limit);
+            total_connections_remaining, pending_limit)
 
         // must always guard access to the vector
         const auto lock = this->cs.lock();

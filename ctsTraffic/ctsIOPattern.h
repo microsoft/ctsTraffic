@@ -17,14 +17,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <algorithm>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsSafeInt.hpp"
 #include "ctsIOPatternState.hpp"
 #include "ctsStatistics.hpp"
-#include <mswsock.h>
+#include <MSWSock.h>
 
 namespace ctsTraffic
 {
@@ -411,7 +411,7 @@ namespace ctsTraffic
             // before printing the final results, make sure the timers are stopped
             if (0 == this->get_last_error() && 0 == stats.current_bytes())
             {
-                PrintDebugInfo(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n");
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern::print_stats : reporting a successful IO completion but transfered zero bytes\n")
                 this->update_last_protocol_error(ctsIOPatternProtocolError::TooFewBytes);
             }
 

@@ -19,9 +19,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <excpt.h>
 #include <Windows.h>
-#include <winsock2.h>
-// ct headers
-#include "ctException.hpp"
+#include <WinSock2.h>
+// wil headers
+#include <wil/resource.h>
 
 
 namespace ctl
@@ -99,14 +99,14 @@ namespace ctl
     public:
         //
         // These c'tors can fail under low resources
-        // - ctl::ctException (from the ThreadPool APIs)
+        // - wil::ResultException (from the ThreadPool APIs)
         //
         explicit ctThreadIocp(HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
         {
             ptp_io = CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env);
             if (!ptp_io)
             {
-                throw ctException(GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
+                THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolIo");
             }
         }
 
@@ -115,7 +115,7 @@ namespace ctl
             ptp_io = CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
             if (!ptp_io)
             {
-                throw ctException(GetLastError(), L"CreateThreadpoolIo", L"ctl::ctThreadIocp::ctThreadIocp", false);
+                THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolIo");
             }
         }
 

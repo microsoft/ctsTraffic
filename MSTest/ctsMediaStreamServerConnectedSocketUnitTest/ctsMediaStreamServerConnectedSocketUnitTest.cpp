@@ -11,7 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <memory>
@@ -69,7 +69,7 @@ namespace ctsTraffic
         void PrintException(const std::exception&) noexcept
         {
         }
-        void PrintErrorInfo(_In_ PCSTR) noexcept
+        void PrintErrorInfo(_In_ PCWSTR) noexcept
         {
         }
 
@@ -405,7 +405,7 @@ namespace ctsUnitTest
             s_IOPended = 1;
             test_connected_socket.schedule_task(test_task);
             // should complete within 1 second (a few ms after 900ms)
-            Assert::AreEqual(WAIT_OBJECT_0, ::WaitForSingleObject(s_RemovedSocketEvent, 1000));
+            Assert::AreEqual(WAIT_OBJECT_0, ::WaitForSingleObject(s_RemovedSocketEvent, 1250));
             Assert::AreEqual(10UL, callback_invoked);
         }
 

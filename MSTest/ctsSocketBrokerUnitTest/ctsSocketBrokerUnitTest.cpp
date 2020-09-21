@@ -11,15 +11,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 // cpp headers
 #include <vector>
 #include <memory>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctString.hpp>
@@ -46,7 +47,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
             case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
             case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
         }
-        return ctl::ctString::ctFormatString(L"Unknown State (0x%x)", _state);
+        return wil::str_printf<std::wstring>(L"Unknown State (0x%x)", _state);
     }
 }
 
@@ -62,9 +63,9 @@ namespace ctsTraffic::ctsConfig
     {
         va_list args;
         va_start(args, _text);
-
-        const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
-        Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+        std::wstring outputString;
+        wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+        Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
 
         va_end(args);
     }
@@ -243,7 +244,7 @@ void ctsSocketState::complete_state(DWORD _error_code) noexcept
 
             default:
                 Assert::Fail(
-                    ctl::ctString::ctFormatString(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+                    wil::str_printf<std::wstring>(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
         }
     }
     else

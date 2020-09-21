@@ -19,7 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 #include <memory>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 // ctl headers
 #include <ctTimer.hpp>
 #include <ctSockaddr.hpp>
@@ -109,7 +109,7 @@ namespace ctsTraffic
         // OR
         inline OptionType operator| (OptionType& lhs, OptionType rhs) noexcept
         {
-            return OptionType(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
         }
         inline OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -120,7 +120,7 @@ namespace ctsTraffic
         // AND
         inline OptionType operator& (OptionType lhs, OptionType rhs) noexcept
         {
-            return OptionType(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
         }
         inline OptionType& operator&= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -131,7 +131,7 @@ namespace ctsTraffic
         // XOR
         inline OptionType operator^ (OptionType lhs, OptionType rhs) noexcept
         {
-            return OptionType(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
         }
         inline OptionType& operator^= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -142,7 +142,7 @@ namespace ctsTraffic
         // NOT
         inline OptionType operator~ (OptionType lhs) noexcept
         {
-            return OptionType(~static_cast<unsigned long>(lhs));
+            return static_cast<OptionType>(~static_cast<unsigned long>(lhs));
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -179,10 +179,10 @@ namespace ctsTraffic
         void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame) noexcept;
 
         void PrintStatusUpdate() noexcept;
-        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept;
+        void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
-#define PrintDebugInfo(fmt, ...)                                        \
+#define PRINT_DEBUG_INFO(fmt, ...)                                        \
         {                                                               \
             if (!::ctsTraffic::ctsConfig::ShutdownCalled()) {           \
                 switch (::ctsTraffic::ctsConfig::ConsoleVerbosity()) {  \
@@ -193,19 +193,29 @@ namespace ctsTraffic
             }                                                           \
         }
 
-        void PrintErrorIfFailed(PCSTR _what, unsigned long _why) noexcept;
-        void __cdecl PrintErrorInfo(_In_ PCSTR _text) noexcept;
+        void PrintErrorIfFailed(PCSTR what, unsigned long why) noexcept;
+        void PrintErrorInfo(_In_ PCWSTR text) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void __cdecl PrintErrorInfoOverride(_In_ PCSTR _text) noexcept;
+        void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
 
-        void PrintException(const std::exception& e) noexcept;
+        inline DWORD Win32FromHRESULT(HRESULT hr) noexcept
+        {
+            constexpr HRESULT Win32Mask = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0);
+            if ((hr & 0xFFFF0000) == Win32Mask)
+            {
+              return HRESULT_CODE(hr);
+            }
+            return hr;
+        }
+        DWORD PrintThrownException() noexcept;
+        void PrintException(DWORD why, _In_ PCWSTR what, _In_ PCWSTR where) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
-        void PrintExceptionOverride(const std::exception& e) noexcept;
+        void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept;
 
-        void PrintNewConnection(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsTcpStatistics& _stats) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _remote_addr, unsigned long _error, const ctsUdpStatistics& _stats) noexcept;
-        void PrintConnectionResults(unsigned long _error) noexcept;
+        void PrintNewConnection(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsTcpStatistics& stats) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsUdpStatistics& stats) noexcept;
+        void PrintConnectionResults(unsigned long error) noexcept;
 
         // Get* functions
         ctsSignedLongLong   GetTcpBytesPerSecond() noexcept;
@@ -219,8 +229,8 @@ namespace ctsTraffic
         bool IsListening() noexcept;
 
         // Set* functions
-        int SetPreBindOptions(SOCKET _s, const ctl::ctSockaddr& _local_address) noexcept;
-        int SetPreConnectOptions(SOCKET _s) noexcept;
+        int SetPreBindOptions(SOCKET s, const ctl::ctSockaddr& local_address) noexcept;
+        int SetPreConnectOptions(SOCKET s) noexcept;
 
         // for the MediaStream pattern
         struct MediaStreamSettings
@@ -340,9 +350,9 @@ namespace ctsTraffic
             unsigned long ConnectionLimit = 0;
             unsigned long ConnectionThrottleLimit = 0;
 
-            std::vector<ctl::ctSockaddr> ListenAddresses;
-            std::vector<ctl::ctSockaddr> TargetAddresses;
-            std::vector<ctl::ctSockaddr> BindAddresses;
+            std::vector<ctl::ctSockaddr> ListenAddresses{};
+            std::vector<ctl::ctSockaddr> TargetAddresses{};
+            std::vector<ctl::ctSockaddr> BindAddresses{};
 
             // stats for status updates and summaries
             ctsConnectionStatistics ConnectionStatusDetails;

@@ -87,10 +87,10 @@ namespace ctsTraffic
                 }
             }
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
-            return wsIOResult(WSAENOBUFS);
+            const auto error = ctsConfig::PrintThrownException();
+            return wsIOResult(error);
         }
 
         return return_result;
@@ -150,10 +150,10 @@ namespace ctsTraffic
                 }
             }
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
-            return wsIOResult(WSAENOBUFS);
+            const auto error = ctsConfig::PrintThrownException();
+            return wsIOResult(error);
         }
 
         return return_result;

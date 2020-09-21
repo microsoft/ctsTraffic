@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 // os headers
-#include <windows.h>
+#include <Windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
 // wil headers
@@ -275,9 +275,9 @@ namespace ctsTraffic
         {
             if (_current_transfer != ctsStatistics::ConnectionIdLength)
             {
-                PrintDebugInfo(
+                PRINT_DEBUG_INFO(
                     L"\t\tctsIOBuffers::SetConnectionId : the bytes received (%u) do not equal the expected length for the connection Id (%u)\n",
-                    _current_transfer, ctsStatistics::ConnectionIdLength);
+                    _current_transfer, ctsStatistics::ConnectionIdLength)
                 return false;
             }
 

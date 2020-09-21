@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctString.hpp>
@@ -99,7 +100,7 @@ namespace ctsPerf {
     void ctsWriteDetails::start_row(PCWSTR class_name, PCWSTR counter_name) const noexcept
     try
     {
-        auto formatted_string(ctl::ctString::ctFormatString(
+        auto formatted_string(wil::str_printf<std::wstring>(
             L"%ws (%ws)", class_name, counter_name));
         // since writing to csv, can't embed a comma in the data
         ctl::ctString::ctReplaceAll(formatted_string, L",", L"-");

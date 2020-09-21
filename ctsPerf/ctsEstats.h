@@ -23,13 +23,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable once CppUnusedIncludeDirective
 #include <WinSock2.h>
 #include <ws2ipdef.h>
-#include <Iphlpapi.h>
-#include <Tcpestats.h>
-
+#include <iphlpapi.h>
+#include <tcpestats.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
-
 // ctl headers
 #include <ctString.hpp>
 #include <ctSockaddr.hpp>
@@ -124,7 +123,7 @@ namespace ctsPerf
                 0);
             if (err != 0)
             {
-                throw ctl::ctException(err, L"SetPerTcpConnectionEStats", false);
+                THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
         }
         template <TCP_ESTATS_TYPE TcpType>
@@ -137,7 +136,7 @@ namespace ctsPerf
                 0);
             if (err != 0)
             {
-                throw ctl::ctException(err, L"SetPerTcp6ConnectionEStats", false);
+                THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
         }
 
@@ -356,7 +355,7 @@ namespace ctsPerf
             {
                 return
                     ctsWriteDetails::PrintMeanStdDev(m_conjestionWindows) +
-                    ctl::ctString::ctFormatString(
+                    wil::str_printf<std::wstring>(
                         L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
                         m_transitionsIntoReceiverLimited,
                         m_transitionsIntoSenderLimited,
@@ -414,7 +413,7 @@ namespace ctsPerf
 
             [[nodiscard]] std::wstring PrintData() const
             {
-                return ctl::ctString::ctFormatString(
+                return wil::str_printf<std::wstring>(
                     L",%lu,%lu,%lu,%lu,%lu",
                     m_bytesRetrans,
                     m_dupAcksRcvd,
@@ -470,8 +469,8 @@ namespace ctsPerf
             [[nodiscard]] std::wstring PrintData() const
             {
                 std::wstring formattedString(L",");
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", m_minReceiveWindow);
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", m_maxReceiveWindow);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", m_minReceiveWindow);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", m_maxReceiveWindow);
 
                 ULONG calculatedMin = ULONG_MAX;
                 ULONG calculatedMax = 0;
@@ -486,8 +485,8 @@ namespace ctsPerf
                         calculatedMax = value;
                     }
                 }
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", calculatedMin);
-                formattedString += ctl::ctString::ctFormatString(L"%lu", calculatedMax);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", calculatedMin);
+                formattedString += wil::str_printf<std::wstring>(L"%lu", calculatedMax);
 
                 return
                     formattedString +
@@ -532,8 +531,8 @@ namespace ctsPerf
             [[nodiscard]] std::wstring PrintData() const
             {
                 std::wstring formattedString(L",");
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", m_minReceiveWindow);
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", m_maxReceiveWindow);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", m_minReceiveWindow);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", m_maxReceiveWindow);
 
                 ULONG calculatedMin = ULONG_MAX;
                 ULONG calculatedMax = 0;
@@ -549,8 +548,8 @@ namespace ctsPerf
                     }
                 }
 
-                formattedString += ctl::ctString::ctFormatString(L"%lu,", calculatedMin);
-                formattedString += ctl::ctString::ctFormatString(L"%lu", calculatedMax);
+                formattedString += wil::str_printf<std::wstring>(L"%lu,", calculatedMin);
+                formattedString += wil::str_printf<std::wstring>(L"%lu", calculatedMax);
 
                 return
                     formattedString +
@@ -730,7 +729,7 @@ namespace ctsPerf
                 WCHAR remote_string[ctl::IpStringMaxLength];
                 (void)m_remoteAddr.WriteCompleteAddress(remote_string);
 
-                return ctl::ctString::ctFormatString(
+                return wil::str_printf<std::wstring>(
                     L"%ws,%ws",
                     local_string,
                     remote_string);
@@ -833,9 +832,13 @@ namespace ctsPerf
                     }
                 }
             }
+            catch (const wil::ResultException& e)
+            {
+                wprintf(L"~Estats exception: %hs\n", e.what());
+            }
             catch (const std::exception& e)
             {
-                wprintf(L"~Estats exception: %ws\n", ctl::ctString::ctFormatException(e).c_str());
+                wprintf(L"~Estats exception: %hs\n", e.what());
             }
         }
 
@@ -860,9 +863,14 @@ namespace ctsPerf
 
                 started = UpdateEstats();
             }
+            catch (const wil::ResultException& e)
+            {
+                wprintf(L"ctsEstats::Start exception: %hs\n", e.what());
+                started = false;
+            }
             catch (const std::exception& e)
             {
-                wprintf(L"ctsEstats::Start exception: %ws\n", ctl::ctString::ctFormatException(e).c_str());
+                wprintf(L"ctsEstats::Start exception: %hs\n", e.what());
                 started = false;
             }
 
@@ -953,9 +961,9 @@ namespace ctsPerf
                         UpdateDataPoints(m_remoteReceiveWindowData, tableEntry);
                         UpdateDataPoints(m_senderCongestionData, tableEntry);
                     }
-                    catch (const ctl::ctException& e)
+                    catch (...)
                     {
-                        if (e.why() == ERROR_ACCESS_DENIED)
+                        if (HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED) == wil::ResultFromCaughtException())
                         {
                             accessDenied = true;
                             throw;
@@ -985,9 +993,9 @@ namespace ctsPerf
                         UpdateDataPoints(m_remoteReceiveWindowData, tableEntry);
                         UpdateDataPoints(m_senderCongestionData, tableEntry);
                     }
-                    catch (const ctl::ctException& e)
+                    catch (...)
                     {
-                        if (e.why() == ERROR_ACCESS_DENIED)
+                        if (HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED) == wil::ResultFromCaughtException())
                         {
                             accessDenied = true;
                             throw;
@@ -997,9 +1005,13 @@ namespace ctsPerf
 
                 RemoveStaleDataPoints();
             }
+            catch (const wil::ResultException& e)
+            {
+                wprintf(L"ctsEstats::UpdateEstats exception: %hs\n", e.what());
+            }
             catch (const std::exception& e)
             {
-                wprintf(L"ctsEstats::UpdateEstats exception: %ws\n", ctl::ctString::ctFormatException(e).c_str());
+                wprintf(L"ctsEstats::UpdateEstats exception: %hs\n", e.what());
             }
 
             if (!accessDenied)
@@ -1010,9 +1022,14 @@ namespace ctsPerf
 
             return !accessDenied;
         }
+        catch (const wil::ResultException& e)
+        {
+            wprintf(L"ctsEstats::UpdateEstats exception: %hs\n", e.what());
+            return false;
+        }
         catch (const std::exception& e)
         {
-            wprintf(L"ctsEstats::UpdateEstats exception: %ws\n", ctl::ctString::ctFormatException(e).c_str());
+            wprintf(L"ctsEstats::UpdateEstats exception: %hs\n", e.what());
             return false;
         }
 
@@ -1036,7 +1053,7 @@ namespace ctsPerf
             }
             if (error != ERROR_SUCCESS)
             {
-                throw ctl::ctException(error, L"GetTcpTable", L"ctsEstats", false);
+                THROW_WIN32_MSG(error, "GetTcpTable");
             }
         }
         void RefreshIPv6Data()
@@ -1059,7 +1076,7 @@ namespace ctsPerf
             }
             if (error != ERROR_SUCCESS)
             {
-                throw ctl::ctException(error, L"GetTcp6Table", L"ctsEstats", false);
+                THROW_WIN32_MSG(error, "GetTcp6Table");
             }
         }
 

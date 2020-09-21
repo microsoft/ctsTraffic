@@ -19,11 +19,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctString.hpp>
 // project headers
 #include "ctsMediaStreamServerListeningSocket.h"
 #include "ctsMediaStreamServer.h"
@@ -116,7 +116,7 @@ namespace ctsTraffic
                             else
                             {
                                 ctsConfig::PrintErrorInfo(
-                                    ctl::ctString::ctFormatString("WSARecvFrom failed (SOCKET %Iu) with error (%d)",
+                                    wil::str_printf<std::wstring>(L"WSARecvFrom failed (SOCKET %Iu) with error (%d)",
                                         listeningSocket.get(),
                                         error).c_str());
                             }
@@ -133,10 +133,9 @@ namespace ctsTraffic
                     break;
                 }
             }
-            catch (const std::exception& e)
+            catch (...)
             {
-                ctsConfig::PrintException(e);
-                error = ERROR_OUTOFMEMORY;
+                error = ctsConfig::PrintThrownException();
             }
 
             if (error != NO_ERROR && error != WSAECONNRESET)
@@ -147,7 +146,7 @@ namespace ctsTraffic
                 try
                 {
                     ctsConfig::PrintErrorInfo(
-                        ctl::ctString::ctFormatString("MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted",
+                        wil::str_printf<std::wstring>(L"MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted",
                             error, failure_counter).c_str());
                 }
                 catch (...)
@@ -193,7 +192,7 @@ namespace ctsTraffic
                         {
                             if (!priorFailureWasConectionReset)
                             {
-                                ctsConfig::PrintErrorInfo("ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
+                                ctsConfig::PrintErrorInfo(L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
                             }
                             priorFailureWasConectionReset = true;
                         }
@@ -202,7 +201,7 @@ namespace ctsTraffic
                             ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
                             priorFailureWasConectionReset = false;
                             ctsConfig::PrintErrorInfo(
-                                ctl::ctString::ctFormatString("ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError()).c_str());
+                                wil::str_printf<std::wstring>(L"ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError()).c_str());
                         }
                     }
                     catch (...)
@@ -219,9 +218,9 @@ namespace ctsTraffic
                     switch (message.action)
                     {
                         case MediaStreamAction::START:
-                            PrintDebugInfo(
+                            PRINT_DEBUG_INFO(
                                 L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                                remoteAddr.WriteCompleteAddress().c_str());
+                                remoteAddr.WriteCompleteAddress().c_str())
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods
                             pimpl_operation = [this]() {
@@ -230,7 +229,7 @@ namespace ctsTraffic
 #endif
                             break;
 
-                        default:
+                        default:  // NOLINT(clang-diagnostic-covered-switch-default)
                             FAIL_FAST_MSG("ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.action, recv_buffer.data());
                     }
                 }
@@ -242,9 +241,9 @@ namespace ctsTraffic
                 pimpl_operation();
             }
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
+            ctsConfig::PrintThrownException();
         }
 
         // finally post another recv

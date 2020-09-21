@@ -26,8 +26,8 @@
 #endif /* __RPCNDR_H_VERSION__ */
 
 #ifndef COM_NO_WINDOWS_H
-#include "windows.h"
-#include "ole2.h"
+#include "Windows.h"
+#include "Ole2.h"
 #endif /*COM_NO_WINDOWS_H*/
 
 #ifndef __wbemdisp_h__
@@ -678,7 +678,7 @@ typedef interface ISWbemRefresher ISWbemRefresher;
 
 
 /* header files for imported files */
-#include "dispex.h"
+#include "DispEx.h"
 
 #ifdef __cplusplus
 extern "C"{

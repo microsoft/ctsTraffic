@@ -17,9 +17,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
-#include <mswsock.h>
+#include <WinSock2.h>
+#include <MSWSock.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
@@ -98,23 +99,23 @@ namespace ctsTraffic
                 static_assert(MAXLONG / 1.5 > RIO_MAX_CQ_SIZE, "s_rio_cq_size can overflow");
                 new_cq_size = RIO_MAX_CQ_SIZE;
             }
-            PrintDebugInfo(
+            PRINT_DEBUG_INFO(
                 L"\t\tctsRioIocp: Resizing the CQ from %u to %u (used slots = %u increasing used slots to %u)\n",
                 s_rio_cq_size,
                 new_cq_size,
                 s_rio_cq_used,
-                new_cq_used);
+                new_cq_used)
 
-            if (!ctl::ctRIOResizeCompletionQueue(s_rio_cq, new_cq_size))
-            {
-                throw ctl::ctException(WSAGetLastError(), L"ctRIOResizeCompletionQueue", L"ctsRioIocp", false);
-            }
+                if (!ctl::ctRIOResizeCompletionQueue(s_rio_cq, new_cq_size))
+                {
+                    THROW_WIN32_MSG(WSAGetLastError(), "ctRIOResizeCompletionQueue");
+                }
         }
         else
         {
-            PrintDebugInfo(
+            PRINT_DEBUG_INFO(
                 L"\t\tctsRioIocp: Not resizing the CQ from %u (used slots = %u increasing to %u)\n",
-                s_rio_cq_size, s_rio_cq_used, new_cq_used);
+                s_rio_cq_size, s_rio_cq_used, new_cq_used)
         }
         // update cq_used and cq_size on the success path
         s_rio_cq_used = new_cq_used;
@@ -135,12 +136,12 @@ namespace ctsTraffic
             "ctsRioIocp::s_release_room_in_cq(%u): underflow - current s_rio_cq_used value (%u)",
             _slots, s_rio_cq_used);
 
-        PrintDebugInfo(
+        PRINT_DEBUG_INFO(
             L"\t\tctsRioIocp: Reducing the CQ used slots from %u to %u\n",
             s_rio_cq_used,
-            s_rio_cq_used - _slots);
+            s_rio_cq_used - _slots)
 
-        s_rio_cq_used -= _slots;
+            s_rio_cq_used -= _slots;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +274,7 @@ namespace ctsTraffic
         s_rio_notify_setttings.Iocp.Overlapped = calloc(1, sizeof OVERLAPPED);
         if (!s_rio_notify_setttings.Iocp.Overlapped)
         {
-            ctsConfig::PrintException(std::bad_alloc());
+            ctsConfig::PrintException(WSAENOBUFS, L"calloc (OVERLAPPED)", L"ctsRioIocp");
             SetLastError(WSAENOBUFS);
             return FALSE;
         }
@@ -284,7 +285,7 @@ namespace ctsTraffic
         if (!s_rio_notify_setttings.Iocp.IocpHandle)
         {
             const auto gle = GetLastError();
-            ctsConfig::PrintException(ctl::ctException(gle, L"CreateIoCompletionPort", L"ctsRioIocp", false));
+            ctsConfig::PrintException(gle, L"CreateIoCompletionPort", L"ctsRioIocp");
             SetLastError(gle);
             return FALSE;
         }
@@ -304,7 +305,7 @@ namespace ctsTraffic
         if (RIO_INVALID_CQ == s_rio_cq)
         {
             const auto gle = WSAGetLastError();
-            ctsConfig::PrintException(ctl::ctException(gle, L"ctRIOCreateCompletionQueue", L"ctsRioIocp", false));
+            ctsConfig::PrintException(gle, L"ctRIOCreateCompletionQueue", L"ctsRioIocp");
             SetLastError(gle);
             return FALSE;
         }
@@ -321,7 +322,7 @@ namespace ctsTraffic
         s_rio_worker_threads = static_cast<HANDLE*>(calloc(system_info.dwNumberOfProcessors, sizeof HANDLE));
         if (!s_rio_worker_threads)
         {
-            ctsConfig::PrintException(std::bad_alloc());
+            ctsConfig::PrintException(ERROR_OUTOFMEMORY, L"calloc", L"ctsRioIocp");
             SetLastError(WSAENOBUFS);
             return FALSE;
         }
@@ -337,7 +338,7 @@ namespace ctsTraffic
             if (!s_rio_worker_threads[loop_workers])
             {
                 const auto gle = GetLastError();
-                ctsConfig::PrintException(ctl::ctException(gle, L"CreateThread", L"ctsRioIocp", false));
+                ctsConfig::PrintException(gle, L"CreateThread", L"ctsRioIocp");
                 SetLastError(gle);
                 return FALSE;
             }
@@ -348,7 +349,7 @@ namespace ctsTraffic
         const auto notify = ctl::ctRIONotify(s_rio_cq);
         if (notify != NO_ERROR)
         {
-            ctsConfig::PrintException(ctl::ctException(notify, L"ctRIONotify", L"ctsRioIocp", false));
+            ctsConfig::PrintException(notify, L"ctRIONotify", L"ctsRioIocp");
             SetLastError(notify);
             return FALSE;
         }
@@ -390,41 +391,33 @@ namespace ctsTraffic
         ///
         DWORD make_room_in_rq() noexcept
         {
-            try
+            const size_t new_rqueue_used = this->rqueue_used + RioRQGrowthFactor;
+            // guarantee room in the RQ for this next IO
+            if (new_rqueue_used > this->rqueue_reserved)
             {
-                const size_t new_rqueue_used = this->rqueue_used + RioRQGrowthFactor;
+                // making room in the CQ for these next 2 slots in the RQ - can throw
+                s_make_room_in_cq(RioRQGrowthFactor);
+
                 // guarantee room in the RQ for this next IO
-                if (new_rqueue_used > this->rqueue_reserved)
+                PRINT_DEBUG_INFO(
+                    L"\t\tctRIOResizeRequestQueue: Resizing the RQ to %Iu\n", new_rqueue_used)
+                if (!ctl::ctRIOResizeRequestQueue(
+                    this->rio_rq,
+                    static_cast<DWORD>(new_rqueue_used / 2),
+                    static_cast<DWORD>(new_rqueue_used / 2)))
                 {
-                    // making room in the CQ for these next 2 slots in the RQ - can throw
-                    s_make_room_in_cq(RioRQGrowthFactor);
-                    auto releaseCqSlotsOnFailure = wil::scope_exit([&]() noexcept { s_release_room_in_cq(RioRQGrowthFactor); });
-
-                    // guarantee room in the RQ for this next IO
-                    PrintDebugInfo(
-                        L"\t\tctRIOResizeRequestQueue: Resizing the RQ to %Iu\n", new_rqueue_used);
-                    if (!ctl::ctRIOResizeRequestQueue(
-                        this->rio_rq,
-                        static_cast<DWORD>(new_rqueue_used / 2),
-                        static_cast<DWORD>(new_rqueue_used / 2)))
-                    {
-                        throw ctl::ctException(WSAGetLastError(), L"RIOResizeRequestQueue", false);
-                    }
-
-                    // since it succeeded, update reserved with the new size
-                    this->rqueue_reserved = new_rqueue_used;
-                    // RQ was updated successfully, dismiss the scope guard
-                    releaseCqSlotsOnFailure.release();
+                    const auto gle = WSAGetLastError();
+                    ctsConfig::PrintErrorIfFailed("RIOResizeRequestQueue", gle);
+                    s_release_room_in_cq(RioRQGrowthFactor);
+                    return gle;
                 }
 
-                // everything succeeded - update rqueue_used with the new slots being used for this next IO
-                this->rqueue_used = new_rqueue_used;
+                // since it succeeded, update reserved with the new size
+                this->rqueue_reserved = new_rqueue_used;
             }
-            catch (const std::exception& e)
-            {
-                ctsConfig::PrintException(e);
-                return ctl::ctErrorCode(e);
-            }
+
+            // everything succeeded - update rqueue_used with the new slots being used for this next IO
+            this->rqueue_used = new_rqueue_used;
             return NO_ERROR;
         }
 
@@ -449,7 +442,7 @@ namespace ctsTraffic
             const auto shared_socket = weak_socket.lock();
             if (!shared_socket)
             {
-                throw std::exception("ctsRioIocp: null socket given to RioSocketContext");
+                THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: null socket given to RioSocketContext");
             }
 
             // lock the socket when doing IO on it
@@ -457,7 +450,7 @@ namespace ctsTraffic
             const SOCKET socket = socket_ref.socket();
             if (INVALID_SOCKET == socket)
             {
-                throw std::exception("ctsRioIocp: invalid socket given to RioSocketContext");
+                THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: invalid socket given to RioSocketContext");
             }
 
             s_make_room_in_cq(RioRQGrowthFactor);
@@ -475,7 +468,7 @@ namespace ctsTraffic
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             if (RIO_INVALID_RQ == rio_rq)
             {
-                throw ctl::ctException(WSAGetLastError(), L"RIOCreateRequestQueue", false);
+                THROW_WIN32_MSG(WSAGetLastError(), "RIOCreateRequestQueue");
             }
 
             // now register the target remote address for UDP for RIOSendTo
@@ -489,7 +482,7 @@ namespace ctsTraffic
                         static_cast<DWORD>(sizeof SOCKADDR_INET));
                 if (RIO_INVALID_BUFFERID == this->rio_remote_address.BufferId)
                 {
-                    throw ctl::ctException(WSAGetLastError(), L"RIORegisterBuffer", false);
+                    THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
                 }
             }
 
@@ -584,9 +577,9 @@ namespace ctsTraffic
             }
             _Analysis_assume_(function_name != nullptr);
 
-            if (_status != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, _status);
+            if (_status != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", function_name, _status)
 
-            DWORD error = _status;
+                DWORD error = _status;
             const ctsIOStatus protocol_status = shared_pattern->complete_io(_task, _transferred, _status);
             switch (protocol_status)
             {
@@ -711,9 +704,8 @@ namespace ctsTraffic
                     // invoke the requested IO now that we have room in our queues
                     if (ctsConfig::ProtocolType::TCP == ctsConfig::Settings->Protocol)
                     {
-                        // ReSharper disable once CppIncompleteSwitchStatement
                         switch (request_context->ioAction)
-                        {  // NOLINT(clang-diagnostic-switch)
+                        {
                             case IOTaskAction::Recv:
                                 RIOFunction = L"RIOReceive";
                                 if (!ctl::ctRIOReceive(this->rio_rq, &rio_buffer, 1, 0, request_context.get()))
@@ -734,9 +726,8 @@ namespace ctsTraffic
                     }
                     else
                     {
-                        // ReSharper disable once CppIncompleteSwitchStatement
                         switch (request_context->ioAction)
-                        {  // NOLINT(clang-diagnostic-switch)
+                        {
                             case IOTaskAction::Recv:
                                 RIOFunction = L"RIOReceiveEx";
                                 if (!ctl::ctRIOReceiveEx(this->rio_rq, &rio_buffer, 1, nullptr, nullptr, nullptr, nullptr, 0, request_context.get()))
@@ -763,7 +754,7 @@ namespace ctsTraffic
                 // if IO was not initiated, complete the IO back the IO pattern
                 if (error != NO_ERROR)
                 {
-                    ctsConfig::PrintException(ctl::ctException(error, RIOFunction, false));
+                    ctsConfig::PrintException(error, RIOFunction, L"ctsRioIocp");
                     continue_io = (shared_pattern->complete_io(next_io, 0, error) == ctsIOStatus::ContinueIo);
                     refcount_io = shared_socket->decrement_io();
                     if (release_rq_slots)
@@ -896,7 +887,7 @@ namespace ctsTraffic
             {
                 gle = WSAENOBUFS;
             }
-            ctsConfig::PrintException(ctl::ctException(gle, L"InitOnceExecuteOnce", L"ctsIOPattern", false));
+            ctsConfig::PrintException(gle, L"InitOnceExecuteOnce", L"ctsRioIocp");
             shared_socket->complete_state(gle);
             return;
         }
@@ -916,10 +907,9 @@ namespace ctsTraffic
             // kick off IO on this RIO socket
             io_count = socket_context->execute_io();
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
-            error = ctl::ctErrorCode(e);
+            error = ctsConfig::PrintThrownException();
         }
 
         // complete the socket state back to the parent if there is no pended IO

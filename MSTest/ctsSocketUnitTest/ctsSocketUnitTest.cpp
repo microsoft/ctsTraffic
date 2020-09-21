@@ -11,7 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <ctString.hpp>
@@ -31,7 +31,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 
     template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
     {
-        return ctl::ctString::ctFormatString(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
+        return wil::str_printf<std::wstring>(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
     }
 
     template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
@@ -70,9 +70,9 @@ namespace ctsTraffic
         {
             va_list args;
             va_start(args, _text);
-
-            const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+            std::wstring outputString;
+            wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
 
             va_end(args);
         }
@@ -95,13 +95,32 @@ namespace ctsTraffic
         void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+                wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
         }
-        void PrintException(const std::exception& e) noexcept
+        DWORD PrintThrownException() noexcept
         {
-            Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintException(%ws)",
-                    ctl::ctString::ctFormatException(e).c_str()).c_str());
+            try
+            {
+                throw;
+            }
+            catch (const wil::ResultException& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                        e.what()).c_str());
+                return Win32FromHRESULT(e.GetErrorCode());
+            }
+            catch (const std::exception& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                        e.what()).c_str());
+                return WSAENOBUFS;
+            }
+            catch (...)
+            {
+                FAIL_FAST();
+            }
         }
         bool ShutdownCalled() noexcept
         {
@@ -287,7 +306,7 @@ namespace ctsUnitTest
             // create a valid UDP socket
             const SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
             const auto gle = ::WSAGetLastError();
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
             Assert::AreNotEqual(INVALID_SOCKET, socket_value);
 
             return socket_value;

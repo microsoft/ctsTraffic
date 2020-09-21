@@ -15,7 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
+#include <WinSock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
@@ -85,7 +85,7 @@ namespace ctsTraffic
 
         // write to PrintError if the IO failed
         const char* function_name = IOTaskAction::Send == _io_task.ioAction ? "WSASend" : "WSARecv";
-        if (gle != 0) { PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", function_name, gle); }
+        if (gle != 0) { PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", function_name, gle) }
 
         if (shared_pattern)
         {
@@ -257,10 +257,9 @@ namespace ctsTraffic
                     }
                 }
             }
-            catch (const std::exception& e)
+            catch (...)
             {
-                ctsConfig::PrintException(e);
-                return_status.ioErrorcode = ctl::ctErrorCode(e);
+                return_status.ioErrorcode = ctsConfig::PrintThrownException();
                 return_status.ioDone = _shared_pattern->complete_io(next_io, 0, return_status.ioErrorcode) != ctsIOStatus::ContinueIo;
                 return_status.ioStarted = false;
             }
@@ -359,11 +358,10 @@ namespace ctsTraffic
                     status.ioStarted = true; // IO started in the context of keeping the count incremented
                     status.ioDone = true;
                 }
-                catch (const std::exception& e)
+                catch (...)
                 {
-                    ctsConfig::PrintException(e);
+                    status.ioErrorcode = ctsConfig::PrintThrownException();
                     status.ioStarted = false;
-                    status.ioErrorcode = ctl::ctErrorCode(e);
                 }
 
             }

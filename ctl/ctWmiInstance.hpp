@@ -19,17 +19,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 #include <utility>
 // os headers
-#include <windows.h>
-#include <Objbase.h>
+#include <Windows.h>
+#include <objbase.h>
 #include <OleAuto.h>
-#include <Wbemidl.h>
+#include <WbemIdl.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 #include <wil/com.h>
 // local headers
 #include "ctWmiService.hpp"
 #include "ctWmiClassObject.hpp"
 #include "ctWmiVariant.hpp"
+
 
 namespace ctl
 {

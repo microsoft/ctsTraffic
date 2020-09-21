@@ -16,15 +16,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctTimer.hpp>
-#include <ctString.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsIOBuffers.hpp"
-
 
 namespace ctsTraffic
 {
@@ -119,7 +118,7 @@ namespace ctsTraffic
 
     ///
     /// Helper factory to build known patterns
-    /// - can throw ctException on a Win32 error
+    /// - can throw wil::ResultException on a Win32 error
     /// - can throw exception on allocation failure
     ///
     shared_ptr<ctsIOPattern> ctsIOPattern::MakeIOPattern()
@@ -148,7 +147,8 @@ namespace ctsTraffic
                     return make_shared<ctsIOPatternMediaStreamClient>();
                 }
 
-            default:
+            case ctsConfig::IoPatternType::NoIOSet: // fall through
+            default:  // NOLINT(clang-diagnostic-covered-switch-default)
                 FAIL_FAST_MSG("ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::Settings->IoPattern);
         }
     }
@@ -218,8 +218,8 @@ namespace ctsTraffic
                 FAIL_FAST_IF_MSG(recv_count > 1, "Currently not supporting >1 concurrent IO requests with RIO");
                 m_recvRioBufferid = ctRIORegisterBuffer(m_recvBufferFreeList[0], static_cast<DWORD>(ctsConfig::GetMaxBufferSize()));
                 if (RIO_INVALID_BUFFERID == m_recvRioBufferid)
-                {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-                    throw ctException(WSAGetLastError(), L"RIORegisterBuffer", L"ctsIOPattern", false);
+                {
+                    THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
                 }
             }
         }
@@ -344,7 +344,7 @@ namespace ctsTraffic
                 return_task.track_io = false;
                 break;
 
-            default:
+            default:  // NOLINT(clang-diagnostic-covered-switch-default)
                 FAIL_FAST_MSG("ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
         }
 
@@ -387,20 +387,20 @@ namespace ctsTraffic
                 break;
 
             case IOTaskAction::FatalAbort:
-                PrintDebugInfo(L"\t\tctsIOPattern : completing a FatalAbort\n");
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a FatalAbort\n")
                 this->update_last_error(ctsStatusErrorNotAllDataTransferred);
                 break;
 
             case IOTaskAction::Abort:
-                PrintDebugInfo(L"\t\tctsIOPattern : completing an Abort\n");
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing an Abort\n")
                 break;
 
             case IOTaskAction::GracefulShutdown:
                 // Fall-through to be processed like send or recv IO
-                PrintDebugInfo(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown\n")
             case IOTaskAction::HardShutdown:
                 // Fall-through to be processed like send or recv IO
-                PrintDebugInfo(L"\t\tctsIOPattern : completing a HardShutdown\n");
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown\n")
             case IOTaskAction::Recv:
                 //
                 // Fall-through to Send - where the IO will be processed
@@ -453,14 +453,14 @@ namespace ctsTraffic
                     //
                     if (IOTaskAction::Recv == original_task.ioAction && m_patternState.is_completed())
                     {
-                        PrintDebugInfo(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", status_code);
+                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", status_code)
                     }
                     else
                     {
                         const auto current_status = this->update_last_error(status_code);
                         if (current_status != ctsStatusIORunning)
                         {
-                            PrintDebugInfo(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", status_code, current_status);
+                            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", status_code, current_status)
                             verify_io = false;
                         }
                     }
@@ -738,8 +738,8 @@ namespace ctsTraffic
             try
             {
                 ctsConfig::PrintErrorInfo(
-                    ctString::ctFormatString(
-                        "ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
+                    wil::str_printf<std::wstring>(
+                        L"ctsIOPattern found data corruption: detected an invalid byte pattern in the returned buffer (length %u): "
                         "buffer received (%p), expected buffer pattern (%p) - mismatch from expected pattern at offset (%Iu) [expected 32-bit value '0x%x' didn't match '0x%x']",
                         transferred_bytes,
                         original_task.buffer + original_task.buffer_offset,
@@ -1109,7 +1109,7 @@ namespace ctsTraffic
             case IOTaskAction::HardShutdown:
             case IOTaskAction::Abort:
             case IOTaskAction::FatalAbort:
-            default:;
+            default:;  // NOLINT(clang-diagnostic-covered-switch-default)
                 // fall through to return NoError
         }
 
@@ -1139,7 +1139,7 @@ namespace ctsTraffic
         m_baseTimeMilliseconds(0LL),
         m_state(ServerState::NotStarted)
     {
-        PrintDebugInfo(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / m_frameRateFps));
+        PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / m_frameRateFps))
     }
     // required virtual functions
     ctsIOTask ctsIOPatternMediaStreamServer::next_task() noexcept

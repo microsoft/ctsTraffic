@@ -11,7 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 // cpp headers
 #include <memory>
@@ -31,7 +31,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
     // Test writer must define specialization of ToString<const Q& q> types used in Assert
     template <> inline std::wstring ToString<ctsTraffic::ctsIOTask>(const ctsTraffic::ctsIOTask& _task)
     {
-        return ctl::ctString::ctFormatString(
+        return wil::str_printf<std::wstring>(
             L"ctsIOTask:\n"
             L"\tbuffer: 0x%p\n"
             L"\tbuffer_length: %u\n"
@@ -103,7 +103,7 @@ namespace ctsTraffic::ctsConfig
     void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCSTR) noexcept
+    void PrintErrorInfo(_In_ PCWSTR) noexcept
     {
     }
 
@@ -457,7 +457,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -516,7 +516,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -530,7 +530,7 @@ namespace ctsUnitTest
             test_task = test_pattern->initiate_io();
             Assert::AreEqual(1024UL, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", 10, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
             ctsIOTask empty_task = test_pattern->initiate_io();
             Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -588,7 +588,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -647,7 +647,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(2048UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -661,7 +661,7 @@ namespace ctsUnitTest
             test_task = test_pattern->initiate_io();
             Assert::AreEqual(1024UL, test_task.buffer_length);
             Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", 10, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
             ctsIOTask empty_task = test_pattern->initiate_io();
             Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -719,7 +719,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Recv, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -787,7 +787,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -844,7 +844,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);
@@ -901,7 +901,7 @@ namespace ctsUnitTest
                 test_task = test_pattern->initiate_io();
                 Assert::AreEqual(1024UL, test_task.buffer_length);
                 Assert::AreEqual(IOTaskAction::Send, test_task.ioAction);
-                Logger::WriteMessage(ctl::ctString::ctFormatString(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
+                Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsIOTask>(test_task).c_str()).c_str());
 
                 ctsIOTask empty_task = test_pattern->initiate_io();
                 Assert::AreEqual(IOTaskAction::None, empty_task.ioAction);

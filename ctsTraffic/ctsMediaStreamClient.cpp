@@ -16,9 +16,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
+// wil headers
+#include <wil/stl.h>
+#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctString.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -200,9 +202,9 @@ namespace ctsTraffic
 
             try
             {
-                PrintDebugInfo(
+                PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamClient sent its START message to %ws\n",
-                    targetAddress.WriteCompleteAddress().c_str());
+                    targetAddress.WriteCompleteAddress().c_str())
             }
             catch (...) {}
         }
@@ -262,7 +264,7 @@ namespace ctsTraffic
                 {
                     // IO successfully completed inline and the async completion won't be invoke
                     // - or the IO failed
-                    if (result.error_code != 0) PrintDebugInfo(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", function_name, result.error_code);
+                    if (result.error_code != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", function_name, result.error_code)
 
                     // hold a reference on the iopattern
                     auto shared_pattern(_shared_socket->io_pattern());
@@ -424,13 +426,13 @@ namespace ctsTraffic
                     {
                         // the failure may have been a protocol error - in which case gle would just be NO_ERROR
                         ctsConfig::PrintErrorInfo(
-                            ctl::ctString::ctFormatString("MediaStream Client: IO failed (%ws) with error %d",
+                            wil::str_printf<std::wstring>(L"MediaStream Client: IO failed (%ws) with error %d",
                                 _io_task.ioAction == IOTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo", gle).c_str());
                     }
                     else
                     {
                         ctsConfig::PrintErrorInfo(
-                            ctl::ctString::ctFormatString("MediaStream Client: IO succeeded (%ws) but the ctsIOProtocol failed the stream (%u)",
+                            wil::str_printf<std::wstring>(L"MediaStream Client: IO succeeded (%ws) but the ctsIOProtocol failed the stream (%u)",
                                 _io_task.ioAction == IOTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo",
                                 shared_pattern->get_last_error()).c_str());
                     }

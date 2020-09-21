@@ -15,8 +15,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 // os headers
-#include <windows.h>
+#include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // project headers
 #include "ctsConfig.h"

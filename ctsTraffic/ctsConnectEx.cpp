@@ -15,12 +15,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
+#include <WinSock2.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <ctException.hpp>
 // project headers
 #include "ctsSocket.h"
 
@@ -107,10 +106,7 @@ namespace ctsTraffic
             {
                 const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
                 error = ctsConfig::SetPreConnectOptions(socket);
-                if (error != NO_ERROR)
-                {
-                    throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
-                }
+                THROW_IF_WIN32_ERROR_MSG(error, "ctsConfig::SetPreConnectOptions");
 
                 // get a new IO request from the socket's TP
                 const std::shared_ptr<ctl::ctThreadIocp>& connect_iocp = shared_socket->thread_pool();
@@ -144,7 +140,7 @@ namespace ctsTraffic
                 ctsConfig::PrintErrorIfFailed("ConnectEx", error);
                 if (NO_ERROR == error)
                 {
-                    PrintDebugInfo(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str())
                 }
             }
             else
@@ -152,10 +148,9 @@ namespace ctsTraffic
                 error = WSAECONNABORTED;
             }
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
-            error = ctl::ctErrorCode(e);
+            error = ctsConfig::PrintThrownException();
         }
 
         // complete on failure

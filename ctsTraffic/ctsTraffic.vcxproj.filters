@@ -130,9 +130,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctException.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp">
       <Filter>ctl</Filter>
     </ClInclude>

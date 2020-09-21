@@ -20,8 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <utility>
 // os headers
-#include <windows.h>
-#include <Wbemidl.h>
+#include <Windows.h>
+#include <WbemIdl.h>
 // wil headers
 #include <wil/com.h>
 // local headers

@@ -14,12 +14,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // parent header
 #include "ctsSocketState.h"
 // cpp headers
-#include <exception>
 #include <memory>
 // os headers
 #include <Windows.h>
-// ctl headers
-#include <ctException.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsSocketBroker.h"
@@ -29,10 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-
-    using namespace ctl;
-    using namespace std;
-
     ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) : broker(move(_broker))
     {
         thread_pool_worker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::Settings->PTPEnvironment));
@@ -107,9 +100,9 @@ namespace ctsTraffic
                     // these 2 states should generally not be "completed" by the functor that was invoked
                     // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
                     // deliberately not changing any internal values these since the socket is already being close
-                    PrintDebugInfo(
+                    PRINT_DEBUG_INFO(
                         L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n",
-                        static_cast<unsigned long>(this->state));
+                        static_cast<unsigned long>(this->state))
                     break;
 
                 default:
@@ -161,23 +154,20 @@ namespace ctsTraffic
         {
             case InternalState::Creating:
             {
-                unsigned long error = 0;
-                try { this_ptr->socket = make_shared<ctsSocket>(this_ptr->shared_from_this()); }
-                catch (const exception& e) { error = ctErrorCode(e); }
-
-                if (error != 0)
+                try
                 {
-                    this_ptr->complete_state(error);
+                    this_ptr->socket = std::make_shared<ctsSocket>(this_ptr->shared_from_this());
 
-                }
-                else
-                {
                     auto lock = this_ptr->state_guard.lock();
                     this_ptr->state = InternalState::Created;
                     lock.reset();
 
                     ctsConfig::Settings->CreateFunction(this_ptr->socket);
-                    PrintDebugInfo(L"\t\tctsSocketState Created\n");
+                    PRINT_DEBUG_INFO(L"\t\tctsSocketState Created\n")
+                }
+                catch (...)
+                {
+                    this_ptr->complete_state(wil::ResultFromCaughtException());
                 }
                 break;
             }
@@ -189,7 +179,7 @@ namespace ctsTraffic
                 lock.reset();
 
                 ctsConfig::Settings->ConnectFunction(this_ptr->socket);
-                PrintDebugInfo(L"\t\tctsSocketState Connected\n");
+                PRINT_DEBUG_INFO(L"\t\tctsSocketState Connected\n")
                 break;
             }
 
@@ -202,23 +192,20 @@ namespace ctsTraffic
                     parent->initiating_io();
                 }
 
-                unsigned long error = 0;
-                try { this_ptr->socket->set_io_pattern(ctsIOPattern::MakeIOPattern()); }
-                catch (const exception& e) { error = ctErrorCode(e); }
-
-                if (error != 0)
+                try
                 {
-                    this_ptr->complete_state(error);
+                    this_ptr->socket->set_io_pattern(ctsIOPattern::MakeIOPattern());
 
-                }
-                else
-                {
                     auto lock = this_ptr->state_guard.lock();
                     this_ptr->state = InternalState::InitiatedIO;
                     lock.reset();
 
                     ctsConfig::Settings->IoFunction(this_ptr->socket);
-                    PrintDebugInfo(L"\t\tctsSocketState InitiatedIO\n");
+                    PRINT_DEBUG_INFO(L"\t\tctsSocketState InitiatedIO\n")
+                }
+                catch (...)
+                {
+                    this_ptr->complete_state(wil::ResultFromCaughtException());
                 }
                 break;
             }
@@ -277,7 +264,7 @@ namespace ctsTraffic
                     parent->closing(this_ptr->initiated_io);
                 }
 
-                PrintDebugInfo(L"\t\tctsSocketState Closed\n");
+                PRINT_DEBUG_INFO(L"\t\tctsSocketState Closed\n")
                 break;
             }
 

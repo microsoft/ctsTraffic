@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <rpc.h>
 // ctl headers
 #include <ctTimer.hpp>
-#include <ctException.hpp>
 #include <ctMemoryGuard.hpp>
 #include <wil/resource.h>
 
@@ -36,14 +35,14 @@ namespace ctsTraffic
             RPC_STATUS status = UuidCreate(&connection_id);
             if (status != RPC_S_OK)
             {
-                throw ctl::ctException(status, L"UuidCreate", L"ctsStatistics", false);
+                THROW_WIN32_MSG(status, "UuidCreate (ctsStatistics)");
             }
 
             RPC_CSTR connection_id_string = nullptr;
             status = UuidToStringA(&connection_id, &connection_id_string);
             if (status != RPC_S_OK)
             {
-                throw ctl::ctException(status, L"UuidToStringA", L"ctsStatistics", false);
+                THROW_WIN32_MSG(status, "UuidToStringA (ctsStatistics)");
             }
             FAIL_FAST_IF_MSG(
                 strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),

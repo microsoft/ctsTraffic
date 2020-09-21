@@ -18,9 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <queue>
 // os headers
 #include <Windows.h>
-#include <winsock2.h>
-#include <mswsock.h>
+#include <WinSock2.h>
+#include <MSWSock.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
@@ -94,7 +95,7 @@ namespace ctsTraffic
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         struct ctsListenSocketInfo
         {
-            // c'tor throws a ctException or bad_alloc on failure
+            // c'tor throws a wil::ResultException or bad_alloc on failure
             explicit ctsListenSocketInfo(ctl::ctSockaddr _addr) : addr(std::move(_addr))
             {
                 wil::unique_socket tempsocket(
@@ -103,17 +104,17 @@ namespace ctsTraffic
                 const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
                 if (error != 0)
                 {
-                    throw ctl::ctException(error, L"ctsConfig::SetPreBindOptions", L"ctsAcceptEx", false);
+                    THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
                 }
 
                 if (SOCKET_ERROR == bind(tempsocket.get(), addr.sockaddr(), addr.length()))
                 {
-                    throw ctl::ctException(WSAGetLastError(), L"bind", L"ctsAcceptEx", false);
+                    THROW_WIN32_MSG(error, "bind (ctsAcceptEx)");
                 }
 
                 if (SOCKET_ERROR == listen(tempsocket.get(), ctsConfig::GetListenBacklog()))
                 {
-                    throw ctl::ctException(WSAGetLastError(), L"listen", L"ctsAcceptEx", false);
+                    THROW_WIN32_MSG(error, "listen (ctsAcceptEx)");
                 }
 
                 iocp = std::make_unique<ctl::ctThreadIocp>(tempsocket.get(), ctsConfig::Settings->PTPEnvironment);
@@ -150,7 +151,7 @@ namespace ctsTraffic
         class ctsAcceptSocketInfo
         {
         public:
-            // c'tor throws ctException on failure
+            // c'tor throws wil::ResultException on failure
             explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket) noexcept
                 : listening_socket_info(_listen_socket)
             {
@@ -217,7 +218,7 @@ namespace ctsTraffic
                 {
                     // Make the structures for the listener and its accept sockets
                     std::shared_ptr<ctsListenSocketInfo> listen_socket_info(std::make_shared<ctsListenSocketInfo>(addr));
-                    PrintDebugInfo(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str())
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
@@ -313,12 +314,12 @@ namespace ctsTraffic
             auto error = ctsConfig::SetPreBindOptions(new_accept_socket.get(), listening_socket_object->addr);
             if (error != 0)
             {
-                throw ctl::ctException(error, L"SetPreBindOptions", L"ctsAcceptEx", false);
+                THROW_WIN32_MSG(error, "SetPreBindOptions (ctsAcceptEx)");
             }
             error = ctsConfig::SetPreConnectOptions(new_accept_socket.get());
             if (error != 0)
             {
-                throw ctl::ctException(error, L"SetPreConnectOptions", L"ctsAcceptEx", false);
+                THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsAcceptEx)");
             }
 
             pov = listening_socket_object->iocp->new_request(
@@ -343,7 +344,6 @@ namespace ctsTraffic
                     ctsConfig::PrintErrorIfFailed("AcceptEx", error);
                     return;
                 }
-
             }
             else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)
             {
@@ -441,10 +441,9 @@ namespace ctsTraffic
             {
                 s_pimpl.Start();
             }
-            catch (const std::exception& e)
+            catch (...)
             {
-                ctsConfig::PrintException(e);
-                *static_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
+                *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
                 return FALSE;
             }
 
@@ -518,11 +517,10 @@ namespace ctsTraffic
             //
             _accept_info->InitatiateAcceptEx();
         }
-        catch (const std::exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
+            ctsConfig::PrintThrownException();
         }
-
     } // namespace details
 
     //

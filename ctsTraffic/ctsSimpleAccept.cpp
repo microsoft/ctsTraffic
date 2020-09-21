@@ -16,13 +16,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <exception>
 // os headers
-#include <windows.h>
-#include <winsock2.h>
+#include <Windows.h>
+#include <WinSock2.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctException.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -52,12 +52,10 @@ namespace ctsTraffic
             // CS guards access to the accepting_sockets vector
             wil::critical_section accepting_cs;
 
-            std::vector<LONG> listening_sockets_refcount;
+            std::vector<LONG> listening_sockets_refcount{};
 
-            _Guarded_by_(accepting_cs)
-                std::vector<SOCKET> listening_sockets;
-            _Guarded_by_(accepting_cs)
-                std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
+            _Guarded_by_(accepting_cs) std::vector<SOCKET> listening_sockets{};
+            _Guarded_by_(accepting_cs) std::vector<std::weak_ptr<ctsSocket>> accepting_sockets{};
 
         public:
             ctsSimpleAcceptImpl()
@@ -71,7 +69,7 @@ namespace ctsTraffic
                 thread_pool_worker = CreateThreadpoolWork(ThreadPoolWorker, this, &thread_pool_environment);
                 if (nullptr == thread_pool_worker)
                 {
-                    throw ctl::ctException(GetLastError(), L"CreateThreadpoolWork", L"ctsSimpleAccept", false);
+                    THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolWork (ctsSimpleAccept)");
                 }
 
                 // listen to each address
@@ -83,31 +81,31 @@ namespace ctsTraffic
                     auto gle = ctsConfig::SetPreBindOptions(listening, addr);
                     if (gle != NO_ERROR)
                     {
-                        throw ctl::ctException(gle, L"SetPreBindOptions", L"ctsSimpleAccept", false);
+                        THROW_WIN32_MSG(gle, "SetPreBindOptions (ctsSimpleAccept)");
                     }
 
                     gle = ctsConfig::SetPreConnectOptions(listening);
                     if (gle != NO_ERROR)
                     {
-                        throw ctl::ctException(gle, L"SetPreConnectOptions", L"ctsSimpleAccept", false);
+                        THROW_WIN32_MSG(gle, "SetPreConnectOptions (ctsSimpleAccept)");
                     }
 
                     if (SOCKET_ERROR == bind(listening, addr.sockaddr(), addr.length()))
                     {
-                        throw ctl::ctException(WSAGetLastError(), L"bind", L"ctsSimpleAccept", false);
+                        THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
                     }
 
                     if (SOCKET_ERROR == listen(listening, ctsConfig::GetListenBacklog()))
                     {
-                        throw ctl::ctException(WSAGetLastError(), L"listen", L"ctsSimpleAccept", false);
+                        THROW_WIN32_MSG(WSAGetLastError(), "listen (ctsSimpleAccept)");
                     }
 
                     listening_sockets.push_back(listening);
                     // socket is now being tracked in listening_sockets, dismiss the scope guard
                     closeSocketOnError.release();
 
-                    PrintDebugInfo(
-                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(
+                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str())
                 }
 
                 if (listening_sockets.empty())
@@ -252,11 +250,13 @@ namespace ctsTraffic
         static INIT_ONCE s_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK s_ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
         {
-            try { s_pimpl = std::make_shared<ctsSimpleAcceptImpl>(); }
-            catch (const std::exception& e)
+            try
             {
-                ctsConfig::PrintException(e);
-                *static_cast<DWORD*>(perror) = ctl::ctErrorCode(e);
+                s_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
+            }
+            catch (...)
+            {
+                *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
                 return FALSE;
             }
 

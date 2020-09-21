@@ -14,8 +14,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // os headers
-#include <windows.h>
-#include <winsock2.h>
+#include <Windows.h>
+#include <WinSock2.h>
+// wil headers
+#include <wil/stl.h>
+#include <wil/resource.h>
 // ctl headers
 #include <ctString.hpp>
 // project headers
@@ -87,16 +90,21 @@ namespace ctsTraffic
                     socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags);
                     break;
 
-                default:
+                case ctsConfig::ProtocolType::NoProtocolSet: // fall-through
+                default:  // NOLINT(clang-diagnostic-covered-switch-default)
                     ctsConfig::PrintErrorInfo(
-                        ctl::ctString::ctFormatString("Unknown socket protocol (%u)",
+                        wil::str_printf<std::wstring>(L"Unknown socket protocol (%u)",
                             static_cast<unsigned>(ctsConfig::Settings->Protocol)).c_str());
                     gle = WSAEINVAL;
             }
         }
-        catch (const std::exception& e)
+        catch (const wil::ResultException& e)
         {
-            gle = ctl::ctErrorCode(e);
+            gle = ctsConfig::Win32FromHRESULT(e.GetErrorCode());
+        }
+        catch (...)
+        {
+            gle = WSAENOBUFS;
         }
 
         if (NO_ERROR == gle)
@@ -129,7 +137,7 @@ namespace ctsTraffic
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)
                         {
-                            PrintDebugInfo(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs);
+                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs)
                             Sleep(BindRetrySleepMs);
                         }
                     }
@@ -137,7 +145,7 @@ namespace ctsTraffic
                     {
                         // succeeded - exit the loop
                         gle = NO_ERROR;
-                        PrintDebugInfo(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1);
+                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1)
                         break;
                     }
                 }

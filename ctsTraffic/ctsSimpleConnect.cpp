@@ -13,13 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-#include <exception>
 // os headers
-#include <windows.h>
-#include <winsock2.h>
+#include <Windows.h>
+#include <WinSock2.h>
 // ctl headers
 #include <ctSockaddr.hpp>
-#include <ctException.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -43,21 +41,20 @@ namespace ctsTraffic
         }
 
         int error = 0;
-        try
+        const auto socket_ref(shared_socket->socket_reference());
+        const auto socket = socket_ref.socket();
+        if (socket != INVALID_SOCKET)
         {
-            const auto socket_ref(shared_socket->socket_reference());
-            const auto socket = socket_ref.socket();
-            if (socket != INVALID_SOCKET)
+            const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
+            const ctl::ctSockaddr local_addr;
+
+            error = ctsConfig::SetPreConnectOptions(socket);
+            if (error != NO_ERROR)
             {
-                const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
-                const ctl::ctSockaddr local_addr;
-
-                error = ctsConfig::SetPreConnectOptions(socket);
-                if (error != NO_ERROR)
-                {
-                    throw ctl::ctException(error, L"ctsConfig::SetPreConnectOptions", false);
-                }
-
+                ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
+            }
+            else
+            {
                 if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
                 {
                     error = WSAGetLastError();
@@ -71,19 +68,13 @@ namespace ctsTraffic
                     {
                         shared_socket->set_local_address(local_addr);
                     }
+                    ctsConfig::PrintNewConnection(local_addr, targetAddress);
                 }
-
-                ctsConfig::PrintNewConnection(local_addr, targetAddress);
-            }
-            else
-            {
-                error = WSAECONNABORTED;
             }
         }
-        catch (const std::exception& e)
+        else
         {
-            ctsConfig::PrintException(e);
-            error = ctl::ctErrorCode(e);
+            error = WSAECONNABORTED;
         }
 
         shared_socket->complete_state(error);

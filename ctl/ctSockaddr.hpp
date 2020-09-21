@@ -19,19 +19,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 // os headers
 #include <Windows.h>
-#include <Winsock2.h>
-#include <Ws2tcpip.h>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 // wil headers
-// ReSharper disable once CppUnusedIncludeDirective
+#include <wil/stl.h>
 #include <wil/resource.h>
-// ctl headers
-#include "ctException.hpp"
 
 #pragma prefast(push)
 // ignore prefast IPv4 warnings
 #pragma prefast(disable: 24002)
 // ignore IDN warnings when explicitly asking to resolve a short-string
 #pragma prefast(disable: 38026)
+
 
 namespace ctl
 {
@@ -62,7 +61,7 @@ namespace ctl
             }
             else
             {
-                throw ctException(WSAGetLastError(), L"GetAddrInfoW", L"ctl::ctSockaddr::ResolveName", false);
+                THROW_WIN32_MSG(WSAGetLastError(), "GetAddrInfoW");
             }
 
             return return_addrs;

@@ -20,12 +20,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 // ReSharper disable once CppUnusedIncludeDirective
-#include <winsock2.h>
+#include <WinSock2.h>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ws2ipdef.h>
-#include <Iphlpapi.h>
+#include <iphlpapi.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
-#include "ctException.hpp"
 #include "ctSockaddr.hpp"
 
 namespace ctl
@@ -194,7 +195,7 @@ namespace ctl
             }
             if (err != NO_ERROR)
             {
-                throw ctException(err, L"GetAdaptersAddresses", L"ctNetAdapterAddresses::ctNetAdapterAddresses", false);
+                THROW_WIN32_MSG(err, "GetAdaptersAddresses");
             }
         }
 

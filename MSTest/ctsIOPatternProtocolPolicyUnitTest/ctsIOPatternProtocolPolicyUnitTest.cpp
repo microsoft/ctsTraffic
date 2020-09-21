@@ -11,7 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <memory>
@@ -106,7 +106,7 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCSTR) noexcept
+    void PrintErrorInfo(_In_ PCWSTR) noexcept
     {
     }
 

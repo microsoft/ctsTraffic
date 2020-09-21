@@ -69,10 +69,10 @@ namespace ctsTraffic
             quantum_start_time_ms(ctl::ctTimer::ctSnapQpcInMillis())
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
-            PrintDebugInfo(
+            PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
                 static_cast<unsigned long long>(this->BytesSendingPerQuantum),
-                static_cast<unsigned long long>(this->QuantumPeriodMs));
+                static_cast<unsigned long long>(this->QuantumPeriodMs))
 #endif
         }
 
@@ -127,14 +127,14 @@ namespace ctsTraffic
                 }
             }
 #ifdef CTSTRAFFIC_UNIT_TESTS
-            PrintDebugInfo(
+            PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternRateLimitPolicy\n"
                 L"\tcurrent_time_ms: %lld\n"
                 L"\tquantum_start_time_ms: %llu\n"
                 L"\tbytes_sent_this_quantum: %llu\n",
                 current_time_ms,
                 static_cast<long long>(this->quantum_start_time_ms),
-                static_cast<long long>(this->bytes_sent_this_quantum));
+                static_cast<long long>(this->bytes_sent_this_quantum))
 #endif
         }
 

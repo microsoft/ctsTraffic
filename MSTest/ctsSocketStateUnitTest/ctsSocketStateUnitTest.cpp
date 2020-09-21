@@ -11,7 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <SDKDDKVer.h>
+#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <Windows.h>
@@ -47,9 +47,9 @@ namespace ctsTraffic {
         {
             va_list args;
             va_start(args, _text);
-
-            const auto formatted(ctl::ctString::ctFormatStringVa(_text, args));
-            Logger::WriteMessage(ctl::ctString::ctFormatString(L"PrintDebug: %ws\n", formatted.c_str()).c_str());
+            std::wstring outputString;
+            wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
 
             va_end(args);
         }
@@ -72,13 +72,32 @@ namespace ctsTraffic {
         void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
         {
             Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+                wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
         }
-        void PrintException(const std::exception& e) noexcept
+        DWORD PrintThrownException() noexcept
         {
-            Logger::WriteMessage(
-                ctl::ctString::ctFormatString(L"ctsConfig::PrintException(%ws)",
-                ctl::ctString::ctFormatException(e).c_str()).c_str());
+            try
+            {
+                throw;
+            }
+            catch (const wil::ResultException& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                        e.what()).c_str());
+                return Win32FromHRESULT(e.GetErrorCode());
+            }
+            catch (const std::exception& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                        e.what()).c_str());
+                return WSAENOBUFS;
+            }
+            catch (...)
+            {
+                FAIL_FAST();
+            }
         }
         bool IsListening() noexcept
         {

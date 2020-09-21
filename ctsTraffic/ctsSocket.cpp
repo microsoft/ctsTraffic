@@ -14,7 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // parent header
 #include "ctsSocket.h"
 // OS headers
-#include <windows.h>
+#include <Windows.h>
 // ctl headers
 #include <wil/win32_helpers.h>
 // ctl headers
@@ -177,7 +177,7 @@ namespace ctsTraffic
             ULONG isb;
             if (0 == idealsendbacklogquery(local_socket, &isb))
             {
-                PrintDebugInfo(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb)
                 pattern->set_ideal_send_backlog(isb);
             }
             else
@@ -260,9 +260,9 @@ namespace ctsTraffic
                 shared_iocp->cancel_request(ov);
             }
         }
-        catch (const exception& e)
+        catch (...)
         {
-            ctsConfig::PrintException(e);
+            ctsConfig::PrintThrownException();
         }
     }
 
