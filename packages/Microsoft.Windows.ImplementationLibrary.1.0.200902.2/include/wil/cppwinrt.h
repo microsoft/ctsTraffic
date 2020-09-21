@@ -14,6 +14,7 @@
 #include "common.h"
 #include <windows.h>
 #include <unknwn.h>
+#include <inspectable.h>
 #include <hstring.h>
 
 // WIL and C++/WinRT use two different exception types for communicating HRESULT failures. Thus, both libraries need to
@@ -108,7 +109,7 @@ namespace wil::details
             catch (const winrt::hresult_error& exception)
             {
                 MaybeGetExceptionString(exception, debugString, debugStringChars);
-                return exception.code().value;
+                return exception.to_abi();
             }
             catch (const std::bad_alloc& exception)
             {
@@ -149,7 +150,7 @@ namespace wil::details
             catch (const winrt::hresult_error& exception)
             {
                 MaybeGetExceptionString(exception, debugString, debugStringChars);
-                return exception.code().value;
+                return exception.to_abi();
             }
             catch (const std::bad_alloc& exception)
             {
@@ -189,7 +190,7 @@ namespace wil
     {
         // C++/WinRT only gives us the return address (caller), so pass along an empty 'DiagnosticsInfo' since we don't
         // have accurate file/line/etc. information
-        return static_cast<std::int32_t>(details::ReportFailure_CaughtException(__R_DIAGNOSTICS_RA(DiagnosticsInfo{}, returnAddress), FailureType::Return));
+        return static_cast<std::int32_t>(details::ReportFailure_CaughtException<FailureType::Return>(__R_DIAGNOSTICS_RA(DiagnosticsInfo{}, returnAddress)));
     }
 
     inline void WilInitialize_CppWinRT()
@@ -201,7 +202,7 @@ namespace wil
             winrt_to_hresult_handler = winrt_to_hresult;
         }
     }
-    
+
     /// @cond
     namespace details
     {
@@ -245,6 +246,26 @@ namespace wil
     inline auto put_abi(winrt::hstring& object) noexcept
     {
         return reinterpret_cast<HSTRING*>(winrt::put_abi(object));
+    }
+
+    inline ::IUnknown* com_raw_ptr(const winrt::Windows::Foundation::IUnknown& ptr) noexcept
+    {
+        return static_cast<::IUnknown*>(winrt::get_abi(ptr));
+    }
+
+    // Needed to power wil::cx_object_from_abi that requires IInspectable
+    inline ::IInspectable* com_raw_ptr(const winrt::Windows::Foundation::IInspectable& ptr) noexcept
+    {
+        return static_cast<::IInspectable*>(winrt::get_abi(ptr));
+    }
+
+    // Taken from the docs.microsoft.com article
+    template <typename T>
+    T convert_from_abi(::IUnknown* from)
+    {
+        T to{ nullptr }; // `T` is a projected type.
+        winrt::check_hresult(from->QueryInterface(winrt::guid_of<T>(), winrt::put_abi(to)));
+        return to;
     }
 }
 

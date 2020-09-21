@@ -15,19 +15,9 @@
 #include "resource.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 #if defined(WIL_ENABLE_EXCEPTIONS)
-namespace std
-{
-    template<class _Ty, class _Alloc>
-    class vector;
-
-    template<class _Elem>
-    struct char_traits;
-
-    template<class _Elem, class _Traits, class _Alloc>
-    class basic_string;
-} // namespace std
 
 namespace wil
 {
@@ -99,6 +89,8 @@ namespace wil
             }
 
             wchar_t* buffer() { return &m_value[0]; }
+
+            HRESULT trim_at_existing_null(size_t length) { m_value.erase(length); return S_OK; }
 
             std::wstring release() { return std::wstring(std::move(m_value)); }
 

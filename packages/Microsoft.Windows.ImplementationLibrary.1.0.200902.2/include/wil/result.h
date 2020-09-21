@@ -318,7 +318,7 @@ namespace wil
 
                 const DWORD size = static_cast<DWORD>(sizeof(ProcessLocalStorageData<T>));
 
-                unique_process_heap_ptr<ProcessLocalStorageData<T>> dataAlloc(static_cast<ProcessLocalStorageData<T>*>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, size)));
+                unique_process_heap_ptr<ProcessLocalStorageData<T>> dataAlloc(static_cast<ProcessLocalStorageData<T>*>(details::ProcessHeapAlloc(HEAP_ZERO_MEMORY, size)));
                 __WIL_PRIVATE_RETURN_IF_NULL_ALLOC(dataAlloc);
 
                 SemaphoreValue semaphoreValue;
@@ -406,7 +406,7 @@ namespace wil
 
                 if (shouldAllocate)
                 {
-                    Node *pNew = reinterpret_cast<Node *>(::HeapAlloc(::GetProcessHeap(), 0, sizeof(Node)));
+                    Node *pNew = reinterpret_cast<Node *>(details::ProcessHeapAlloc(0, sizeof(Node)));
                     if (pNew != nullptr)
                     {
                         new(pNew)Node{ threadId };
@@ -487,7 +487,7 @@ namespace wil
 
                 if (!stringBuffer || (stringBufferSize < neededSize))
                 {
-                    auto newBuffer = ::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, neededSize);
+                    auto newBuffer = details::ProcessHeapAlloc(HEAP_ZERO_MEMORY, neededSize);
                     if (newBuffer)
                     {
                         ::HeapFree(::GetProcessHeap(), 0, stringBuffer);
@@ -565,7 +565,7 @@ namespace wil
                 if (!errors && create)
                 {
                     const unsigned short errorCount = 5;
-                    errors = reinterpret_cast<ThreadLocalFailureInfo *>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, errorCount * sizeof(ThreadLocalFailureInfo)));
+                    errors = reinterpret_cast<ThreadLocalFailureInfo *>(details::ProcessHeapAlloc(HEAP_ZERO_MEMORY, errorCount * sizeof(ThreadLocalFailureInfo)));
                     if (errors)
                     {
                         errorAllocCount = errorCount;
@@ -678,7 +678,7 @@ namespace wil
                 // NOTE:  FailureType::Log as it's only informative (no action) and SupportedExceptions::All as it's not a barrier, only recognition.
                 wchar_t message[2048];
                 message[0] = L'\0';
-                const HRESULT hr = details::ReportFailure_CaughtExceptionCommon(__R_DIAGNOSTICS_RA(source, returnAddress), FailureType::Log, message, ARRAYSIZE(message), SupportedExceptions::All);
+                const HRESULT hr = details::ReportFailure_CaughtExceptionCommon<FailureType::Log>(__R_DIAGNOSTICS_RA(source, returnAddress), message, ARRAYSIZE(message), SupportedExceptions::All).hr;
 
                 // Now that the exception was logged, we should be able to fetch it.
                 return GetLastError(info, minSequenceId, hr);
@@ -1130,6 +1130,11 @@ namespace wil
 
         details::InitGlobalWithStorage(state, s_processLocalData, details_abi::g_pProcessLocalData, "WilError_03");
         details::InitGlobalWithStorage(state, s_threadFailureCallbacks, details::g_pThreadFailureCallbacks);
+
+        if (state == WilInitializeCommand::Create)
+        {
+            details::g_pfnGetContextAndNotifyFailure = details::GetContextAndNotifyFailure;
+        }
     }
 
     /// @cond
