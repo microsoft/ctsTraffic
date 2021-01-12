@@ -26,7 +26,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsPerf {
 
-    void ctsWriteDetails::create_file(bool mean_only)
+    void ctsWriteDetails::CreateFile(bool meanOnly)
     {
         m_fileHandle.reset(::CreateFileW(
             m_fileName.c_str(),
@@ -39,12 +39,12 @@ namespace ctsPerf {
         THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
         // write the UTF16 Byte order mark
-        constexpr WCHAR bom_utf16 = 0xFEFF;
+        constexpr WCHAR bomUtf16 = 0xFEFF;
         DWORD length = sizeof(WCHAR);
         DWORD written;
-        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), &bom_utf16, length, &written, nullptr));
+        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), &bomUtf16, length, &written, nullptr));
 
-        if (mean_only) {
+        if (meanOnly) {
             constexpr WCHAR meanHeader[] = L"PerfCounter(CounterName),SampleCount,Min,Max,Mean\r\n";
             length = sizeof meanHeader;
             THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), meanHeader, length, &written, nullptr));
@@ -56,7 +56,7 @@ namespace ctsPerf {
             THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), detailedHeader, length, &written, nullptr));
         }
     }
-    void ctsWriteDetails::create_file(const std::wstring& banner_text)
+    void ctsWriteDetails::CreateFile(const std::wstring& bannerText)
     {
         m_fileHandle.reset(::CreateFileW(
             m_fileName.c_str(),
@@ -69,18 +69,18 @@ namespace ctsPerf {
         THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
         // write the UTF16 Byte order mark
-        constexpr WCHAR bom_utf16 = 0xFEFF;
+        constexpr WCHAR bomUtf16 = 0xFEFF;
         constexpr DWORD bomLength{ sizeof(WCHAR) };
         DWORD written{};
-        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), &bom_utf16, bomLength, &written, nullptr));
+        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), &bomUtf16, bomLength, &written, nullptr));
 
-        const DWORD bannerLength{ static_cast<DWORD>(banner_text.length() * sizeof(WCHAR)) };
-        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), banner_text.c_str(), bannerLength, &written, nullptr));
+        const DWORD bannerLength{ static_cast<DWORD>(bannerText.length() * sizeof(WCHAR)) };
+        THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), bannerText.c_str(), bannerLength, &written, nullptr));
 
-        end_row();
+        EndRow();
     }
 
-    void ctsWriteDetails::write_row(const std::wstring& text) const noexcept
+    void ctsWriteDetails::WriteRow(const std::wstring& text) const noexcept
     {
         const DWORD length{ static_cast<DWORD>(text.length() * sizeof(WCHAR)) };
         DWORD written{};
@@ -89,37 +89,37 @@ namespace ctsPerf {
             wprintf(L"\t[ctsWriteDetails::write_row] WriteFile failed (%u)\n", gle);
         }
 
-        end_row();
+        EndRow();
     }
 
-    void ctsWriteDetails::write_empty_row() const noexcept
+    void ctsWriteDetails::WriteEmptyRow() const noexcept
     {
-        end_row();
+        EndRow();
     }
 
-    void ctsWriteDetails::start_row(PCWSTR class_name, PCWSTR counter_name) const noexcept
+    void ctsWriteDetails::StartRow(PCWSTR className, PCWSTR counterName) const noexcept
     try
     {
-        auto formatted_string(wil::str_printf<std::wstring>(
-            L"%ws (%ws)", class_name, counter_name));
+        auto formattedString(wil::str_printf<std::wstring>(
+            L"%ws (%ws)", className, counterName));
         // since writing to csv, can't embed a comma in the data
-        ctl::ctString::ctReplaceAll(formatted_string, L",", L"-");
+        ctl::ctString::ctReplaceAll(formattedString, L",", L"-");
 
-        const DWORD length{ static_cast<DWORD>(formatted_string.length() * sizeof(WCHAR)) };
+        const DWORD length{ static_cast<DWORD>(formattedString.length() * sizeof(WCHAR)) };
         DWORD written{};
-        if (!::WriteFile(m_fileHandle.get(), formatted_string.c_str(), length, &written, nullptr)) {
+        if (!::WriteFile(m_fileHandle.get(), formattedString.c_str(), length, &written, nullptr)) {
             const auto gle = ::GetLastError();
             wprintf(L"\t[ctsWriteDetails::start_row] WriteFile failed (%u)\n", gle);
         }
     }
     CATCH_LOG()
 
-    void ctsWriteDetails::end_row() const noexcept
+    void ctsWriteDetails::EndRow() const noexcept
     {
-        constexpr WCHAR c_Eol[2]{ L'\r', L'\n' };
-        constexpr DWORD c_EolLen{ sizeof c_Eol };
+        constexpr WCHAR endOfLine[2]{ L'\r', L'\n' };
+        constexpr DWORD endOfLineLength{ sizeof endOfLine };
         DWORD written{};
-        if (!::WriteFile(m_fileHandle.get(), c_Eol, c_EolLen, &written, nullptr)) {
+        if (!::WriteFile(m_fileHandle.get(), endOfLine, endOfLineLength, &written, nullptr)) {
             const auto gle = ::GetLastError();
             wprintf(L"\t[ctsWriteDetails::end_row] WriteFile failed (%u)\n", gle);
         }

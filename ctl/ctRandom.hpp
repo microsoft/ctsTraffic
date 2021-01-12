@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -119,7 +120,7 @@ namespace ctl
     inline void ctRandomTwister::swap(ctRandomTwister& other) noexcept
     {
         using std::swap;
-        swap(this->m_engine, other.m_engine);
+        swap(m_engine, other.m_engine);
     }
 
     template <class IntegerT>

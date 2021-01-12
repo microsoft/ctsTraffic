@@ -33,57 +33,57 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //
 namespace ctsTraffic
 {
+    // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSARecvFrom(
-        const std::shared_ptr<ctsSocket>& _shared_socket,
-        const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) noexcept
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept
     {
-        const auto socket_lock(_shared_socket->socket_reference());
-        const SOCKET socket = socket_lock.socket();
+        const auto socketLock(sharedSocket->AcquireSocketLock());
+        const SOCKET socket = socketLock.Get();
         if (INVALID_SOCKET == socket)
         {
             return wsIOResult(WSAECONNABORTED);
         }
 
-        wsIOResult return_result;
+        wsIOResult returnResult;
         try
         {
-            const auto& io_thread_pool = _shared_socket->thread_pool();
-            OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
+            const auto& ioThreadPool = sharedSocket->GetIocpThreadpool();
+            OVERLAPPED* pOverlapped = ioThreadPool->new_request(std::move(callback));
 
-            WSABUF wsabuf;
-            wsabuf.buf = _task.buffer + _task.buffer_offset;
-            wsabuf.len = _task.buffer_length;
+            WSABUF wsabuffer;
+            wsabuffer.buf = task.m_buffer + task.m_bufferOffset;
+            wsabuffer.len = task.m_bufferLength;
 
             DWORD flags = 0;
-            if (WSARecvFrom(socket, &wsabuf, 1, nullptr, &flags, nullptr, nullptr, pov, nullptr) != 0)
+            if (WSARecvFrom(socket, &wsabuffer, 1, nullptr, &flags, nullptr, nullptr, pOverlapped, nullptr) != 0)
             {
-                return_result.error_code = WSAGetLastError();
+                returnResult.m_errorCode = WSAGetLastError();
                 // IO pended == successfully initiating the IO
-                if (return_result.error_code != WSA_IO_PENDING)
+                if (returnResult.m_errorCode != WSA_IO_PENDING)
                 {
                     // must cancel the IOCP TP if the IO call fails
-                    io_thread_pool->cancel_request(pov);
+                    ioThreadPool->cancel_request(pOverlapped);
                 }
                 // will return WSA_IO_PENDING transparently to the caller
-
             }
             else
             {
-                if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)
+                if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
                 {
-                    return_result.error_code = ERROR_SUCCESS;
+                    returnResult.m_errorCode = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    return_result.bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    returnResult.m_bytesTransferred = static_cast<unsigned long>(pOverlapped->InternalHigh);
                     // completed inline, so the TP won't be notified
-                    io_thread_pool->cancel_request(pov);
+                    ioThreadPool->cancel_request(pOverlapped);
                 }
                 else
                 {
                     // WSARecvFrom returned success, but inline completions is not enabled
                     // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
-                    return_result.error_code = WSA_IO_PENDING;
+                    returnResult.m_errorCode = WSA_IO_PENDING;
                 }
             }
         }
@@ -93,60 +93,60 @@ namespace ctsTraffic
             return wsIOResult(error);
         }
 
-        return return_result;
+        return returnResult;
     }
 
+    // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSASendTo(
-        const std::shared_ptr<ctsSocket>& _shared_socket,
-        const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) noexcept
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept
     {
-        const auto socket_lock(_shared_socket->socket_reference());
-        const SOCKET socket = socket_lock.socket();
+        const auto socketLock(sharedSocket->AcquireSocketLock());
+        const SOCKET socket = socketLock.Get();
         if (INVALID_SOCKET == socket)
         {
             return wsIOResult(WSAECONNABORTED);
         }
 
-        wsIOResult return_result;
+        wsIOResult returnResult;
         try
         {
-            const auto& targetAddress = _shared_socket->target_address();
-            const auto& io_thread_pool = _shared_socket->thread_pool();
-            OVERLAPPED* pov = io_thread_pool->new_request(std::move(_callback));
+            const auto& targetAddress = sharedSocket->GetRemoteSockaddr();
+            const auto& ioThreadPool = sharedSocket->GetIocpThreadpool();
+            OVERLAPPED* pOverlapped = ioThreadPool->new_request(std::move(callback));
 
-            WSABUF wsabuf;
-            wsabuf.buf = _task.buffer + _task.buffer_offset;
-            wsabuf.len = _task.buffer_length;
+            WSABUF wsabuffer;
+            wsabuffer.buf = task.m_buffer + task.m_bufferOffset;
+            wsabuffer.len = task.m_bufferLength;
 
-            if (WSASendTo(socket, &wsabuf, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pov, nullptr) != 0)
+            if (WSASendTo(socket, &wsabuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pOverlapped, nullptr) != 0)
             {
-                return_result.error_code = WSAGetLastError();
+                returnResult.m_errorCode = WSAGetLastError();
                 // IO pended == successfully initiating the IO
-                if (return_result.error_code != WSA_IO_PENDING)
+                if (returnResult.m_errorCode != WSA_IO_PENDING)
                 {
                     // must cancel the IOCP TP if the IO call fails
-                    io_thread_pool->cancel_request(pov);
+                    ioThreadPool->cancel_request(pOverlapped);
                 }
                 // will return WSA_IO_PENDING transparently to the caller
-
             }
             else
             {
-                if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)
+                if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
                 {
-                    return_result.error_code = ERROR_SUCCESS;
+                    returnResult.m_errorCode = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    return_result.bytes_transferred = static_cast<unsigned long>(pov->InternalHigh);
+                    returnResult.m_bytesTransferred = static_cast<unsigned long>(pOverlapped->InternalHigh);
                     // completed inline, so the TP won't be notified
-                    io_thread_pool->cancel_request(pov);
+                    ioThreadPool->cancel_request(pOverlapped);
                 }
                 else
                 {
                     // WSARecvFrom returned success, but inline completions is not enabled
                     // so the IOCP callback will be invoked - thus will return WSA_IO_PENDING
-                    return_result.error_code = WSA_IO_PENDING;
+                    returnResult.m_errorCode = WSA_IO_PENDING;
                 }
             }
         }
@@ -156,20 +156,20 @@ namespace ctsTraffic
             return wsIOResult(error);
         }
 
-        return return_result;
+        return returnResult;
     }
 
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept
+    wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept
     {
-        wsIOResult return_result;
-        linger linger_option{};
-        linger_option.l_onoff = 1;
-        linger_option.l_linger = 0;
-        if (setsockopt(_socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&linger_option), static_cast<int>(sizeof linger_option)) != 0)
+        wsIOResult returnResult;
+        linger lingerOption{};
+        lingerOption.l_onoff = 1;
+        lingerOption.l_linger = 0;
+        if (setsockopt(socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&lingerOption), static_cast<int>(sizeof lingerOption)) != 0)
         {
-            return_result.error_code = WSAGetLastError();
+            returnResult.m_errorCode = WSAGetLastError();
         }
 
-        return return_result;
+        return returnResult;
     }
 }

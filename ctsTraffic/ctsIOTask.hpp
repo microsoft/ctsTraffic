@@ -24,7 +24,7 @@ namespace ctsTraffic
 {
     // The ctsIOTask struct instructs the caller on what action to perform
     // - and provides it the buffer it should use to send/recv data
-    enum class IOTaskAction
+    enum class ctsTaskAction
     {
         None,
         Send,
@@ -35,16 +35,16 @@ namespace ctsTraffic
         FatalAbort
     };
 
-    struct ctsIOTask
+    struct ctsTask
     {
-        long long time_offset_milliseconds = 0LL;
-        RIO_BUFFERID rio_bufferid = RIO_INVALID_BUFFERID;
+        long long m_timeOffsetMilliseconds = 0LL;
+        RIO_BUFFERID m_rioBufferid = RIO_INVALID_BUFFERID;
 
-        _Field_size_full_(buffer_length) char* buffer = nullptr;
-        unsigned long buffer_length = 0UL;
-        unsigned long buffer_offset = 0UL;
-        unsigned long expected_pattern_offset = 0UL;
-        IOTaskAction ioAction = IOTaskAction::None;
+        _Field_size_full_(buffer_length) char* m_buffer = nullptr;
+        unsigned long m_bufferLength = 0UL;
+        unsigned long m_bufferOffset = 0UL;
+        unsigned long m_expectedPatternOffset = 0UL;
+        ctsTaskAction m_ioAction = ctsTaskAction::None;
 
         // (internal) flag identifying the type of buffer
         enum class BufferType
@@ -52,23 +52,24 @@ namespace ctsTraffic
             Null,
             TcpConnectionId,
             UdpConnectionId,
+            CompletionMessage,
             Static,
-            Tracked
-        } buffer_type = BufferType::Null;
+            Dynamic
+        } m_bufferType = BufferType::Null;
         // (internal) flag if this IO request is tracked and verified
-        bool track_io = false;
+        bool m_trackIo = false;
 
-        static PCWSTR PrintIOAction(const IOTaskAction& _action) noexcept
+        static PCWSTR PrintTaskAction(const ctsTaskAction& action) noexcept
         {
-            switch (_action)
+            switch (action)
             {
-                case IOTaskAction::None: return L"None";
-                case IOTaskAction::Send: return L"Send";
-                case IOTaskAction::Recv: return L"Recv";
-                case IOTaskAction::GracefulShutdown: return L"GracefulShutdown";
-                case IOTaskAction::HardShutdown: return L"HardShutdown";
-                case IOTaskAction::Abort: return L"Abort";
-                case IOTaskAction::FatalAbort: return L"FatalAbort";
+                case ctsTaskAction::None: return L"None";
+                case ctsTaskAction::Send: return L"Send";
+                case ctsTaskAction::Recv: return L"Recv";
+                case ctsTaskAction::GracefulShutdown: return L"GracefulShutdown";
+                case ctsTaskAction::HardShutdown: return L"HardShutdown";
+                case ctsTaskAction::Abort: return L"Abort";
+                case ctsTaskAction::FatalAbort: return L"FatalAbort";
             }
 
             return L"Unknown IOAction";

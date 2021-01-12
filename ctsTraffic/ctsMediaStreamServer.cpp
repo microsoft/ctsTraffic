@@ -37,81 +37,82 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
     // Called to 'accept' incoming connections
-    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         try
         {
-            ctsMediaStreamServerImpl::init_once();
+            ctsMediaStreamServerImpl::InitOnce();
             // ctsMediaStreamServerImpl will complete the ctsSocket object
             // when a client request comes in to be 'accepted'
-            ctsMediaStreamServerImpl::accept_socket(_weak_socket);
+            ctsMediaStreamServerImpl::AcceptSocket(weakSocket);
         }
         catch (...)
         {
             const auto error = ctsConfig::PrintThrownException();
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket)
+            auto sharedSocket(weakSocket.lock());
+            if (sharedSocket)
             {
-                shared_socket->complete_state(error);
+                sharedSocket->CompleteState(error);
             }
         }
     }
 
     // Called initiate IO on a datagram socket
-    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
-        ctsIOTask next_task;
+        const auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
+        {
+            return;
+        }
+
+        // hold a reference on the iopattern
+        auto lockedPattern(sharedSocket->LockIoPattern());
+        if (!lockedPattern)
+        {
+            return;
+        }
+
+        ctsTask nextTask;
         try
         {
-            ctsMediaStreamServerImpl::init_once();
+            ctsMediaStreamServerImpl::InitOnce();
 
-            const auto shared_socket(_weak_socket.lock());
-            if (shared_socket)
+            do
             {
-                // hold a reference on the iopattern
-                auto shared_pattern(shared_socket->io_pattern());
-                do
+                nextTask = lockedPattern->InitiateIo();
+                if (nextTask.m_ioAction != ctsTaskAction::None)
                 {
-                    next_task = shared_pattern->initiate_io();
-                    if (next_task.ioAction != IOTaskAction::None)
-                    {
-                        ctsMediaStreamServerImpl::schedule_io(_weak_socket, next_task);
-                    }
+                    ctsMediaStreamServerImpl::ScheduleIo(weakSocket, nextTask);
                 }
-                while (next_task.ioAction != IOTaskAction::None);
             }
+            while (nextTask.m_ioAction != ctsTaskAction::None);
         }
         catch (...)
         {
             const auto error = ctsConfig::PrintThrownException();
-            if (next_task.ioAction != IOTaskAction::None)
+            if (nextTask.m_ioAction != ctsTaskAction::None)
             {
-                auto exception_shared_socket(_weak_socket.lock());
-                if (exception_shared_socket)
+                // must complete any IO that was requested but not scheduled
+                lockedPattern->CompleteIo(nextTask, 0, error);
+                if (0 == sharedSocket->GetPendedIoCount())
                 {
-                    // hold a reference on the iopattern
-                    auto exception_shared_pattern(exception_shared_socket->io_pattern());
-                    // must complete any IO that was requested but not scheduled
-                    exception_shared_pattern->complete_io(next_task, 0, error);
-                    if (0 == exception_shared_socket->pended_io())
-                    {
-                        exception_shared_socket->complete_state(error);
-                    }
+                    sharedSocket->CompleteState(error);
                 }
             }
         }
     }
 
     // Called to remove that socket from the tracked vector of connected sockets
-    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         try
     {
-        ctsMediaStreamServerImpl::init_once();
+        ctsMediaStreamServerImpl::InitOnce();
 
-        const auto shared_socket(_weak_socket.lock());
-        if (shared_socket)
+        const auto sharedSocket(weakSocket.lock());
+        if (sharedSocket)
         {
-            ctsMediaStreamServerImpl::remove_socket(shared_socket->target_address());
+            ctsMediaStreamServerImpl::RemoveSocket(sharedSocket->GetRemoteSockaddr());
         }
     }
     catch (...)
@@ -121,31 +122,31 @@ namespace ctsTraffic
 
     namespace ctsMediaStreamServerImpl
     {
-        std::vector<std::unique_ptr<ctsMediaStreamServerListeningSocket>> listening_sockets;
-
         // function for doing the actual IO for a UDP media stream datagram connection
-        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* connected_socket) noexcept;
+        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* connectedSocket) noexcept;
 
-        wil::critical_section socket_vector_guard;
-        _Guarded_by_(socket_vector_guard) std::vector<std::shared_ptr<ctsMediaStreamServerConnectedSocket>> connected_sockets;
+        std::vector<std::unique_ptr<ctsMediaStreamServerListeningSocket>> g_listeningSockets;  // NOLINT(clang-diagnostic-exit-time-destructors)
+
+        wil::critical_section g_socketVectorGuard{ ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };  // NOLINT(cppcoreguidelines-interfaces-global-init, clang-diagnostic-exit-time-destructors)
+        _Guarded_by_(g_socketVectorGuard) std::vector<std::shared_ptr<ctsMediaStreamServerConnectedSocket>> g_connectedSockets;  // NOLINT(clang-diagnostic-exit-time-destructors)
         // weak_ptr<> to ctsSocket objects ready to accept a connection
-        _Guarded_by_(socket_vector_guard) std::vector<std::weak_ptr<ctsSocket>> accepting_sockets;
+        _Guarded_by_(g_socketVectorGuard) std::vector<std::weak_ptr<ctsSocket>> g_acceptingSockets;  // NOLINT(clang-diagnostic-exit-time-destructors)
         // endpoints that have been received from clients not yet matched to ctsSockets
-        _Guarded_by_(socket_vector_guard) std::vector<std::pair<SOCKET, ctl::ctSockaddr>> awaiting_endpoints;
+        _Guarded_by_(g_socketVectorGuard) std::vector<std::pair<SOCKET, ctl::ctSockaddr>> g_awaitingEndpoints;  // NOLINT(clang-diagnostic-exit-time-destructors)
 
 
         // Singleton values used as the actual implementation for every 'connection'
 
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        static INIT_ONCE InitImpl = INIT_ONCE_STATIC_INIT;
+        static INIT_ONCE g_initImpl = INIT_ONCE_STATIC_INIT;
         static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID*)
         {
             try
             {
                 // 'listen' to each address
-                for (const auto& addr : ctsConfig::Settings->ListenAddresses)
+                for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
                 {
-                    wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags));
+                    wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
 
                     const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                     if (error != NO_ERROR)
@@ -159,24 +160,24 @@ namespace ctsTraffic
                     }
 
                     // capture the socket value before moved into the vector
-                    const SOCKET listening_socket_to_print(listening.get());
-                    listening_sockets.emplace_back(
+                    const SOCKET listeningSocketToPrint(listening.get());
+                    g_listeningSockets.emplace_back(
                         std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
                     PRINT_DEBUG_INFO(
                         L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
                         addr.WriteCompleteAddress().c_str(),
-                        listening_socket_to_print)
+                        listeningSocketToPrint);
                 }
 
-                if (listening_sockets.empty())
+                if (g_listeningSockets.empty())
                 {
                     throw std::exception("ctsMediaStreamServer invoked with no listening addresses specified");
                 }
 
                 // initiate the recv's in the 'listening' sockets
-                for (auto& listener : listening_sockets)
+                for (auto& listener : g_listeningSockets)
                 {
-                    listener->initiate_recv();
+                    listener->InitiateRecv();
                 }
             }
             catch (...)
@@ -187,336 +188,322 @@ namespace ctsTraffic
             return TRUE;
         }
 
-        void init_once()
+        void InitOnce()
         {
-            if (!InitOnceExecuteOnce(&InitImpl, InitOnceImpl, nullptr, nullptr))
+            if (!InitOnceExecuteOnce(&g_initImpl, InitOnceImpl, nullptr, nullptr))
             {
                 throw std::runtime_error("ctsMediaStreamServerListener could not be instantiated");
             }
         }
 
         // Schedule the first IO on the specified ctsSocket
-        void schedule_io(const std::weak_ptr<ctsSocket>& _weak_socket, const ctsIOTask& _task)
+        void ScheduleIo(const std::weak_ptr<ctsSocket>& weakSocket, const ctsTask& task)
         {
-            auto shared_socket = _weak_socket.lock();
-            if (!shared_socket)
+            auto sharedSocket = weakSocket.lock();
+            if (!sharedSocket)
             {
                 THROW_WIN32_MSG(WSAECONNABORTED, "ctsSocket already freed");
             }
 
-            std::shared_ptr<ctsMediaStreamServerConnectedSocket> shared_connected_socket;
+            std::shared_ptr<ctsMediaStreamServerConnectedSocket> sharedConnectedSocket;
             {
                 // must guard connected_sockets since we need to add it
-                const auto lock_connected_object = socket_vector_guard.lock();
+                const auto lockConnectedObject = g_socketVectorGuard.lock();
 
                 // find the matching connected_socket
-                const auto found_socket = std::find_if(
-                    std::begin(connected_sockets),
-                    std::end(connected_sockets),
-                    [&shared_socket](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
-                        return (shared_socket->target_address() == _connected_socket->get_remote_address());
+                const auto foundSocket = std::find_if(
+                    std::begin(g_connectedSockets),
+                    std::end(g_connectedSockets),
+                    [&sharedSocket](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
+                        return sharedSocket->GetRemoteSockaddr() == connectedSocket->GetRemoteAddress();
                     }
                 );
 
-                if (found_socket == std::end(connected_sockets))
+                if (foundSocket == std::end(g_connectedSockets))
                 {
                     ctsConfig::PrintErrorInfo(
-                        wil::str_printf<std::wstring>(L"ctsMediaStreamServer - failed to find the socket with remote address %ws in our connected socket list to continue sending datagrams",
-                            shared_socket->target_address().WriteCompleteAddress().c_str()).c_str());
+                        L"ctsMediaStreamServer - failed to find the socket with remote address %ws in our connected socket list to continue sending datagrams",
+                        sharedSocket->GetRemoteSockaddr().WriteCompleteAddress().c_str());
                     THROW_WIN32_MSG(ERROR_INVALID_DATA, "ctsSocket was not found in the connected sockets to continue sending datagrams");
                 }
 
-                shared_connected_socket = *found_socket;
+                sharedConnectedSocket = *foundSocket;
             }
             // must call into connected socket without holding a lock
             // and without maintaining an iterator into the list
             // since the call to schedule_io could end up asking to remove this object from the list
-            shared_connected_socket->schedule_task(_task);
+            sharedConnectedSocket->ScheduleTask(task);
         }
 
         // Process a new ctsSocket from the ctsSocketBroker
         // - accept_socket takes the ctsSocket to create a new entry
         //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
-        void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
+        void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket)
         {
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket)
+            auto sharedSocket(weakSocket.lock());
+            if (sharedSocket)
             {
-                const auto lock_awaiting_object = socket_vector_guard.lock();
+                const auto lockAwaitingObject = g_socketVectorGuard.lock();
 
-                if (awaiting_endpoints.empty())
+                if (g_awaitingEndpoints.empty())
                 {
                     // just add it to our accepting sockets vector under the writer lock
-                    accepting_sockets.push_back(_weak_socket);
+                    g_acceptingSockets.push_back(weakSocket);
                 }
                 else
                 {
-                    auto waiting_endpoint = awaiting_endpoints.rbegin();
+                    auto waitingEndpoint = g_awaitingEndpoints.rbegin();
 
-                    const auto existing_socket = std::find_if(
-                        std::begin(connected_sockets),
-                        std::end(connected_sockets),
-                        [&](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
-                            return waiting_endpoint->second == _connected_socket->get_remote_address();
+                    const auto existingSocket = std::find_if(
+                        std::begin(g_connectedSockets),
+                        std::end(g_connectedSockets),
+                        [&](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
+                            return waitingEndpoint->second == connectedSocket->GetRemoteAddress();
                         });
 
-                    if (existing_socket != std::end(connected_sockets))
+                    if (existingSocket != std::end(g_connectedSockets))
                     {
-                        ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
+                        ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                         PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
-                            waiting_endpoint->second.WriteCompleteAddress().c_str())
+                            waitingEndpoint->second.WriteCompleteAddress().c_str());
                         // return early if this was a duplicate request: this can happen if there is latency or drops
                         // between the client and server as they attempt to negotiating starting a new stream
                         return;
                     }
 
-                    connected_sockets.emplace_back(
+                    g_connectedSockets.emplace_back(
                         std::make_shared<ctsMediaStreamServerConnectedSocket>(
-                            _weak_socket,
-                            waiting_endpoint->first,
-                            waiting_endpoint->second,
+                            weakSocket,
+                            waitingEndpoint->first,
+                            waitingEndpoint->second,
                             ConnectedSocketIo));
 
                     PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws added to connected_sockets",
-                        waiting_endpoint->second.WriteCompleteAddress().c_str())
+                        waitingEndpoint->second.WriteCompleteAddress().c_str());
 
                     // now complete the ctsSocket 'Create' request
-                    const auto found_socket = std::find_if(
-                        listening_sockets.begin(),
-                        listening_sockets.end(),
-                        [&waiting_endpoint](const std::unique_ptr<ctsMediaStreamServerListeningSocket>& _listener) noexcept {
-                            return (_listener->get_socket() == waiting_endpoint->first);
+                    const auto foundSocket = std::find_if(
+                        g_listeningSockets.begin(),
+                        g_listeningSockets.end(),
+                        [&waitingEndpoint](const std::unique_ptr<ctsMediaStreamServerListeningSocket>& listener) noexcept {
+                            return listener->GetSocket() == waitingEndpoint->first;
                         });
                     FAIL_FAST_IF_MSG(
-                        found_socket == listening_sockets.end(),
+                        foundSocket == g_listeningSockets.end(),
                         "Could not find the socket (%Iu) in the waiting_endpoint from our listening sockets (%p)\n",
-                        waiting_endpoint->first, &listening_sockets);
+                        waitingEndpoint->first, &g_listeningSockets);
 
-                    shared_socket->set_local_address((*found_socket)->get_address());
-                    shared_socket->set_target_address(waiting_endpoint->second);
-                    shared_socket->complete_state(NO_ERROR);
+                    sharedSocket->SetLocalSockaddr((*foundSocket)->GetListeningAddress());
+                    sharedSocket->SetRemoteSockaddr(waitingEndpoint->second);
+                    sharedSocket->CompleteState(NO_ERROR);
 
-                    ctsConfig::PrintNewConnection(shared_socket->local_address(), shared_socket->target_address());
+                    ctsConfig::PrintNewConnection(sharedSocket->GetLocalSockaddr(), sharedSocket->GetRemoteSockaddr());
                     // if added to connected_sockets, can then safely remove it from the waiting endpoint
-                    awaiting_endpoints.pop_back();
+                    g_awaitingEndpoints.pop_back();
                 }
             }
         }
 
         // Process the removal of a connected socket once it is completed
         // - remove_socket takes the remote address to find the socket
-        void remove_socket(const ctl::ctSockaddr& _target_addr)
+        void RemoveSocket(const ctl::ctSockaddr& targetAddr)
         {
-            const auto lock_connected_object = socket_vector_guard.lock();
+            const auto lockConnectedObject = g_socketVectorGuard.lock();
 
-            const auto found_socket = std::find_if(
-                std::begin(connected_sockets),
-                std::end(connected_sockets),
-                [&_target_addr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
-                    return _target_addr == _connected_socket->get_remote_address();
+            const auto foundSocket = std::find_if(
+                std::begin(g_connectedSockets),
+                std::end(g_connectedSockets),
+                [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
+                    return targetAddr == connectedSocket->GetRemoteAddress();
                 });
 
-            if (found_socket != std::end(connected_sockets))
+            if (foundSocket != std::end(g_connectedSockets))
             {
-                connected_sockets.erase(found_socket);
+                g_connectedSockets.erase(foundSocket);
             }
         }
 
         // Processes the incoming START request from the client
         // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
         // - else we'll queue it to awaiting_endpoints
-        void Start(SOCKET _socket, const ctl::ctSockaddr& _local_addr, const ctl::ctSockaddr& _target_addr)
+        void Start(SOCKET socket, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& targetAddr)
         {
-            const auto lock_awaiting_object = socket_vector_guard.lock();
+            const auto lockAwaitingObject = g_socketVectorGuard.lock();
 
-            const auto existing_socket = std::find_if(
-                std::begin(connected_sockets),
-                std::end(connected_sockets),
-                [&_target_addr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& _connected_socket) noexcept {
-                    return _target_addr == _connected_socket->get_remote_address();
+            const auto existingSocket = std::find_if(
+                std::begin(g_connectedSockets),
+                std::end(g_connectedSockets),
+                [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
+                    return targetAddr == connectedSocket->GetRemoteAddress();
                 });
-            if (existing_socket != std::end(connected_sockets))
+            if (existingSocket != std::end(g_connectedSockets))
             {
-                ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
+                ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
-                    _target_addr.WriteCompleteAddress().c_str())
+                    targetAddr.WriteCompleteAddress().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops
                 // between the client and server as they attempt to negotiating starting a new stream
                 return;
             }
-            const auto awaiting_endpoint = std::find_if(
-                std::begin(awaiting_endpoints),
-                std::end(awaiting_endpoints),
-                [&_target_addr](const std::pair<SOCKET, ctl::ctSockaddr>& endpoint) noexcept {
-                    return _target_addr == endpoint.second;
+            const auto awaitingEndpoint = std::find_if(
+                std::begin(g_awaitingEndpoints),
+                std::end(g_awaitingEndpoints),
+                [&targetAddr](const std::pair<SOCKET, ctl::ctSockaddr>& endpoint) noexcept {
+                    return targetAddr == endpoint.second;
                 });
-            if (awaiting_endpoint != std::end(awaiting_endpoints))
+            if (awaitingEndpoint != std::end(g_awaitingEndpoints))
             {
-                ctsConfig::Settings->UdpStatusDetails.duplicate_frames.increment();
+                ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
-                    _target_addr.WriteCompleteAddress().c_str())
+                    targetAddr.WriteCompleteAddress().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops
                 // between the client and server as they attempt to negotiating starting a new stream
                 return;
             }
 
             // find a ctsSocket waiting to 'accept' a connection and complete it
-            bool add_to_awaiting = true;
-            while (!accepting_sockets.empty())
+            bool addToAwaiting = true;
+            while (!g_acceptingSockets.empty())
             {
-                auto weak_instance = *accepting_sockets.rbegin();
-                auto shared_instance = weak_instance.lock();
-                if (shared_instance)
+                auto weakInstance = *g_acceptingSockets.rbegin();
+                auto sharedInstance = weakInstance.lock();
+                if (sharedInstance)
                 {
                     // 'move' the accepting socket to connected
-                    connected_sockets.emplace_back(
-                        std::make_shared<ctsMediaStreamServerConnectedSocket>(weak_instance, _socket, _target_addr, ConnectedSocketIo));
+                    g_connectedSockets.emplace_back(
+                        std::make_shared<ctsMediaStreamServerConnectedSocket>(weakInstance, socket, targetAddr, ConnectedSocketIo));
 
                     PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to connected_sockets",
-                        _target_addr.WriteCompleteAddress().c_str())
+                        targetAddr.WriteCompleteAddress().c_str());
 
                     // verify is successfully added to connected_sockets before popping off accepting_sockets
-                    add_to_awaiting = false;
-                    accepting_sockets.pop_back();
+                    addToAwaiting = false;
+                    g_acceptingSockets.pop_back();
 
                     // now complete the accepted ctsSocket back to the ctsSocketState
-                    shared_instance->set_local_address(_local_addr);
-                    shared_instance->set_target_address(_target_addr);
-                    shared_instance->complete_state(NO_ERROR);
+                    sharedInstance->SetLocalSockaddr(localAddr);
+                    sharedInstance->SetRemoteSockaddr(targetAddr);
+                    sharedInstance->CompleteState(NO_ERROR);
 
-                    ctsConfig::PrintNewConnection(_local_addr, _target_addr);
+                    ctsConfig::PrintNewConnection(localAddr, targetAddr);
                     break;
                 }
             }
 
             // if we didn't find a waiting connection to accept it, queue it for when one arrives later
-            if (add_to_awaiting)
+            if (addToAwaiting)
             {
                 PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to awaiting_endpoints",
-                    _target_addr.WriteCompleteAddress().c_str())
+                    targetAddr.WriteCompleteAddress().c_str());
 
                 // only queue it if we aren't already waiting on this address
-                awaiting_endpoints.emplace_back(_socket, _target_addr);
+                g_awaitingEndpoints.emplace_back(socket, targetAddr);
             }
         }
 
-        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* connected_socket) noexcept
+        wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* connectedSocket) noexcept
         {
-            const SOCKET socket = connected_socket->get_sending_socket();
+            const SOCKET socket = connectedSocket->GetSendingSocket();
             if (INVALID_SOCKET == socket)
             {
                 return wsIOResult(WSA_OPERATION_ABORTED);
             }
 
-            const ctl::ctSockaddr& remote_addr(connected_socket->get_remote_address());
-            const ctsIOTask next_task = connected_socket->get_nextTask();
+            const ctl::ctSockaddr& remoteAddr(connectedSocket->GetRemoteAddress());
+            const ctsTask nextTask = connectedSocket->GetNextTask();
 
-            wsIOResult return_results;
-            if (ctsIOTask::BufferType::UdpConnectionId == next_task.buffer_type)
+            wsIOResult returnResults;
+            if (ctsTask::BufferType::UdpConnectionId == nextTask.m_bufferType)
             {
                 // making a synchronous call
-                WSABUF wsabuf{};
-                wsabuf.buf = next_task.buffer;
-                wsabuf.len = next_task.buffer_length;
+                WSABUF wsabuffer{};
+                wsabuffer.buf = nextTask.m_buffer;
+                wsabuffer.len = nextTask.m_bufferLength;
 
-                const auto send_result = WSASendTo(
+                const auto sendResult = WSASendTo(
                     socket,
-                    &wsabuf,
+                    &wsabuffer,
                     1,
-                    &return_results.bytes_transferred,
+                    &returnResults.m_bytesTransferred,
                     0,
-                    remote_addr.sockaddr(),
-                    remote_addr.length(),
+                    remoteAddr.sockaddr(),
+                    remoteAddr.length(),
                     nullptr,
                     nullptr);
 
-                if (SOCKET_ERROR == send_result)
+                if (SOCKET_ERROR == sendResult)
                 {
                     const auto error = WSAGetLastError();
-                    try
-                    {
-                        ctsConfig::PrintErrorInfo(
-                            wil::str_printf<std::wstring>(L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
-                                socket,
-                                remote_addr.WriteCompleteAddress().c_str(),
-                                error).c_str());
-                    }
-                    catch (...)
-                    {
-                        // best effort
-                    }
+                    ctsConfig::PrintErrorInfo(
+                        L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
+                        socket,
+                        remoteAddr.WriteCompleteAddress().c_str(),
+                        error);
                     return wsIOResult(error);
                 }
             }
             else
             {
-                const auto seq_number = connected_socket->increment_sequence();
+                const auto sequenceNumber = connectedSocket->IncrementSequence();
                 PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServer sending seq number %lld (%lu bytes)\n",
-                    seq_number,
-                    next_task.buffer_length)
+                    sequenceNumber,
+                    nextTask.m_bufferLength);
 
-                ctsMediaStreamSendRequests sending_requests(
-                    next_task.buffer_length, // total bytes to send
-                    seq_number,
-                    next_task.buffer);
-                for (auto& send_request : sending_requests)
+                ctsMediaStreamSendRequests sendingRequests(
+                    nextTask.m_bufferLength, // total bytes to send
+                    sequenceNumber,
+                    nextTask.m_buffer);
+                for (auto& sendRequest : sendingRequests)
                 {
                     // making a synchronous call
-                    DWORD bytes_sent{};
-                    const auto send_result = WSASendTo(
+                    DWORD bytesSent{};
+                    const auto sendResult = WSASendTo(
                         socket,
-                        send_request.data(),
-                        static_cast<DWORD>(send_request.size()),
-                        &bytes_sent,
+                        sendRequest.data(),
+                        static_cast<DWORD>(sendRequest.size()),
+                        &bytesSent,
                         0,
-                        remote_addr.sockaddr(),
-                        remote_addr.length(),
+                        remoteAddr.sockaddr(),
+                        remoteAddr.length(),
                         nullptr,
                         nullptr);
-                    if (SOCKET_ERROR == send_result)
+                    if (SOCKET_ERROR == sendResult)
                     {
                         const auto error = WSAGetLastError();
-                        try
+                        if (WSAEMSGSIZE == error)
                         {
-                            if (WSAEMSGSIZE == error)
+                            unsigned long bytesRequested = 0;
+                            // iterate across each WSABUF* in the array
+                            for (auto& wasbuffer : sendRequest)
                             {
-                                unsigned long bytes_requested = 0;
-                                // iterate across each WSABUF* in the array
-                                for (auto& wasbuf : send_request)
-                                {
-                                    bytes_requested += wasbuf.len;
-                                }
-                                ctsConfig::PrintErrorInfo(
-                                    wil::str_printf<std::wstring>(L"WSASendTo(%Iu, seq %lld, %ws) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
-                                        socket,
-                                        seq_number,
-                                        remote_addr.WriteCompleteAddress().c_str(),
-                                        bytes_requested).c_str());
+                                bytesRequested += wasbuffer.len;
                             }
-                            else
-                            {
-                                ctsConfig::PrintErrorInfo(
-                                    wil::str_printf<std::wstring>(L"WSASendTo(%Iu, seq %lld, %ws) failed [%d]",
-                                        socket,
-                                        seq_number,
-                                        remote_addr.WriteCompleteAddress().c_str(),
-                                        error).c_str());
-                            }
+                            ctsConfig::PrintErrorInfo(
+                                L"WSASendTo(%Iu, seq %lld, %ws) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
+                                socket,
+                                sequenceNumber,
+                                remoteAddr.WriteCompleteAddress().c_str(),
+                                bytesRequested);
                         }
-                        catch (...)
+                        else
                         {
-                            // best effort
+                            ctsConfig::PrintErrorInfo(
+                                L"WSASendTo(%Iu, seq %lld, %ws) failed [%d]",
+                                socket,
+                                sequenceNumber,
+                                remoteAddr.WriteCompleteAddress().c_str(),
+                                error);
                         }
                         return wsIOResult(error);
                     }
 
                     // successfully completed synchronously
-                    return_results.bytes_transferred += bytes_sent;
+                    returnResults.m_bytesTransferred += bytesSent;
                 }
             }
 
-            return return_results;
+            return returnResults;
         }
     }
 }

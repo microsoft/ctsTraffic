@@ -26,174 +26,175 @@ namespace ctsTraffic
 {
     namespace ctsStatistics
     {
-        constexpr unsigned long ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
+        constexpr unsigned long c_connectionIdLength = 36 + 1; // UUID strings are 36 chars
 
         template <typename T>
-        void GenerateConnectionId(_In_ T& _statistics_object)
+        void GenerateConnectionId(_In_ T& statisticsObject)
         {
-            UUID connection_id;
-            RPC_STATUS status = UuidCreate(&connection_id);
+            UUID connectionId;
+            RPC_STATUS status = UuidCreate(&connectionId);
             if (status != RPC_S_OK)
             {
                 THROW_WIN32_MSG(status, "UuidCreate (ctsStatistics)");
             }
 
-            RPC_CSTR connection_id_string = nullptr;
-            status = UuidToStringA(&connection_id, &connection_id_string);
+            RPC_CSTR connectionIdString = nullptr;
+            status = UuidToStringA(&connectionId, &connectionIdString);
             if (status != RPC_S_OK)
             {
                 THROW_WIN32_MSG(status, "UuidToStringA (ctsStatistics)");
             }
             FAIL_FAST_IF_MSG(
-                strlen(reinterpret_cast<LPSTR>(connection_id_string)) != (ConnectionIdLength - 1),
+                // ReSharper disable once CppRedundantParentheses
+                strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (c_connectionIdLength - 1),
                 "UuidToString returned a string not 36 characters long (%Iu)",
-                strlen(reinterpret_cast<LPSTR>(connection_id_string)));
+                strlen(reinterpret_cast<LPSTR>(connectionIdString)));
 
-            const auto copy_error = ::memcpy_s(_statistics_object.connection_identifier, ConnectionIdLength, connection_id_string, ConnectionIdLength);
+            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, c_connectionIdLength, connectionIdString, c_connectionIdLength);
             FAIL_FAST_IF_MSG(
-                copy_error != 0,
-                "memcpy_s failed trying to copy a UUID string (%d)", copy_error);
+                copyError != 0,
+                "memcpy_s failed trying to copy a UUID string (%d)", copyError);
 
-            RpcStringFreeA(&connection_id_string);
-            _statistics_object.connection_identifier[ConnectionIdLength - 1] = '\0';
+            RpcStringFreeA(&connectionIdString);
+            statisticsObject.m_connectionIdentifier[c_connectionIdLength - 1] = '\0';
         }
 
         template <typename T>
-        void Start(_In_ T& _statistics_object) noexcept
+        void Start(_In_ T& statisticsObject) noexcept
         {
             // only calculate the QPC the first time
             // - willing to take the cost of 2 interlocked operations the first time this is initialized
             //   versus taking a QPC hit on every IO request
-            if (0LL == _statistics_object.start_time.get())
+            if (0LL == statisticsObject.start_time.get())
             {
-                _statistics_object.start_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
+                statisticsObject.m_startTime.set_conditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
             }
         }
 
         template <typename T>
-        void End(_In_ T& _statistics_object) noexcept
+        void End(_In_ T& statisticsObject) noexcept
         {
-            _statistics_object.end_time.set_conditionally(ctl::ctTimer::ctSnapQpcInMillis(), 0LL);
+            statisticsObject.m_endTime.set_conditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
         }
     }
 
-    struct ctStatsTracking
+    struct ctsStatsTracking
     {
     private:
-        long long current_value = 0ll;
-        long long previous_value = 0ll;
+        long long m_currentValue = 0ll;
+        long long m_previousValue = 0ll;
 
     public:
-        ctStatsTracking() noexcept = default;
-        explicit ctStatsTracking(long long _initial_value) noexcept :
-            current_value(_initial_value),
-            previous_value(_initial_value)
+        ctsStatsTracking() noexcept = default;
+        explicit ctsStatsTracking(long long initial_value) noexcept :
+            m_currentValue(initial_value),
+            m_previousValue(initial_value)
         {
         }
-        ~ctStatsTracking() noexcept = default;
+        ~ctsStatsTracking() noexcept = default;
 
-        ctStatsTracking(const ctStatsTracking& _in) noexcept :
-            current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
-            previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
+        ctsStatsTracking(const ctsStatsTracking& in) noexcept :
+            m_currentValue(ctl::ctMemoryGuardRead(&in.m_currentValue)),
+            m_previousValue(ctl::ctMemoryGuardRead(&in.m_previousValue))
         {
         }
-        ctStatsTracking(ctStatsTracking&& _in) noexcept :
-            current_value(ctl::ctMemoryGuardRead(&_in.current_value)),
-            previous_value(ctl::ctMemoryGuardRead(&_in.previous_value))
+        ctsStatsTracking(ctsStatsTracking&& in) noexcept :
+            m_currentValue(ctl::ctMemoryGuardRead(&in.m_currentValue)),
+            m_previousValue(ctl::ctMemoryGuardRead(&in.m_previousValue))
         {
         }
         // not allowing assignment operator - must be explicit
-        ctStatsTracking& operator=(const ctStatsTracking&) = delete;
-        ctStatsTracking& operator=(ctStatsTracking&&) = delete;
+        ctsStatsTracking& operator=(const ctsStatsTracking&) = delete;
+        ctsStatsTracking& operator=(ctsStatsTracking&&) = delete;
 
-        [[nodiscard]] long long get() const noexcept
+        [[nodiscard]] long long GetValue() const noexcept
         {
-            return ctl::ctMemoryGuardRead(&current_value);
+            return ctl::ctMemoryGuardRead(&m_currentValue);
         }
         //
         // Safely writes to the current value, returning the *prior* value
         //
-        long long set(long long _new_value) noexcept
+        long long SetValue(long long new_value) noexcept
         {
-            return ctl::ctMemoryGuardWrite(&current_value, _new_value);
+            return ctl::ctMemoryGuardWrite(&m_currentValue, new_value);
         }
-        long long set_conditionally(long long _new_value, long long _if_equals) noexcept
+        long long SetConditionally(long long new_value, long long if_equals) noexcept
         {
-            return ctl::ctMemoryGuardWriteConditionally(&current_value, _new_value, _if_equals);
+            return ctl::ctMemoryGuardWriteConditionally(&m_currentValue, new_value, if_equals);
         }
         //
         // Adds 1 to the current value, returning the new value
         //
-        long long increment() noexcept
+        long long Increment() noexcept
         {
-            return ctl::ctMemoryGuardIncrement(&current_value);
+            return ctl::ctMemoryGuardIncrement(&m_currentValue);
         }
         //
         // Subtracts 1 from the current value, returning the new value
         //
-        long long decrement() noexcept
+        long long Decrement() noexcept
         {
-            return ctl::ctMemoryGuardDecrement(&current_value);
+            return ctl::ctMemoryGuardDecrement(&m_currentValue);
         }
         //
         // Adds the [in] value to the current value, returning the original value
         //
-        long long add(long long _value) noexcept
+        long long Add(long long value) noexcept
         {
-            return ctl::ctMemoryGuardAdd(&current_value, _value);
+            return ctl::ctMemoryGuardAdd(&m_currentValue, value);
         }
         //
         // Subtracts the [in] value from the current value, returning the original value
         //
-        long long subtract(long long _value) noexcept
+        long long Subtract(long long value) noexcept
         {
-            return ctl::ctMemoryGuardSubtract(&current_value, _value);
+            return ctl::ctMemoryGuardSubtract(&m_currentValue, value);
         }
         //
         // Get / Sets a new value to the 'previous' value, returning the prior 'previous' value
         //
-        long long get_prior_value() noexcept
+        [[nodiscard]] long long GetPriorValue() noexcept
         {
-            return ctl::ctMemoryGuardRead(&previous_value);
+            return ctl::ctMemoryGuardRead(&m_previousValue);
         }
-        long long set_prior_value(long long _new_value) noexcept
+        long long SetPriorValue(long long new_value) noexcept
         {
-            return ctl::ctMemoryGuardWrite(&previous_value, _new_value);
+            return ctl::ctMemoryGuardWrite(&m_previousValue, new_value);
         }
         //
         // Updates the previous value with the current value
         // - returning the difference (current_value - previous_value)
         //
-        long long snap_value_difference() noexcept
+        [[nodiscard]] long long SnapValueDifference() noexcept
         {
-            const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
-            const long long capture_prior_value = ctl::ctMemoryGuardWrite(&previous_value, capture_current_value);
-            return capture_current_value - capture_prior_value;
+            const auto captureCurrentValue = ctl::ctMemoryGuardRead(&m_currentValue);
+            const auto capturePriorValue = ctl::ctMemoryGuardWrite(&m_previousValue, captureCurrentValue);
+            return captureCurrentValue - capturePriorValue;
         }
         //
         // Returns the difference (current_value - previous_value)
         // - without modifying either value
         //
-        [[nodiscard]] long long read_value_difference() const noexcept
+        [[nodiscard]] long long ReadValueDifference() const noexcept
         {
-            const long long capture_current_value = ctl::ctMemoryGuardRead(&current_value);
-            const long long capture_prior_value = ctl::ctMemoryGuardRead(&previous_value);
-            return capture_current_value - capture_prior_value;
+            const auto captureCurrentValue = ctl::ctMemoryGuardRead(&m_currentValue);
+            const auto capturePriorValue = ctl::ctMemoryGuardRead(&m_previousValue);
+            return captureCurrentValue - capturePriorValue;
         }
     };
 
 
     struct ctsConnectionStatistics
     {
-        ctStatsTracking start_time;
-        ctStatsTracking end_time;
-        ctStatsTracking active_connection_count;
-        ctStatsTracking successful_completion_count;
-        ctStatsTracking connection_error_count;
-        ctStatsTracking protocol_error_count;
+        ctsStatsTracking m_startTime;
+        ctsStatsTracking m_endTime;
+        ctsStatsTracking m_activeConnectionCount;
+        ctsStatsTracking m_successfulCompletionCount;
+        ctsStatsTracking m_connectionErrorCount;
+        ctsStatsTracking m_protocolErrorCount;
 
-        explicit ctsConnectionStatistics(long long _start_time = 0LL) noexcept :
-            start_time(_start_time)
+        explicit ctsConnectionStatistics(long long start_time = 0LL) noexcept :
+            m_startTime(start_time)
         {
         }
         ~ctsConnectionStatistics() noexcept = default;
@@ -201,7 +202,7 @@ namespace ctsTraffic
         ctsConnectionStatistics(ctsConnectionStatistics&&) = default;
         // not implementing the assignment operator
         // only implemeting the copy c'tor (due to maintaining memory barriers)
-        ctsConnectionStatistics& operator=(const ctsConnectionStatistics& _in) = delete;
+        ctsConnectionStatistics& operator=(const ctsConnectionStatistics&) = delete;
         ctsConnectionStatistics& operator=(ctsConnectionStatistics&&) = delete;
 
         //
@@ -211,150 +212,147 @@ namespace ctsTraffic
         //   connection values in status messages always display the aggregate values
         //   (not displaying only changes in connection settings over each time slice)
         //
-        ctsConnectionStatistics snap_view(bool _clear_settings) noexcept
+        ctsConnectionStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
-            const long long prior_time_read = (_clear_settings) ?
-                this->start_time.set_prior_value(current_time) :
-                this->start_time.get_prior_value();
+            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const long long priorTimeRead = clear_settings ?
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
-            ctsConnectionStatistics return_stats(prior_time_read);
-            return_stats.end_time.set(current_time);
+            ctsConnectionStatistics returnStats(priorTimeRead);
+            returnStats.m_endTime.SetValue(currentTime);
 
-            return_stats.active_connection_count.set(this->active_connection_count.get());
-            return_stats.successful_completion_count.set(this->successful_completion_count.get());
-            return_stats.connection_error_count.set(this->connection_error_count.get());
-            return_stats.protocol_error_count.set(this->protocol_error_count.get());
+            returnStats.m_activeConnectionCount.SetValue(m_activeConnectionCount.GetValue());
+            returnStats.m_successfulCompletionCount.SetValue(m_successfulCompletionCount.GetValue());
+            returnStats.m_connectionErrorCount.SetValue(m_connectionErrorCount.GetValue());
+            returnStats.m_protocolErrorCount.SetValue(m_protocolErrorCount.GetValue());
 
-            return return_stats;
+            return returnStats;
         }
     };
 
     struct ctsUdpStatistics
     {
-        ctStatsTracking start_time;
-        ctStatsTracking end_time;
-        ctStatsTracking bits_received;
-        ctStatsTracking successful_frames;
-        ctStatsTracking dropped_frames;
-        ctStatsTracking duplicate_frames;
-        ctStatsTracking error_frames;
+        ctsStatsTracking m_startTime;
+        ctsStatsTracking m_endTime;
+        ctsStatsTracking m_bitsReceived;
+        ctsStatsTracking m_successfulFrames;
+        ctsStatsTracking m_droppedFrames;
+        ctsStatsTracking m_duplicateFrames;
+        ctsStatsTracking m_errorFrames;
         // unique connection identifier
-        char connection_identifier[ctsStatistics::ConnectionIdLength]{};
+        char m_connectionIdentifier[ctsStatistics::c_connectionIdLength]{};
 
-        explicit ctsUdpStatistics(long long _start_time = 0LL) noexcept :
-            start_time(_start_time)
+        explicit ctsUdpStatistics(long long start_time = 0LL) noexcept :
+            m_startTime(start_time)
         {
-            connection_identifier[0] = '\0';
+            m_connectionIdentifier[0] = '\0';
         }
         ~ctsUdpStatistics() noexcept = default;
 
-        ctsUdpStatistics(const ctsUdpStatistics& _in) noexcept = default;
-        ctsUdpStatistics(ctsUdpStatistics&& _in) noexcept = default;
+        ctsUdpStatistics(const ctsUdpStatistics&) noexcept = default;
+        ctsUdpStatistics(ctsUdpStatistics&&) noexcept = default;
 
-        ctsUdpStatistics& operator=(const ctsUdpStatistics& _in) = delete;
+        ctsUdpStatistics& operator=(const ctsUdpStatistics&) = delete;
         ctsUdpStatistics& operator=(ctsUdpStatistics&&) = delete;
 
-        [[nodiscard]] long long current_bytes() const noexcept
+        [[nodiscard]] long long GetBytesReceived() const noexcept
         {
-            return this->bits_received.get() / 8;
+            return m_bitsReceived.GetValue() / 8;
         }
 
         //
         // snap-view will set the returned start time == last read time to capture the delta
         //
-        ctsUdpStatistics snap_view(bool _clear_settings) noexcept
+        ctsUdpStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
-            const long long prior_time_read = (_clear_settings) ?
-                this->start_time.set_prior_value(current_time) :
-                this->start_time.get_prior_value();
+            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const long long priorTimeRead = clear_settings ?
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
-            ctsUdpStatistics return_stats(prior_time_read);
-            return_stats.end_time.set(current_time);
+            ctsUdpStatistics returnStats(priorTimeRead);
+            returnStats.m_endTime.SetValue(currentTime);
 
-            if (_clear_settings)
+            if (clear_settings)
             {
-                return_stats.bits_received.set(this->bits_received.snap_value_difference());
-                return_stats.successful_frames.set(this->successful_frames.snap_value_difference());
-                return_stats.dropped_frames.set(this->dropped_frames.snap_value_difference());
-                return_stats.duplicate_frames.set(this->duplicate_frames.snap_value_difference());
-                return_stats.error_frames.set(this->error_frames.snap_value_difference());
+                returnStats.m_bitsReceived.SetValue(m_bitsReceived.SnapValueDifference());
+                returnStats.m_successfulFrames.SetValue(m_successfulFrames.SnapValueDifference());
+                returnStats.m_droppedFrames.SetValue(m_droppedFrames.SnapValueDifference());
+                returnStats.m_duplicateFrames.SetValue(m_duplicateFrames.SnapValueDifference());
+                returnStats.m_errorFrames.SetValue(m_errorFrames.SnapValueDifference());
 
             }
             else
             {
-                return_stats.bits_received.set(this->bits_received.read_value_difference());
-                return_stats.successful_frames.set(this->successful_frames.read_value_difference());
-                return_stats.dropped_frames.set(this->dropped_frames.read_value_difference());
-                return_stats.duplicate_frames.set(this->duplicate_frames.read_value_difference());
-                return_stats.error_frames.set(this->error_frames.read_value_difference());
+                returnStats.m_bitsReceived.SetValue(m_bitsReceived.ReadValueDifference());
+                returnStats.m_successfulFrames.SetValue(m_successfulFrames.ReadValueDifference());
+                returnStats.m_droppedFrames.SetValue(m_droppedFrames.ReadValueDifference());
+                returnStats.m_duplicateFrames.SetValue(m_duplicateFrames.ReadValueDifference());
+                returnStats.m_errorFrames.SetValue(m_errorFrames.ReadValueDifference());
             }
 
-            return return_stats;
+            return returnStats;
         }
     };
 
     struct ctsTcpStatistics
     {
-        ctStatsTracking start_time;
-        ctStatsTracking end_time;
-        ctStatsTracking bytes_sent;
-        ctStatsTracking bytes_recv;
+        ctsStatsTracking m_startTime;
+        ctsStatsTracking m_endTime;
+        ctsStatsTracking m_bytesSent;
+        ctsStatsTracking m_bytesRecv;
         // unique connection identifier
-        char connection_identifier[ctsStatistics::ConnectionIdLength]{};
+        char m_connectionIdentifier[ctsStatistics::c_connectionIdLength]{};
 
-        explicit ctsTcpStatistics(long long _current_time = 0LL) noexcept :
-            start_time(_current_time),
-            end_time(0LL),
-            bytes_sent(0LL),
-            bytes_recv(0LL)
+        explicit ctsTcpStatistics(long long current_time = 0LL) noexcept :
+            m_startTime(current_time)
         {
-            static const char* NULL_GUID_STRING = "00000000-0000-0000-0000-000000000000";
+            static const char* nullGuidString = "00000000-0000-0000-0000-000000000000";
             strcpy_s(
-                connection_identifier,
-                NULL_GUID_STRING);
+                m_connectionIdentifier,
+                nullGuidString);
         }
         ~ctsTcpStatistics() noexcept = default;
 
-        ctsTcpStatistics(const ctsTcpStatistics& _in) noexcept = default;
-        ctsTcpStatistics(ctsTcpStatistics&& _in) noexcept = default;
+        ctsTcpStatistics(const ctsTcpStatistics&) noexcept = default;
+        ctsTcpStatistics(ctsTcpStatistics&&) noexcept = default;
 
-        ctsTcpStatistics operator=(const ctsTcpStatistics& _in) = delete;
+        ctsTcpStatistics operator=(const ctsTcpStatistics&) = delete;
         ctsTcpStatistics operator=(ctsTcpStatistics&&) = delete;
 
-        [[nodiscard]] long long current_bytes() const noexcept
+        [[nodiscard]] long long GetBytesReceived() const noexcept
         {
-            return this->bytes_recv.get() + this->bytes_sent.get();
+            return m_bytesRecv.GetValue() + m_bytesSent.GetValue();
         }
 
         //
         // snap-view will set the returned start time == last read time to capture the delta
         // - and end time == current time
         //
-        ctsTcpStatistics snap_view(bool _clear_settings) noexcept
+        ctsTcpStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long current_time = ctl::ctTimer::ctSnapQpcInMillis();
-            const long long prior_time_read = (_clear_settings) ?
-                this->start_time.set_prior_value(current_time) :
-                this->start_time.get_prior_value();
+            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const long long priorTimeRead = clear_settings ?
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
-            ctsTcpStatistics return_stats(prior_time_read);
-            return_stats.end_time.set(current_time);
+            ctsTcpStatistics returnStats(priorTimeRead);
+            returnStats.m_endTime.SetValue(currentTime);
 
-            if (_clear_settings)
+            if (clear_settings)
             {
-                return_stats.bytes_sent.set(this->bytes_sent.snap_value_difference());
-                return_stats.bytes_recv.set(this->bytes_recv.snap_value_difference());
+                returnStats.m_bytesSent.SetValue(m_bytesSent.SnapValueDifference());
+                returnStats.m_bytesRecv.SetValue(m_bytesRecv.SnapValueDifference());
 
             }
             else
             {
-                return_stats.bytes_sent.set(this->bytes_sent.read_value_difference());
-                return_stats.bytes_recv.set(this->bytes_recv.read_value_difference());
+                returnStats.m_bytesSent.SetValue(m_bytesSent.ReadValueDifference());
+                returnStats.m_bytesRecv.SetValue(m_bytesRecv.ReadValueDifference());
             }
 
-            return return_stats;
+            return returnStats;
         }
     };
 }

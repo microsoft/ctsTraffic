@@ -47,35 +47,35 @@ namespace ctsTraffic
         class ctsSimpleAcceptImpl
         {
         private:
-            PTP_WORK thread_pool_worker = nullptr;
-            TP_CALLBACK_ENVIRON thread_pool_environment{};
+            PTP_WORK m_threadPoolWorker = nullptr;
+            TP_CALLBACK_ENVIRON m_threadPoolEnvironment{};
             // CS guards access to the accepting_sockets vector
-            wil::critical_section accepting_cs;
+            wil::critical_section m_acceptingCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
 
-            std::vector<LONG> listening_sockets_refcount{};
+            std::vector<LONG> m_listeningSocketsRefcount{};
 
-            _Guarded_by_(accepting_cs) std::vector<SOCKET> listening_sockets{};
-            _Guarded_by_(accepting_cs) std::vector<std::weak_ptr<ctsSocket>> accepting_sockets{};
+            _Guarded_by_(accepting_cs) std::vector<SOCKET> m_listeningSockets{};
+            _Guarded_by_(accepting_cs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
 
         public:
             ctsSimpleAcceptImpl()
             {
                 // will use the global threadpool, but will mark these work-items as running long
-                ::ZeroMemory(&thread_pool_environment, sizeof thread_pool_environment);
-                InitializeThreadpoolEnvironment(&thread_pool_environment);
-                SetThreadpoolCallbackRunsLong(&thread_pool_environment);
+                ::ZeroMemory(&m_threadPoolEnvironment, sizeof m_threadPoolEnvironment);
+                InitializeThreadpoolEnvironment(&m_threadPoolEnvironment);
+                SetThreadpoolCallbackRunsLong(&m_threadPoolEnvironment);
 
                 // can *not* pass the this ptr to the threadpool, since this object can be copied
-                thread_pool_worker = CreateThreadpoolWork(ThreadPoolWorker, this, &thread_pool_environment);
-                if (nullptr == thread_pool_worker)
+                m_threadPoolWorker = CreateThreadpoolWork(ThreadPoolWorker, this, &m_threadPoolEnvironment);
+                if (nullptr == m_threadPoolWorker)
                 {
                     THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolWork (ctsSimpleAccept)");
                 }
 
                 // listen to each address
-                for (const auto& addr : ctsConfig::Settings->ListenAddresses)
+                for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
                 {
-                    SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
+                    SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
                     auto closeSocketOnError = wil::scope_exit([&]() noexcept { closesocket(listening); });
 
                     auto gle = ctsConfig::SetPreBindOptions(listening, addr);
@@ -100,50 +100,50 @@ namespace ctsTraffic
                         THROW_WIN32_MSG(WSAGetLastError(), "listen (ctsSimpleAccept)");
                     }
 
-                    listening_sockets.push_back(listening);
+                    m_listeningSockets.push_back(listening);
                     // socket is now being tracked in listening_sockets, dismiss the scope guard
                     closeSocketOnError.release();
 
                     PRINT_DEBUG_INFO(
-                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str())
+                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                 }
 
-                if (listening_sockets.empty())
+                if (m_listeningSockets.empty())
                 {
                     throw std::exception("ctsSimpleAccept invoked with no listening addresses specified");
                 }
-                listening_sockets_refcount.resize(listening_sockets.size(), 0L);
+                m_listeningSocketsRefcount.resize(m_listeningSockets.size(), 0L);
             }
             ~ctsSimpleAcceptImpl()
             {
-                auto lock = accepting_cs.lock();
+                auto lock = m_acceptingCs.lock();
                 /// close all listening sockets to release any pended accept's
-                for (auto& listening_socket : listening_sockets)
+                for (auto& listeningSocket : m_listeningSockets)
                 {
-                    if (listening_socket != INVALID_SOCKET)
+                    if (listeningSocket != INVALID_SOCKET)
                     {
-                        closesocket(listening_socket);
-                        listening_socket = INVALID_SOCKET;
+                        closesocket(listeningSocket);
+                        listeningSocket = INVALID_SOCKET;
                     }
                 }
                 lock.reset();
 
-                if (thread_pool_worker != nullptr)
+                if (m_threadPoolWorker != nullptr)
                 {
                     // ctsSimpleAccept object was initialized
-                    WaitForThreadpoolWorkCallbacks(thread_pool_worker, TRUE);
-                    CloseThreadpoolWork(thread_pool_worker);
+                    WaitForThreadpoolWorkCallbacks(m_threadPoolWorker, TRUE);
+                    CloseThreadpoolWork(m_threadPoolWorker);
                 }
             }
 
             //
             // Needs to not block ctsSocketState - will just schedule work on its own TP
             //
-            void accept_socket(const std::weak_ptr<ctsSocket>& _weak_socket)
+            void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket)
             {
-                const auto lock = accepting_cs.lock();
-                accepting_sockets.push_back(_weak_socket);
-                SubmitThreadpoolWork(thread_pool_worker);
+                const auto lock = m_acceptingCs.lock();
+                m_acceptingSockets.push_back(weakSocket);
+                SubmitThreadpoolWork(m_threadPoolWorker);
             }
 
             // non-copyable
@@ -153,38 +153,38 @@ namespace ctsTraffic
             ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
 
         private:
-            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_WORK) noexcept
+            static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_WORK) noexcept
             {
-                auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(_context);
+                auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(pContext);
 
                 // get an accept-socket off the vector (protected with its cs)
-                auto lock = pimpl->accepting_cs.lock();
+                auto lock = pimpl->m_acceptingCs.lock();
 
-                const std::weak_ptr<ctsSocket> weak_socket(*pimpl->accepting_sockets.rbegin());
-                pimpl->accepting_sockets.pop_back();
+                const std::weak_ptr<ctsSocket> weakSocket(*pimpl->m_acceptingSockets.rbegin());
+                pimpl->m_acceptingSockets.pop_back();
 
-                auto accept_socket(weak_socket.lock());
-                if (!accept_socket)
+                auto acceptSocket(weakSocket.lock());
+                if (!acceptSocket)
                 {
                     return;
                 }
 
                 // based off of the refcount, choose a socket that's least used
                 // - not taking a lock: it doesn't have to be that precise
-                LONG lowest_refcount = pimpl->listening_sockets_refcount[0];
-                unsigned listener_counter = 0;
-                unsigned listener_position = 0;
-                for (const auto& refcount : pimpl->listening_sockets_refcount)
+                LONG lowestRefcount = pimpl->m_listeningSocketsRefcount[0];
+                unsigned listenerCounter = 0;
+                unsigned listenerPosition = 0;
+                for (const auto& refcount : pimpl->m_listeningSocketsRefcount)
                 {
-                    if (refcount < lowest_refcount)
+                    if (refcount < lowestRefcount)
                     {
-                        lowest_refcount = refcount;
-                        listener_position = listener_counter;
+                        lowestRefcount = refcount;
+                        listenerPosition = listenerCounter;
                     }
-                    ++listener_counter;
+                    ++listenerCounter;
                 }
 
-                const SOCKET listener = pimpl->listening_sockets[listener_position];
+                const SOCKET listener = pimpl->m_listeningSockets[listenerPosition];
                 if (INVALID_SOCKET == listener)
                 {
                     return;
@@ -194,65 +194,65 @@ namespace ctsTraffic
                 lock.reset();
 
                 // increment the listening socket before calling accept on the blocking socket
-                ::InterlockedIncrement(&pimpl->listening_sockets_refcount[listener_position]);
-                const ctl::ctSockaddr remote_addr;
-                int remote_addr_len = remote_addr.length();
-                const SOCKET new_socket = accept(listener, remote_addr.sockaddr(), &remote_addr_len);
+                ::InterlockedIncrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
+                const ctl::ctSockaddr remoteAddr;
+                int remoteAddrLen = remoteAddr.length();
+                const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
                 DWORD gle = WSAGetLastError();
-                ::InterlockedDecrement(&pimpl->listening_sockets_refcount[listener_position]);
+                ::InterlockedDecrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
 
                 // if failed complete the ctsSocket and return
-                if (new_socket == INVALID_SOCKET)
+                if (newSocket == INVALID_SOCKET)
                 {
                     ctsConfig::PrintErrorIfFailed("accept", gle);
-                    accept_socket->complete_state(gle);
+                    acceptSocket->CompleteState(gle);
                     return;
                 }
 
                 // successfully accepted a connection
-                accept_socket->set_socket(new_socket);
-                accept_socket->set_target_address(remote_addr);
+                acceptSocket->SetSocket(newSocket);
+                acceptSocket->SetRemoteSockaddr(remoteAddr);
 
-                const ctl::ctSockaddr local_addr;
-                int local_addr_len = local_addr.length();
-                if (0 == getsockname(new_socket, local_addr.sockaddr(), &local_addr_len))
+                const ctl::ctSockaddr localAddr;
+                auto localAddrLen = localAddr.length();
+                if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
                 {  // NOLINT(bugprone-branch-clone)
-                    accept_socket->set_local_address(local_addr);
+                    acceptSocket->SetLocalSockaddr(localAddr);
                 }
-                else if (0 == getsockname(listener, local_addr.sockaddr(), &local_addr_len))
+                else if (0 == getsockname(listener, localAddr.sockaddr(), &localAddrLen))
                 {
-                    accept_socket->set_local_address(local_addr);
+                    acceptSocket->SetLocalSockaddr(localAddr);
                 }
 
-                gle = ctsConfig::SetPreBindOptions(new_socket, local_addr);
+                gle = ctsConfig::SetPreBindOptions(newSocket, localAddr);
                 if (gle != NO_ERROR)
                 {
                     ctsConfig::PrintErrorIfFailed("SetPreBindOptions", gle);
-                    accept_socket->complete_state(gle);
+                    acceptSocket->CompleteState(gle);
                     return;
                 }
 
-                gle = ctsConfig::SetPreConnectOptions(new_socket);
+                gle = ctsConfig::SetPreConnectOptions(newSocket);
                 if (gle != NO_ERROR)
                 {
                     ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", gle);
-                    accept_socket->complete_state(gle);
+                    acceptSocket->CompleteState(gle);
                     return;
                 }
 
-                accept_socket->complete_state(0);
-                ctsConfig::PrintNewConnection(local_addr, remote_addr);
+                acceptSocket->CompleteState(0);
+                ctsConfig::PrintNewConnection(localAddr, remoteAddr);
             }
         };
 
-        std::shared_ptr<ctsSimpleAcceptImpl> s_pimpl;
+        std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl;  // NOLINT(clang-diagnostic-exit-time-destructors)
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        static INIT_ONCE s_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
-        static BOOL CALLBACK s_ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
+        static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
+        static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
         {
             try
             {
-                s_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
+                g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
             }
             catch (...)
             {
@@ -264,27 +264,27 @@ namespace ctsTraffic
         }
     }
 
-    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         DWORD error = 0;
-        if (!InitOnceExecuteOnce(&details::s_ctsSimpleAcceptImplInitOnce, details::s_ctsSimpleAcceptImplInitFn, &error, nullptr))
+        if (!InitOnceExecuteOnce(&details::g_ctsSimpleAcceptImplInitOnce, details::ctsSimpleAcceptImplInitFn, &error, nullptr))
         {
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket)
+            auto sharedSocket(weakSocket.lock());
+            if (sharedSocket)
             {
-                shared_socket->complete_state(error);
+                sharedSocket->CompleteState(error);
             }
 
         }
         else
         {
-            try { details::s_pimpl->accept_socket(_weak_socket); }
+            try { details::g_pimpl->AcceptSocket(weakSocket); }
             catch (...)
             {
-                auto shared_socket(_weak_socket.lock());
-                if (shared_socket)
+                auto sharedSocket(weakSocket.lock());
+                if (sharedSocket)
                 {
-                    shared_socket->complete_state(ERROR_OUTOFMEMORY);
+                    sharedSocket->CompleteState(ERROR_OUTOFMEMORY);
                 }
             }
         }

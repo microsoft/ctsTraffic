@@ -27,80 +27,81 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    static long long s_BindCounter = 0LL;
-    static long long s_TargetCounter = 0LL;
-    static long long s_PortCounter = 0LL;
+    static long long g_bindCounter = 0LL;
+    static long long g_targetCounter = 0LL;
+    static long long g_portCounter = 0LL;
 
-    void ctsWSASocket(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    // ReSharper disable once CppInconsistentNaming
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
-        auto shared_socket(_weak_socket.lock());
-        if (!shared_socket)
+        auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
         {
             return;
         }
 
-        USHORT next_port = 0;
-        if (ctsConfig::Settings->LocalPortHigh != 0 && ctsConfig::Settings->LocalPortLow != 0)
+        USHORT nextPort = 0;
+        if (ctsConfig::g_configSettings->LocalPortHigh != 0 && ctsConfig::g_configSettings->LocalPortLow != 0)
         {
-            const auto port_counter = ctl::ctMemoryGuardIncrement(&s_PortCounter);
-            next_port = static_cast<USHORT>(port_counter % (ctsConfig::Settings->LocalPortHigh - ctsConfig::Settings->LocalPortLow + 1)) + ctsConfig::Settings->LocalPortLow;
+            const auto portCounter = ctl::ctMemoryGuardIncrement(&g_portCounter);
+            nextPort = static_cast<USHORT>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
         }
         else
         {
-            next_port = ctsConfig::Settings->LocalPortLow;
+            nextPort = ctsConfig::g_configSettings->LocalPortLow;
         }
 
         //
         // Find a bind and target address by moving to the next address in the respective vectors
         //
-        const auto bind_size = ctsConfig::Settings->BindAddresses.size();
-        auto socket_counter = ctl::ctMemoryGuardIncrement(&s_BindCounter);
-        ctl::ctSockaddr local_addr(ctsConfig::Settings->BindAddresses[socket_counter % bind_size]);
-        local_addr.SetPort(next_port);
+        const auto bindSize = ctsConfig::g_configSettings->BindAddresses.size();
+        auto socketCounter = ctl::ctMemoryGuardIncrement(&g_bindCounter);
+        ctl::ctSockaddr localAddr(ctsConfig::g_configSettings->BindAddresses[socketCounter % bindSize]);
+        localAddr.SetPort(nextPort);
 
-        ctl::ctSockaddr target_addr;
-        if (!ctsConfig::Settings->TargetAddresses.empty())
+        ctl::ctSockaddr targetAddr;
+        if (!ctsConfig::g_configSettings->TargetAddresses.empty())
         {
             //
             // the target address family must match the bind address family
             // - ctsConfig guarantees that at least address families will match with at least one address in bind and target vectors
             //
-            const auto target_size = ctsConfig::Settings->TargetAddresses.size();
-            socket_counter = ctl::ctMemoryGuardIncrement(&s_TargetCounter);
-            target_addr = ctsConfig::Settings->TargetAddresses[socket_counter % target_size];
-            while (target_addr.family() != local_addr.family())
+            const auto targetSize = ctsConfig::g_configSettings->TargetAddresses.size();
+            socketCounter = ctl::ctMemoryGuardIncrement(&g_targetCounter);
+            targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
+            while (targetAddr.family() != localAddr.family())
             {
-                socket_counter = ctl::ctMemoryGuardIncrement(&s_TargetCounter);
-                target_addr = ctsConfig::Settings->TargetAddresses[socket_counter % target_size];
+                socketCounter = ctl::ctMemoryGuardIncrement(&g_targetCounter);
+                targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
             }
         }
 
         auto socket = INVALID_SOCKET;
         int gle = 0;
-        PCSTR function_name = "CreateWSASocket";
+        PCSTR functionName = "CreateSocket";
         try
         {
-            switch (ctsConfig::Settings->Protocol)
+            switch (ctsConfig::g_configSettings->Protocol)
             {
                 case ctsConfig::ProtocolType::TCP:
-                    socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags);
+                    socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
                     break;
 
                 case ctsConfig::ProtocolType::UDP:
-                    socket = ctsConfig::CreateSocket(local_addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::Settings->SocketFlags);
+                    socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags);
                     break;
 
                 case ctsConfig::ProtocolType::NoProtocolSet: // fall-through
                 default:  // NOLINT(clang-diagnostic-covered-switch-default)
                     ctsConfig::PrintErrorInfo(
-                        wil::str_printf<std::wstring>(L"Unknown socket protocol (%u)",
-                            static_cast<unsigned>(ctsConfig::Settings->Protocol)).c_str());
+                        L"Unknown socket protocol (%u)",
+                        static_cast<unsigned>(ctsConfig::g_configSettings->Protocol));
                     gle = WSAEINVAL;
             }
         }
         catch (const wil::ResultException& e)
         {
-            gle = ctsConfig::Win32FromHRESULT(e.GetErrorCode());
+            gle = ctsConfig::Win32FromHresult(e.GetErrorCode());
         }
         catch (...)
         {
@@ -109,17 +110,17 @@ namespace ctsTraffic
 
         if (NO_ERROR == gle)
         {
-            function_name = "SetPreBindOptions";
-            gle = ctsConfig::SetPreBindOptions(socket, local_addr);
+            functionName = "SetPreBindOptions";
+            gle = ctsConfig::SetPreBindOptions(socket, localAddr);
         }
 
         if (NO_ERROR == gle)
         {
-            function_name = "bind";
+            functionName = "bind";
 
-            if (0 == next_port)
+            if (0 == nextPort)
             {
-                if (SOCKET_ERROR == bind(socket, local_addr.sockaddr(), local_addr.length()))
+                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
                 {
                     gle = WSAGetLastError();
                 }
@@ -127,25 +128,25 @@ namespace ctsTraffic
             else
             {
                 // sleep up to 5 seconds to allow TCP to cleanup its internal state
-                constexpr unsigned long BindRetryCount = 5;
-                constexpr unsigned long BindRetrySleepMs = 1000;
+                constexpr unsigned long bindRetryCount = 5;
+                constexpr unsigned long bindRetrySleepMs = 1000;
 
-                for (unsigned long bind_retry = 0; bind_retry < BindRetryCount; ++bind_retry)
+                for (unsigned long bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
-                    if (SOCKET_ERROR == bind(socket, local_addr.sockaddr(), local_addr.length()))
+                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
                     {
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)
                         {
-                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bind_retry + 1, BindRetrySleepMs)
-                            Sleep(BindRetrySleepMs);
+                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bindRetry + 1, bindRetrySleepMs);
+                            Sleep(bindRetrySleepMs);
                         }
                     }
                     else
                     {
                         // succeeded - exit the loop
                         gle = NO_ERROR;
-                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bind_retry + 1)
+                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bindRetry + 1);
                         break;
                     }
                 }
@@ -153,18 +154,18 @@ namespace ctsTraffic
         }
 
         // store whatever values we have: for accurate logging
-        shared_socket->set_socket(socket);
-        shared_socket->set_local_address(local_addr);
-        shared_socket->set_target_address(target_addr);
+        sharedSocket->SetSocket(socket);
+        sharedSocket->SetLocalSockaddr(localAddr);
+        sharedSocket->SetRemoteSockaddr(targetAddr);
 
         if (0 == gle)
         {
-            shared_socket->complete_state(NO_ERROR);
+            sharedSocket->CompleteState(NO_ERROR);
         }
         else
         {
-            ctsConfig::PrintErrorIfFailed(function_name, gle);
-            shared_socket->complete_state(gle);
+            ctsConfig::PrintErrorIfFailed(functionName, gle);
+            sharedSocket->CompleteState(gle);
         }
     }
 

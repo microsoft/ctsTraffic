@@ -23,7 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/stl.h>
 #include <wil/resource.h>
 // project headers
-#include "ctString.hpp"
 #include "ctMath.hpp"
 
 
@@ -36,48 +35,48 @@ namespace ctsPerf {
         /// - overloads for 1, 2, or 3 data points
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline std::wstring Write(ULONGLONG first_value)
+        inline std::wstring Write(ULONGLONG firstValue)
         {
-            return wil::str_printf<std::wstring>(L",%llu", first_value);
+            return wil::str_printf<std::wstring>(L",%llu", firstValue);
         }
-        inline std::wstring Write(ULONG first_value)
+        inline std::wstring Write(ULONG firstValue)
         {
-            return wil::str_printf<std::wstring>(L",%lu", first_value);
+            return wil::str_printf<std::wstring>(L",%lu", firstValue);
         }
-        inline std::wstring Write(double first_value)
+        inline std::wstring Write(double firstValue)
         {
-            return wil::str_printf<std::wstring>(L",%.3f", first_value);
+            return wil::str_printf<std::wstring>(L",%.3f", firstValue);
         }
-        inline std::wstring Write(ULONGLONG first_value, ULONGLONG second_value)
+        inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue)
         {
-            return wil::str_printf<std::wstring>(L",%llu,%llu", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%llu,%llu", firstValue, secondValue);
         }
-        inline std::wstring Write(ULONG first_value, ULONG second_value)
+        inline std::wstring Write(ULONG firstValue, ULONG secondValue)
         {
-            return wil::str_printf<std::wstring>(L",%lu,%lu", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%lu,%lu", firstValue, secondValue);
         }
-        inline std::wstring Write(double first_value, double second_value)
+        inline std::wstring Write(double firstValue, double secondValue)
         {
-            return wil::str_printf<std::wstring>(L",%.3f,%.3f", first_value, second_value);
+            return wil::str_printf<std::wstring>(L",%.3f,%.3f", firstValue, secondValue);
         }
-        inline std::wstring Write(ULONGLONG first_value, ULONGLONG second_value, ULONGLONG third_value)
+        inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue, ULONGLONG thirdValue)
         {
-            return wil::str_printf<std::wstring>(L",%llu,%llu,%llu", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%llu,%llu,%llu", firstValue, secondValue, thirdValue);
         }
-        inline std::wstring Write(ULONG first_value, ULONG second_value, ULONG third_value)
+        inline std::wstring Write(ULONG firstValue, ULONG secondValue, ULONG thirdValue)
         {
-            return wil::str_printf<std::wstring>(L",%lu,%lu,%lu", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%lu,%lu,%lu", firstValue, secondValue, thirdValue);
         }
-        inline std::wstring Write(double first_value, double second_value, double third_value)
+        inline std::wstring Write(double firstValue, double secondValue, double thirdValue)
         {
-            return wil::str_printf<std::wstring>(L",%.3f,%.3f,%.3f", first_value, second_value, third_value);
+            return wil::str_printf<std::wstring>(L",%.3f,%.3f,%.3f", firstValue, secondValue, thirdValue);
         }
     }
 
     class ctsWriteDetails {
     private:
-        void start_row(PCWSTR class_name, PCWSTR counter_name) const noexcept;
-        void end_row() const noexcept;
+        void StartRow(PCWSTR className, PCWSTR counterName) const noexcept;
+        void EndRow() const noexcept;
 
         std::wstring m_fileName;
         wil::unique_hfile m_fileHandle;
@@ -86,8 +85,8 @@ namespace ctsPerf {
         template <typename T>
         static std::wstring PrintMeanStdDev(const std::vector<T>& data)
         {
-            auto std_tuple = ctl::ctSampledStandardDeviation(data.begin(), data.end());
-            return Details::Write(std::get<0>(std_tuple), std::get<1>(std_tuple)); // Mean,StdDev
+            auto stdTuple = ctl::SampledStandardDeviation(data.begin(), data.end());
+            return Details::Write(std::get<0>(stdTuple), std::get<1>(stdTuple)); // Mean,StdDev
         }
 
         template <typename T>
@@ -100,17 +99,17 @@ namespace ctsPerf {
             // sort the data for IQR calculations
             sort(data.begin(), data.end());
 
-            auto std_tuple = ctl::ctSampledStandardDeviation(data.begin(), data.end());
-            auto interquartile_tuple = ctl::ctInterquartileRange(data.begin(), data.end());
+            auto stdTuple = ctl::SampledStandardDeviation(data.begin(), data.end());
+            auto interquartileTuple = ctl::ctInterquartileRange(data.begin(), data.end());
 
-            auto formatted_data = Details::Write(static_cast<DWORD>(data.size()));  // SampleCount
-            formatted_data += Details::Write(*data.begin(), *data.rbegin()); // Min,Max
-            formatted_data += Details::Write(std::get<0>(std_tuple) - std::get<1>(std_tuple),  std::get<0>(std_tuple), std::get<0>(std_tuple) + std::get<1>(std_tuple)); // -1Std,Mean,+1Std
-            formatted_data += Details::Write(std::get<0>(interquartile_tuple), std::get<1>(interquartile_tuple), std::get<2>(interquartile_tuple)); // -1IQR,Median,+1IQR
-            return formatted_data;
+            auto formattedData = Details::Write(static_cast<DWORD>(data.size()));  // SampleCount
+            formattedData += Details::Write(*data.begin(), *data.rbegin()); // Min,Max
+            formattedData += Details::Write(std::get<0>(stdTuple) - std::get<1>(stdTuple),  std::get<0>(stdTuple), std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
+            formattedData += Details::Write(std::get<0>(interquartileTuple), std::get<1>(interquartileTuple), std::get<2>(interquartileTuple)); // -1IQR,Median,+1IQR
+            return formattedData;
         }
 
-        explicit ctsWriteDetails(PCWSTR _file_name) : m_fileName(_file_name)
+        explicit ctsWriteDetails(PCWSTR file_name) : m_fileName(file_name)
         {
         }
         ~ctsWriteDetails() noexcept = default;
@@ -121,40 +120,40 @@ namespace ctsPerf {
         ctsWriteDetails(ctsWriteDetails&& rhs) noexcept = default;
         ctsWriteDetails& operator=(ctsWriteDetails&& rhs) noexcept = default;
 
-        void create_file(bool mean_only = false);
-        void create_file(const std::wstring& banner_text);
+        void CreateFile(bool meanOnly = false);
+        void CreateFile(const std::wstring& bannerText);
 
-        void write_row(const std::wstring& text) const noexcept;
-		void write_empty_row() const noexcept;
+        void WriteRow(const std::wstring& text) const noexcept;
+		void WriteEmptyRow() const noexcept;
 
         //
         // The vector *will* be sorted before being returned (this is why it's non-const).
         //
         template <typename T>
-        void write_details(PCWSTR class_name, PCWSTR counter_name, std::vector<T>& data)
+        void WriteDetails(PCWSTR className, PCWSTR counterName, std::vector<T>& data)
         {
             if (data.empty()) {
                 return;
             }
 
-            start_row(class_name, counter_name);
+            StartRow(className, counterName);
 
             const std::wstring formattedData(PrintDetails(data));
             const auto length = static_cast<DWORD>(formattedData.length() * sizeof(wchar_t));
             DWORD written{};
             THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), formattedData.c_str(), length, &written, nullptr));
 
-            end_row();
+            EndRow();
         }
 
         template <typename T>
-        void write_difference(PCWSTR class_name, PCWSTR counter_name, const std::vector<T>& data)
+        void WriteDifference(PCWSTR className, PCWSTR counterName, const std::vector<T>& data)
         {
             if (data.size() < 3) {
                 return;
             }
 
-            start_row(class_name, counter_name);
+            StartRow(className, counterName);
             // [0] == count
             // [1] == first
             // [2] == last
@@ -163,17 +162,17 @@ namespace ctsPerf {
             DWORD written{};
             THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), difference.c_str(), length, &written, nullptr));
 
-            end_row();
+            EndRow();
         }
 
         template <typename T>
-        void write_mean(PCWSTR class_name, PCWSTR counter_name, const std::vector<T>& data)
+        void WriteMean(PCWSTR className, PCWSTR counterName, const std::vector<T>& data)
         {
             if (data.size() < 4) {
                 return;
             }
 
-            start_row(class_name, counter_name);
+            StartRow(className, counterName);
             // assumes vector is formatted as:
             // [0] == count
             // [1] == min
@@ -184,7 +183,7 @@ namespace ctsPerf {
             DWORD written{};
             THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), meanString.c_str(), length, &written, nullptr));
 
-            end_row();
+            EndRow();
         }
     };
 }

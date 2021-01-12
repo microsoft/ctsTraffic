@@ -34,7 +34,7 @@ using namespace std;
 
 
 // global ptr for easing debugging
-ctsSocketBroker* g_SocketBroker = nullptr;
+ctsSocketBroker* g_socketBroker = nullptr;
 
 BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
@@ -43,7 +43,7 @@ BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
     return TRUE;
 }
 
-int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
+int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata{};
     const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
@@ -64,7 +64,7 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     catch (const ctsSafeIntException& e)
     {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid parameters : %ws", ctsPrintSafeIntException(e)).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid parameters : %ws", PrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         err = ERROR_INVALID_DATA;
     }
@@ -107,21 +107,29 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::PrintLegend();
 
         // set the start timer as close as possible to the start of the engine
-        ctsConfig::Settings->StartTimeMilliseconds = ctTimer::ctSnapQpcInMillis();
+        ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::SnapQpcInMillis();
         std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
-        g_SocketBroker = broker.get();
-        broker->start();
+        g_socketBroker = broker.get();
+        broker->Start();
 
-        ctThreadpoolTimer status_timer;
-        status_timer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::Settings->StatusUpdateFrequencyMilliseconds);
-        if (!broker->wait(ctsConfig::Settings->TimeLimit > 0 ? ctsConfig::Settings->TimeLimit : INFINITE))
+        ctThreadpoolTimer statusTimer;
+        statusTimer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds);
+
+// define this is testing the shutdown path to force a clean shutdown while running
+// #define DEBUGGING_CTSTRAFFIC
+
+#ifdef  DEBUGGING_CTSTRAFFIC
+        getchar();
+#else
+        if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
         {
-            ctsConfig::PrintSummary(L"\n ** Timelimit of %lu reached **\n", static_cast<unsigned long>(ctsConfig::Settings->TimeLimit));
+            ctsConfig::PrintSummary(L"\n ** Time-limit of %lu reached **\n", static_cast<unsigned long>(ctsConfig::g_configSettings->TimeLimit));
         }
+#endif
     }
     catch (const ctsSafeIntException& e)
     {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed when converting integers : %ws", ctsPrintSafeIntException(e)).c_str());
+        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed when converting integers : %ws", PrintSafeIntException(e)).c_str());
         ctsConfig::Shutdown();
         return ERROR_INVALID_DATA;
     }
@@ -144,7 +152,7 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_CANCELLED;
     }
 
-    const auto total_time_run = ctTimer::ctSnapQpcInMillis() - ctsConfig::Settings->StartTimeMilliseconds;
+    const auto totalTimeRun = ctTimer::SnapQpcInMillis() - ctsConfig::g_configSettings->StartTimeMilliseconds;
 
     // write out the final status update
     ctsConfig::PrintStatusUpdate();
@@ -156,28 +164,28 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         L"  Historic Connection Statistics (all connections over the complete lifetime)  \n"
         L"-------------------------------------------------------------------------------\n"
         L"  SuccessfulConnections [%lld]   NetworkErrors [%lld]   ProtocolErrors [%lld]\n",
-        ctsConfig::Settings->ConnectionStatusDetails.successful_completion_count.get(),
-        ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get(),
-        ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get());
+        ctsConfig::g_configSettings->ConnectionStatusDetails.m_successfulCompletionCount.GetValue(),
+        ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue(),
+        ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue());
 
-    if (ctsConfig::Settings->Protocol == ctsConfig::ProtocolType::TCP)
+    if (ctsConfig::g_configSettings->Protocol == ctsConfig::ProtocolType::TCP)
     {
         ctsConfig::PrintSummary(
             L"\n"
             L"  Total Bytes Recv : %lld\n"
             L"  Total Bytes Sent : %lld\n",
-            ctsConfig::Settings->TcpStatusDetails.bytes_recv.get(),
-            ctsConfig::Settings->TcpStatusDetails.bytes_sent.get());
+            ctsConfig::g_configSettings->TcpStatusDetails.m_bytesRecv.GetValue(),
+            ctsConfig::g_configSettings->TcpStatusDetails.m_bytesSent.GetValue());
     }
     else
     {
         // currently don't track UDP server stats
         if (!ctsConfig::IsListening())
         {
-            const auto successfulFrames = ctsConfig::Settings->UdpStatusDetails.successful_frames.get();
-            const auto droppedFrames = ctsConfig::Settings->UdpStatusDetails.dropped_frames.get();
-            const auto duplicateFrames = ctsConfig::Settings->UdpStatusDetails.duplicate_frames.get();
-            const auto errorFrames = ctsConfig::Settings->UdpStatusDetails.error_frames.get();
+            const auto successfulFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_successfulFrames.GetValue();
+            const auto droppedFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_droppedFrames.GetValue();
+            const auto duplicateFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.GetValue();
+            const auto errorFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.GetValue();
 
             const auto totalFrames =
                 successfulFrames +
@@ -191,27 +199,27 @@ int _cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
                 L"  Total Dropped Frames : %lld (%f)\n"
                 L"  Total Duplicate Frames : %lld (%f)\n"
                 L"  Total Error Frames : %lld (%f)\n",
-                ctsConfig::Settings->UdpStatusDetails.bits_received.get() / 8LL,
+                ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.GetValue() / 8LL,
                 successfulFrames,
-                totalFrames > 0 ? static_cast<double>(successfulFrames) / totalFrames * 100.0 : 0.0,
+                totalFrames > 0 ? static_cast<double>(successfulFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
                 droppedFrames,
-                totalFrames > 0 ? static_cast<double>(droppedFrames) / totalFrames * 100.0 : 0.0,
+                totalFrames > 0 ? static_cast<double>(droppedFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
                 duplicateFrames,
-                totalFrames > 0 ? static_cast<double>(duplicateFrames) / totalFrames * 100.0 : 0.0,
+                totalFrames > 0 ? static_cast<double>(duplicateFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
                 errorFrames,
-                totalFrames > 0 ? static_cast<double>(errorFrames) / totalFrames * 100.0 : 0.0);
+                totalFrames > 0 ? static_cast<double>(errorFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0);
         }
     }
     ctsConfig::PrintSummary(
         L"  Total Time : %lld ms.\n",
-        static_cast<long long>(total_time_run));
+        static_cast<long long>(totalTimeRun));
 
-    long long error_count =
-        ctsConfig::Settings->ConnectionStatusDetails.connection_error_count.get() +
-        ctsConfig::Settings->ConnectionStatusDetails.protocol_error_count.get();
-    if (error_count > MAXINT)
+    long long errorCount =
+        ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
+        ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
+    if (errorCount > MAXINT)
     {
-        error_count = MAXINT;
+        errorCount = MAXINT;
     }
-    return static_cast<int>(error_count);
+    return static_cast<int>(errorCount);
 }

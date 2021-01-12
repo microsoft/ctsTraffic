@@ -30,6 +30,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsSocket.h"
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
     //
@@ -64,7 +66,7 @@ namespace ctsTraffic
         //
         // constant defining how many acceptex requests we want maintained per listener
         //
-        constexpr unsigned PendedAcceptRequests = 100;
+        constexpr unsigned c_pendedAcceptRequests = 100;
 
         //
         // necessary forward declarations of internal classes
@@ -72,7 +74,7 @@ namespace ctsTraffic
         struct ctsAcceptExImpl;
         class ctsAcceptSocketInfo;
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept;
+        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept;
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -81,10 +83,10 @@ namespace ctsTraffic
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         struct ctsAcceptedConnection
         {
-            wil::unique_socket accept_socket;
-            ctl::ctSockaddr local_addr;
-            ctl::ctSockaddr remote_addr;
-            DWORD  gle = 0;
+            wil::unique_socket m_acceptSocket;
+            ctl::ctSockaddr m_localAddr;
+            ctl::ctSockaddr m_remoteAddr;
+            DWORD m_lastError = 0;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,10 +98,10 @@ namespace ctsTraffic
         struct ctsListenSocketInfo
         {
             // c'tor throws a wil::ResultException or bad_alloc on failure
-            explicit ctsListenSocketInfo(ctl::ctSockaddr _addr) : addr(std::move(_addr))
+            explicit ctsListenSocketInfo(ctl::ctSockaddr addr) : m_sockaddr(std::move(addr))
             {
                 wil::unique_socket tempsocket(
-                    ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::Settings->SocketFlags));
+                    ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags));
 
                 const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
                 if (error != 0)
@@ -117,17 +119,17 @@ namespace ctsTraffic
                     THROW_WIN32_MSG(error, "listen (ctsAcceptEx)");
                 }
 
-                iocp = std::make_unique<ctl::ctThreadIocp>(tempsocket.get(), ctsConfig::Settings->PTPEnvironment);
+                m_iocp = std::make_unique<ctl::ctThreadIocp>(tempsocket.get(), g_configSettings->pTpEnvironment);
 
                 // now save the socket after everything succeeded
-                listen_socket = std::move(tempsocket);
+                m_listenSocket = std::move(tempsocket);
             }
 
             ~ctsListenSocketInfo() noexcept
             {
                 // close the socket then wait for all IO to stop
-                listen_socket.reset();
-                iocp.reset();
+                m_listenSocket.reset();
+                m_iocp.reset();
             }
 
             ctsListenSocketInfo(const ctsListenSocketInfo&) = delete;
@@ -135,10 +137,10 @@ namespace ctsTraffic
             ctsListenSocketInfo(ctsListenSocketInfo&&) = delete;
             ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
-            wil::unique_socket listen_socket;
-            ctl::ctSockaddr addr;
-            std::unique_ptr<ctl::ctThreadIocp> iocp;
-            std::vector<std::shared_ptr<ctsAcceptSocketInfo>> accept_sockets;
+            wil::unique_socket m_listenSocket;
+            ctl::ctSockaddr m_sockaddr;
+            std::unique_ptr<ctl::ctThreadIocp> m_iocp;
+            std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,8 +154,8 @@ namespace ctsTraffic
         {
         public:
             // c'tor throws wil::ResultException on failure
-            explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& _listen_socket) noexcept
-                : listening_socket_info(_listen_socket)
+            explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& listenSocket) noexcept
+                : m_listeningSocketInfo(listenSocket)
             {
             }
 
@@ -173,17 +175,17 @@ namespace ctsTraffic
             ctsAcceptSocketInfo& operator=(ctsAcceptSocketInfo&&) = delete;
 
         private:
-            static const size_t SingleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
+            static const size_t c_singleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
 
             // the lock to guard access to the SOCKET
-            wil::critical_section cs;
-            wil::unique_socket accept_socket;
+            wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+            wil::unique_socket m_acceptSocket;
             // the raw (non-owning) OVERLAPPED* for the AcceptEx request
-            OVERLAPPED* pov = nullptr;
+            OVERLAPPED* m_pOverlapped = nullptr;
             // a weak reference back to the parent listening object
-            const std::weak_ptr<ctsListenSocketInfo> listening_socket_info;
+            const std::weak_ptr<ctsListenSocketInfo> m_listeningSocketInfo;
             // the buffer to supply to AcceptEx to capture the address information
-            char OutputBuffer[SingleOutputBufferSize * 2]{};
+            char m_outputBuffer[c_singleOutputBufferSize * 2]{};
         };
 
         //
@@ -193,11 +195,11 @@ namespace ctsTraffic
         struct ctsAcceptExImpl
         {
             // must guard access to internal containers
-            wil::critical_section cs;
-            std::vector<std::shared_ptr<ctsListenSocketInfo>> listeners;
-            std::queue<std::weak_ptr<ctsSocket>> pended_accept_requests;
-            std::queue<ctsAcceptedConnection> accepted_connections;
-            bool shutting_down = false;
+            wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+            std::vector<std::shared_ptr<ctsListenSocketInfo>> m_listeners;
+            std::queue<std::weak_ptr<ctsSocket>> m_pendedAcceptRequests;
+            std::queue<ctsAcceptedConnection> m_acceptedConnections;
+            bool m_shuttingDown = false;
 
             //
             // ctsAcceptExImpl constructor
@@ -211,66 +213,66 @@ namespace ctsTraffic
             {
                 // swap in the listen vector only if fully created
                 // - if anything fails, this temp vector will go out of scope and safely be destroyed
-                std::vector<std::shared_ptr<ctsListenSocketInfo>> temp_listeners;
+                std::vector<std::shared_ptr<ctsListenSocketInfo>> tempListeners;
 
                 // listen to each address
-                for (const auto& addr : ctsConfig::Settings->ListenAddresses)
+                for (const auto& addr : g_configSettings->ListenAddresses)
                 {
                     // Make the structures for the listener and its accept sockets
-                    std::shared_ptr<ctsListenSocketInfo> listen_socket_info(std::make_shared<ctsListenSocketInfo>(addr));
-                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str())
+                    std::shared_ptr<ctsListenSocketInfo> listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
-                    for (unsigned accept_counter = 0; accept_counter < PendedAcceptRequests; ++accept_counter)
+                    for (unsigned acceptCounter = 0; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
                     {
-                        std::shared_ptr<ctsAcceptSocketInfo> accept_socket_info = std::make_shared<ctsAcceptSocketInfo>(listen_socket_info);
-                        listen_socket_info->accept_sockets.push_back(accept_socket_info);
+                        std::shared_ptr<ctsAcceptSocketInfo> acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
+                        listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
                         // post AcceptEx on this socket
-                        accept_socket_info->InitatiateAcceptEx();
+                        acceptSocketInfo->InitatiateAcceptEx();
                     }
 
                     // all successful - save this listen socket
-                    temp_listeners.push_back(listen_socket_info);
+                    tempListeners.push_back(listenSocketInfo);
                 }
 
-                if (temp_listeners.empty())
+                if (tempListeners.empty())
                 {
                     throw std::exception("ctsAcceptEx invoked with no listening addresses specified");
                 }
 
                 // everything succeeded - safely save the listen queue
-                listeners.swap(temp_listeners);
+                m_listeners.swap(tempListeners);
             }
 
             ~ctsAcceptExImpl() noexcept
             {
                 // remove anything pended under lock since the IOCP callbacks still might be invoked
                 {
-                    const auto lock = cs.lock();
-                    shutting_down = true;
+                    const auto lock = m_lock.lock();
+                    m_shuttingDown = true;
 
                     // close out all caller requests for new accepted sockets
-                    while (!pended_accept_requests.empty())
+                    while (!m_pendedAcceptRequests.empty())
                     {
-                        auto weak_socket = pended_accept_requests.front();
-                        auto shared_socket(weak_socket.lock());
-                        if (shared_socket)
+                        auto weakSocket = m_pendedAcceptRequests.front();
+                        auto sharedSocket(weakSocket.lock());
+                        if (sharedSocket)
                         {
-                            shared_socket->complete_state(WSAECONNABORTED);
+                            sharedSocket->CompleteState(WSAECONNABORTED);
                         }
 
-                        pended_accept_requests.pop();
+                        m_pendedAcceptRequests.pop();
                     }
 
-                    while (!accepted_connections.empty())
+                    while (!m_acceptedConnections.empty())
                     {
-                        accepted_connections.pop();
+                        m_acceptedConnections.pop();
                     }
                 }
 
                 // now stop the listeners and accepted sockets
-                listeners.clear();
+                m_listeners.clear();
             }
 
             // non-copyable
@@ -289,157 +291,157 @@ namespace ctsTraffic
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void ctsAcceptSocketInfo::InitatiateAcceptEx()
         {
-            const auto listening_socket_object = listening_socket_info.lock();
-            if (!listening_socket_object)
+            const auto listeningSocketObject = m_listeningSocketInfo.lock();
+            if (!listeningSocketObject)
             {
                 return;
             }
 
-            const auto lock = cs.lock();
+            const auto lock = m_lock.lock();
 
-            if (accept_socket.get() != INVALID_SOCKET)
+            if (m_acceptSocket.get() != INVALID_SOCKET)
             {
                 return;
             }
 
-            wil::unique_socket new_accept_socket(
+            wil::unique_socket newAcceptedSocket(
                 ctsConfig::CreateSocket(
-                    listening_socket_object->addr.family(),
+                    listeningSocketObject->m_sockaddr.family(),
                     SOCK_STREAM,
                     IPPROTO_TCP,
-                    ctsConfig::Settings->SocketFlags));
+                    g_configSettings->SocketFlags));
 
             // since not inheriting from the listening socket, must explicity set options on the accept socket
             // - passing the listening address since that will be the local address of this accepted socket
-            auto error = ctsConfig::SetPreBindOptions(new_accept_socket.get(), listening_socket_object->addr);
+            auto error = ctsConfig::SetPreBindOptions(newAcceptedSocket.get(), listeningSocketObject->m_sockaddr);
             if (error != 0)
             {
                 THROW_WIN32_MSG(error, "SetPreBindOptions (ctsAcceptEx)");
             }
-            error = ctsConfig::SetPreConnectOptions(new_accept_socket.get());
+            error = ctsConfig::SetPreConnectOptions(newAcceptedSocket.get());
             if (error != 0)
             {
                 THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsAcceptEx)");
             }
 
-            pov = listening_socket_object->iocp->new_request(
-                [this](OVERLAPPED* _ov) noexcept { ctsAcceptExIoCompletionCallback(_ov, this); });
+            m_pOverlapped = listeningSocketObject->m_iocp->new_request(
+                [this](OVERLAPPED* pCallbackOverlapped) noexcept { ctsAcceptExIoCompletionCallback(pCallbackOverlapped, this); });
 
-            ::ZeroMemory(OutputBuffer, SingleOutputBufferSize * 2);
-            DWORD bytes_received{};
+            ::ZeroMemory(m_outputBuffer, c_singleOutputBufferSize * 2);
+            DWORD bytesReceived{};
             if (!ctl::ctAcceptEx(
-                listening_socket_object->listen_socket.get(),
-                new_accept_socket.get(),
-                OutputBuffer,
-                0, SingleOutputBufferSize, SingleOutputBufferSize,
-                &bytes_received,
-                pov))
+                listeningSocketObject->m_listenSocket.get(),
+                newAcceptedSocket.get(),
+                m_outputBuffer,
+                0, c_singleOutputBufferSize, c_singleOutputBufferSize,
+                &bytesReceived,
+                m_pOverlapped))
             {
                 error = WSAGetLastError();
                 if (ERROR_IO_PENDING != error)
                 {
                     // a real failure - must abort the IO
-                    listening_socket_object->iocp->cancel_request(pov);
-                    pov = nullptr;
+                    listeningSocketObject->m_iocp->cancel_request(m_pOverlapped);
+                    m_pOverlapped = nullptr;
                     ctsConfig::PrintErrorIfFailed("AcceptEx", error);
                     return;
                 }
             }
-            else if (ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP)
+            else if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
             {
                 // AcceptEx completed inline - directly invoke the callback to handle the completion
                 // - after canceling the TP request
-                listening_socket_object->iocp->cancel_request(pov);
-                pov = nullptr;
+                listeningSocketObject->m_iocp->cancel_request(m_pOverlapped);
+                m_pOverlapped = nullptr;
                 ctsAcceptExIoCompletionCallback(nullptr, this);
             }
 
             // no failures - store the socket
-            accept_socket = std::move(new_accept_socket);
+            m_acceptSocket = std::move(newAcceptedSocket);
         }
 
         ctsAcceptedConnection ctsAcceptSocketInfo::GetAcceptedSocket() noexcept
         {
-            ctsAcceptedConnection return_details;
+            ctsAcceptedConnection returnDetails;
 
-            const auto listening_socket_object = listening_socket_info.lock();
-            if (!listening_socket_object)
+            const auto listeningSocketObject = m_listeningSocketInfo.lock();
+            if (!listeningSocketObject)
             {
-                return_details.gle = WSAECONNABORTED;
-                accept_socket.reset();
+                returnDetails.m_lastError = WSAECONNABORTED;
+                m_acceptSocket.reset();
                 // return empty/failed details object
-                return return_details;
+                return returnDetails;
             }
-            const auto listening_socket = listening_socket_object->listen_socket.get();
+            const auto listeningSocket = listeningSocketObject->m_listenSocket.get();
 
-            const auto lock = cs.lock();
+            const auto lock = m_lock.lock();
 
             // if the OVERLAPPED* is null, it means it completed inline (no OVERLAPPED async completion)
             // - thus we know it already succeeded
-            if (pov)
+            if (m_pOverlapped)
             {
                 DWORD transferred{};
                 DWORD flags{};
                 if (!WSAGetOverlappedResult(
-                    listening_socket,
-                    pov,
+                    listeningSocket,
+                    m_pOverlapped,
                     &transferred,
                     FALSE,
                     &flags))
                 {
-                    return_details.gle = WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed("AcceptEx", return_details.gle);
-                    accept_socket.reset();
+                    returnDetails.m_lastError = WSAGetLastError();
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", returnDetails.m_lastError);
+                    m_acceptSocket.reset();
                     // return empty/failed details object
-                    return return_details;
+                    return returnDetails;
                 }
             }
 
             // if successful, update the socket context
             // this should never fail - break if it does to debug it
             const auto err = setsockopt(
-                accept_socket.get(),
+                m_acceptSocket.get(),
                 SOL_SOCKET,
                 SO_UPDATE_ACCEPT_CONTEXT,
-                reinterpret_cast<const char*>(&listening_socket),
-                sizeof(listening_socket));
+                reinterpret_cast<const char*>(&listeningSocket),
+                sizeof listeningSocket);
             FAIL_FAST_IF_MSG(
                 err != 0,
                 "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
-                WSAGetLastError(), accept_socket.get(), listening_socket);
+                WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
 
-            SOCKADDR_INET* local_addr{};
-            auto local_addr_len = int{ sizeof SOCKADDR_INET };
-            SOCKADDR_INET* remote_addr{};
-            auto remote_addr_len = int{ sizeof SOCKADDR_INET };
+            SOCKADDR_INET* localAddr{};
+            auto localAddrLen = int{ sizeof SOCKADDR_INET };
+            SOCKADDR_INET* remoteAddr{};
+            auto remoteAddrLen = int{ sizeof SOCKADDR_INET };
 
             ctl::ctGetAcceptExSockaddrs(
-                OutputBuffer,
+                m_outputBuffer,
                 0,
-                SingleOutputBufferSize,
-                SingleOutputBufferSize,
-                reinterpret_cast<sockaddr**>(&local_addr),
-                &local_addr_len,
-                reinterpret_cast<sockaddr**>(&remote_addr),
-                &remote_addr_len);
+                c_singleOutputBufferSize,
+                c_singleOutputBufferSize,
+                reinterpret_cast<sockaddr**>(&localAddr),
+                &localAddrLen,
+                reinterpret_cast<sockaddr**>(&remoteAddr),
+                &remoteAddrLen);
 
             // transfer ownership of the SOCKET to the caller
-            return_details.accept_socket = std::move(accept_socket);
-            return_details.gle = 0;
-            return_details.local_addr.set(local_addr);
-            return_details.remote_addr.set(remote_addr);
+            returnDetails.m_acceptSocket = std::move(m_acceptSocket);
+            returnDetails.m_lastError = 0;
+            returnDetails.m_localAddr.set(localAddr);
+            returnDetails.m_remoteAddr.set(remoteAddr);
 
-            return return_details;
+            return returnDetails;
         }
 
-        ctsAcceptExImpl s_pimpl;
+        ctsAcceptExImpl g_acceptExImpl;  // NOLINT(clang-diagnostic-exit-time-destructors)
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        static INIT_ONCE s_ctsAcceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
-        static BOOL CALLBACK s_ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
+        static INIT_ONCE g_acceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
+        static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
         {
             try
             {
-                s_pimpl.Start();
+                g_acceptExImpl.Start();
             }
             catch (...)
             {
@@ -450,51 +452,51 @@ namespace ctsTraffic
             return TRUE;
         }
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* _accept_info) noexcept
+        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept
             try
         {
-            ctsAcceptedConnection accepted_socket = _accept_info->GetAcceptedSocket();
+            ctsAcceptedConnection acceptedSocket = acceptInfo->GetAcceptedSocket();
 
-            const auto lock = s_pimpl.cs.lock();
-            if (s_pimpl.shutting_down)
+            const auto lock = g_acceptExImpl.m_lock.lock();
+            if (g_acceptExImpl.m_shuttingDown)
             {
                 return;
             }
 
-            if (!s_pimpl.pended_accept_requests.empty())
+            if (!g_acceptExImpl.m_pendedAcceptRequests.empty())
             {
                 //
                 // we have unfulfilled requests for more connections
                 // return a previously accepted socket
                 //
-                const auto weak_socket = s_pimpl.pended_accept_requests.front();
-                s_pimpl.pended_accept_requests.pop();
+                const auto weakSocket = g_acceptExImpl.m_pendedAcceptRequests.front();
+                g_acceptExImpl.m_pendedAcceptRequests.pop();
 
-                auto shared_socket(weak_socket.lock());
-                if (shared_socket)
+                auto sharedSocket(weakSocket.lock());
+                if (sharedSocket)
                 {
-                    ctsConfig::PrintErrorIfFailed("AcceptEx", accepted_socket.gle);
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", acceptedSocket.m_lastError);
 
-                    if (0 == accepted_socket.gle)
+                    if (0 == acceptedSocket.m_lastError)
                     {
                         // set the local addr
-                        const ctl::ctSockaddr local_addr;
-                        int local_addr_len = local_addr.length();
-                        if (0 == getsockname(accepted_socket.accept_socket.get(), local_addr.sockaddr(), &local_addr_len))
+                        const ctl::ctSockaddr localAddr;
+                        int localAddrLen = localAddr.length();
+                        if (0 == getsockname(acceptedSocket.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
                         {
-                            shared_socket->set_local_address(local_addr);
+                            sharedSocket->SetLocalSockaddr(localAddr);
                         }
 
                         // socket ownership was successfully transfered
-                        shared_socket->set_socket(accepted_socket.accept_socket.release());
-                        shared_socket->set_target_address(accepted_socket.remote_addr);
-                        shared_socket->complete_state(0);
+                        sharedSocket->SetSocket(acceptedSocket.m_acceptSocket.release());
+                        sharedSocket->SetRemoteSockaddr(acceptedSocket.m_remoteAddr);
+                        sharedSocket->CompleteState(0);
 
-                        ctsConfig::PrintNewConnection(local_addr, accepted_socket.remote_addr);
+                        ctsConfig::PrintNewConnection(localAddr, acceptedSocket.m_remoteAddr);
                     }
                     else
                     {
-                        shared_socket->complete_state(accepted_socket.gle);
+                        sharedSocket->CompleteState(acceptedSocket.m_lastError);
                     }
                 }
                 else
@@ -509,13 +511,13 @@ namespace ctsTraffic
                 // else, we have no requests for another connection,
                 // - queue this one for when a request comes in
                 //
-                s_pimpl.accepted_connections.push(std::move(accepted_socket));
+                g_acceptExImpl.m_acceptedConnections.push(std::move(acceptedSocket));
             }
 
             //
             // always attempt another AcceptEx
             //
-            _accept_info->InitatiateAcceptEx();
+            acceptInfo->InitatiateAcceptEx();
         }
         catch (...)
         {
@@ -530,48 +532,47 @@ namespace ctsTraffic
     // - else store the weak_ptr<ctsSocket> to be fulfilled later
     //
     //
-    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         DWORD error = 0;
-        if (!InitOnceExecuteOnce(&details::s_ctsAcceptExImplInitOnce, details::s_ctsAcceptExImplInitFn, &error, nullptr))
+        if (!InitOnceExecuteOnce(&details::g_acceptExImplInitOnce, details::ctsAcceptExImplInitFn, &error, nullptr))
         {
-            auto shared_socket(_weak_socket.lock());
-            if (shared_socket)
+            auto sharedSocket(weakSocket.lock());
+            if (sharedSocket)
             {
-                shared_socket->complete_state(error);
+                sharedSocket->CompleteState(error);
             }
             return;
         }
 
-        auto shared_socket(_weak_socket.lock());
-        if (!shared_socket)
+        auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
         {
             return;
         }
 
-        details::ctsAcceptedConnection accepted_connection;
+        details::ctsAcceptedConnection acceptedConnection;
 
         // scoped to the auto-release CS object
         {
-            const auto lock = details::s_pimpl.cs.lock();
+            const auto lock = details::g_acceptExImpl.m_lock.lock();
             // guard access to internal queues
-            if (details::s_pimpl.accepted_connections.empty())
+            if (details::g_acceptExImpl.m_acceptedConnections.empty())
             {
                 // no accepted connections yet -- save the weak_ptr, *not* the shared_ptr
-                try { details::s_pimpl.pended_accept_requests.push(_weak_socket); }
+                try { details::g_acceptExImpl.m_pendedAcceptRequests.push(weakSocket); }
                 catch (...)
                 {
                     // fail the caller if can't save this request
                     error = WSAENOBUFS;
                 }
-
             }
             else
             {
                 // pull the next connection off the queue
-                accepted_connection = std::move(details::s_pimpl.accepted_connections.front());
-                details::s_pimpl.accepted_connections.pop();
-                error = accepted_connection.gle;
+                acceptedConnection = std::move(details::g_acceptExImpl.m_acceptedConnections.front());
+                details::g_acceptExImpl.m_acceptedConnections.pop();
+                error = acceptedConnection.m_lastError;
             }
         }
 
@@ -581,7 +582,7 @@ namespace ctsTraffic
         ctsConfig::PrintErrorIfFailed("AcceptEx", error);
         if (error != 0)
         {
-            shared_socket->complete_state(error);
+            sharedSocket->CompleteState(error);
             return;
         }
 
@@ -589,22 +590,22 @@ namespace ctsTraffic
         // if did not defer the accept request and we have a new accepted socket,
         // complete this socket state
         //
-        if (accepted_connection.accept_socket.get() != INVALID_SOCKET)
+        if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)
         {
             // set the local addr
-            const ctl::ctSockaddr local_addr;
-            int local_addr_len = local_addr.length();
-            if (0 == getsockname(accepted_connection.accept_socket.get(), local_addr.sockaddr(), &local_addr_len))
+            const ctl::ctSockaddr localAddr;
+            int localAddrLen = localAddr.length();
+            if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
             {
-                shared_socket->set_local_address(local_addr);
+                sharedSocket->SetLocalSockaddr(localAddr);
             }
 
             // transfering ownership to the ctsSocket
-            shared_socket->set_socket(accepted_connection.accept_socket.release());
-            shared_socket->set_target_address(accepted_connection.remote_addr);
-            shared_socket->complete_state(0);
+            sharedSocket->SetSocket(acceptedConnection.m_acceptSocket.release());
+            sharedSocket->SetRemoteSockaddr(acceptedConnection.m_remoteAddr);
+            sharedSocket->CompleteState(0);
 
-            ctsConfig::PrintNewConnection(local_addr, accepted_connection.remote_addr);
+            ctsConfig::PrintNewConnection(localAddr, acceptedConnection.m_remoteAddr);
         }
     }
 

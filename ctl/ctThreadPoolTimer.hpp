@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -28,7 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-    namespace details
+    namespace Details
     {
         struct ctThreadpoolTimerCallbackInfo
         {
@@ -47,7 +48,7 @@ namespace ctl
                 ReoccuringPeriod(period)
             {
                 using namespace ctTimer;
-                TimerExpiration = ctConvertMillisToAbsoluteFiletime(ctSnapSystemTimeInMillis() + milliseconds);
+                TimerExpiration = ConvertMillisToAbsoluteFiletime(SnapSystemTimeInMillis() + milliseconds);
             }
 
             // supporting only move semantics
@@ -70,8 +71,8 @@ namespace ctl
             {
                 // addition in hundredNs to avoid loss of precision if were to convert to milliseconds
                 using namespace ctTimer;
-                const auto nextTimerHundredNs = ctConvertFiletimeToHundredNs(TimerExpiration) + ctConvertMillisToHundredNs(ReoccuringPeriod);
-                TimerExpiration = ctConvertHundredNsToAbsoluteFiletime(nextTimerHundredNs);
+                const auto nextTimerHundredNs = ConvertFiletimeToHundredNs(TimerExpiration) + ConvertMillisToHundredNs(ReoccuringPeriod);
+                TimerExpiration = ConvertHundredNsToAbsoluteFiletime(nextTimerHundredNs);
             }
 
             void swap(ctThreadpoolTimerCallbackInfo& rhs) noexcept
@@ -102,7 +103,7 @@ namespace ctl
         ~ctThreadpoolTimer() noexcept
         {
             // wait for all callbacks
-            auto lock_timer = this->m_timerLock.lock();
+            auto lock_timer = m_timerLock.lock();
             // block any more items being scheduled
             m_exiting = true;
             lock_timer.reset();
@@ -124,7 +125,7 @@ namespace ctl
         {
             // capture the caller's context in a lambda to be invoked in the callback
             this->insert_callback_info(
-                details::ctThreadpoolTimerCallbackInfo(
+                Details::ctThreadpoolTimerCallbackInfo(
                     std::move(function),
                     millisecond_offset,
                     period));
@@ -132,7 +133,7 @@ namespace ctl
 
         void stop_all_timers() noexcept
         {
-            auto lock_timer = this->m_timerLock.lock();
+            auto lock_timer = m_timerLock.lock();
             for (const auto& timer : m_tpTimers)
             {
                 SetThreadpoolTimer(timer, nullptr, 0, 0);
@@ -149,15 +150,15 @@ namespace ctl
         //
         // Private members
         //
-        wil::critical_section m_timerLock;
+        wil::critical_section m_timerLock{500};
         const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr;  // NOLINT(misc-misplaced-const)
         std::vector<PTP_TIMER> m_tpTimers;
-        std::vector<details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
+        std::vector<Details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
         bool m_exiting = false;
 
         PTP_TIMER create_tp()
         {
-            const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, this->m_tpEnvironment); // NOLINT(misc-misplaced-const)
+            const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, m_tpEnvironment); // NOLINT(misc-misplaced-const)
             if (!ptp_timer)
             {
                 THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolTimer");
@@ -168,9 +169,9 @@ namespace ctl
         //
         // must insert the callback info sorted based of the expected time to complete
         //
-        void insert_callback_info(details::ctThreadpoolTimerCallbackInfo&& new_request)
+        void insert_callback_info(Details::ctThreadpoolTimerCallbackInfo&& new_request)
         {
-            const auto lock_timer = this->m_timerLock.lock();
+            const auto lock_timer = m_timerLock.lock();
             if (m_exiting)
             {
                 return;
@@ -178,34 +179,34 @@ namespace ctl
 
             // compare each callback_object to check if it contains a null function ptr
             auto unused_callback = std::find_if(
-                std::begin(this->m_callbackObjects),
-                std::end(this->m_callbackObjects),
-                [](const details::ctThreadpoolTimerCallbackInfo& info) noexcept {
+                std::begin(m_callbackObjects),
+                std::end(m_callbackObjects),
+                [](const Details::ctThreadpoolTimerCallbackInfo& info) noexcept {
                     // returns if a null callback (not being used)
                     return !static_cast<bool>(info.Callback);
                 });
 
-            if (unused_callback == std::end(this->m_callbackObjects))
+            if (unused_callback == std::end(m_callbackObjects))
             {
                 //
                 // need room in both the callback_objects && tp_timers vector for a new timer
                 //
-                this->m_callbackObjects.emplace_back(std::move(new_request));
+                m_callbackObjects.emplace_back(std::move(new_request));
                 // ensure this is exception safe with a scope guard
-                auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { this->m_callbackObjects.pop_back(); });
+                auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { m_callbackObjects.pop_back(); });
 
                 PTP_TIMER temp_timer = this->create_tp();
                 // ensure the timer is closed (is exception safe) with a scope guard
                 auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() noexcept { CloseThreadpoolTimer(temp_timer); });
 
                 // now attempt to store the new timer
-                this->m_tpTimers.push_back(temp_timer);
+                m_tpTimers.push_back(temp_timer);
 
                 // all succeeded : dismiss the scope guards
                 deleteTemporaryTimerOnFailure.release();
                 removeCallbackObjectOnFailure.release();
 
-                unused_callback = this->m_callbackObjects.end() - 1;
+                unused_callback = m_callbackObjects.end() - 1;
             }
             else
             {
@@ -215,11 +216,11 @@ namespace ctl
 
             // using iterator_offect to directly express the relationship between tp_timers and callback_objects
             // - each of the vector offsets are functionally paired together
-            const auto iterator_offset = unused_callback - this->m_callbackObjects.begin();
+            const auto iterator_offset = unused_callback - m_callbackObjects.begin();
             SetThreadpoolTimer(
-                this->m_tpTimers[iterator_offset],
-                &this->m_callbackObjects[iterator_offset].TimerExpiration,
-                this->m_callbackObjects[iterator_offset].ReoccuringPeriod,
+                m_tpTimers[iterator_offset],
+                &m_callbackObjects[iterator_offset].TimerExpiration,
+                m_callbackObjects[iterator_offset].ReoccuringPeriod,
                 0); // specifying window length of zero for now: not a need to be less precise -> more power efficient yet
         }
 

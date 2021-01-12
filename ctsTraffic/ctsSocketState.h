@@ -20,6 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/resource.h>
 
+#include "ctsConfig.h"
+
 namespace ctsTraffic
 {
     //
@@ -49,8 +51,8 @@ namespace ctsTraffic
             Created,
             Connecting,
             Connected,
-            InitiatingIO,
-            InitiatedIO,
+            InitiatingIo,
+            InitiatedIo,
             Closing,
             Closed
         };
@@ -58,7 +60,7 @@ namespace ctsTraffic
         //
         // c'tor requiring a parent ctsSocketBroker
         //
-        explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker);
+        explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker);
 
         ~ctsSocketState() noexcept;
 
@@ -67,17 +69,17 @@ namespace ctsTraffic
         // - this is required to ensure the object is fully instatiated before
         //   it is passed to the threadpool thread
         //
-        void start() noexcept;
+        void Start() noexcept;
 
         //
         // Completes the current socket state
         //
-        void complete_state(DWORD _error) noexcept;
+        void CompleteState(DWORD error) noexcept;
 
         //
         // Accessor to current state information
         //
-        InternalState current_state() const noexcept;
+        InternalState GetCurrentState() const noexcept;
 
         //
         // copy c'tor and assignment
@@ -92,18 +94,18 @@ namespace ctsTraffic
         // private members of ctsSocketState
         // - CS's are mutable to allow taking a CS in a const function
         //
-        wil::unique_threadpool_work thread_pool_worker;
-        mutable wil::critical_section state_guard{};
-        std::weak_ptr<ctsSocketBroker> broker{};
-        std::shared_ptr<ctsSocket> socket{};
-        InternalState state = InternalState::Creating;
-        int last_error = 0UL;
-        bool initiated_io = false;
+        wil::unique_threadpool_work m_threadPoolWorker;
+        mutable wil::critical_section m_stateGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        std::weak_ptr<ctsSocketBroker> m_broker{};
+        std::shared_ptr<ctsSocket> m_socket{};
+        InternalState m_state = InternalState::Creating;
+        int m_lastError = 0UL;
+        bool m_initiatedIo = false;
 
         //
         // static threadpool callback function
         //
-        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE /*_instance*/, PVOID _context, PTP_WORK /*_work*/) noexcept;
+        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context, PTP_WORK) noexcept;
     };
 
 } // namespace

@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -30,7 +31,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
 // ctl headers
-#include <ctString.hpp>
 #include <ctSockaddr.hpp>
 
 namespace ctsPerf
@@ -724,10 +724,10 @@ namespace ctsPerf
 
             std::wstring PrintAddresses() const
             {
-                WCHAR local_string[ctl::IpStringMaxLength];
-                (void)m_localAddr.WriteCompleteAddress(local_string);
-                WCHAR remote_string[ctl::IpStringMaxLength];
-                (void)m_remoteAddr.WriteCompleteAddress(remote_string);
+                WCHAR local_string[ctl::c_ipStringMaxLength];
+                m_localAddr.WriteCompleteAddress(local_string);
+                WCHAR remote_string[ctl::c_ipStringMaxLength];
+                m_remoteAddr.WriteCompleteAddress(remote_string);
 
                 return wil::str_printf<std::wstring>(
                     L"%ws,%ws",
@@ -803,7 +803,7 @@ namespace ctsPerf
             {
                 for (const auto& entry : m_pathInfoData)
                 {
-                    m_pathInfoWriter.write_row(entry.PrintAddresses() + entry.PrintData());
+                    m_pathInfoWriter.WriteRow(entry.PrintAddresses() + entry.PrintData());
                 }
 
                 for (const auto& entry : m_localReceiveWindowData)
@@ -815,7 +815,7 @@ namespace ctsPerf
                     const auto foundEntry = m_remoteReceiveWindowData.find(matchingData);
                     if (foundEntry != m_remoteReceiveWindowData.end())
                     {
-                        m_receiveWindowWriter.write_row(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
+                        m_receiveWindowWriter.WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
                     }
                 }
 
@@ -828,7 +828,7 @@ namespace ctsPerf
                     const auto foundEntry = m_byteTrackingData.find(matchingData);
                     if (foundEntry != m_byteTrackingData.end())
                     {
-                        m_senderCongestionWriter.write_row(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
+                        m_senderCongestionWriter.WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
                     }
                 }
             }
@@ -849,14 +849,14 @@ namespace ctsPerf
             auto started = false;
             try
             {
-                m_pathInfoWriter.create_file(
+                m_pathInfoWriter.CreateFile(
                     std::wstring(Details::EstatsDataPoint<TcpConnectionEstatsPath>::PrintAddressHeader()) +
                     L"," + Details::EstatsDataPoint<TcpConnectionEstatsPath>::PrintHeader());
-                m_receiveWindowWriter.create_file(
+                m_receiveWindowWriter.CreateFile(
                     std::wstring(Details::EstatsDataPoint<TcpConnectionEstatsRec>::PrintAddressHeader()) +
                     L"," + Details::EstatsDataPoint<TcpConnectionEstatsRec>::PrintHeader() +
                     L"," + Details::EstatsDataPoint<TcpConnectionEstatsObsRec>::PrintHeader());
-                m_senderCongestionWriter.create_file(
+                m_senderCongestionWriter.CreateFile(
                     std::wstring(Details::EstatsDataPoint<TcpConnectionEstatsSndCong>::PrintAddressHeader()) +
                     L"," + Details::EstatsDataPoint<TcpConnectionEstatsSndCong>::PrintHeader() +
                     L"," + Details::EstatsDataPoint<TcpConnectionEstatsData>::PrintHeader());
@@ -885,7 +885,7 @@ namespace ctsPerf
 
     private:
         wil::unique_threadpool_timer m_timer;
-        wil::critical_section m_timerLock;
+        wil::critical_section m_timerLock{500};
         bool m_timersStopping = false;
 
         std::set<Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>> m_synOptsData;
@@ -1134,14 +1134,14 @@ namespace ctsPerf
 
                 if (fPathInfoInstanceFound)
                 {
-                    m_pathInfoWriter.write_row(
+                    m_pathInfoWriter.WriteRow(
                         pathInfoInstance->PrintAddresses() +
                         pathInfoInstance->PrintData());
                 }
 
                 if (fLocalReceiveWindowInstanceFound && fRemoteReceiveWindowInstanceFound)
                 {
-                    m_receiveWindowWriter.write_row(
+                    m_receiveWindowWriter.WriteRow(
                         localReceiveWindowInstance->PrintAddresses() +
                         localReceiveWindowInstance->PrintData() +
                         remoteReceiveWindowInstance->PrintData());
@@ -1149,7 +1149,7 @@ namespace ctsPerf
 
                 if (fSenderCongestionInstanceFound && fByteTrackingInstanceFound)
                 {
-                    m_senderCongestionWriter.write_row(
+                    m_senderCongestionWriter.WriteRow(
                         senderCongestionInstance->PrintAddresses() +
                         senderCongestionInstance->PrintData() +
                         byteTrackingInstance->PrintData());

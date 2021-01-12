@@ -125,7 +125,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -195,6 +195,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -238,6 +239,8 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>Machinex64</TargetMachine>
+      <SetChecksum>true</SetChecksum>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -280,6 +283,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -322,6 +326,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineARM</TargetMachine>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -367,6 +372,7 @@
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -379,7 +385,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <PrecompiledHeaderFile>
@@ -414,6 +420,7 @@
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineX64</TargetMachine>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -463,6 +470,7 @@
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -512,6 +520,7 @@
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
       <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
       <TargetMachine>MachineARM</TargetMachine>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -563,7 +572,6 @@
     <ClInclude Include="..\ctl\ctWmiVariant.hpp" />
     <ClInclude Include="..\SdkChanges\WbemDisp.h" />
     <ClInclude Include="ctsConfig.h" />
-    <ClInclude Include="ctsIOBuffers.hpp" />
     <ClInclude Include="ctsIOPattern.h" />
     <ClInclude Include="ctsIOPatternBufferPolicy.hpp" />
     <ClInclude Include="ctsIOPatternProtocolPolicy.hpp" />

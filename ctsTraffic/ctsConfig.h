@@ -10,8 +10,10 @@ THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF 
 See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 
 */
-
 #pragma once
+// ReSharper disable CppInconsistentNaming
+// ReSharper disable CppClangTidyCppcoreguidelinesMacroUsage
+// ReSharper disable CppClangTidyClangDiagnosticGnuZeroVariadicMacroArguments
 
 // cpp headers
 #include <stdexcept>
@@ -67,7 +69,7 @@ namespace ctsTraffic
 
         enum class IoPatternType
         {
-            NoIOSet,
+            NoIoSet,
             Push,
             Pull,
             PushPull,
@@ -88,15 +90,15 @@ namespace ctsTraffic
         enum OptionType
         {
             NoOptionSet = 0x0000,
-            LOOPBACK_FAST_PATH = 0x0001,
-            KEEPALIVE = 0x0002,
-            NON_BLOCKING_IO = 0x0004,
-            HANDLE_INLINE_IOCP = 0x0008,
-            REUSE_UNICAST_PORT = 0x0010,
-            SET_RECV_BUF = 0x0020,
-            SET_SEND_BUF = 0x0040,
-            ENABLE_CIRCULAR_QUEUEING = 0x0080,
-            MSG_WAIT_ALL = 0x0100,
+            LoopbackFastPath = 0x0001,
+            Keepalive = 0x0002,
+            NonBlockingIo = 0x0004,
+            HandleInlineIocp = 0x0008,
+            ReuseUnicastPort = 0x0010,
+            SetRecvBuf = 0x0020,
+            SetSendBuf = 0x0040,
+            EnableCircularQueueing = 0x0080,
+            MsgWaitAll = 0x0100,
             // next enum  = 0x0200
         };
 
@@ -168,21 +170,22 @@ namespace ctsTraffic
 
         struct JitterFrameEntry
         {
-            unsigned long bytes_received = 0UL;
-            long long sequence_number = 0LL;
-            long long sender_qpc = 0LL;
-            long long sender_qpf = 0LL;
-            long long receiver_qpc = 0LL;
-            long long receiver_qpf = 0LL;
-            double estimated_time_in_flight_ms = 0;
+            unsigned long m_bytesReceived = 0UL;
+            long long m_sequenceNumber = 0LL;
+            long long m_senderQpc = 0LL;
+            long long m_senderQpf = 0LL;
+            long long m_receiverQpc = 0LL;
+            long long m_receiverQpf = 0LL;
+            double m_estimatedTimeInFlightMs = 0;
         };
-        void PrintJitterUpdate(const JitterFrameEntry& current_frame, const JitterFrameEntry& previous_frame) noexcept;
+        void PrintJitterUpdate(const JitterFrameEntry& currentFrame, const JitterFrameEntry& previousFrame) noexcept;
 
         void PrintStatusUpdate() noexcept;
         void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
-#define PRINT_DEBUG_INFO(fmt, ...)                                        \
+#define PRINT_DEBUG_INFO(fmt, ...)                                      \
+        do                                                              \
         {                                                               \
             if (!::ctsTraffic::ctsConfig::ShutdownCalled()) {           \
                 switch (::ctsTraffic::ctsConfig::ConsoleVerbosity()) {  \
@@ -191,19 +194,19 @@ namespace ctsTraffic
                         break;                                          \
                 }                                                       \
             }                                                           \
-        }
+        }                                                               \
+        while ((void)0, 0)                                              \
 
         void PrintErrorIfFailed(PCSTR what, unsigned long why) noexcept;
-        void PrintErrorInfo(_In_ PCWSTR text) noexcept;
+        void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
 
-        inline DWORD Win32FromHRESULT(HRESULT hr) noexcept
+        inline DWORD Win32FromHresult(HRESULT hr) noexcept
         {
-            constexpr HRESULT Win32Mask = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, 0);
-            if ((hr & 0xFFFF0000) == Win32Mask)
+            if (HRESULT_SEVERITY(hr) == SEVERITY_ERROR && HRESULT_FACILITY(hr) == FACILITY_WIN32)
             {
-              return HRESULT_CODE(hr);
+                return HRESULT_CODE(hr);
             }
             return hr;
         }
@@ -212,15 +215,16 @@ namespace ctsTraffic
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept;
 
-        void PrintNewConnection(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsTcpStatistics& stats) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr, unsigned long error, const ctsUdpStatistics& stats) noexcept;
+        void PrintNewConnection(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, unsigned long error, const ctsTcpStatistics& stats) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, unsigned long error, const ctsUdpStatistics& stats) noexcept;
         void PrintConnectionResults(unsigned long error) noexcept;
 
         // Get* functions
-        ctsSignedLongLong   GetTcpBytesPerSecond() noexcept;
-        ctsUnsignedLong     GetMaxBufferSize() noexcept;
-        ctsUnsignedLong     GetBufferSize() noexcept;
+        ctsSignedLongLong GetTcpBytesPerSecond() noexcept;
+        ctsUnsignedLong GetMaxBufferSize() noexcept;
+        ctsUnsignedLong GetMinBufferSize() noexcept;
+        ctsUnsignedLong GetBufferSize() noexcept;
         ctsUnsignedLongLong GetTransferSize() noexcept;
 
         float GetStatusTimeStamp() noexcept;
@@ -229,8 +233,8 @@ namespace ctsTraffic
         bool IsListening() noexcept;
 
         // Set* functions
-        int SetPreBindOptions(SOCKET s, const ctl::ctSockaddr& local_address) noexcept;
-        int SetPreConnectOptions(SOCKET s) noexcept;
+        int SetPreBindOptions(SOCKET socket, const ctl::ctSockaddr& localAddress) noexcept;
+        int SetPreConnectOptions(SOCKET) noexcept;
 
         // for the MediaStream pattern
         struct MediaStreamSettings
@@ -274,41 +278,41 @@ namespace ctsTraffic
                     }
                 }
 
-                const ctsUnsignedLongLong total_stream_length_frames = StreamLengthSeconds * FramesPerSecond;
-                if (total_stream_length_frames > MAXULONG32)
+                const ctsUnsignedLongLong totalStreamLengthFrames = StreamLengthSeconds * FramesPerSecond;
+                if (totalStreamLengthFrames > MAXULONG32)
                 {
                     throw std::invalid_argument("The total stream length in frame-count exceeds the maximum allowed to be streamed (2^32)");
                 }
 
                 // convert rate to bytes / second -> calculate the total # of bytes
-                ctsUnsignedLongLong total_stream_length_bytes = static_cast<unsigned long long>(static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds));
+                ctsUnsignedLongLong totalStreamLengthBytes = static_cast<unsigned long long>(static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds));
 
                 // guarantee that the total stream length aligns evenly with total_frames
-                if (total_stream_length_bytes % total_stream_length_frames != 0)
+                if (totalStreamLengthBytes % totalStreamLengthFrames != 0)
                 {
-                    total_stream_length_bytes -= total_stream_length_bytes % total_stream_length_frames;
+                    totalStreamLengthBytes -= totalStreamLengthBytes % totalStreamLengthFrames;
                 }
 
-                const ctsUnsignedLongLong total_frame_size_bytes = total_stream_length_bytes / total_stream_length_frames;
-                if (total_frame_size_bytes > MAXULONG32)
+                const ctsUnsignedLongLong totalFrameSizeBytes = totalStreamLengthBytes / totalStreamLengthFrames;
+                if (totalFrameSizeBytes > MAXULONG32)
                 {
                     throw std::invalid_argument("The frame size in bytes exceeds the maximum allowed to be streamed (2^32)");
                 }
 
-                FrameSizeBytes = static_cast<unsigned long>(total_frame_size_bytes);
+                FrameSizeBytes = static_cast<unsigned long>(totalFrameSizeBytes);
                 if (FrameSizeBytes < 40)
                 {
                     throw std::invalid_argument("The frame size is too small - it must be at least 40 bytes");
                 }
-                StreamLengthFrames = static_cast<unsigned long>(total_stream_length_frames);
+                StreamLengthFrames = static_cast<unsigned long>(totalStreamLengthFrames);
 
                 // guarantee frame alignment
                 FAIL_FAST_IF_MSG(
-                    static_cast<unsigned long long>(FrameSizeBytes) * static_cast<unsigned long long>(StreamLengthFrames) != total_stream_length_bytes,
+                    static_cast<unsigned long long>(FrameSizeBytes) * static_cast<unsigned long long>(StreamLengthFrames) != totalStreamLengthBytes,
                     "FrameSizeBytes (%u) * StreamLengthFrames (%u) != TotalStreamLength (%llx)",
-                    static_cast<unsigned long>(FrameSizeBytes), static_cast<unsigned long>(StreamLengthFrames), static_cast<unsigned long long>(total_stream_length_bytes));
+                    static_cast<unsigned long>(FrameSizeBytes), static_cast<unsigned long>(StreamLengthFrames), static_cast<unsigned long long>(totalStreamLengthBytes));
 
-                return total_stream_length_bytes;
+                return totalStreamLengthBytes;
             }
         };
         const MediaStreamSettings& GetMediaStream() noexcept;
@@ -317,7 +321,7 @@ namespace ctsTraffic
         {
             // dynamically initialize status details with current qpc
             ctsConfigSettings() noexcept :
-                ConnectionStatusDetails(ctl::ctTimer::ctSnapQpcInMillis())
+                ConnectionStatusDetails(ctl::ctTimer::SnapQpcInMillis())
             {
             }
             ~ctsConfigSettings() noexcept = default;
@@ -328,7 +332,7 @@ namespace ctsTraffic
             ctsConfigSettings& operator=(ctsConfigSettings&&) = delete;
 
             HANDLE CtrlCHandle = nullptr;
-            PTP_CALLBACK_ENVIRON PTPEnvironment = nullptr;
+            PTP_CALLBACK_ENVIRON pTpEnvironment = nullptr;
 
             ctsSocketFunction CreateFunction;
             ctsSocketFunction ConnectFunction;
@@ -336,10 +340,10 @@ namespace ctsTraffic
             ctsSocketFunction IoFunction;
             ctsSocketFunction ClosingFunction; // optional
 
-            ProtocolType    Protocol = ProtocolType::NoProtocolSet;
+            ProtocolType Protocol = ProtocolType::NoProtocolSet;
             TcpShutdownType TcpShutdown = TcpShutdownType::NoShutdownOptionSet;
-            IoPatternType   IoPattern = IoPatternType::NoIOSet;
-            OptionType      Options = NoOptionSet;
+            IoPatternType IoPattern = IoPatternType::NoIoSet;
+            OptionType Options = NoOptionSet;
 
             DWORD SocketFlags = 0;
             WORD  Port = 0;
@@ -381,6 +385,8 @@ namespace ctsTraffic
 
             bool UseSharedBuffer = false;
             bool ShouldVerifyBuffers = false;
+
+            static const DWORD c_CriticalSectionSpinlock = 500ul;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -389,7 +395,7 @@ namespace ctsTraffic
         /// - it's made available to all consumers of ctsConfig.h through extern
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        extern ctsConfigSettings* Settings;
+        extern ctsConfigSettings* g_configSettings;
 
         SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);
         bool ShutdownCalled() noexcept;

@@ -24,20 +24,20 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& value)
     {
-        return std::to_wstring(static_cast<unsigned long long>(_value));
+        return std::to_wstring(static_cast<unsigned long long>(value));
     }
 }
 
-ctsTraffic::ctsUnsignedLongLong s_TransferSize = 0ULL;
-bool s_Listening = false;
+ctsTraffic::ctsUnsignedLongLong g_transferSize = 0ULL;
+bool g_isListening = false;
 ///
 /// Fakes
 ///
 namespace ctsTraffic::ctsConfig
 {
-    ctsConfigSettings* Settings;
+    ctsConfigSettings* g_configSettings;
 
     void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
     {
@@ -54,18 +54,18 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCWSTR) noexcept
+    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
 
     bool IsListening() noexcept
     {
-        return s_Listening;
+        return g_isListening;
     }
 
     ctsUnsignedLongLong GetTransferSize() noexcept
     {
-        return s_TransferSize;
+        return g_transferSize;
     }
     bool ShutdownCalled() noexcept
     {
@@ -90,7 +90,7 @@ namespace ctsUnitTest
         //
         // The pattern state to use with each test
         //
-        std::unique_ptr<ctsIOPatternState> pattern_state;
+        std::unique_ptr<ctsIoPatternState> pattern_state;
 
         enum Role
         {
@@ -101,19 +101,19 @@ namespace ctsUnitTest
     public:
         TEST_CLASS_INITIALIZE(Setup)
         {
-            ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
-            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
         }
 
         TEST_CLASS_CLEANUP(Cleanup)
         {
-            delete ctsConfig::Settings;
+            delete ctsConfig::g_configSettings;
         }
 
         TEST_METHOD(Default)
         {
-            s_Listening = true;
+            g_isListening = true;
 
             ctsTcpStatistics tcp_stats;
             ctsUdpStatistics udp_stats;

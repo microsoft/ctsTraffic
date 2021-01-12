@@ -31,154 +31,166 @@ namespace ctsTraffic
     using namespace std;
 
     // default values are assigned in the class declaration
-    ctsSocket::ctsSocket(weak_ptr<ctsSocketState> _parent) noexcept : parent(move(_parent))
+    ctsSocket::ctsSocket(weak_ptr<ctsSocketState> parent) noexcept : m_parent(move(parent))
     {
     }
 
     _No_competing_thread_ ctsSocket::~ctsSocket() noexcept
     {
         // shutdown() tears down the socket object
-        shutdown();
+        Shutdown();
+
+        /*
+        // wait for all IO to be completed before deleting the pattern if this is RIO
+        // as the IO requests are still using the RIO Buffers we gave it
+        if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
+        {
+            while (GetPendedIoCount() != 0)
+            {
+                YieldProcessor();
+            }
+        }
+        */
 
         // if the IO pattern is still alive, must delete it once in the d'tor before this object goes away
         // - can't reset this in ctsSocket::shutdown since ctsSocket::shutdown can be called from the parent ctsSocketState 
         //   and there may be callbacks still running holding onto a reference to this ctsSocket object
         //   which causes the potential to AV in the io_pattern
         //   (a race-condition touching the io_pattern with deleting the io_pattern)
-        pattern.reset();
+        m_pattern.reset();
     }
 
-    void ctsSocket::set_socket(SOCKET _socket) noexcept
+    void ctsSocket::SetSocket(SOCKET socket) noexcept
     {
-        const auto lock = socket_cs.lock();
+        const auto lock = m_socketCs.lock();
 
         FAIL_FAST_IF_MSG(
-            !!socket,
+            !!m_socket,
             "ctsSocket::set_socket trying to set a SOCKET (%Iu) when it has already been set in this object (%Iu)",
-            _socket, socket.get());
+            socket, m_socket.get());
 
-        socket.reset(_socket);
+        m_socket.reset(socket);
     }
 
-    int ctsSocket::close_socket(int _error_code) noexcept
+    int ctsSocket::CloseSocket(int errorCode) noexcept
     {
-        const auto lock = socket_cs.lock();
+        const auto lock = m_socketCs.lock();
 
         int error = 0;
-        if (socket)
+        if (m_socket)
         {
-            if (_error_code != 0)
+            if (errorCode != 0)
             {
                 // always try to RST if we are closing due to an error
                 // to best-effort notify the opposite endpoint
-                const wsIOResult result = ctsSetLingertoRSTSocket(socket.get());
-                error = result.error_code;
+                const wsIOResult result = ctsSetLingertoResetSocket(m_socket.get());
+                error = result.m_errorCode;
             }
-            socket.reset();
+            m_socket.reset();
         }
         return error;
     }
 
-    const shared_ptr<ctThreadIocp>& ctsSocket::thread_pool()
+    const shared_ptr<ctThreadIocp>& ctsSocket::GetIocpThreadpool()
     {
         // use the SOCKET cs to also guard creation of this TP object
-        const auto lock = socket_cs.lock();
+        const auto lock = m_socketCs.lock();
         // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
-        if (socket && !tp_iocp)
+        if (m_socket && !m_tpIocp)
         {
-            tp_iocp = make_shared<ctThreadIocp>(socket.get(), ctsConfig::Settings->PTPEnvironment); // can throw
+            m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), ctsConfig::g_configSettings->pTpEnvironment); // can throw
         }
-        return tp_iocp;
+        return m_tpIocp;
     }
 
-    void ctsSocket::print_pattern_results(unsigned long _last_error) const noexcept
+    void ctsSocket::PrintPatternResults(unsigned long lastError) const noexcept
     {
-        if (pattern)
+        if (m_pattern)
         {
-            pattern->print_stats(
-                local_address(),
-                target_address());
+            m_pattern->PrintStatistics(
+                GetLocalSockaddr(),
+                GetRemoteSockaddr());
         }
         else
         {
             // failed during socket creation, bind, or connect
             ctsConfig::PrintConnectionResults(
-                _last_error);
+                lastError);
         }
     }
 
-    void ctsSocket::complete_state(DWORD _error_code) noexcept
+    void ctsSocket::CompleteState(DWORD errorCode) noexcept
     {
-        const auto current_io_count = ctMemoryGuardRead(&io_count);
+        const auto currentIoCount = ctMemoryGuardRead(&m_ioCount);
         FAIL_FAST_IF_MSG(
-            current_io_count != 0,
-            "ctsSocket::complete_state is called with outstanding IO (%d)", current_io_count);
+            currentIoCount != 0,
+            "ctsSocket::complete_state is called with outstanding IO (%d)", currentIoCount);
 
-        DWORD recorded_error = _error_code;
-        if (pattern)
+        DWORD recordedError = errorCode;
+        if (m_pattern)
         {
             // get the pattern's last_error
-            recorded_error = pattern->get_last_error();
+            recordedError = m_pattern->GetLastPatternError();
             // no longer allow any more callbacks
-            pattern->register_callback(nullptr);
+            m_pattern->RegisterCallback(nullptr);
         }
 
-        auto ref_parent(parent.lock());
-        if (ref_parent)
+        auto refParent(m_parent.lock());
+        if (refParent)
         {
-            ref_parent->complete_state(recorded_error);
+            refParent->CompleteState(recordedError);
         }
     }
 
-    const ctSockaddr& ctsSocket::local_address() const noexcept
+    const ctSockaddr& ctsSocket::GetLocalSockaddr() const noexcept
     {
-        return local_sockaddr;
+        return m_localSockaddr;
     }
 
-    void ctsSocket::set_local_address(const ctSockaddr& _local) noexcept
+    void ctsSocket::SetLocalSockaddr(const ctSockaddr& _local) noexcept
     {
-        local_sockaddr = _local;
+        m_localSockaddr = _local;
     }
 
-    const ctSockaddr& ctsSocket::target_address() const noexcept
+    const ctSockaddr& ctsSocket::GetRemoteSockaddr() const noexcept
     {
-        return target_sockaddr;
+        return m_targetSockaddr;
     }
 
-    void ctsSocket::set_target_address(const ctSockaddr& _target) noexcept
+    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& target) noexcept
     {
-        target_sockaddr = _target;
+        m_targetSockaddr = target;
     }
 
-    shared_ptr<ctsIOPattern> ctsSocket::io_pattern() const noexcept
+    ctsIoPattern::LockedIoPattern ctsSocket::LockIoPattern() const noexcept
     {
-        return pattern;
+        return ctsIoPattern::LockedIoPattern(m_pattern);
     }
 
-    void ctsSocket::set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) noexcept
+    void ctsSocket::SetIoPattern(const std::shared_ptr<ctsIoPattern>& pattern) noexcept
     {
-        pattern = _pattern;
-        if (ctsConfig::Settings->PrePostSends == 0)
+        m_pattern = pattern;
+        if (ctsConfig::g_configSettings->PrePostSends == 0)
         {
             // user didn't specify a specific # of sends to pend
             // start ISB notifications (best effort)
-            initiate_isb_notification();
+            InitiateIsbNotification();
         }
     }
 
-    void ctsSocket::process_isb_notification() noexcept
+    void ctsSocket::ProcessIsbNotification() noexcept
     {
         // lock the socket
-        const auto shared_this = shared_from_this();
-        const auto socket_lock(shared_this->socket_reference());
-        const auto local_socket = socket_lock.socket();
-        if (local_socket != INVALID_SOCKET)
+        const auto sharedThis = shared_from_this();
+        const auto socketLock(sharedThis->AcquireSocketLock());
+        const auto localSocket = socketLock.Get();
+        if (localSocket != INVALID_SOCKET)
         {
             ULONG isb;
-            if (0 == idealsendbacklogquery(local_socket, &isb))
+            if (0 == idealsendbacklogquery(localSocket, &isb))
             {
-                PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb)
-                pattern->set_ideal_send_backlog(isb);
+                PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                m_pattern->SetIdealSendBacklog(isb);
             }
             else
             {
@@ -191,26 +203,26 @@ namespace ctsTraffic
         }
     }
 
-    void ctsSocket::initiate_isb_notification() noexcept
+    void ctsSocket::InitiateIsbNotification() noexcept
     {
         try
         {
-            const auto& shared_iocp = thread_pool();
-            OVERLAPPED* ov = shared_iocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* ov) noexcept {
+            const auto& sharedIocp = GetIocpThreadpool();
+            OVERLAPPED* ov = sharedIocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* pOverlapped) noexcept {
                 DWORD gle = NO_ERROR;
 
-                auto shared_this_ptr = weak_this_ptr.lock();
-                if (!shared_this_ptr)
+                auto sharedThisPtr = weak_this_ptr.lock();
+                if (!sharedThisPtr)
                 {
                     return;
                 }
 
-                const auto socket_lock(shared_this_ptr->socket_reference());
-                const auto local_socket = socket_lock.socket();
-                if (local_socket != INVALID_SOCKET)
+                const auto socketLock(sharedThisPtr->AcquireSocketLock());
+                const auto localSocket = socketLock.Get();
+                if (localSocket != INVALID_SOCKET)
                 {
                     DWORD transferred, flags; // unneeded
-                    if (!WSAGetOverlappedResult(local_socket, ov, &transferred, FALSE, &flags))
+                    if (!WSAGetOverlappedResult(localSocket, pOverlapped, &transferred, FALSE, &flags))
                     {
                         gle = WSAGetLastError();
                         if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
@@ -228,17 +240,17 @@ namespace ctsTraffic
                 {
                     // if the request succeeded, handle the ISB change
                     // and issue the next
-                    shared_this_ptr->process_isb_notification();
-                    shared_this_ptr->initiate_isb_notification();
+                    sharedThisPtr->ProcessIsbNotification();
+                    sharedThisPtr->InitiateIsbNotification();
                 }
             }); // lambda for new_request
 
-            const auto shared_this = shared_from_this();
-            const auto socket_lock(shared_this->socket_reference());
-            const auto local_socket = socket_lock.socket();
-            if (local_socket != INVALID_SOCKET)
+            const auto sharedThis = shared_from_this();
+            const auto socketLock(sharedThis->AcquireSocketLock());
+            const auto localSocket = socketLock.Get();
+            if (localSocket != INVALID_SOCKET)
             {
-                const auto error = idealsendbacklognotify(local_socket, ov, nullptr);
+                const auto error = idealsendbacklognotify(localSocket, ov, nullptr);
                 if (SOCKET_ERROR == error)
                 {
                     const auto gle = WSAGetLastError();
@@ -246,7 +258,7 @@ namespace ctsTraffic
                     if (gle != WSA_IO_PENDING)
                     {
                         // if the ISB notification failed, tell the TP to no longer track that IO
-                        shared_iocp->cancel_request(ov);
+                        sharedIocp->cancel_request(ov);
                         if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
                         {
                             ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
@@ -257,7 +269,7 @@ namespace ctsTraffic
             else
             {
                 // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
-                shared_iocp->cancel_request(ov);
+                sharedIocp->cancel_request(ov);
             }
         }
         catch (...)
@@ -266,37 +278,37 @@ namespace ctsTraffic
         }
     }
 
-    long ctsSocket::increment_io() noexcept
+    long ctsSocket::IncrementIo() noexcept
     {
-        return ctMemoryGuardIncrement(&io_count);
+        return ctMemoryGuardIncrement(&m_ioCount);
     }
 
-    long ctsSocket::decrement_io() noexcept
+    long ctsSocket::DecrementIo() noexcept
     {
-        const auto io_value = ctMemoryGuardDecrement(&io_count);
+        const auto ioValue = ctMemoryGuardDecrement(&m_ioCount);
         FAIL_FAST_IF_MSG(
-            io_value < 0,
-            "ctsSocket: io count fell below zero (%d)\n", io_value);
-        return io_value;
+            ioValue < 0,
+            "ctsSocket: io count fell below zero (%d)\n", ioValue);
+        return ioValue;
     }
 
-    long ctsSocket::pended_io() noexcept
+    long ctsSocket::GetPendedIoCount() noexcept
     {
-        return ctMemoryGuardRead(&io_count);
+        return ctMemoryGuardRead(&m_ioCount);
     }
 
-    void ctsSocket::shutdown() noexcept
+    void ctsSocket::Shutdown() noexcept
     {
         // close the socket to trigger IO to complete/shutdown
-        close_socket();
+        CloseSocket();
         // Must destroy these threadpool objects outside the CS to prevent a deadlock
         // - from when worker threads attempt to callback this ctsSocket object when IO completes
         // Must wait for the threadpool from this method when ctsSocketState calls ctsSocket::shutdown
         // - instead of calling this from the d'tor of ctsSocket, as the final reference
         //   to this ctsSocket might be from a TP thread - in which case this d'tor will deadlock
         //   (it will wait for all TP threads to exit, but it is using/blocking on of those TP threads)
-        tp_iocp.reset();
-        tp_timer.reset();
+        m_tpIocp.reset();
+        m_tpTimer.reset();
     }
 
     ///
@@ -304,32 +316,32 @@ namespace ctsTraffic
     /// - note that the timer 
     /// - can throw under low resource conditions
     ///
-    void ctsSocket::set_timer(const ctsIOTask& task, function<void(weak_ptr<ctsSocket>, const ctsIOTask&)>&& func)
+    void ctsSocket::SetTimer(const ctsTask& task, function<void(weak_ptr<ctsSocket>, const ctsTask&)>&& func)
     {
-        const auto lock = socket_cs.lock();
-        timer_task = task;
-        timer_callback = std::move(func);
+        const auto lock = m_socketCs.lock();
+        m_timerTask = task;
+        m_timerCallback = std::move(func);
 
-        if (!tp_timer)
+        if (!m_tpTimer)
         {
-            tp_timer.reset(CreateThreadpoolTimer(ThreadPoolTimerCallback, this, ctsConfig::Settings->PTPEnvironment));
-            THROW_LAST_ERROR_IF(!tp_timer);
+            m_tpTimer.reset(CreateThreadpoolTimer(ThreadPoolTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
+            THROW_LAST_ERROR_IF(!m_tpTimer);
         }
 
-        FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * task.time_offset_milliseconds);
-        SetThreadpoolTimer(tp_timer.get(), &relativeTimeout, 0, 0);
+        FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * task.m_timeOffsetMilliseconds);
+        SetThreadpoolTimer(m_tpTimer.get(), &relativeTimeout, 0, 0);
     }
 
     void NTAPI ctsSocket::ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER)
     {
         auto* pThis = static_cast<ctsSocket*>(pContext);
 
-        ctsIOTask task{};
-        function<void(weak_ptr<ctsSocket>, const ctsIOTask&)> callback;
+        ctsTask task{};
+        function<void(weak_ptr<ctsSocket>, const ctsTask&)> callback;
         {
-            const auto lock = pThis->socket_cs.lock();
-            task = pThis->timer_task;
-            callback = std::move(pThis->timer_callback);
+            const auto lock = pThis->m_socketCs.lock();
+            task = pThis->m_timerTask;
+            callback = std::move(pThis->m_timerCallback);
         }
 
         // invoke the callback outside the lock

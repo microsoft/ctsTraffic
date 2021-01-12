@@ -31,22 +31,22 @@ namespace ctsTraffic
     //
     // Its intended use is either for UDP sockets, or for very few concurrent connections
     //
-    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& _weak_socket) noexcept
+    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
-        auto shared_socket(_weak_socket.lock());
-        if (!shared_socket)
+        auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
         {
             return;
         }
 
         int error = 0;
-        const auto socket_ref(shared_socket->socket_reference());
-        const auto socket = socket_ref.socket();
+        const auto socketReference(sharedSocket->AcquireSocketLock());
+        const auto socket = socketReference.Get();
         if (socket != INVALID_SOCKET)
         {
-            const ctl::ctSockaddr& targetAddress = shared_socket->target_address();
-            const ctl::ctSockaddr local_addr;
+            const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
+            const ctl::ctSockaddr localAddr;
 
             error = ctsConfig::SetPreConnectOptions(socket);
             if (error != NO_ERROR)
@@ -63,12 +63,12 @@ namespace ctsTraffic
                 else
                 {
                     // set the local address
-                    auto local_addr_len = local_addr.length();
-                    if (0 == getsockname(socket, local_addr.sockaddr(), &local_addr_len))
+                    auto localAddrLen = localAddr.length();
+                    if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
                     {
-                        shared_socket->set_local_address(local_addr);
+                        sharedSocket->SetLocalSockaddr(localAddr);
                     }
-                    ctsConfig::PrintNewConnection(local_addr, targetAddress);
+                    ctsConfig::PrintNewConnection(localAddr, targetAddress);
                 }
             }
         }
@@ -77,6 +77,6 @@ namespace ctsTraffic
             error = WSAECONNABORTED;
         }
 
-        shared_socket->complete_state(error);
+        sharedSocket->CompleteState(error);
     }
 }

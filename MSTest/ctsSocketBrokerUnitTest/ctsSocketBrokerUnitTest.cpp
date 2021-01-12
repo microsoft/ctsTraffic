@@ -34,20 +34,20 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
 
-    template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& _state)
+    template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& state)
     {
-        switch (_state)
+        switch (state)
         {
             case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
             case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
             case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
             case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
-            case ctsTraffic::ctsSocketState::InternalState::InitiatingIO: return L"InitiatingIO";
-            case ctsTraffic::ctsSocketState::InternalState::InitiatedIO: return L"InitiatedIO";
+            case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIO";
+            case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIO";
             case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
             case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
         }
-        return wil::str_printf<std::wstring>(L"Unknown State (0x%x)", _state);
+        return wil::str_printf<std::wstring>(L"Unknown State (0x%x)", state);
     }
 }
 
@@ -57,14 +57,14 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 ///
 namespace ctsTraffic::ctsConfig
 {
-    ctsConfigSettings* Settings;
+    ctsConfigSettings* g_configSettings;
 
-    void PrintDebug(PCWSTR _text, ...) noexcept
+    void PrintDebug(PCWSTR text, ...) noexcept
     {
         va_list args;
-        va_start(args, _text);
+        va_start(args, text);
         std::wstring outputString;
-        wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+        wil::details::str_vprintf_nothrow<std::wstring>(outputString, text, args);
         Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
 
         va_end(args);
@@ -119,70 +119,70 @@ public:
     ~SocketStatePool() noexcept = default;
 
     /// Add/remove ctsSocketState objects
-    void add_object(const std::shared_ptr<ctsSocketState>& _state_object)
+    void add_object(const std::shared_ptr<ctsSocketState>& state_object)
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
-        state_objects.push_back(_state_object);
+        m_stateObjects.push_back(state_object);
     }
     void remove_deleted_objects() noexcept
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
-        state_objects.erase(
+        m_stateObjects.erase(
             std::remove_if(
-                std::begin(state_objects),
-                std::end(state_objects),
-                [&](const std::weak_ptr<ctsSocketState>& _weak_ptr) { return _weak_ptr.expired(); }),
-            std::end(state_objects));
+                std::begin(m_stateObjects),
+                std::end(m_stateObjects),
+                [&](const std::weak_ptr<ctsSocketState>& weak_ptr) { return weak_ptr.expired(); }),
+            std::end(m_stateObjects));
     }
     void reset() noexcept
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
-        state_objects.clear();
+        m_stateObjects.clear();
     }
 
     /// Interact with states of contained ctsSocketState objects
-    void complete_state(DWORD _error_code)
+    void complete_state(DWORD error_code)
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
-        for (auto& socket_state : state_objects)
+        for (auto& socket_state : m_stateObjects)
         {
             auto shared_state(socket_state.lock());
             Assert::IsNotNull(shared_state.get());
             if (shared_state)
             {
-                shared_state->complete_state(_error_code);
+                shared_state->CompleteState(error_code);
             }
         }
     }
-    void validate_expected_count(size_t _count)
+    void validate_expected_count(size_t count)
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
-        Assert::AreEqual(_count, state_objects.size());
+        Assert::AreEqual(count, m_stateObjects.size());
     }
-    void validate_expected_count(size_t _count, ctsSocketState::InternalState _state)
+    void validate_expected_count(size_t count, ctsSocketState::InternalState state)
     {
-        const auto hold_lock = cs.lock();
+        const auto hold_lock = m_lock.lock();
 
         size_t matched_state = 0;
-        for (auto& socket_state : state_objects)
+        for (auto& socket_state : m_stateObjects)
         {
             auto shared_state(socket_state.lock());
             Assert::IsNotNull(shared_state.get());
             if (shared_state)
             {
-                if (shared_state->current_state() == _state)
+                if (shared_state->GetCurrentState() == state)
                 {
                     ++matched_state;
                 }
             }
         }
 
-        Assert::AreEqual(_count, matched_state);
+        Assert::AreEqual(count, matched_state);
     }
 
     // non-copyable
@@ -190,11 +190,11 @@ public:
     SocketStatePool& operator=(const SocketStatePool&) = delete;
 
 private:
-    wil::critical_section cs;
-    std::vector<std::weak_ptr<ctsSocketState>> state_objects;
+    wil::critical_section m_lock{ctsConfig::g_configSettings->c_CriticalSectionSpinlock};
+    std::vector<std::weak_ptr<ctsSocketState>> m_stateObjects;
 };
 
-SocketStatePool* s_SocketPool;
+SocketStatePool* g_socketPool;
 
 
 ///
@@ -202,63 +202,63 @@ SocketStatePool* s_SocketPool;
 /// - don't need to actually do any work - just need to control indications back to the broker
 /// - but we do need to track all instances created so we can control each socketstate
 ///
-ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> _broker) :
-    broker(std::move(_broker))
+ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> broker) :
+    m_broker(std::move(broker))
 {
 }
 
 ctsSocketState::~ctsSocketState() noexcept
 {
-    s_SocketPool->remove_deleted_objects();
+    g_socketPool->remove_deleted_objects();
 }
 
-void ctsSocketState::start() noexcept
+void ctsSocketState::Start() noexcept
 {
-    s_SocketPool->add_object(this->shared_from_this());
+    g_socketPool->add_object(this->shared_from_this());
 }
 
-void ctsSocketState::complete_state(DWORD _error_code) noexcept
+void ctsSocketState::CompleteState(DWORD error_code) noexcept
 {
-    if (NO_ERROR == _error_code)
+    if (NO_ERROR == error_code)
     {
 // walk states from creating -> InitiatingIO -> Closed
-        switch (this->state)
+        switch (m_state)
         {
 
 // Skipping Connecting, since that state doesn't affect ctsSocketBroker
 
-            case ctsSocketState::InternalState::Creating:
+            case InternalState::Creating:
             {
-                auto parent = this->broker.lock();
-                parent->initiating_io();
-                this->state = ctsSocketState::InternalState::InitiatingIO;
+                auto parent = m_broker.lock();
+                parent->InitiatingIo();
+                m_state = InternalState::InitiatingIo;
                 break;
             }
-            case ctsSocketState::InternalState::InitiatingIO:
+            case InternalState::InitiatingIo:
             {
-                auto parent = this->broker.lock();
-                parent->closing(true);
-                this->state = ctsSocketState::InternalState::Closed;
+                auto parent = m_broker.lock();
+                parent->Closing(true);
+                m_state = InternalState::Closed;
                 break;
             }
 
             default:
                 Assert::Fail(
-                    wil::str_printf<std::wstring>(L"Unexpected ctsSocketState: 0x%x\n", this->state).c_str());
+                    wil::str_printf<std::wstring>(L"Unexpected ctsSocketState: 0x%x\n", m_state).c_str());
         }
     }
     else
     {
      // move straight to Closed
-        auto parent = this->broker.lock();
-        parent->closing(ctsSocketState::InternalState::InitiatingIO == this->state);
-        this->state = ctsSocketState::InternalState::Closed;
+        auto parent = m_broker.lock();
+        parent->Closing(InternalState::InitiatingIo == m_state);
+        m_state = InternalState::Closed;
     }
 }
 
-ctsSocketState::InternalState ctsSocketState::current_state() const noexcept
+ctsSocketState::InternalState ctsSocketState::GetCurrentState() const noexcept
 {
-    return this->state;
+    return m_state;
 }
 
 
@@ -269,845 +269,845 @@ namespace ctsUnitTest
     public:
         TEST_CLASS_INITIALIZE(Setup)
         {
-            s_SocketPool = new SocketStatePool;
+            g_socketPool = new SocketStatePool;
 
-            ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
-            ctsConfig::Settings->CtrlCHandle = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
-            ctsConfig::Settings->PrePostRecvs = 1;
-            ctsConfig::Settings->PrePostSends = 1;
-            Assert::AreNotEqual(static_cast<HANDLE>(nullptr), ctsConfig::Settings->CtrlCHandle);
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->CtrlCHandle = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
+            ctsConfig::g_configSettings->PrePostRecvs = 1;
+            ctsConfig::g_configSettings->PrePostSends = 1;
+            Assert::AreNotEqual(static_cast<HANDLE>(nullptr), ctsConfig::g_configSettings->CtrlCHandle);
         }
         TEST_CLASS_CLEANUP(Cleanup)
         {
-            delete ctsConfig::Settings;
-            delete s_SocketPool;
+            delete ctsConfig::g_configSettings;
+            delete g_socketPool;
         }
 
         TEST_METHOD_INITIALIZE(MethodSetup)
         {
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 333;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 333;
         }
         TEST_METHOD_CLEANUP(MethodCleanup)
         {
             // drain the Timer
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2);
         }
 
         TEST_METHOD(OneSuccessfulClientConnection)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 1;
-            ctsConfig::Settings->ConnectionThrottleLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 1;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 1;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulClientConnection)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 100;
-            ctsConfig::Settings->ConnectionThrottleLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 100;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 100;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(OneSuccessfulServerConnectionWithExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 1;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->AcceptLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 1;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->AcceptLimit = 1;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 100;
-            ctsConfig::Settings->Iterations = 100;
-            ctsConfig::Settings->AcceptLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 100;
+            ctsConfig::g_configSettings->Iterations = 100;
+            ctsConfig::g_configSettings->AcceptLimit = 100;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(OneSuccessfulServerConnectionWithoutExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = MAXULONGLONG;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->AcceptLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = MAXULONGLONG;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->AcceptLimit = 1;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsFalse(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsFalse(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(1);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(1);
         }
         TEST_METHOD(ManySuccessfulServerConnectionWithoutExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = MAXULONGLONG;
-            ctsConfig::Settings->Iterations = 100;
-            ctsConfig::Settings->AcceptLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = MAXULONGLONG;
+            ctsConfig::g_configSettings->Iterations = 100;
+            ctsConfig::g_configSettings->AcceptLimit = 100;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Closing sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsFalse(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsFalse(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
             // should create the next socket to accept on the next Timer callback
-            s_SocketPool->validate_expected_count(100);
+            g_socketPool->validate_expected_count(100);
         }
 
         TEST_METHOD(OneFailedClientConnection_FailedConnect)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 1;
-            ctsConfig::Settings->ConnectionThrottleLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 1;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 1;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Connecting sockets");
-            s_SocketPool->complete_state(WSAECONNREFUSED);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAECONNREFUSED);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedConnect)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 100;
-            ctsConfig::Settings->ConnectionThrottleLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 100;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 100;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Connecting sockets");
-            s_SocketPool->complete_state(WSAECONNREFUSED);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAECONNREFUSED);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(OneFailedServerConnectionWithExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 1;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->AcceptLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 1;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->AcceptLimit = 1;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Connecting sockets");
-            s_SocketPool->complete_state(WSAECONNREFUSED);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAECONNREFUSED);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 100;
-            ctsConfig::Settings->Iterations = 100;
-            ctsConfig::Settings->AcceptLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 100;
+            ctsConfig::g_configSettings->Iterations = 100;
+            ctsConfig::g_configSettings->AcceptLimit = 100;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Connecting sockets");
-            s_SocketPool->complete_state(WSAECONNREFUSED);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAECONNREFUSED);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(OneFailedClientConnection_FailedIO)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 1;
-            ctsConfig::Settings->ConnectionThrottleLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 1;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 1;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Failing IO on sockets");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAENOBUFS);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedClientConnection_FailedIO)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 100;
-            ctsConfig::Settings->ConnectionThrottleLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 100;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 100;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Starting IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Failing IO on sockets");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAENOBUFS);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(OneFailedServerConnectionWithExit_FailedIO)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 1;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->AcceptLimit = 1;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 1;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->AcceptLimit = 1;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 100;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"Initiating IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Failing IO on sockets");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAENOBUFS);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
         TEST_METHOD(ManyFailedServerConnectionWithExit_FailedIO)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 100;
-            ctsConfig::Settings->Iterations = 100;
-            ctsConfig::Settings->AcceptLimit = 100;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 100;
+            ctsConfig::g_configSettings->Iterations = 100;
+            ctsConfig::g_configSettings->AcceptLimit = 100;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::s_TimerCallbackTimeoutMs = 750;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
-            s_SocketPool->validate_expected_count(100);
+            g_socketPool->validate_expected_count(100);
 
             Logger::WriteMessage(L"Initiating IO on sockets");
-            s_SocketPool->complete_state(NO_ERROR);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"Failing IO on sockets");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            s_SocketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
+            g_socketPool->complete_state(WSAENOBUFS);
+            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Closed);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(MoreSuccessfulClientConnectionsThanConnectionThrottleLimit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 15;
-            ctsConfig::Settings->ConnectionThrottleLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 15;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 5;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            s_SocketPool->validate_expected_count(5);
+            g_socketPool->validate_expected_count(5);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 5 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 initiating IO, 10 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 15 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(MoreFailedClientConnectionsThanConnectionThrottleLimit_FailedConnect)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 15;
-            ctsConfig::Settings->ConnectionThrottleLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 15;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 5;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 waiting, 5 closed\n");
-            s_SocketPool->complete_state(WSAECONNREFUSED); // fail connect
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 10 closed\n");
-            s_SocketPool->complete_state(WSAECONNREFUSED); // fail connect
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"4. Expecting 15 closed\n");
-            s_SocketPool->complete_state(WSAECONNREFUSED); // fail connect
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(MoreFailedClientConnectionsThanConnectionThrottleLimit_FailedIO)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 1;
-            ctsConfig::Settings->ConnectionLimit = 15;
-            ctsConfig::Settings->ConnectionThrottleLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 1;
+            ctsConfig::g_configSettings->ConnectionLimit = 15;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 5;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR); // successful connect
-            ::Sleep(1000); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR); // successful connect
+            Sleep(1000); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 10 closed\n");
-            s_SocketPool->complete_state(WSAECONNREFUSED); // fail connect
-            ::Sleep(1000); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
+            Sleep(1000); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"4. Expecting 15 closed\n");
-            s_SocketPool->complete_state(WSAECONNREFUSED); // fail connect
-            ::Sleep(1000); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
+            Sleep(1000); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
-            s_SocketPool->validate_expected_count(0);
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(MoreSuccessfulServerConnectionsThanAcceptLimit)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 15;
-            ctsConfig::Settings->Iterations = 15;
-            ctsConfig::Settings->AcceptLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 15;
+            ctsConfig::g_configSettings->Iterations = 15;
+            ctsConfig::g_configSettings->AcceptLimit = 5;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 5 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 initiating IO, 10 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 15 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->validate_expected_count(0);
         }
 
         TEST_METHOD(ServerExitLimitShouldOverrideIterations)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // not a client (connecting), a server (accepting)
-            ctsConfig::Settings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
-            ctsConfig::Settings->ServerExitLimit = 1;
-            ctsConfig::Settings->Iterations = 15;
-            ctsConfig::Settings->AcceptLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {};
+            ctsConfig::g_configSettings->ServerExitLimit = 1;
+            ctsConfig::g_configSettings->Iterations = 15;
+            ctsConfig::g_configSettings->AcceptLimit = 5;
             // these are not applicable to server
-            ctsConfig::Settings->ConnectionLimit = 0;
-            ctsConfig::Settings->ConnectionThrottleLimit = 0;
+            ctsConfig::g_configSettings->ConnectionLimit = 0;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 1 creating\n");
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"2. Expecting 1 initiating IO\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 1 completed\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            ::Sleep(ctsSocketBroker::s_TimerCallbackTimeoutMs);
-            s_SocketPool->validate_expected_count(0);
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs);
+            g_socketPool->validate_expected_count(0);
         }
 
 
         TEST_METHOD(ManySuccessfulClientConnectionsMixingIterationsAndConnections)
         {
-            s_SocketPool->reset();
+            g_socketPool->reset();
 
             // Initialize config for this test
             // a client (connecting), not a server (accepting)
-            ctsConfig::Settings->AcceptFunction = nullptr;
-            ctsConfig::Settings->Iterations = 10;
-            ctsConfig::Settings->ConnectionLimit = 10;
-            ctsConfig::Settings->ConnectionThrottleLimit = 5;
+            ctsConfig::g_configSettings->AcceptFunction = nullptr;
+            ctsConfig::g_configSettings->Iterations = 10;
+            ctsConfig::g_configSettings->ConnectionLimit = 10;
+            ctsConfig::g_configSettings->ConnectionThrottleLimit = 5;
             // these are not applicable to client
-            ctsConfig::Settings->ServerExitLimit = 0;
-            ctsConfig::Settings->AcceptLimit = 0;
+            ctsConfig::g_configSettings->ServerExitLimit = 0;
+            ctsConfig::g_configSettings->AcceptLimit = 0;
 
             std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
-            test_broker->start();
+            test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 95 waiting\n");
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 90 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 85 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 creating, 5 initiating IO, 80 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"5. Failing all sockets: 5 creating, 75 waiting\n");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(WSAENOBUFS);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 5 creating, 5 initiating IO, 70 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"7. Expecting 5 creating, 5 initiating IO, 65 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"8. Failing all sockets: 5 creating, 60 waiting\n");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(WSAENOBUFS);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"9. Expecting 10 creating, 10 initiating IO, 55 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"10. Expecting 10 creating, 10 initiating IO, 50 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"11. Expecting 10 creating, 10 initiating IO, 45 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"12. Failing all sockets: 5 creating, 40 waiting\n");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(WSAENOBUFS);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"13. Expecting 10 creating, 10 initiating IO, 35 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"14. Expecting 10 creating, 10 initiating IO, 30 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"15. Expecting 10 creating, 10 initiating IO, 25 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"16. Expecting 10 creating, 10 initiating IO, 20 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"17. Failing all sockets: 5 creating, 15 waiting\n");
-            s_SocketPool->complete_state(WSAENOBUFS);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(WSAENOBUFS);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"18. Expecting 10 creating, 10 initiating IO, 10 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"19. Expecting 10 creating, 10 initiating IO, 5 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"20. Expecting 5 creating, 5 initiating IO, 0 waiting\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"21. Expecting 5 initiating IO\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIO);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"22. Expecting all done\n");
-            s_SocketPool->complete_state(NO_ERROR);
-            ::Sleep(500); // allowing the timer to coalesce
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->complete_state(NO_ERROR);
+            Sleep(500); // allowing the timer to coalesce
+            g_socketPool->validate_expected_count(0);
 
-            Assert::IsTrue(test_broker->wait(ctsSocketBroker::s_TimerCallbackTimeoutMs * 2));
+            Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
             // let the timer fire
-            s_SocketPool->validate_expected_count(0);
+            g_socketPool->validate_expected_count(0);
         }
     };
 }

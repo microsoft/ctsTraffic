@@ -32,13 +32,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& _listening_socket, ctl::ctSockaddr _listening_addr) :
-        threadIocp(std::make_shared<ctl::ctThreadIocp>(_listening_socket.get(), ctsConfig::Settings->PTPEnvironment)),
-        listeningSocket(std::move(_listening_socket)),
-        listeningAddr(std::move(_listening_addr))
+    ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, ctl::ctSockaddr listeningAddr) :
+        m_threadIocp(std::make_shared<ctl::ctThreadIocp>(listeningSocket.get(), ctsConfig::g_configSettings->pTpEnvironment)),
+        m_listeningSocket(std::move(listeningSocket)),
+        m_listeningAddr(std::move(listeningAddr))
     {
         FAIL_FAST_IF_MSG(
-            !!(ctsConfig::Settings->Options & ctsConfig::OptionType::HANDLE_INLINE_IOCP),
+            !!(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp),
             "ctsMediaStream sockets must not have HANDLE_INLINE_IOCP set on its datagram sockets");
     }
 
@@ -46,56 +46,56 @@ namespace ctsTraffic
     {
         // close the socket, then end the TP
         {
-            const auto lock = listeningsocketLock.lock();
-            listeningSocket.reset();
+            const auto lock = m_listeningsocketLock.lock();
+            m_listeningSocket.reset();
         }
-        threadIocp.reset();
+        m_threadIocp.reset();
     }
 
-    SOCKET ctsMediaStreamServerListeningSocket::get_socket() const noexcept
+    SOCKET ctsMediaStreamServerListeningSocket::GetSocket() const noexcept
     {
-        const auto lock = listeningsocketLock.lock();
-        return listeningSocket.get();
+        const auto lock = m_listeningsocketLock.lock();
+        return m_listeningSocket.get();
     }
 
-    ctl::ctSockaddr ctsMediaStreamServerListeningSocket::get_address() const noexcept
+    ctl::ctSockaddr ctsMediaStreamServerListeningSocket::GetListeningAddress() const noexcept
     {
-        return listeningAddr;
+        return m_listeningAddr;
     }
 
-    void ctsMediaStreamServerListeningSocket::initiate_recv() noexcept
+    void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
     {
         // continue to try to post a recv if the call fails
         int error = SOCKET_ERROR;
-        unsigned long failure_counter = 0;
+        unsigned long failureCounter = 0;
         while (error != NO_ERROR)
         {
             try
             {
-                const auto lock = listeningsocketLock.lock();
-                if (listeningSocket)
+                const auto lock = m_listeningsocketLock.lock();
+                if (m_listeningSocket)
                 {
-                    WSABUF wsabuf;
-                    wsabuf.buf = recv_buffer.data();
-                    wsabuf.len = static_cast<ULONG>(recv_buffer.size());
-                    ::ZeroMemory(recv_buffer.data(), recv_buffer.size());
+                    WSABUF wsabuffer;
+                    wsabuffer.buf = m_recvBuffer.data();
+                    wsabuffer.len = static_cast<ULONG>(m_recvBuffer.size());
+                    ::ZeroMemory(m_recvBuffer.data(), m_recvBuffer.size());
 
-                    recvFlags = 0;
-                    remoteAddr.set(remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
-                    remoteAddrLen = remoteAddr.length();
-                    OVERLAPPED* pov = threadIocp->new_request(
-                        [this](OVERLAPPED* _ov) noexcept {
-                            recv_completion(_ov); });
+                    m_recvFlags = 0;
+                    m_remoteAddr.set(m_remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
+                    m_remoteAddrLen = m_remoteAddr.length();
+                    OVERLAPPED* pOverlapped = m_threadIocp->new_request(
+                        [this](OVERLAPPED* pCallbackOverlapped) noexcept {
+                            RecvCompletion(pCallbackOverlapped); });
 
                     error = WSARecvFrom(
-                        listeningSocket.get(),
-                        &wsabuf,
+                        m_listeningSocket.get(),
+                        &wsabuffer,
                         1,
                         nullptr,
-                        &recvFlags,
-                        remoteAddr.sockaddr(),
-                        &remoteAddrLen,
-                        pov,
+                        &m_recvFlags,
+                        m_remoteAddr.sockaddr(),
+                        &m_remoteAddrLen,
+                        pOverlapped,
                         nullptr);
                     if (SOCKET_ERROR == error)
                     {
@@ -107,7 +107,7 @@ namespace ctsTraffic
                         }
                         else
                         {
-                            threadIocp->cancel_request(pov);
+                            m_threadIocp->cancel_request(pOverlapped);
                             if (WSAECONNRESET == error)
                             {
                                 // when this fails on retry, it has already failed from a prior WSARecvFrom request
@@ -116,9 +116,8 @@ namespace ctsTraffic
                             else
                             {
                                 ctsConfig::PrintErrorInfo(
-                                    wil::str_printf<std::wstring>(L"WSARecvFrom failed (SOCKET %Iu) with error (%d)",
-                                        listeningSocket.get(),
-                                        error).c_str());
+                                    L"WSARecvFrom failed (SOCKET %Iu) with error (%d)",
+                                    m_listeningSocket.get(), error);
                             }
                         }
                     }
@@ -140,21 +139,15 @@ namespace ctsTraffic
 
             if (error != NO_ERROR && error != WSAECONNRESET)
             {
-                ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
-                ++failure_counter;
+                ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
+                ++failureCounter;
 
-                try
-                {
-                    ctsConfig::PrintErrorInfo(
-                        wil::str_printf<std::wstring>(L"MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted",
-                            error, failure_counter).c_str());
-                }
-                catch (...)
-                {
-                }
+                ctsConfig::PrintErrorInfo(
+                    L"MediaStream Server : WSARecvFrom failed (%d) %u times in a row trying to get another recv posted",
+                    error, failureCounter);
 
                 FAIL_FAST_IF_MSG(
-                    0 == failure_counter % 10,
+                    0 == failureCounter % 10,
                     "ctsMediaStreamServer has failed to post another recv - it cannot accept any more client connections");
 
                 Sleep(10);
@@ -162,83 +155,76 @@ namespace ctsTraffic
         }
     }
 
-    void ctsMediaStreamServerListeningSocket::recv_completion(OVERLAPPED* _ov) noexcept
+    void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped) noexcept
     {
         // Cannot be holding the object_guard when calling into any pimpl-> methods
         // - will risk deadlocking the server
         // Will store the pimpl call to be made in this std function to be exeucted outside the lock
-        std::function<void()> pimpl_operation(nullptr);
+        std::function<void()> pimplOperation(nullptr);
 
         try
         {
             // scope to the object lock
             {
                 // must take the object lock before touching socket
-                const auto lock = listeningsocketLock.lock();
-                if (!listeningSocket)
+                const auto lock = m_listeningsocketLock.lock();
+                if (!m_listeningSocket)
                 {
                     // the listening socket was closed - just exit
                     return;
                 }
 
-                DWORD bytes_received;
-                if (!WSAGetOverlappedResult(listeningSocket.get(), _ov, &bytes_received, FALSE, &recvFlags))
+                DWORD bytesReceived;
+                if (!WSAGetOverlappedResult(m_listeningSocket.get(), pOverlapped, &bytesReceived, FALSE, &m_recvFlags))
                 {
                     // recvfrom failed
-                    try
+                    const auto gle = WSAGetLastError();
+                    if (WSAECONNRESET == gle)
                     {
-                        const auto gle = WSAGetLastError();
-                        if (WSAECONNRESET == gle)
+                        if (!m_priorFailureWasConectionReset)
                         {
-                            if (!priorFailureWasConectionReset)
-                            {
-                                ctsConfig::PrintErrorInfo(L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
-                            }
-                            priorFailureWasConectionReset = true;
+                            ctsConfig::PrintErrorInfo(L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
                         }
-                        else
-                        {
-                            ctsConfig::Settings->UdpStatusDetails.error_frames.increment();
-                            priorFailureWasConectionReset = false;
-                            ctsConfig::PrintErrorInfo(
-                                wil::str_printf<std::wstring>(L"ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError()).c_str());
-                        }
+                        m_priorFailureWasConectionReset = true;
                     }
-                    catch (...)
+                    else
                     {
-                        // best effort
+                        ctsConfig::PrintErrorInfo(
+                            L"ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError());
+                        ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
+                        m_priorFailureWasConectionReset = false;
                     }
                     // this receive failed - do nothing immediately in response
                     // - just attempt to post another recv at the end of this function
                 }
                 else
                 {
-                    priorFailureWasConectionReset = false;
-                    const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(recv_buffer.data(), bytes_received));
-                    switch (message.action)
+                    m_priorFailureWasConectionReset = false;
+                    const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(m_recvBuffer.data(), bytesReceived));
+                    switch (message.m_action)
                     {
                         case MediaStreamAction::START:
                             PRINT_DEBUG_INFO(
                                 L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                                remoteAddr.WriteCompleteAddress().c_str())
+                                m_remoteAddr.WriteCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
                             // Cannot be holding the object_guard when calling into any pimpl-> methods
-                            pimpl_operation = [this]() {
-                                ctsMediaStreamServerImpl::Start(listeningSocket.get(), listeningAddr, remoteAddr);
+                            pimplOperation = [this]() {
+                                ctsMediaStreamServerImpl::Start(m_listeningSocket.get(), m_listeningAddr, m_remoteAddr);
                             };
 #endif
                             break;
 
                         default:  // NOLINT(clang-diagnostic-covered-switch-default)
-                            FAIL_FAST_MSG("ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.action, recv_buffer.data());
+                            FAIL_FAST_MSG("ctsMediaStreamServer - received an unexpected Action: %d (%p)\n", message.m_action, m_recvBuffer.data());
                     }
                 }
             }
 
             // now execute the stored call outside the lock but inside the try/catch
-            if (pimpl_operation)
+            if (pimplOperation)
             {
-                pimpl_operation();
+                pimplOperation();
             }
         }
         catch (...)
@@ -247,7 +233,7 @@ namespace ctsTraffic
         }
 
         // finally post another recv
-        initiate_recv();
+        InitiateRecv();
     }
 
 } // namespace

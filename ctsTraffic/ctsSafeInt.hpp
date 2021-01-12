@@ -40,16 +40,15 @@ namespace ctsTraffic
 
     using ctsSafeIntException = msl::utilities::SafeIntException;
 
-    inline PCWSTR ctsPrintSafeIntException(const ctsSafeIntException& _ex) noexcept
+    inline PCWSTR PrintSafeIntException(const ctsSafeIntException& ex) noexcept
     {
-        switch (_ex.m_code)
+        switch (ex.m_code)
         {
             case msl::utilities::SafeIntNoError: return L"SafeInt - No Error";
             case msl::utilities::SafeIntArithmeticOverflow: return L"SafeInt - Arithmetic Overflow";
             case msl::utilities::SafeIntDivideByZero: return L"SafeInt - Divide By Zero";
-            default:
-                return nullptr;
         }
+        return nullptr;
     }
 
 } // namespace

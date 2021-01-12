@@ -36,64 +36,64 @@ namespace ctsTraffic
     {
     private:
         // the CS is mutable so we can take a lock / release a lock in const methods
-        mutable wil::critical_section object_guard;
-        _Guarded_by_(object_guard) ctsIOTask next_task;
+        mutable wil::critical_section m_objectGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        _Guarded_by_(object_guard) ctsTask m_nextTask;
 
-        wil::unique_threadpool_timer task_timer;
+        wil::unique_threadpool_timer m_taskTimer;
 
         // this weak_socket is the weak reference to the ctsSocket tracked by ctsSocketState & ctsSocketBroker
         // used to complete the state when finished and take a shared_ptr when needing to take a reference
-        const std::weak_ptr<ctsSocket> weak_socket;
+        const std::weak_ptr<ctsSocket> m_weakSocket;
 
         // invoked to do actual IO on the socket
-        const ctsMediaStreamConnectedSocketIoFunctor io_functor;
+        const ctsMediaStreamConnectedSocketIoFunctor m_ioFunctor;
 
         // sending_socket is a shared socket from the datagram server
         // that (potentially) many connected datagram sockets will send from
         // thus it's not owned by this class
-        const SOCKET sending_socket;
-        const ctl::ctSockaddr remote_addr;
+        const SOCKET m_sendingSocket;
+        const ctl::ctSockaddr m_remoteAddr;
 
-        long long sequence_number = 0LL;
-        const long long connect_time = 0LL;
+        long long m_sequenceNumber = 0LL;
+        const long long m_connectTime = 0LL;
 
     public:
         ctsMediaStreamServerConnectedSocket(
-            std::weak_ptr<ctsSocket> _weak_socket,
-            SOCKET _sending_socket,
-            ctl::ctSockaddr _remote_addr,
-            ctsMediaStreamConnectedSocketIoFunctor _io_functor);
+            std::weak_ptr<ctsSocket> weakSocket,
+            SOCKET sendingSocket,
+            ctl::ctSockaddr remoteAddr,
+            ctsMediaStreamConnectedSocketIoFunctor ioFunctor);
 
         ~ctsMediaStreamServerConnectedSocket() noexcept;
 
-        const ctl::ctSockaddr& get_remote_address() const noexcept
+        const ctl::ctSockaddr& GetRemoteAddress() const noexcept
         {
-            return remote_addr;
+            return m_remoteAddr;
         }
 
-        SOCKET get_sending_socket() const noexcept
+        SOCKET GetSendingSocket() const noexcept
         {
-            return sending_socket;
+            return m_sendingSocket;
         }
-        long long get_startTime() const noexcept
+        long long GetStartTime() const noexcept
         {
-            return connect_time;
-        }
-
-        ctsIOTask get_nextTask() const noexcept
-        {
-            const auto lock = object_guard.lock();
-            return next_task;
+            return m_connectTime;
         }
 
-        long long increment_sequence() noexcept
+        ctsTask GetNextTask() const noexcept
         {
-            return InterlockedIncrement64(&sequence_number);
+            const auto lock = m_objectGuard.lock();
+            return m_nextTask;
         }
 
-        void schedule_task(const ctsIOTask& _task) noexcept;
+        long long IncrementSequence() noexcept
+        {
+            return InterlockedIncrement64(&m_sequenceNumber);
+        }
 
-        void complete_state(unsigned long _error_code) const noexcept;
+        void ScheduleTask(const ctsTask& task) noexcept;
+
+        void CompleteState(unsigned long errorCode) const noexcept;
 
         // non-copyable
         ctsMediaStreamServerConnectedSocket(const ctsMediaStreamServerConnectedSocket&) = delete;
@@ -102,6 +102,6 @@ namespace ctsTraffic
         ctsMediaStreamServerConnectedSocket& operator=(ctsMediaStreamServerConnectedSocket&&) = delete;
 
     private:
-        static VOID CALLBACK ctsMediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID _context, PTP_TIMER) noexcept;
+        static VOID CALLBACK MediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER) noexcept;
     };
 }

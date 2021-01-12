@@ -95,12 +95,12 @@ namespace ctl
         // ReSharper disable once CppInconsistentNaming
         class iterator
         {
-            const unsigned END_ITERATOR_INDEX = 0xffffffff;
+            const unsigned m_endIteratorIndex = 0xffffffff;
 
             wil::com_ptr<IWbemClassObject> m_wbemClassObject;
             wil::shared_bstr m_propertyName;
             CIMTYPE m_propertyType = 0;
-            unsigned m_index = END_ITERATOR_INDEX;
+            unsigned m_index = m_endIteratorIndex;
 
         public:
             // Iterator requires the caller's IWbemServices interface and class name
@@ -131,7 +131,7 @@ namespace ctl
 
             wil::shared_bstr operator*() const
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == m_endIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiProperties::iterator::operator - invalid subscript");
                 }
@@ -139,7 +139,7 @@ namespace ctl
             }
             const wil::shared_bstr* operator->() const
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == m_endIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiProperties::iterator::operator-> - invalid subscript");
                 }
@@ -148,7 +148,7 @@ namespace ctl
 
             [[nodiscard]] CIMTYPE type() const
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == m_endIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiProperties::iterator::type - invalid subscript");
                 }
@@ -157,7 +157,7 @@ namespace ctl
 
             bool operator==(const iterator& iter) const noexcept
             {
-                if (m_index != END_ITERATOR_INDEX)
+                if (m_index != m_endIteratorIndex)
                 {
                     return m_index == iter.m_index &&
                         m_wbemClassObject == iter.m_wbemClassObject;
@@ -190,7 +190,7 @@ namespace ctl
                 for (unsigned loop = 0; loop < _inc; ++loop)
                 {
                     increment();
-                    if (m_index == END_ITERATOR_INDEX)
+                    if (m_index == m_endIteratorIndex)
                     {
                         throw std::out_of_range("ctWmiProperties::iterator::operator+= - invalid subscript");
                     }
@@ -199,27 +199,32 @@ namespace ctl
             }
 
             // iterator_traits (allows <algorithm> functions to be used)
+            // ReSharper disable once CppInconsistentNaming
             typedef std::forward_iterator_tag iterator_category;
+            // ReSharper disable once CppInconsistentNaming
             typedef wil::shared_bstr value_type;
+            // ReSharper disable once CppInconsistentNaming
             typedef int difference_type;
+            // ReSharper disable once CppInconsistentNaming
             typedef wil::shared_bstr* pointer;
+            // ReSharper disable once CppInconsistentNaming
             typedef wil::shared_bstr& reference;
 
         private:
             void increment()
             {
-                if (m_index == END_ITERATOR_INDEX)
+                if (m_index == m_endIteratorIndex)
                 {
                     throw std::out_of_range("ctWmiProperties::iterator - cannot increment: at the end");
                 }
 
-                CIMTYPE next_cimtype;
-                wil::shared_bstr next_name;
+                CIMTYPE nextCimtype;
+                wil::shared_bstr nextName;
                 const auto hr = THROW_IF_FAILED(m_wbemClassObject->Next(
                     0,
-                    next_name.addressof(),
+                    nextName.addressof(),
                     nullptr,
-                    &next_cimtype,
+                    &nextCimtype,
                     nullptr));
                 switch (hr)
                 {
@@ -228,15 +233,15 @@ namespace ctl
                         // update the instance members
                         ++m_index;
                         using std::swap;
-                        swap(m_propertyName, next_name);
-                        swap(m_propertyType, next_cimtype);
+                        swap(m_propertyName, nextName);
+                        swap(m_propertyType, nextCimtype);
                         break;
                     }
 
                     case WBEM_S_NO_MORE_DATA:
                     {
                         // at the end...
-                        m_index = END_ITERATOR_INDEX;
+                        m_index = m_endIteratorIndex;
                         m_propertyName.reset();
                         m_propertyType = 0;
                         break;

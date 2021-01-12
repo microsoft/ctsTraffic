@@ -91,17 +91,22 @@ namespace ctl
 
             // iterator_traits
             // - allows <algorithm> functions to be used
+            // ReSharper disable once CppInconsistentNaming
             typedef std::forward_iterator_tag iterator_category;
+            // ReSharper disable once CppInconsistentNaming
             typedef ctWmiInstance value_type;
+            // ReSharper disable once CppInconsistentNaming
             typedef int difference_type;
+            // ReSharper disable once CppInconsistentNaming
             typedef ctWmiInstance* pointer;
+            // ReSharper disable once CppInconsistentNaming
             typedef ctWmiInstance& reference;
 
         private:
             void increment();
 
-            static constexpr unsigned long c_EndIteratorIndex = 0xffffffff;
-            unsigned long m_index = c_EndIteratorIndex;
+            static constexpr unsigned long c_endIteratorIndex = 0xffffffff;
+            unsigned long m_index = c_endIteratorIndex;
             ctWmiService m_wbemServices;
             wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;
             std::shared_ptr<ctWmiInstance> m_ctInstance;
@@ -174,7 +179,7 @@ namespace ctl
 
     inline bool ctWmiEnumerate::iterator::operator==(const iterator& iter) const noexcept
     {
-        if (m_index != c_EndIteratorIndex)
+        if (m_index != c_endIteratorIndex)
         {
             return m_index == iter.m_index &&
                 m_wbemServices == iter.m_wbemServices &&
@@ -211,7 +216,7 @@ namespace ctl
         for (unsigned loop = 0; loop < inc; ++loop)
         {
             increment();
-            if (m_index == c_EndIteratorIndex)
+            if (m_index == c_endIteratorIndex)
             {
                 throw std::out_of_range("ctWmiEnumerate::iterator::operator+= - invalid subscript");
             }
@@ -221,7 +226,7 @@ namespace ctl
 
     inline void ctWmiEnumerate::iterator::increment()
     {
-        if (m_index == c_EndIteratorIndex)
+        if (m_index == c_endIteratorIndex)
         {
             throw std::out_of_range("ctWmiEnumerate::iterator::increment at the end");
         }
@@ -237,7 +242,7 @@ namespace ctl
         if (0 == uReturn)
         {
             // at the end...
-            m_index = c_EndIteratorIndex;
+            m_index = c_endIteratorIndex;
             m_ctInstance.reset();
         }
         else

@@ -23,6 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctThreadPoolTimer.hpp>
 // project headers
+#include "ctsConfig.h"
 #include "ctsSocketState.h"
 
 namespace ctsTraffic
@@ -37,20 +38,20 @@ namespace ctsTraffic
         // timer to wake up and clean up the socket pool
         // - delete any closed sockets
         // - create new sockets
-        static unsigned long s_TimerCallbackTimeoutMs;
+        static unsigned long m_timerCallbackTimeoutMs;
 
         // only the c'tor can throw
         ctsSocketBroker();
         ~ctsSocketBroker() noexcept;
 
-        void start();
+        void Start();
 
         // methods that the child ctsSocketState objects will invoke when they change state
-        void initiating_io() noexcept;
-        void closing(bool _was_active) noexcept;
+        void InitiatingIo() noexcept;
+        void Closing(bool wasActive) noexcept;
 
         // method to wait on when all connections are completed
-        bool wait(DWORD _milliseconds) const noexcept;
+        bool Wait(DWORD milliseconds) const noexcept;
 
         // not copyable
         ctsSocketBroker(const ctsSocketBroker&) = delete;
@@ -60,27 +61,27 @@ namespace ctsTraffic
 
     private:
         // CS to guard access to the vector socket_pool
-        wil::critical_section cs;
+        wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
         // notification event when we're done
-        wil::unique_event_nothrow done_event;
+        wil::unique_event_nothrow m_doneEvent;
         // vector of currently active sockets
         // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
         // - and thus there must be at least one refcount on that object to call shared_from_this()
-        std::vector<std::shared_ptr<ctsSocketState>> socket_pool;
+        std::vector<std::shared_ptr<ctsSocketState>> m_socketPool;
         // timer to initiate the savenge routine TimerCallback()
-        ctl::ctThreadpoolTimer wakeup_timer;
+        ctl::ctThreadpoolTimer m_wakeupTimer;
         // keep a burn-down count as connections are made to know when to be 'done'
-        ULONGLONG total_connections_remaining = 0ULL;
+        ULONGLONG m_totalConnectionsRemaining = 0ULL;
         // track what's pended and what's active
-        unsigned long pending_limit = 0UL;
-        unsigned long pending_sockets = 0UL;
-        unsigned long active_sockets = 0UL;
+        unsigned long m_pendingLimit = 0UL;
+        unsigned long m_pendingSockets = 0UL;
+        unsigned long m_activeSockets = 0UL;
 
         //
         // Callback for the threadpool timer to scavenge closed sockets and recreate new ones
         // - this allows destroying ctsSockets outside of an inline path from ctsSocket
         //
-        static void TimerCallback(_In_ ctsSocketBroker* _broker) noexcept;
+        static void TimerCallback(_In_ ctsSocketBroker* pBroker) noexcept;
     };
 
 } // namespace

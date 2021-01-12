@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -45,45 +46,45 @@ namespace ctl
             {
                 if (m_buffer && !m_buffer->empty())
                 {
-                    m_current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0));
+                    m_current = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&m_buffer->at(0));
                 }
             }
 
             void swap(_Inout_ iterator& rhs) noexcept
             {
                 using std::swap;
-                swap(this->m_buffer, rhs.m_buffer);
-                swap(this->m_current, rhs.m_current);
+                swap(m_buffer, rhs.m_buffer);
+                swap(m_current, rhs.m_current);
             }
 
             IP_ADAPTER_ADDRESSES& operator*() const
             {
-                if (!this->m_current)
+                if (!m_current)
                 {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator*");
                 }
-                return *this->m_current;
+                return *m_current;
             }
 
             IP_ADAPTER_ADDRESSES* operator->() const
             {
-                if (!this->m_current)
+                if (!m_current)
                 {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator->");
                 }
-                return this->m_current;
+                return m_current;
             }
 
             bool operator==(const iterator& iter) const noexcept
             {
                 // for comparison of 'end' iterators, just look at current
-                if (!this->m_current)
+                if (!m_current)
                 {
-                    return this->m_current == iter.m_current;
+                    return m_current == iter.m_current;
                 }
 
-                return this->m_buffer == iter.m_buffer &&
-                    this->m_current == iter.m_current;
+                return m_buffer == iter.m_buffer &&
+                    m_current == iter.m_current;
             }
 
             bool operator!=(const iterator& iter) const noexcept
@@ -93,7 +94,7 @@ namespace ctl
 
             iterator& operator++()
             {
-                if (!this->m_current)
+                if (!m_current)
                 {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator++");
                 }
@@ -110,13 +111,13 @@ namespace ctl
                 return temp;
             }
 
-            iterator& operator+=(DWORD _inc)
+            iterator& operator+=(DWORD inc)
             {
-                for (unsigned loop = 0; loop < _inc && this->m_current != nullptr; ++loop)
+                for (unsigned loop = 0; loop < inc && m_current != nullptr; ++loop)
                 {
                     m_current = m_current->Next;
                 }
-                if (!this->m_current)
+                if (!m_current)
                 {
                     throw std::out_of_range("out_of_range: ctNetAdapterAddresses::iterator::operator+=");
                 }
@@ -151,10 +152,10 @@ namespace ctl
         ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        explicit ctNetAdapterAddresses(unsigned _family = AF_UNSPEC, DWORD _gaaFlags = 0) :
+        explicit ctNetAdapterAddresses(unsigned family = AF_UNSPEC, DWORD gaaFlags = 0) :
             m_buffer(std::make_shared<std::vector<BYTE>>(16384))
         {
-            this->refresh(_family, _gaaFlags);
+            this->refresh(family, gaaFlags);
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -174,22 +175,22 @@ namespace ctl
         void refresh(unsigned family = AF_UNSPEC, DWORD gaaFlags = 0) const
         {
             // get both v4 and v6 adapter info
-            auto byteSize = static_cast<ULONG>(this->m_buffer->size());
+            auto byteSize = static_cast<ULONG>(m_buffer->size());
             auto err = GetAdaptersAddresses(
                 family,   // Family
                 gaaFlags, // Flags
                 nullptr,   // Reserved
-                reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0)),
+                reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&m_buffer->at(0)),
                 &byteSize
             );
             if (err == ERROR_BUFFER_OVERFLOW)
             {
-                this->m_buffer->resize(byteSize);
+                m_buffer->resize(byteSize);
                 err = GetAdaptersAddresses(
                     family,   // Family
                     gaaFlags, // Flags
                     nullptr,   // Reserved
-                    reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&this->m_buffer->at(0)),
+                    reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&m_buffer->at(0)),
                     &byteSize
                 );
             }
@@ -201,7 +202,7 @@ namespace ctl
 
         [[nodiscard]] iterator begin() const noexcept
         {
-            return iterator(this->m_buffer);
+            return iterator(m_buffer);
         }
 
         // ReSharper disable once CppMemberFunctionMayBeStatic

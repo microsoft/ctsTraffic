@@ -24,18 +24,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-    namespace details
+    namespace Details
     {
-        constexpr unsigned fn_ptr_count = 9;
-        static LPFN_TRANSMITFILE transmitfile = nullptr; // WSAID_TRANSMITFILE
-        static LPFN_ACCEPTEX acceptex = nullptr; // WSAID_ACCEPTEX
-        static LPFN_GETACCEPTEXSOCKADDRS getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
-        static LPFN_TRANSMITPACKETS transmitpackets = nullptr; // WSAID_TRANSMITPACKETS
-        static LPFN_CONNECTEX connectex = nullptr; // WSAID_CONNECTEX
-        static LPFN_DISCONNECTEX disconnectex = nullptr; // WSAID_DISCONNECTEX
-        static LPFN_WSARECVMSG wsarecvmsg = nullptr; // WSAID_WSARECVMSG
-        static LPFN_WSASENDMSG wsasendmsg = nullptr; // WSAID_WSASENDMSG
-        static RIO_EXTENSION_FUNCTION_TABLE rioextensionfunctiontable; // WSAID_MULTIPLE_RIO
+        constexpr unsigned c_functionPtrCount = 9;
+        static LPFN_TRANSMITFILE g_transmitfile = nullptr; // WSAID_TRANSMITFILE
+        static LPFN_ACCEPTEX g_acceptex = nullptr; // WSAID_ACCEPTEX
+        static LPFN_GETACCEPTEXSOCKADDRS g_getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
+        static LPFN_TRANSMITPACKETS g_transmitpackets = nullptr; // WSAID_TRANSMITPACKETS
+        static LPFN_CONNECTEX g_connectex = nullptr; // WSAID_CONNECTEX
+        static LPFN_DISCONNECTEX g_disconnectex = nullptr; // WSAID_DISCONNECTEX
+        static LPFN_WSARECVMSG g_wsarecvmsg = nullptr; // WSAID_WSARECVMSG
+        static LPFN_WSASENDMSG g_wsasendmsg = nullptr; // WSAID_WSASENDMSG
+        static RIO_EXTENSION_FUNCTION_TABLE g_rioextensionfunctiontable; // WSAID_MULTIPLE_RIO
 
         //
         // ctSocketExtensionInit
@@ -43,7 +43,7 @@ namespace ctl
         // InitOnce function only to be called locally to ensure WSAStartup is held
         // for the function pointers to remain accurate
         //
-        static BOOL CALLBACK s_ctSocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
+        static BOOL CALLBACK SocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
         {
             WSADATA wsadata;
             const auto wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
@@ -51,84 +51,84 @@ namespace ctl
             {
                 return FALSE;
             }
-            auto WSACleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
+            auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
 
             // check to see if need to create a temp socket
-            SOCKET local_socket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-            if (INVALID_SOCKET == local_socket)
+            SOCKET localSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+            if (INVALID_SOCKET == localSocket)
             {
                 return FALSE;
             }
-            auto closesocketOnExit = wil::scope_exit([&]() noexcept { closesocket(local_socket); });
+            auto closesocketOnExit = wil::scope_exit([&]() noexcept { closesocket(localSocket); });
 
             // control code and the size to fetch the extension function pointers
-            for (unsigned fn_loop = 0; fn_loop < fn_ptr_count; ++fn_loop)
+            for (unsigned fnLoop = 0; fnLoop < c_functionPtrCount; ++fnLoop)
             {
-                VOID* function_ptr = nullptr;
+                VOID* functionPtr = nullptr;
                 DWORD controlCode = SIO_GET_EXTENSION_FUNCTION_POINTER;
                 auto bytes = static_cast<DWORD>(sizeof(VOID*));
                 // must declare GUID explicitly at a global scope as some commonly used test libraries
                 // - incorrectly pull it into their own namespace
                 GUID guid{};
 
-                switch (fn_loop)
+                switch (fnLoop)
                 {
                     case 0: {
-                        function_ptr = &transmitfile;
-                        GUID tmp_guid = WSAID_TRANSMITFILE;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_transmitfile;
+                        constexpr GUID tmpGuid = WSAID_TRANSMITFILE;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 1: {
-                        function_ptr = &acceptex;
-                        GUID tmp_guid = WSAID_ACCEPTEX;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_acceptex;
+                        constexpr GUID tmpGuid = WSAID_ACCEPTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 2: {
-                        function_ptr = &getacceptexsockaddrs;
-                        GUID tmp_guid = WSAID_GETACCEPTEXSOCKADDRS;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_getacceptexsockaddrs;
+                        constexpr GUID tmpGuid = WSAID_GETACCEPTEXSOCKADDRS;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 3: {
-                        function_ptr = &transmitpackets;
-                        GUID tmp_guid = WSAID_TRANSMITPACKETS;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_transmitpackets;
+                        constexpr GUID tmpGuid = WSAID_TRANSMITPACKETS;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 4: {
-                        function_ptr = &connectex;
-                        GUID tmp_guid = WSAID_CONNECTEX;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_connectex;
+                        constexpr GUID tmpGuid = WSAID_CONNECTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 5: {
-                        function_ptr = &disconnectex;
-                        GUID tmp_guid = WSAID_DISCONNECTEX;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_disconnectex;
+                        constexpr GUID tmpGuid = WSAID_DISCONNECTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 6: {
-                        function_ptr = &wsarecvmsg;
-                        GUID tmp_guid = WSAID_WSARECVMSG;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_wsarecvmsg;
+                        constexpr GUID tmpGuid = WSAID_WSARECVMSG;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 7: {
-                        function_ptr = &wsasendmsg;
-                        GUID tmp_guid = WSAID_WSASENDMSG;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_wsasendmsg;
+                        constexpr GUID tmpGuid = WSAID_WSASENDMSG;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         break;
                     }
                     case 8: {
-                        function_ptr = &rioextensionfunctiontable;
-                        GUID tmp_guid = WSAID_MULTIPLE_RIO;
-                        memcpy(&guid, &tmp_guid, sizeof GUID);
+                        functionPtr = &g_rioextensionfunctiontable;
+                        constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
                         controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
-                        bytes = static_cast<DWORD>(sizeof rioextensionfunctiontable);
-                        ::ZeroMemory(&rioextensionfunctiontable, bytes);
-                        rioextensionfunctiontable.cbSize = bytes;
+                        bytes = static_cast<DWORD>(sizeof g_rioextensionfunctiontable);
+                        ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
+                        g_rioextensionfunctiontable.cbSize = bytes;
                         break;
                     }
                     default:
@@ -136,18 +136,18 @@ namespace ctl
                 }
 
                 if (0 != WSAIoctl(
-                    local_socket,
+                    localSocket,
                     controlCode,
                     &guid,
                     static_cast<DWORD>(sizeof guid),
-                    function_ptr,
+                    functionPtr,
                     bytes,
                     &bytes,
                     nullptr, // lpOverlapped
                     nullptr))  // lpCompletionRoutine
                 {
                     const auto errorCode = WSAGetLastError();
-                    if (8 == fn_loop && errorCode == WSAEOPNOTSUPP)
+                    if (8 == fnLoop && errorCode == WSAEOPNOTSUPP)
                     {
                         // ignore not-supported errors for RIO APIs to support Win7
                     }
@@ -161,11 +161,11 @@ namespace ctl
             return TRUE;
         }
 
-        static void s_InitSocketExtensions() noexcept
+        static void InitSocketExtensions() noexcept
         {
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            static INIT_ONCE s_ctSocketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
-            FAIL_FAST_IF(!::InitOnceExecuteOnce(&s_ctSocketExtensionInitOnce, s_ctSocketExtensionInitFn, nullptr, nullptr));
+            static INIT_ONCE socketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
+            FAIL_FAST_IF(!::InitOnceExecuteOnce(&socketExtensionInitOnce, SocketExtensionInitFn, nullptr, nullptr));
         }
     }; // anonymous namespace
 
@@ -174,8 +174,8 @@ namespace ctl
     //
     inline bool ctSocketIsRioAvailable() noexcept
     {
-        details::s_InitSocketExtensions();
-        return nullptr != details::rioextensionfunctiontable.RIOReceive;
+        Details::InitSocketExtensions();
+        return nullptr != Details::g_rioextensionfunctiontable.RIOReceive;
     }
 
     //
@@ -190,8 +190,8 @@ namespace ctl
         _In_opt_ LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers,
         _In_  DWORD dwReserved) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::transmitfile(
+        Details::InitSocketExtensions();
+        return Details::g_transmitfile(
             hSocket,
             hFile,
             nNumberOfBytesToWrite,
@@ -212,8 +212,8 @@ namespace ctl
         _Inout_opt_ LPOVERLAPPED lpOverlapped,
         _In_ DWORD dwFlags) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::transmitpackets(
+        Details::InitSocketExtensions();
+        return Details::g_transmitpackets(
             hSocket,
             lpPacketArray,
             nElementCount,
@@ -236,8 +236,8 @@ namespace ctl
         _Out_ LPDWORD lpdwBytesReceived,
         _Inout_ LPOVERLAPPED lpOverlapped) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::acceptex(
+        Details::InitSocketExtensions();
+        return Details::g_acceptex(
             sListenSocket,
             sAcceptSocket,
             lpOutputBuffer,
@@ -257,20 +257,20 @@ namespace ctl
         _In_ DWORD dwReceiveDataLength,
         _In_ DWORD dwLocalAddressLength,
         _In_ DWORD dwRemoteAddressLength,
-        _Outptr_result_bytebuffer_(*LocalSockaddrLength) struct sockaddr** LocalSockaddr,
+        _Outptr_result_bytebuffer_(*LocalSockaddrLength) struct sockaddr** localSockaddr,
         _Out_ LPINT LocalSockaddrLength,
-        _Outptr_result_bytebuffer_(*RemoteSockaddrLength) struct sockaddr** RemoteSockaddr,
+        _Outptr_result_bytebuffer_(*RemoteSockaddrLength) struct sockaddr** remoteSockaddr,
         _Out_ LPINT RemoteSockaddrLength) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::getacceptexsockaddrs(
+        Details::InitSocketExtensions();
+        return Details::g_getacceptexsockaddrs(
             lpOutputBuffer,
             dwReceiveDataLength,
             dwLocalAddressLength,
             dwRemoteAddressLength,
-            LocalSockaddr,
+            localSockaddr,
             LocalSockaddrLength,
-            RemoteSockaddr,
+            remoteSockaddr,
             RemoteSockaddrLength
         );
     }
@@ -287,8 +287,8 @@ namespace ctl
         _When_(lpSendBuffer, _Out_) LPDWORD lpdwBytesSent, // optional if lpSendBuffer is null
         _Inout_ LPOVERLAPPED lpOverlapped) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::connectex(
+        Details::InitSocketExtensions();
+        return Details::g_connectex(
             s,
             name,
             namelen,
@@ -308,8 +308,8 @@ namespace ctl
         _In_ DWORD  dwFlags,
         _In_ DWORD  dwReserved) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::disconnectex(
+        Details::InitSocketExtensions();
+        return Details::g_disconnectex(
             s,
             lpOverlapped,
             dwFlags,
@@ -327,8 +327,8 @@ namespace ctl
         _Inout_opt_ LPWSAOVERLAPPED lpOverlapped,
         _In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::wsarecvmsg(
+        Details::InitSocketExtensions();
+        return Details::g_wsarecvmsg(
             s,
             lpMsg,
             lpdwNumberOfBytesRecvd,
@@ -348,8 +348,8 @@ namespace ctl
         _Inout_opt_ LPWSAOVERLAPPED lpOverlapped,
         _In_opt_ LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::wsasendmsg(
+        Details::InitSocketExtensions();
+        return Details::g_wsasendmsg(
             s,
             lpMsg,
             dwFlags,
@@ -369,8 +369,8 @@ namespace ctl
         _In_ DWORD dwFlags,
         _In_ PVOID requestContext) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOReceive(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOReceive(
             socketQueue,
             pData,
             dataBufferCount,
@@ -393,8 +393,8 @@ namespace ctl
         _In_ DWORD dwFlags,
         _In_ PVOID requestContext) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOReceiveEx(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOReceiveEx(
             socketQueue,
             pData,
             dataBufferCount,
@@ -417,8 +417,8 @@ namespace ctl
         _In_ DWORD dwFlags,
         _In_ PVOID requestContext) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOSend(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOSend(
             socketQueue,
             pData,
             dataBufferCount,
@@ -441,8 +441,8 @@ namespace ctl
         _In_ DWORD dwFlags,
         _In_ PVOID requestContext) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOSendEx(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOSendEx(
             socketQueue,
             pData,
             dataBufferCount,
@@ -461,8 +461,8 @@ namespace ctl
     inline void ctRIOCloseCompletionQueue(
         _In_ RIO_CQ cq) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOCloseCompletionQueue(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOCloseCompletionQueue(
             cq
         );
     }
@@ -474,8 +474,8 @@ namespace ctl
         _In_ DWORD queueSize,
         _In_opt_ PRIO_NOTIFICATION_COMPLETION pNotificationCompletion) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOCreateCompletionQueue(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOCreateCompletionQueue(
             queueSize,
             pNotificationCompletion
         );
@@ -494,8 +494,8 @@ namespace ctl
         _In_ RIO_CQ sendCq,
         _In_ PVOID socketContext) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOCreateRequestQueue(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOCreateRequestQueue(
             socket,
             maxOutstandingReceive,
             maxReceiveDataBuffers,
@@ -515,8 +515,8 @@ namespace ctl
         _Out_writes_to_(arraySize, return) PRIORESULT array,
         _In_ ULONG arraySize) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIODequeueCompletion(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIODequeueCompletion(
             cq,
             array,
             arraySize
@@ -529,8 +529,8 @@ namespace ctl
     inline void ctRIODeregisterBuffer(
         _In_ RIO_BUFFERID bufferId) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIODeregisterBuffer(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIODeregisterBuffer(
             bufferId
         );
     }
@@ -541,8 +541,8 @@ namespace ctl
     inline int ctRIONotify(
         _In_ RIO_CQ cq) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIONotify(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIONotify(
             cq
         );
     }
@@ -554,8 +554,8 @@ namespace ctl
         _In_ PCHAR dataBuffer,
         _In_ DWORD dataLength) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIORegisterBuffer(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIORegisterBuffer(
             dataBuffer,
             dataLength
         );
@@ -568,8 +568,8 @@ namespace ctl
         _In_ RIO_CQ cq,
         _In_ DWORD queueSize) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOResizeCompletionQueue(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOResizeCompletionQueue(
             cq,
             queueSize
         );
@@ -583,8 +583,8 @@ namespace ctl
         _In_ DWORD maxOutstandingReceive,
         _In_ DWORD maxOutstandingSend) noexcept
     {
-        details::s_InitSocketExtensions();
-        return details::rioextensionfunctiontable.RIOResizeRequestQueue(
+        Details::InitSocketExtensions();
+        return Details::g_rioextensionfunctiontable.RIOResizeRequestQueue(
             rq,
             maxOutstandingReceive,
             maxOutstandingSend

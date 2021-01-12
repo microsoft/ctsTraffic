@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #include <sdkddkver.h>
 #include "CppUnitTest.h"
 
@@ -23,73 +24,53 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& _value)
+    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& q)
     {
-        return std::to_wstring(static_cast<unsigned long long>(_value));
+        return std::to_wstring(static_cast<unsigned long long>(q));
     }
-    /*
-    enum ctsIOPatternProtocolTask {
-        NoIo,
-        SendConnectionGuid,
-        RecvConnectionGuid,
-        MoreIo,
-        SendCompletion,
-        RecvCompletion,
-        GracefulShutdown,
-        HardShutdown,
-        RequestFin
-        };
-    enum ctsIOPatternProtocolError {
-        NoError,
-        TooManyBytes,
-        TooFewBytes,
-        CorruptedBytes,
-        ErrorIOFailed,
-        SuccessfullyCompleted
-        };
-    */
-    template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolTask>(const ctsTraffic::ctsIOPatternProtocolTask& _value)
+
+    template<> inline std::wstring ToString<ctsTraffic::ctsIoPatternType>(const ctsTraffic::ctsIoPatternType& q)
     {
-        switch (_value)
+        switch (q)
         {
-            case ctsTraffic::ctsIOPatternProtocolTask::NoIo: return L"NoIo";
-            case ctsTraffic::ctsIOPatternProtocolTask::SendConnectionGuid: return L"SendConnectionGuid";
-            case ctsTraffic::ctsIOPatternProtocolTask::RecvConnectionGuid: return L"RecvConnectionGuid";
-            case ctsTraffic::ctsIOPatternProtocolTask::MoreIo: return L"MoreIo";
-            case ctsTraffic::ctsIOPatternProtocolTask::SendCompletion: return L"SendCompletion";
-            case ctsTraffic::ctsIOPatternProtocolTask::RecvCompletion: return L"RecvCompletion";
-            case ctsTraffic::ctsIOPatternProtocolTask::GracefulShutdown: return L"GracefulShutdown";
-            case ctsTraffic::ctsIOPatternProtocolTask::HardShutdown: return L"HardShutdown";
-            case ctsTraffic::ctsIOPatternProtocolTask::RequestFIN: return L"RequestFIN";
+            case ctsTraffic::ctsIoPatternType::NoIo: return L"NoIo";
+            case ctsTraffic::ctsIoPatternType::SendConnectionGuid: return L"SendConnectionGuid";
+            case ctsTraffic::ctsIoPatternType::RecvConnectionGuid: return L"RecvConnectionGuid";
+            case ctsTraffic::ctsIoPatternType::MoreIo: return L"MoreIo";
+            case ctsTraffic::ctsIoPatternType::SendCompletion: return L"SendCompletion";
+            case ctsTraffic::ctsIoPatternType::RecvCompletion: return L"RecvCompletion";
+            case ctsTraffic::ctsIoPatternType::GracefulShutdown: return L"GracefulShutdown";
+            case ctsTraffic::ctsIoPatternType::HardShutdown: return L"HardShutdown";
+            case ctsTraffic::ctsIoPatternType::RequestFin: return L"RequestFIN";
         }
 
         Assert::Fail(L"Unknown ctsIOPatternProtocolTask");
     }
 
-    template<> inline std::wstring ToString<ctsTraffic::ctsIOPatternProtocolError>(const ctsTraffic::ctsIOPatternProtocolError& _value)
+    template<> inline std::wstring ToString<ctsTraffic::ctsIoPatternError>(const ctsTraffic::ctsIoPatternError& q)
     {
-        switch (_value)
+        switch (q)
         {
-            case ctsTraffic::ctsIOPatternProtocolError::NotProtocolError: return L"NotProtocolError";
-            case ctsTraffic::ctsIOPatternProtocolError::NoConnectionGuid: return L"NoConnectionGuid";
-            case ctsTraffic::ctsIOPatternProtocolError::ZeroByteXfer: return L"ZeroByteXfer";
-            case ctsTraffic::ctsIOPatternProtocolError::TooManyBytes: return L"TooManyBytes";
-            case ctsTraffic::ctsIOPatternProtocolError::TooFewBytes: return L"TooFewBytes";
-            case ctsTraffic::ctsIOPatternProtocolError::CorruptedXfer: return L"CorruptedXfer";
+            case ctsTraffic::ctsIoPatternError::NotProtocolError: return L"NotProtocolError";
+            case ctsTraffic::ctsIoPatternError::NoConnectionGuid: return L"NoConnectionGuid";
+            case ctsTraffic::ctsIoPatternError::ZeroByteXfer: return L"ZeroByteXfer";
+            case ctsTraffic::ctsIoPatternError::TooManyBytes: return L"TooManyBytes";
+            case ctsTraffic::ctsIoPatternError::TooFewBytes: return L"TooFewBytes";
+            case ctsTraffic::ctsIoPatternError::CorruptedXfer: return L"CorruptedXfer";
         }
 
-        Assert::Fail(L"Unknown ctsIOPatternProtocolError");
+        Assert::Fail(L"Unknown ctsIoPatternError");
     }
 }
 
-ctsTraffic::ctsUnsignedLongLong s_TransferSize = 0ULL;
-bool s_Listening = false;
+ctsTraffic::ctsUnsignedLongLong g_transferSize = 0ULL;
+bool g_isListening = false;
 ///
 /// Fakes
 ///
 namespace ctsTraffic::ctsConfig
 {
-    ctsConfigSettings* Settings;
+    ctsConfigSettings* g_configSettings;
 
     void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
     {
@@ -106,18 +87,18 @@ namespace ctsTraffic::ctsConfig
     void PrintException(const std::exception&) noexcept
     {
     }
-    void PrintErrorInfo(_In_ PCWSTR) noexcept
+    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
 
     bool IsListening() noexcept
     {
-        return s_Listening;
+        return g_isListening;
     }
 
     ctsUnsignedLongLong GetTransferSize() noexcept
     {
-        return s_TransferSize;
+        return g_transferSize;
     }
     bool ShutdownCalled() noexcept
     {
@@ -139,1899 +120,1903 @@ namespace ctsUnitTest
     TEST_CLASS(ctsIOPatternProtocolPolicyUnitTest)
     {
     private:
-        unsigned long ZERO = 0UL;
-        unsigned long TEST_ERROR = 1UL;
+        unsigned long m_zero = 0UL;
+        unsigned long m_testError = 1UL;
 
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientGracefulShutdownTest(unsigned long long _test_transfer_size) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientGracefulShutdownTest(unsigned long long testTransferSize) const
         {
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
-            s_Listening = false;
-            s_TransferSize = _test_transfer_size;
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            g_isListening = false;
+            g_transferSize = testTransferSize;
 
-            auto return_pattern(std::make_unique<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>>());
-            Assert::IsFalse(return_pattern->is_completed());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_max_transfer());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
-            return return_pattern;
+            auto returnPattern(std::make_unique<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>>());
+            Assert::IsFalse(returnPattern->IsCompleted());
+            Assert::AreEqual(g_transferSize, returnPattern->GetMaxTransfer());
+            Assert::AreEqual(g_transferSize, returnPattern->GetRemainingTransfer());
+            return returnPattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>> InitServerGracefulShutdownTest(unsigned long long _test_transfer_size) const
-        {
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
-            s_Listening = true;
-            s_TransferSize = _test_transfer_size;
 
-            auto return_pattern(std::make_unique<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpServer>>());
-            Assert::IsFalse(return_pattern->is_completed());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_max_transfer());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
-            return return_pattern;
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>> InitServerGracefulShutdownTest(unsigned long long testTransferSize) const
+        {
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            g_isListening = true;
+            g_transferSize = testTransferSize;
+
+            auto returnPattern(std::make_unique<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>>());
+            Assert::IsFalse(returnPattern->IsCompleted());
+            Assert::AreEqual(g_transferSize, returnPattern->GetMaxTransfer());
+            Assert::AreEqual(g_transferSize, returnPattern->GetRemainingTransfer());
+            return returnPattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>> InitClientHardShutdownTest(unsigned long long _test_transfer_size) const
-        {
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
-            s_Listening = false; // client-only
-            s_TransferSize = _test_transfer_size;
 
-            auto return_pattern(std::make_unique<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolTcpClient>>());
-            Assert::IsFalse(return_pattern->is_completed());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_max_transfer());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
-            return return_pattern;
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientHardShutdownTest(unsigned long long testTransferSize) const
+        {
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
+            g_isListening = false; // client-only
+            g_transferSize = testTransferSize;
+
+            auto returnPattern(std::make_unique<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>>());
+            Assert::IsFalse(returnPattern->IsCompleted());
+            Assert::AreEqual(g_transferSize, returnPattern->GetMaxTransfer());
+            Assert::AreEqual(g_transferSize, returnPattern->GetRemainingTransfer());
+            return returnPattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpClientTest(unsigned long long _test_transfer_size) const
-        {
-            s_Listening = false;
-            s_TransferSize = _test_transfer_size;
 
-            auto return_pattern(std::make_unique<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>>());
-            Assert::IsFalse(return_pattern->is_completed());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_max_transfer());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
-            return return_pattern;
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpClientTest(unsigned long long testTransferSize) const
+        {
+            g_isListening = false;
+            g_transferSize = testTransferSize;
+
+            auto returnPattern(std::make_unique<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>>());
+            Assert::IsFalse(returnPattern->IsCompleted());
+            Assert::AreEqual(g_transferSize, returnPattern->GetMaxTransfer());
+            Assert::AreEqual(g_transferSize, returnPattern->GetRemainingTransfer());
+            return returnPattern;
         }
-        std::unique_ptr<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>> InitUdpServerTest(unsigned long long _test_transfer_size) const
-        {
-            s_Listening = true;
-            s_TransferSize = _test_transfer_size;
 
-            auto return_pattern(std::make_unique<ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>>());
-            Assert::IsFalse(return_pattern->is_completed());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_max_transfer());
-            Assert::AreEqual(s_TransferSize, return_pattern->get_remaining_transfer());
-            return return_pattern;
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpServerTest(unsigned long long testTransferSize) const
+        {
+            g_isListening = true;
+            g_transferSize = testTransferSize;
+
+            auto returnPattern(std::make_unique<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>>());
+            Assert::IsFalse(returnPattern->IsCompleted());
+            Assert::AreEqual(g_transferSize, returnPattern->GetMaxTransfer());
+            Assert::AreEqual(g_transferSize, returnPattern->GetRemainingTransfer());
+            return returnPattern;
         }
         //
         // Private members to implement building out a ctsIOTask for each task
         //
-        template <typename IOPattern>
-        ctsIOTask RequestConnectionGuid(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        ctsTask RequestConnectionGuid(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            auto task = _ioPattern->get_next_task();
-            if (s_Listening)
+            auto task = ioPattern->GetNextPatternType();
+            if (g_isListening)
             {
-                Assert::AreEqual(ctsIOPatternProtocolTask::SendConnectionGuid, task);
+                Assert::AreEqual(ctsIoPatternType::SendConnectionGuid, task);
             }
             else
             {
-                Assert::AreEqual(ctsIOPatternProtocolTask::RecvConnectionGuid, task);
+                Assert::AreEqual(ctsIoPatternType::RecvConnectionGuid, task);
             }
 
-            ctsIOTask test_task;
-            if (s_Listening)
+            ctsTask testTask;
+            if (g_isListening)
             {
-                test_task.ioAction = IOTaskAction::Send;
+                testTask.m_ioAction = ctsTaskAction::Send;
             }
             else
             {
-                test_task.ioAction = IOTaskAction::Recv;
+                testTask.m_ioAction = ctsTaskAction::Recv;
             }
-            test_task.track_io = false;
-            test_task.buffer_length = ctsStatistics::ConnectionIdLength;
+            testTask.m_trackIo = false;
+            testTask.m_bufferLength = ctsStatistics::c_connectionIdLength;
 
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestMoreIo(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern, unsigned long _buffer_length)
+        template <typename IoPattern>
+        ctsTask RequestMoreIo(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, unsigned long bufferLength)
         {
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::MoreIo, task);
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::MoreIo, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Recv;
-            test_task.track_io = true;
-            test_task.buffer_length = _buffer_length;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::Recv;
+            testTask.m_trackIo = true;
+            testTask.m_bufferLength = bufferLength;
 
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestSendStatus(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern, _In_ unsigned long* _status_buffer)
+        template <typename IoPattern>
+        ctsTask RequestSendStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ unsigned long* statusBuffer)
         {
-            // get_next_task
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::SendCompletion, task);
+            // GetNextPatternType
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::SendCompletion, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
-            test_task.track_io = false;
-            test_task.buffer = reinterpret_cast<char*>(_status_buffer);
-            test_task.buffer_length = 4;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::Send;
+            testTask.m_trackIo = false;
+            testTask.m_buffer = reinterpret_cast<char*>(statusBuffer);
+            testTask.m_bufferLength = 4;
 
-            // notify_next_task
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            // NotifyNextTask
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
             // should return NoIO since we are waiting on this task
-            this->VerifyNoMoreIo(_ioPattern);
+            VerifyNoMoreIo(ioPattern);
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestRecvStatus(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern, _In_ unsigned long* _status_buffer)
+        template <typename IoPattern>
+        ctsTask RequestRecvStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ unsigned long* statusBuffer)
         {
-            // get_next_task
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::RecvCompletion, task);
+            // GetNextPatternType
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::RecvCompletion, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Recv;
-            test_task.track_io = false;
-            test_task.buffer = reinterpret_cast<char*>(_status_buffer);
-            test_task.buffer_length = 4;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::Recv;
+            testTask.m_trackIo = false;
+            testTask.m_buffer = reinterpret_cast<char*>(statusBuffer);
+            testTask.m_bufferLength = 4;
 
-            // notify_next_task
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            // NotifyNextTask
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
             // should return NoIO since we are waiting on this task
-            this->VerifyNoMoreIo(_ioPattern);
+            VerifyNoMoreIo(ioPattern);
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestFin(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        ctsTask RequestFin(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            // get_next_task
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::RequestFIN, task);
+            // GetNextPatternType
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::RequestFin, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Recv;
-            test_task.track_io = false;
-            test_task.buffer_length = 16;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::Recv;
+            testTask.m_trackIo = false;
+            testTask.m_bufferLength = 16;
 
-            // notify_next_task
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            // NotifyNextTask
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
             // should return NoIO since we are waiting on this task
-            this->VerifyNoMoreIo(_ioPattern);
+            VerifyNoMoreIo(ioPattern);
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestGracefulShutdown(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        ctsTask RequestGracefulShutdown(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            // get_next_task
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::GracefulShutdown, task);
+            // GetNextPatternType
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::GracefulShutdown, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::GracefulShutdown;
-            test_task.track_io = false;
-            test_task.buffer_length = 0;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::GracefulShutdown;
+            testTask.m_trackIo = false;
+            testTask.m_bufferLength = 0;
 
-            // notify_next_task
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            // NotifyNextTask
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
             // should return NoIO since we are waiting on this task
-            this->VerifyNoMoreIo(_ioPattern);
+            VerifyNoMoreIo(ioPattern);
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        ctsIOTask RequestHardShutdown(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        ctsTask RequestHardShutdown(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            // get_next_task
-            auto task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::HardShutdown, task);
+            // GetNextPatternType
+            auto task = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::HardShutdown, task);
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::HardShutdown;
-            test_task.track_io = false;
-            test_task.buffer_length = 0;
+            ctsTask testTask;
+            testTask.m_ioAction = ctsTaskAction::HardShutdown;
+            testTask.m_trackIo = false;
+            testTask.m_bufferLength = 0;
 
-            // notify_next_task
-            _ioPattern->notify_next_task(test_task);
-            Assert::IsFalse(_ioPattern->is_completed());
+            // NotifyNextTask
+            ioPattern->NotifyNextTask(testTask);
+            Assert::IsFalse(ioPattern->IsCompleted());
 
             // should return NoIO since we are waiting on this task
-            this->VerifyNoMoreIo(_ioPattern);
+            VerifyNoMoreIo(ioPattern);
 
-            return test_task;
+            return testTask;
         }
 
-        template <typename IOPattern>
-        void VerifyNoMoreIo(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        void VerifyNoMoreIo(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            auto no_io_task = _ioPattern->get_next_task();
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, no_io_task);
+            auto noIoTask = ioPattern->GetNextPatternType();
+            Assert::AreEqual(ctsIoPatternType::NoIo, noIoTask);
         }
 
-        template <typename IOPattern>
-        void FailIoAndVerify(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        void FailIoAndVerify(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            Assert::AreEqual(TEST_ERROR, _ioPattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(_ioPattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, _ioPattern->get_last_error());
-            Assert::AreEqual(TEST_ERROR, _ioPattern->update_last_error(NO_ERROR));
-            Assert::AreEqual(TEST_ERROR, _ioPattern->get_last_error());
+            Assert::AreEqual(m_testError, ioPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(ioPattern->IsCompleted());
+            Assert::AreEqual(m_testError, ioPattern->GetLastError());
+            Assert::AreEqual(m_testError, ioPattern->UpdateLastError(NO_ERROR));
+            Assert::AreEqual(m_testError, ioPattern->GetLastError());
         }
 
-        template <typename IOPattern>
-        void CompleteIoAndVerifySuccess(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern, ctsIOTask _task, unsigned long _bytes)
+        template <typename IoPattern>
+        void CompleteIoAndVerifySuccess(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, ctsTask task, unsigned long bytes)
         {
-            Assert::AreEqual(ZERO, _ioPattern->update_last_error(ZERO));
-            _ioPattern->completed_task(_task, _bytes);
-            Assert::AreEqual(ZERO, _ioPattern->get_last_error());
-            Assert::AreEqual(ZERO, _ioPattern->update_last_error(ZERO));
+            Assert::AreEqual(m_zero, ioPattern->UpdateLastError(m_zero));
+            ioPattern->CompletedTask(task, bytes);
+            Assert::AreEqual(m_zero, ioPattern->GetLastError());
+            Assert::AreEqual(m_zero, ioPattern->UpdateLastError(m_zero));
         }
 
-        template <typename IOPattern>
-        void RequestAndCompleteConnectionGuid(std::unique_ptr<ctsIOPatternProtocolPolicy<IOPattern>>& _ioPattern)
+        template <typename IoPattern>
+        void RequestAndCompleteConnectionGuid(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
-            ctsIOTask test_task = this->RequestConnectionGuid(_ioPattern);
-            _ioPattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::AreEqual(ZERO, _ioPattern->get_last_error());
-            Assert::IsFalse(_ioPattern->is_completed());
+            ctsTask testTask = RequestConnectionGuid(ioPattern);
+            ioPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::AreEqual(m_zero, ioPattern->GetLastError());
+            Assert::IsFalse(ioPattern->IsCompleted());
         }
 
     public:
         TEST_CLASS_INITIALIZE(Setup)
         {
-            ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
-            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
         }
 
         TEST_CLASS_CLEANUP(Cleanup)
         {
-            delete ctsConfig::Settings;
+            delete ctsConfig::g_configSettings;
         }
 
 
         TEST_METHOD(GracefulShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong testTransferSize(100);
 
-            auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), io_pattern->get_remaining_transfer());
+            auto testPattern = InitClientGracefulShutdownTest(250);
+            Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
 
-            io_pattern->set_max_transfer(TestTransferSize);
-            Assert::AreEqual(TestTransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(TestTransferSize, io_pattern->get_remaining_transfer());
+            testPattern->SetMaxTransfer(testTransferSize);
+            Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(testTransferSize, testPattern->GetRemainingTransfer());
         }
 
         TEST_METHOD(HardShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong testTransferSize(100);
 
-            auto io_pattern = this->InitClientHardShutdownTest(250);
-            Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), io_pattern->get_remaining_transfer());
+            auto testPattern = InitClientHardShutdownTest(250);
+            Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
 
-            io_pattern->set_max_transfer(TestTransferSize);
-            Assert::AreEqual(TestTransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(TestTransferSize, io_pattern->get_remaining_transfer());
+            testPattern->SetMaxTransfer(testTransferSize);
+            Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(testTransferSize, testPattern->GetRemainingTransfer());
         }
 
         TEST_METHOD(TCPServerShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong testTransferSize(100);
 
-            auto io_pattern = this->InitServerGracefulShutdownTest(250);
-            Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), io_pattern->get_remaining_transfer());
+            auto testPattern = InitServerGracefulShutdownTest(250);
+            Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
 
-            io_pattern->set_max_transfer(TestTransferSize);
-            Assert::AreEqual(TestTransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(TestTransferSize, io_pattern->get_remaining_transfer());
+            testPattern->SetMaxTransfer(testTransferSize);
+            Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(testTransferSize, testPattern->GetRemainingTransfer());
         }
 
         TEST_METHOD(UdpClientSetMaxTransfer)
         {
-            const ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong testTransferSize(100);
 
-            auto io_pattern = this->InitUdpClientTest(250);
-            Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), io_pattern->get_remaining_transfer());
+            auto testPattern = InitUdpClientTest(250);
+            Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
 
-            io_pattern->set_max_transfer(TestTransferSize);
-            Assert::AreEqual(TestTransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(TestTransferSize, io_pattern->get_remaining_transfer());
+            testPattern->SetMaxTransfer(testTransferSize);
+            Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(testTransferSize, testPattern->GetRemainingTransfer());
         }
 
         TEST_METHOD(UdpServerSetMaxTransfer)
         {
-            const ctsUnsignedLongLong TestTransferSize(100);
+            const ctsUnsignedLongLong testTransferSize(100);
 
-            auto io_pattern = this->InitUdpServerTest(250);
-            Assert::AreEqual(s_TransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), io_pattern->get_remaining_transfer());
+            auto testPattern = InitUdpServerTest(250);
+            Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
 
-            io_pattern->set_max_transfer(TestTransferSize);
-            Assert::AreEqual(TestTransferSize, io_pattern->get_max_transfer());
-            Assert::AreEqual(TestTransferSize, io_pattern->get_remaining_transfer());
+            testPattern->SetMaxTransfer(testTransferSize);
+            Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
+            Assert::AreEqual(testTransferSize, testPattern->GetRemainingTransfer());
         }
 
 
         TEST_METHOD(SuccessfullySendConnectionGuid)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::IsFalse(io_pattern->is_completed());
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(UDPSuccessfullySendConnectionGuid)
         {
-            auto io_pattern = this->InitUdpServerTest(100);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::IsFalse(io_pattern->is_completed());
+            auto testPattern = InitUdpServerTest(100);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(FailedSendConnectionGuid)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            [[maybe_unused]] ctsTask testTask = RequestConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPFailedSendConnectionGuid)
         {
-            auto io_pattern = this->InitUdpServerTest(100);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitUdpServerTest(100);
+            [[maybe_unused]] ctsTask testTask = RequestConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownSuccessfullyReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::IsFalse(io_pattern->is_completed());
+            auto testPattern = InitClientGracefulShutdownTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(HardShutdownSuccessfullyReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::IsFalse(io_pattern->is_completed());
+            auto testPattern = InitClientHardShutdownTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(UDPSuccessfullyReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitUdpClientTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength);
-            Assert::IsFalse(io_pattern->is_completed());
+            auto testPattern = InitUdpClientTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(GracefulShutdownFailedReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(250);
+            [[maybe_unused]] ctsTask testTask = RequestConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownFailedReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(250);
+            [[maybe_unused]] ctsTask testTask = RequestConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPFailedReceiveConnectionGuid)
         {
-            auto io_pattern = this->InitUdpClientTest(250);
-            ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitUdpClientTest(250);
+            [[maybe_unused]] ctsTask testTask = RequestConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownContinueIoAfterFailure)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
         }
 
         TEST_METHOD(HardShutdownContinueIoAfterFailure)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
         }
 
         TEST_METHOD(UDPContinueIoAfterFailure)
         {
-            auto io_pattern = this->InitUdpClientTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
-            this->FailIoAndVerify(io_pattern);
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            auto testPattern = InitUdpClientTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
+            FailIoAndVerify(testPattern);
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
         }
 
         TEST_METHOD(GracefulShutdownReceivedTooFewBytesForConnectionGuid)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownReceivedTooFewBytesForConnectionGuid)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPReceivedTooFewBytesForConnectionGuid)
         {
-            auto io_pattern = this->InitUdpClientTest(250);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, ctsStatistics::ConnectionIdLength - 1);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitUdpClientTest(250);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownReceivedZeroBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownReceivedZeroBytes)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPReceivedZeroBytes)
         {
-            auto io_pattern = this->InitUdpClientTest(100);
-            const ctsIOTask test_task = this->RequestConnectionGuid(io_pattern);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::NoConnectionGuid, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            auto testPattern = InitUdpClientTest(100);
+            const ctsTask testTask = RequestConnectionGuid(testPattern);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownReceivedZeroBytesAfterConnectionGuid)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::ZeroByteXfer, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownReceivedZeroBytesAfterConnectionGuid)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::ZeroByteXfer, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerShutdownReceivedZeroBytesAfterConnectionGuid)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::ZeroByteXfer, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::ZeroByteXfer, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         /* Receiving a 0-byte datagram is just fine, differing from TCP behavior */
         TEST_METHOD(UDPReceivedZeroBytesAfterConnectionGuid)
         {
-            auto io_pattern = this->InitUdpClientTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::NotProtocolError, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::IsFalse(io_pattern->is_completed());
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::NotProtocolError, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::IsFalse(testPattern->IsCompleted());
         }
 
         TEST_METHOD(GracefulShutdownClientFailIo)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(250);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(250);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
-            this->FailIoAndVerify(io_pattern);
-            io_pattern->completed_task(test_task, 50);
-            Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, io_pattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 50);
+            FailIoAndVerify(testPattern);
+            testPattern->CompletedTask(testTask, 50);
+            Assert::AreEqual(m_testError, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(m_testError, testPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientFailIo)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
-            this->FailIoAndVerify(io_pattern);
-            io_pattern->completed_task(test_task, 50);
-            Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, io_pattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 50);
+            FailIoAndVerify(testPattern);
+            testPattern->CompletedTask(testTask, 50);
+            Assert::AreEqual(m_testError, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(m_testError, testPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerFailIo)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
-            this->FailIoAndVerify(io_pattern);
-            io_pattern->completed_task(test_task, 50);
-            Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, io_pattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 50);
+            FailIoAndVerify(testPattern);
+            testPattern->CompletedTask(testTask, 50);
+            Assert::AreEqual(m_testError, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(m_testError, testPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientFailIo)
         {
-            auto io_pattern = this->InitUdpClientTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
-            this->FailIoAndVerify(io_pattern);
-            io_pattern->completed_task(test_task, 50);
-            Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, io_pattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 50);
+            FailIoAndVerify(testPattern);
+            testPattern->CompletedTask(testTask, 50);
+            Assert::AreEqual(m_testError, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(m_testError, testPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPServerFailIo)
         {
-            auto io_pattern = this->InitUdpServerTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 50);
-            this->FailIoAndVerify(io_pattern);
-            io_pattern->completed_task(test_task, 50);
-            Assert::AreEqual(TEST_ERROR, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(TEST_ERROR, io_pattern->update_last_error(TEST_ERROR));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 50);
+            FailIoAndVerify(testPattern);
+            testPattern->CompletedTask(testTask, 50);
+            Assert::AreEqual(m_testError, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(m_testError, testPattern->UpdateLastError(m_testError));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownClientFailTooManyBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(150);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(150);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 100);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 100);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientFailTooManyBytes)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(150);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(150);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 100);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 100);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerFailTooManyBytes)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(150);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(150);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 100);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 100);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientFailTooManyBytes)
         {
-            auto io_pattern = this->InitUdpClientTest(150);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(150);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 100);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 100);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPServerFailTooManyBytes)
         {
-            auto io_pattern = this->InitUdpServerTest(150);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(150);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 100);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 100);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownClientFailTooFewBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // 2 IO tasks - completing too few bytes
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 50); // only 50 of 100 bytes
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 50); // only 50 of 100 bytes
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0); // complete zero bytes - indicating FIN
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0); // complete zero bytes - indicating FIN
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientFailTooFewBytes)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // 2 IO tasks - completing too few bytes
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 50); // only 50 of 100 bytes
-            Assert::IsFalse(io_pattern->is_completed());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 50); // only 50 of 100 bytes
+            Assert::IsFalse(testPattern->IsCompleted());
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0); // complete zero bytes - indicating FIN
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0); // complete zero bytes - indicating FIN
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerFailTooFewBytes)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // 2 IO tasks - completing too few bytes
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 50); // only 50 of 100 bytes
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 50); // only 50 of 100 bytes
 
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            io_pattern->completed_task(test_task, 0); // complete zero bytes - indicating FIN
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestMoreIo(testPattern, 100);
+            testPattern->CompletedTask(testTask, 0); // complete zero bytes - indicating FIN
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
 
         TEST_METHOD(GracefulShutdownClientFailFinalStatusTooFewBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 2)
-            unsigned long status_code = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status_code);
-            io_pattern->completed_task(test_task, 2);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            unsigned long status_code = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status_code);
+            testPattern->CompletedTask(testTask, 2);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientFailFinalStatusTooFewBytes)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 2)
-            unsigned long status_code = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status_code);
-            io_pattern->completed_task(test_task, 2);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            unsigned long status_code = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status_code);
+            testPattern->CompletedTask(testTask, 2);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         /* UDP doesn't send a final status */
 
         TEST_METHOD(GracefulShutdownClientFailFinalStatusZeroBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - completing 0 - as in a FIN)
-            unsigned long status_code = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status_code);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            unsigned long status_code = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status_code);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientFailFinalStatusZeroBytes)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 0 - as in a FIN)
-            unsigned long status_code = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status_code);
-            io_pattern->completed_task(test_task, 0);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooFewBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsStatusErrorNotAllDataTransferred, io_pattern->update_last_error(ZERO));
-            Assert::IsTrue(io_pattern->is_completed());
-            this->VerifyNoMoreIo(io_pattern);
+            unsigned long status_code = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status_code);
+            testPattern->CompletedTask(testTask, 0);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(c_statusErrorNotAllDataTransferred, testPattern->UpdateLastError(m_zero));
+            Assert::IsTrue(testPattern->IsCompleted());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(Client_GracefulShutdown_FINFailedTooManyBytes)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (4 bytes)
-            unsigned long status_code = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status_code);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status_code = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status_code);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown (0 byte FIN)
-            test_task = this->RequestGracefulShutdown(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestGracefulShutdown(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN 
-            test_task = this->RequestFin(io_pattern);
-            io_pattern->completed_task(test_task, 1);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            testPattern->CompletedTask(testTask, 1);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            VerifyNoMoreIo(testPattern);
 
             // No FIN test for HardShutdown - since HardShutdown just sends a RST
         }
 
         TEST_METHOD(TCPServerFINFailedTooManyBytes)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
-            test_task = this->RequestFin(io_pattern);
-            io_pattern->completed_task(test_task, 1);
-            Assert::AreEqual(ctsIOPatternProtocolError::TooManyBytes, ctsIOPatternStateCheckProtocolError(io_pattern->get_last_error()));
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsStatusErrorTooMuchDataTransferred, io_pattern->update_last_error(ZERO));
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            testPattern->CompletedTask(testTask, 1);
+            Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownClientSingleIo)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Receive server status
-            unsigned long status = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown Task
-            test_task = this->RequestGracefulShutdown(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestGracefulShutdown(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
-            test_task = this->RequestFin(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientSingleIo)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Receive server status
-            unsigned long status = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown Task
-            test_task = this->RequestHardShutdown(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestHardShutdown(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientSingleIo)
         {
-            auto io_pattern = this->InitUdpClientTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPServerSingleIo)
         {
-            auto io_pattern = this->InitUdpServerTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            const ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            const ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerSingleIo_FIN)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
-            test_task = this->RequestFin(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerSingleIo_RST_connreset)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAECONNRESET - which is OK if the client wanted to RST instead of FIN
-            test_task = this->RequestFin(io_pattern);
-            Assert::AreEqual(ZERO, io_pattern->update_last_error(WSAECONNRESET));
-            //            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
+            Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAECONNRESET));
+            //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerSingleIo_RST_connaborted)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAECONNABORTED - which is OK if the client wanted to RST instead of FIN
-            test_task = this->RequestFin(io_pattern);
-            Assert::AreEqual(ZERO, io_pattern->update_last_error(WSAECONNABORTED));
-            //            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
+            Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAECONNABORTED));
+            //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerSingleIo_RST_timedout)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAETIMEDOUT - which is OK if the client wanted to RST instead of FIN
-            test_task = this->RequestFin(io_pattern);
-            Assert::AreEqual(ZERO, io_pattern->update_last_error(WSAETIMEDOUT));
-            //            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
+            Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAETIMEDOUT));
+            //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownClientMultipleIo)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv the server status
-            unsigned long status = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Graceful shutdown
-            test_task = this->RequestGracefulShutdown(io_pattern);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestGracefulShutdown(testPattern);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
-            test_task = this->RequestFin(io_pattern);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientMultipleIo)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv the server status
-            unsigned long status = ZERO;
-            test_task = this->RequestRecvStatus(io_pattern, &status);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestRecvStatus(testPattern, &status);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // shutdown
-            test_task = this->RequestHardShutdown(io_pattern);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestHardShutdown(testPattern);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerMultipleIo)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Send server status
-            unsigned long status = ZERO;
-            test_task = this->RequestSendStatus(io_pattern, &status);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            testTask = RequestSendStatus(testPattern, &status);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
-            test_task = this->RequestFin(io_pattern);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ZERO, io_pattern->update_last_error(ZERO));
-            this->VerifyNoMoreIo(io_pattern);
+            testTask = RequestFin(testPattern);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(m_zero, testPattern->UpdateLastError(m_zero));
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientMultipleIo)
         {
-            auto io_pattern = this->InitUdpClientTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
         TEST_METHOD(UDPServerMultipleIo)
         {
-            auto io_pattern = this->InitUdpServerTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            ctsTask testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
-            test_task = this->RequestMoreIo(io_pattern, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            testTask = RequestMoreIo(testPattern, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownClientOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task1, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task2, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task3, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Recv server status
             //
-            unsigned long status_buffer = ZERO;
-            const ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
-            this->CompleteIoAndVerifySuccess(io_pattern, server_status_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status_buffer = m_zero;
+            const ctsTask server_status_task = RequestRecvStatus(testPattern, &status_buffer);
+            CompleteIoAndVerifySuccess(testPattern, server_status_task, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Shutdown Task
             //
-            const ctsIOTask shutdown_task = this->RequestGracefulShutdown(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, shutdown_task, 0);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask shutdown_task = RequestGracefulShutdown(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, shutdown_task, 0);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Request FIN task
             //
-            const ctsIOTask final_fin_task = this->RequestFin(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, final_fin_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask final_fin_task = RequestFin(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, final_fin_task, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownClientOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task1, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task2, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task3, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Recv server status
             //
-            unsigned long status_buffer = ZERO;
-            const ctsIOTask server_status_task = this->RequestRecvStatus(io_pattern, &status_buffer);
-            this->CompleteIoAndVerifySuccess(io_pattern, server_status_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status_buffer = m_zero;
+            const ctsTask server_status_task = RequestRecvStatus(testPattern, &status_buffer);
+            CompleteIoAndVerifySuccess(testPattern, server_status_task, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Shutdown Task
             //
-            const ctsIOTask shutdown_task = this->RequestHardShutdown(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, shutdown_task, 4);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask shutdown_task = RequestHardShutdown(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, shutdown_task, 4);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task1, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task2, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task3, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Send server status
             //
-            unsigned long status = ZERO;
-            const ctsIOTask send_status_task = this->RequestSendStatus(io_pattern, &status);
-            this->CompleteIoAndVerifySuccess(io_pattern, send_status_task, 4);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            unsigned long status = m_zero;
+            const ctsTask send_status_task = RequestSendStatus(testPattern, &status);
+            CompleteIoAndVerifySuccess(testPattern, send_status_task, 4);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // Request FIN task
             //
-            const ctsIOTask fin_task = this->RequestFin(io_pattern);
-            this->CompleteIoAndVerifySuccess(io_pattern, fin_task, 0);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask fin_task = RequestFin(testPattern);
+            CompleteIoAndVerifySuccess(testPattern, fin_task, 0);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitUdpClientTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task1, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task2, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task3, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
         TEST_METHOD(UDPServerOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitUdpServerTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            const ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task1, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task2, 100);
-            Assert::IsFalse(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
+            Assert::IsFalse(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3
             //
-            this->CompleteIoAndVerifySuccess(io_pattern, test_task3, 100);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
 
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(GracefulShutdownFailingOneIoWithClientOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitClientGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->FailIoAndVerify(io_pattern);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            FailIoAndVerify(testPattern);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task2, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask2, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task3, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask3, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(HardShutdownFailingOneIoWithClientOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitClientHardShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitClientHardShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->FailIoAndVerify(io_pattern);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            FailIoAndVerify(testPattern);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task2, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask2, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task3, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask3, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(TCPServerFailingOneIoWithOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitServerGracefulShutdownTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitServerGracefulShutdownTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->FailIoAndVerify(io_pattern);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            FailIoAndVerify(testPattern);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task2, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask2, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task3, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask3, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPClientFailingOneIoWithOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitUdpClientTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpClientTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->FailIoAndVerify(io_pattern);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            FailIoAndVerify(testPattern);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task2, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask2, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task3, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask3, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
 
         TEST_METHOD(UDPServerFailingOneIoWithOverlappingMultipleIo)
         {
-            auto io_pattern = this->InitUdpServerTest(100 * 3);
-            this->RequestAndCompleteConnectionGuid(io_pattern);
+            auto testPattern = InitUdpServerTest(100 * 3);
+            RequestAndCompleteConnectionGuid(testPattern);
 
             // IO Task #1
-            ctsIOTask test_task1 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), io_pattern->get_remaining_transfer());
+            [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
             // IO Task #2
-            const ctsIOTask test_task2 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), io_pattern->get_remaining_transfer());
+            const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
             // IO Task #3
-            const ctsIOTask test_task3 = this->RequestMoreIo(io_pattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
+            const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 1
             //
-            this->FailIoAndVerify(io_pattern);
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            FailIoAndVerify(testPattern);
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task2, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask2, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, io_pattern->update_last_error(ZERO));
-            io_pattern->completed_task(test_task3, 100);
-            Assert::AreEqual(1UL, io_pattern->get_last_error());
-            Assert::IsTrue(io_pattern->is_completed());
-            Assert::AreEqual(ctsUnsignedLongLong(ZERO), io_pattern->get_remaining_transfer());
-            Assert::AreEqual(ctsIOPatternProtocolTask::NoIo, io_pattern->get_next_task());
+            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            testPattern->CompletedTask(testTask3, 100);
+            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::IsTrue(testPattern->IsCompleted());
+            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
             //
-            this->VerifyNoMoreIo(io_pattern);
+            VerifyNoMoreIo(testPattern);
         }
     };
 }

@@ -16,6 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 
+// ReSharper disable once CppInconsistentNaming
 namespace ctl
 {
     ///
@@ -31,68 +32,68 @@ namespace ctl
         /// millisecond == 10 ^ -3
         ///
 
-        constexpr long long ctConvertMillisToHundredNs(long long milliseconds) noexcept
+        constexpr long long ConvertMillisToHundredNs(long long milliseconds) noexcept
         {
             return static_cast<long long>(milliseconds * 10000LL);
         }
 
-        constexpr long long ctConvertHundredNsToMillis(long long _hundred_nanoseconds) noexcept
+        constexpr long long ConvertHundredNsToMillis(long long _hundred_nanoseconds) noexcept
         {
             return static_cast<long long>(_hundred_nanoseconds / 10000LL);
         }
 
-        inline FILETIME ctConvertHundredNsToAbsoluteFiletime(long long hundred_nanoseconds) noexcept
+        inline FILETIME ConvertHundredNsToAbsoluteFiletime(long long hundred_nanoseconds) noexcept
         {
-            ULARGE_INTEGER ulong_integer;
-            ulong_integer.QuadPart = hundred_nanoseconds;
+            ULARGE_INTEGER ulongInteger;
+            ulongInteger.QuadPart = hundred_nanoseconds;
 
-            FILETIME return_filetime;
-            return_filetime.dwHighDateTime = ulong_integer.HighPart;
-            return_filetime.dwLowDateTime = ulong_integer.LowPart;
-            return return_filetime;
+            FILETIME returnFiletime;
+            returnFiletime.dwHighDateTime = ulongInteger.HighPart;
+            returnFiletime.dwLowDateTime = ulongInteger.LowPart;
+            return returnFiletime;
         }
 
         // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
         // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
-        inline FILETIME ctConvertHundredNsToRelativeFiletime(long long hundred_nanoseconds) noexcept
+        inline FILETIME ConvertHundredNsToRelativeFiletime(long long hundred_nanoseconds) noexcept
         {
-            ULARGE_INTEGER ulong_integer;
-            ulong_integer.QuadPart = static_cast<ULONGLONG>(-hundred_nanoseconds);
+            ULARGE_INTEGER ulongInteger;
+            ulongInteger.QuadPart = static_cast<ULONGLONG>(-hundred_nanoseconds);
 
-            FILETIME return_filetime;
-            return_filetime.dwHighDateTime = ulong_integer.HighPart;
-            return_filetime.dwLowDateTime = ulong_integer.LowPart;
-            return return_filetime;
+            FILETIME returnFiletime;
+            returnFiletime.dwHighDateTime = ulongInteger.HighPart;
+            returnFiletime.dwLowDateTime = ulongInteger.LowPart;
+            return returnFiletime;
         }
 
-        inline long long ctConvertFiletimeToHundredNs(const FILETIME& filetime) noexcept
+        inline long long ConvertFiletimeToHundredNs(const FILETIME& filetime) noexcept
         {
-            ULARGE_INTEGER ulong_integer;
-            ulong_integer.HighPart = filetime.dwHighDateTime;
-            ulong_integer.LowPart = filetime.dwLowDateTime;
+            ULARGE_INTEGER ulongInteger;
+            ulongInteger.HighPart = filetime.dwHighDateTime;
+            ulongInteger.LowPart = filetime.dwLowDateTime;
 
-            return ulong_integer.QuadPart;
+            return ulongInteger.QuadPart;
         }
 
-        inline FILETIME ctConvertMillisToAbsoluteFiletime(long long milliseconds) noexcept
+        inline FILETIME ConvertMillisToAbsoluteFiletime(long long milliseconds) noexcept
         {
-            return ctConvertHundredNsToAbsoluteFiletime(ctConvertMillisToHundredNs(milliseconds));
+            return ConvertHundredNsToAbsoluteFiletime(ConvertMillisToHundredNs(milliseconds));
         }
 
         // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
         // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
-        inline FILETIME ctConvertMillisToRelativeFiletime(long long milliseconds) noexcept
+        inline FILETIME ConvertMillisToRelativeFiletime(long long milliseconds) noexcept
         {
-            return ctConvertHundredNsToRelativeFiletime(ctConvertMillisToHundredNs(milliseconds));
+            return ConvertHundredNsToRelativeFiletime(ConvertMillisToHundredNs(milliseconds));
         }
 
-        inline long long ctConvertFiletimeToMillis(const FILETIME& filetime) noexcept
+        inline long long ConvertFiletimeToMillis(const FILETIME& filetime) noexcept
         {
-            ULARGE_INTEGER ulong_integer;
-            ulong_integer.HighPart = filetime.dwHighDateTime;
-            ulong_integer.LowPart = filetime.dwLowDateTime;
+            ULARGE_INTEGER ulongInteger;
+            ulongInteger.HighPart = filetime.dwHighDateTime;
+            ulongInteger.LowPart = filetime.dwLowDateTime;
 
-            return ctConvertHundredNsToMillis(ulong_integer.QuadPart);
+            return ConvertHundredNsToMillis(ulongInteger.QuadPart);
         }
 
         namespace Details
@@ -102,45 +103,48 @@ namespace ctl
             /// - hiding within an unnamed namesapce
             ///
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            static INIT_ONCE g_QpfInitOnce = INIT_ONCE_STATIC_INIT;
-            static LARGE_INTEGER g_Qpf;
+            static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;
+            static LARGE_INTEGER g_qpf;
 
             static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
             {
-                QueryPerformanceFrequency(&g_Qpf);
+                QueryPerformanceFrequency(&g_qpf);
                 return TRUE;
             }
         }
 
-        inline long long ctSnapQpf() noexcept
+        inline long long SnapQpf() noexcept
         {
-            (void)InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
-            return Details::g_Qpf.QuadPart;
+            InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+            return Details::g_qpf.QuadPart;
         }
 
 #ifdef CTSTRAFFIC_UNIT_TESTS
-        inline long long ctSnapQpcInMillis() noexcept;
-#else
-        inline long long ctSnapQpcInMillis() noexcept
+        inline long long SnapQpcInMillis() noexcept
         {
-            (void)InitOnceExecuteOnce(&Details::g_QpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+            return 0;
+        }
+#else
+        inline long long SnapQpcInMillis() noexcept
+        {
+            InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
             LARGE_INTEGER qpc;
             QueryPerformanceCounter(&qpc);
             // multiplying by 1000 as (qpc / qpf) == seconds
-            return static_cast<long long>(qpc.QuadPart * 1000LL / Details::g_Qpf.QuadPart);
+            return static_cast<long long>(qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart);
         }
 #endif
 
-        inline FILETIME ctSnapQpcAsFiletime() noexcept
+        inline FILETIME SnapQpcAsFiletime() noexcept
         {
-            return ctConvertHundredNsToAbsoluteFiletime(ctSnapQpcInMillis());
+            return ConvertHundredNsToAbsoluteFiletime(SnapQpcInMillis());
         }
 
-        inline long long ctSnapSystemTimeInMillis() noexcept
+        inline long long SnapSystemTimeInMillis() noexcept
         {
             FILETIME filetime;
             GetSystemTimeAsFileTime(&filetime);
-            return ctConvertFiletimeToMillis(filetime);
+            return ConvertFiletimeToMillis(filetime);
         }
     } // namespace ctTimer
 } // namespace ctl

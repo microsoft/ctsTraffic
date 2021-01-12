@@ -22,39 +22,42 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
 
+#include "ctsConfig.h"
+
 namespace ctsTraffic
 {
     class ctsMediaStreamServerListeningSocket
     {
     private:
-        static const size_t RecvBufferSize = 1024;
+        static const size_t c_recvBufferSize = 1024;
 
-        std::shared_ptr<ctl::ctThreadIocp> threadIocp;
+        std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
 
-        mutable wil::critical_section listeningsocketLock;
-        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket listeningSocket;
+        mutable wil::critical_section m_listeningsocketLock{
+            ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket m_listeningSocket;
 
-        const ctl::ctSockaddr listeningAddr;
-        std::array<char, RecvBufferSize> recv_buffer{};
-        DWORD recvFlags{};
-        ctl::ctSockaddr remoteAddr;
-        int remoteAddrLen{};
-        bool priorFailureWasConectionReset = false;
+        const ctl::ctSockaddr m_listeningAddr;
+        std::array<char, c_recvBufferSize> m_recvBuffer{};
+        DWORD m_recvFlags{};
+        ctl::ctSockaddr m_remoteAddr;
+        int m_remoteAddrLen{};
+        bool m_priorFailureWasConectionReset = false;
 
-        void recv_completion(OVERLAPPED* _ov) noexcept;
+        void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
 
     public:
         ctsMediaStreamServerListeningSocket(
-            wil::unique_socket&& _listening_socket,
-            ctl::ctSockaddr _listening_addr);
+            wil::unique_socket&& listeningSocket,
+            ctl::ctSockaddr listeningAddr);
 
         ~ctsMediaStreamServerListeningSocket() noexcept;
 
-        SOCKET get_socket() const noexcept;
+        SOCKET GetSocket() const noexcept;
 
-        ctl::ctSockaddr get_address() const noexcept;
+        ctl::ctSockaddr GetListeningAddress() const noexcept;
 
-        void initiate_recv() noexcept;
+        void InitiateRecv() noexcept;
 
         // non-copyable
         ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;

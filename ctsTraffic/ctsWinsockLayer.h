@@ -30,28 +30,31 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
+    // ReSharper disable once CppInconsistentNaming
     struct wsIOResult
     {
-        int error_code = 0;
-        unsigned long bytes_transferred = 0;
+        int m_errorCode = 0;
+        unsigned long m_bytesTransferred = 0;
 
         wsIOResult() noexcept = default;
-        explicit wsIOResult(int _error) noexcept
+        explicit wsIOResult(int error) noexcept
         {
-            error_code = _error;
+            m_errorCode = error;
         }
     };
 
+    // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSARecvFrom(
-        const std::shared_ptr<ctsSocket>& _shared_socket,
-        const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) noexcept;
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
+    // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSASendTo(
-        const std::shared_ptr<ctsSocket>& _shared_socket,
-        const ctsIOTask& _task,
-        std::function<void(OVERLAPPED*)>&& _callback) noexcept;
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
     // Set LINGER options to force a RST when the socket is closed
-    wsIOResult ctsSetLingertoRSTSocket(SOCKET _socket) noexcept;
+    wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept;
 }

@@ -26,24 +26,24 @@ namespace ctl
     ///  long *
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    inline long long ctMemoryGuardRead(const long long* original_value) noexcept
+    inline long long ctMemoryGuardRead(const long long* value) noexcept
     {
-        return ::InterlockedCompareExchange64(const_cast<long long*>(original_value), 0LL, 0LL);
+        return ::InterlockedCompareExchange64(const_cast<long long*>(value), 0LL, 0LL);
     }
 
-    inline long ctMemoryGuardRead(const long* original_value) noexcept
+    inline long ctMemoryGuardRead(const long* value) noexcept
     {
-        return ::InterlockedCompareExchange(const_cast<long*>(original_value), 0LL, 0LL);
+        return ::InterlockedCompareExchange(const_cast<long*>(value), 0LL, 0LL);
     }
 
-    inline long long ctMemoryGuardRead(_In_ long long* original_value) noexcept
+    inline long long ctMemoryGuardRead(_In_ long long* value) noexcept
     {
-        return ::InterlockedCompareExchange64(original_value, 0LL, 0LL);
+        return ::InterlockedCompareExchange64(value, 0LL, 0LL);
     }
 
-    inline long ctMemoryGuardRead(_In_ long* original_value) noexcept
+    inline long ctMemoryGuardRead(_In_ long* value) noexcept
     {
-        return ::InterlockedCompareExchange(original_value, 0LL, 0LL);
+        return ::InterlockedCompareExchange(value, 0LL, 0LL);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -59,63 +59,63 @@ namespace ctl
     /// - *Decrement returns the *new* value
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    inline long long ctMemoryGuardWrite(_Inout_ long long* original_value, long long new_value) noexcept
+    inline long long ctMemoryGuardWrite(_Inout_ long long* value, long long newValue) noexcept
     {
-        return ::InterlockedExchange64(original_value, new_value);
+        return ::InterlockedExchange64(value, newValue);
     }
 
-    inline long ctMemoryGuardWrite(_Inout_ long* original_value, long new_value) noexcept
+    inline long ctMemoryGuardWrite(_Inout_ long* value, long newValue) noexcept
     {
-        return ::InterlockedExchange(original_value, new_value);
+        return ::InterlockedExchange(value, newValue);
     }
 
-    inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* original_value, long long new_value, long long if_equals) noexcept
+    inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* value, long long newValue, long long ifEquals) noexcept
     {
-        return ::InterlockedCompareExchange64(original_value, new_value, if_equals);
+        return ::InterlockedCompareExchange64(value, newValue, ifEquals);
     }
 
-    inline long ctMemoryGuardWriteConditionally(_Inout_ long* original_value, long new_value, long if_equals) noexcept
+    inline long ctMemoryGuardWriteConditionally(_Inout_ long* value, long newValue, long ifEquals) noexcept
     {
-        return ::InterlockedCompareExchange(original_value, new_value, if_equals);
+        return ::InterlockedCompareExchange(value, newValue, ifEquals);
     }
 
-    inline long long ctMemoryGuardAdd(_Inout_ long long* original_value, long long add_value) noexcept
+    inline long long ctMemoryGuardAdd(_Inout_ long long* value, long long addValue) noexcept
     {
-        return ::InterlockedExchangeAdd64(original_value, add_value);
+        return ::InterlockedExchangeAdd64(value, addValue);
     }
 
-    inline long ctMemoryGuardAdd(_Inout_ long* original_value, long add_value) noexcept
+    inline long ctMemoryGuardAdd(_Inout_ long* value, long addValue) noexcept
     {
-        return ::InterlockedExchangeAdd(original_value, add_value);
+        return ::InterlockedExchangeAdd(value, addValue);
     }
 
-    inline long long ctMemoryGuardSubtract(_Inout_ long long* original_value, long long subtract_value) noexcept
+    inline long long ctMemoryGuardSubtract(_Inout_ long long* value, long long subtractValue) noexcept
     {
-        return ::InterlockedExchangeAdd64(original_value, subtract_value * -1LL);
+        return ::InterlockedExchangeAdd64(value, subtractValue * -1LL);
     }
 
-    inline long ctMemoryGuardSubtract(_Inout_ long* original_value, long subtract_value) noexcept
+    inline long ctMemoryGuardSubtract(_Inout_ long* value, long subtractValue) noexcept
     {
-        return ::InterlockedExchangeAdd(original_value, subtract_value * -1L);
+        return ::InterlockedExchangeAdd(value, subtractValue * -1L);
     }
 
-    inline long long ctMemoryGuardIncrement(_Inout_ long long* original_value) noexcept
+    inline long long ctMemoryGuardIncrement(_Inout_ long long* value) noexcept
     {
-        return ::InterlockedIncrement64(original_value);
+        return ::InterlockedIncrement64(value);
     }
 
-    inline long ctMemoryGuardIncrement(_Inout_ long* original_value) noexcept
+    inline long ctMemoryGuardIncrement(_Inout_ long* value) noexcept
     {
-        return ::InterlockedIncrement(original_value);
+        return ::InterlockedIncrement(value);
     }
 
-    inline long long ctMemoryGuardDecrement(_Inout_ long long* original_value) noexcept
+    inline long long ctMemoryGuardDecrement(_Inout_ long long* value) noexcept
     {
-        return ::InterlockedDecrement64(original_value);
+        return ::InterlockedDecrement64(value);
     }
 
-    inline long ctMemoryGuardDecrement(_Inout_ long* original_value) noexcept
+    inline long ctMemoryGuardDecrement(_Inout_ long* value) noexcept
     {
-        return ::InterlockedDecrement(original_value);
+        return ::InterlockedDecrement(value);
     }
 } // namespace

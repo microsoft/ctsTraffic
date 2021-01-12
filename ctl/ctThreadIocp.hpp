@@ -11,6 +11,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
+// ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #pragma once
 
 // cpp headers
@@ -43,7 +45,7 @@ namespace ctl
     struct ctThreadIocpCallbackInfo
     {
         OVERLAPPED ov{};
-        PVOID _padding{}; // required padding before the std::function for the below C_ASSERT alignment/sizing to be correct
+        PVOID padding{}; // required padding before the std::function for the below static_assert alignment/sizing to be correct
         ctThreadIocpCallback_t callback;
 
         // ReSharper disable once CppPossiblyUninitializedMember
@@ -61,7 +63,7 @@ namespace ctl
     };
 
     // asserting at compile time, as we assume this when we reinterpret_cast in the callback
-    C_ASSERT(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) + sizeof(PVOID) + sizeof(ctThreadIocpCallback_t));
+    static_assert(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) + sizeof(PVOID) + sizeof(ctThreadIocpCallback_t));
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -186,10 +188,10 @@ namespace ctl
         // This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
         // - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
         //
-        void cancel_request(OVERLAPPED* _pov) const noexcept
+        void cancel_request(OVERLAPPED* pOverlapped) const noexcept
         {
             CancelThreadpoolIo(ptp_io);
-            const auto* const old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(_pov);
+            const auto* const old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(pOverlapped);
             delete old_request;
         }
 

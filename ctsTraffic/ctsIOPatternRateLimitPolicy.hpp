@@ -29,7 +29,7 @@ namespace ctsTraffic
     template <typename Protocol>
     struct ctsIOPatternRateLimitPolicy
     {
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong& _buffer_size) noexcept = delete;
+        void update_time_offset(ctsTask&, const ctsSignedLongLong& _buffer_size) noexcept = delete;
     };
 
 
@@ -41,7 +41,7 @@ namespace ctsTraffic
     {
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
-        void update_time_offset(ctsIOTask&, const ctsSignedLongLong&) const noexcept
+        void update_time_offset(ctsTask&, const ctsSignedLongLong&) const noexcept
         {
             // no-op
         }
@@ -63,28 +63,28 @@ namespace ctsTraffic
 
     public:
         ctsIOPatternRateLimitPolicy() noexcept
-            : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* ctsConfig::Settings->TcpBytesPerSecondPeriod / 1000LL),
-            QuantumPeriodMs(ctsConfig::Settings->TcpBytesPerSecondPeriod),
+            : BytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
+            QuantumPeriodMs(ctsConfig::g_configSettings->TcpBytesPerSecondPeriod),
             bytes_sent_this_quantum(0ULL),
-            quantum_start_time_ms(ctl::ctTimer::ctSnapQpcInMillis())
+            quantum_start_time_ms(ctl::ctTimer::SnapQpcInMillis())
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
                 static_cast<unsigned long long>(this->BytesSendingPerQuantum),
-                static_cast<unsigned long long>(this->QuantumPeriodMs))
+                static_cast<unsigned long long>(this->QuantumPeriodMs));
 #endif
         }
 
-        void update_time_offset(ctsIOTask& _task, const ctsUnsignedLongLong& _buffer_size) noexcept
+        void update_time_offset(ctsTask& _task, const ctsUnsignedLongLong& _buffer_size) noexcept
         {
-            if (_task.ioAction != IOTaskAction::Send)
+            if (_task.m_ioAction != ctsTaskAction::Send)
             {
                 return;
             }
 
-            _task.time_offset_milliseconds = 0LL;
-            const auto current_time_ms(ctl::ctTimer::ctSnapQpcInMillis());
+            _task.m_timeOffsetMilliseconds = 0LL;
+            const auto current_time_ms(ctl::ctTimer::SnapQpcInMillis());
 
             if (this->bytes_sent_this_quantum < this->BytesSendingPerQuantum)
             {
@@ -98,7 +98,7 @@ namespace ctsTraffic
                     else
                     {
                         // time is still in a prior quantum
-                        _task.time_offset_milliseconds = this->newQuantumStartTime() - current_time_ms;
+                        _task.m_timeOffsetMilliseconds = this->newQuantumStartTime() - current_time_ms;
                         this->bytes_sent_this_quantum += _buffer_size;
                     }
                 }
@@ -116,7 +116,7 @@ namespace ctsTraffic
 
                 if (current_time_ms < new_quantum_start_time_ms)
                 {
-                    _task.time_offset_milliseconds = new_quantum_start_time_ms - current_time_ms;
+                    _task.m_timeOffsetMilliseconds = new_quantum_start_time_ms - current_time_ms;
                     this->bytes_sent_this_quantum = _buffer_size;
                     this->quantum_start_time_ms = new_quantum_start_time_ms;
                 }
@@ -134,7 +134,7 @@ namespace ctsTraffic
                 L"\tbytes_sent_this_quantum: %llu\n",
                 current_time_ms,
                 static_cast<long long>(this->quantum_start_time_ms),
-                static_cast<long long>(this->bytes_sent_this_quantum))
+                static_cast<long long>(this->bytes_sent_this_quantum));
 #endif
         }
 

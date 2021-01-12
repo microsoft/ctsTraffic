@@ -91,20 +91,20 @@ namespace ctl
 
         [[nodiscard]] wil::unique_bstr get_path() const
         {
-            wil::unique_variant object_path_variant;
-            get(L"__RELPATH", object_path_variant.addressof());
+            wil::unique_variant objectPathVariant;
+            get(L"__RELPATH", objectPathVariant.addressof());
 
-            if (ctIsVariantEmptyOrNull(object_path_variant.addressof()))
+            if (IsVariantEmptyOrNull(objectPathVariant.addressof()))
             {
                 return nullptr;
             }
 
-            if (V_VT(&object_path_variant) != VT_BSTR)
+            if (V_VT(&objectPathVariant) != VT_BSTR)
             {
                 THROW_HR(E_INVALIDARG);
             }
 
-            return wil::make_bstr(V_BSTR(&object_path_variant));
+            return wil::make_bstr(V_BSTR(&objectPathVariant));
         }
 
         [[nodiscard]] ctWmiService get_service() const noexcept
@@ -115,19 +115,19 @@ namespace ctl
         // Retrieves the class name this ctWmiInstance is representing if any
         [[nodiscard]] wil::unique_bstr get_class_name() const
         {
-            wil::unique_variant class_variant;
-            get(L"__CLASS", class_variant.addressof());
+            wil::unique_variant classVariant;
+            get(L"__CLASS", classVariant.addressof());
 
-            if (ctIsVariantEmptyOrNull(class_variant.addressof()))
+            if (IsVariantEmptyOrNull(classVariant.addressof()))
             {
                 return nullptr;
             }
-            if (V_VT(&class_variant) != VT_BSTR)
+            if (V_VT(&classVariant) != VT_BSTR)
             {
                 THROW_HR(E_INVALIDARG);
             }
 
-            return wil::make_bstr(V_BSTR(&class_variant));
+            return wil::make_bstr(V_BSTR(&classVariant));
         }
 
         [[nodiscard]] wil::com_ptr<IWbemClassObject> get_instance_object() const noexcept
@@ -161,7 +161,7 @@ namespace ctl
         {
             VariantClear(value);
             get_property(propname, value);
-            return !ctIsVariantEmptyOrNull(value);
+            return !IsVariantEmptyOrNull(value);
         }
         void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
         {
@@ -187,12 +187,12 @@ namespace ctl
         //   WBEM_FLAG_CREATE_OR_UPDATE
         //   WBEM_FLAG_UPDATE_ONLY
         //   WBEM_FLAG_CREATE_ONLY
-        void write_class_object(const wil::com_ptr<IWbemContext>& context, const LONG wbem_flags = WBEM_FLAG_CREATE_OR_UPDATE)
+        void write_class_object(const wil::com_ptr<IWbemContext>& context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
             wil::com_ptr<IWbemCallResult> result;
             THROW_IF_FAILED(m_wbemServices->PutInstance(
                 m_instanceObject.get(),
-                wbem_flags | WBEM_FLAG_RETURN_IMMEDIATELY,
+                wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
                 const_cast<IWbemContext*>(context.get()),
                 result.addressof()));
             // wait for the call to complete
@@ -203,8 +203,8 @@ namespace ctl
 
         void write_class_object(LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
-            const wil::com_ptr<IWbemContext> null_context;
-            write_class_object(null_context, wbemFlags);
+            const wil::com_ptr<IWbemContext> nullContext;
+            write_class_object(nullContext, wbemFlags);
         }
 
         void delete_class_object()
@@ -249,12 +249,12 @@ namespace ctl
             THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
             // Instantiate a class object to iterate through each property
-            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
-            auto property_iter = property_object.property_begin();
+            const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
+            auto propertyItererator = propertyObject.property_begin();
 
             // write the property
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-            propertyclassObject.set(*property_iter, arg1);
+            propertyclassObject.set(*propertyItererator, arg1);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -279,14 +279,14 @@ namespace ctl
             THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
             // Instantiate a class object to iterate through each property
-            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
-            auto property_iter = property_object.property_begin();
+            const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
+            auto propertyItererator = propertyObject.property_begin();
 
             // write each property
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-            propertyclassObject.set(*property_iter, arg1);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg2);
+            propertyclassObject.set(*propertyItererator, arg1);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg2);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -311,16 +311,16 @@ namespace ctl
             THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
             // Instantiate a class object to iterate through each property
-            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
-            auto property_iter = property_object.property_begin();
+            const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
+            auto propertyItererator = propertyObject.property_begin();
 
             // write each property
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-            propertyclassObject.set(*property_iter, arg1);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg2);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg3);
+            propertyclassObject.set(*propertyItererator, arg1);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg2);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg3);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -345,18 +345,18 @@ namespace ctl
             THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
             // Instantiate a class object to iterate through each property
-            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
-            auto property_iter = property_object.property_begin();
+            const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
+            auto propertyItererator = propertyObject.property_begin();
 
             // write each property
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-            propertyclassObject.set(*property_iter, arg1);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg2);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg3);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg4);
+            propertyclassObject.set(*propertyItererator, arg1);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg2);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg3);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg4);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -381,20 +381,20 @@ namespace ctl
             THROW_IF_FAILED(inParamsDefinition->SpawnInstance(0, inParamsInstance.addressof()));
 
             // Instantiate a class object to iterate through each property
-            const ctWmiClassObject property_object(m_wbemServices, inParamsDefinition);
-            auto property_iter = property_object.property_begin();
+            const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
+            auto propertyItererator = propertyObject.property_begin();
 
             // write each property
             ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-            propertyclassObject.set(*property_iter, arg1);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg2);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg3);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg4);
-            ++property_iter;
-            propertyclassObject.set(*property_iter, arg5);
+            propertyclassObject.set(*propertyItererator, arg1);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg2);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg3);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg4);
+            ++propertyItererator;
+            propertyclassObject.set(*propertyItererator, arg5);
 
             // execute the method with the properties set
             return execute_method_impl(method, inParamsInstance.get());
@@ -435,7 +435,7 @@ namespace ctl
                 0));
         }
 
-        ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* inParams)
+        ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* pParams)
         {
             // exec the method semi-synchronously from this instance based off the __REPATH property
             wil::com_ptr<IWbemCallResult> result;
@@ -444,7 +444,7 @@ namespace ctl
                 wil::make_bstr(method).get(),
                 WBEM_FLAG_RETURN_IMMEDIATELY,
                 nullptr,
-                inParams,
+                pParams,
                 nullptr,
                 result.addressof()));
 

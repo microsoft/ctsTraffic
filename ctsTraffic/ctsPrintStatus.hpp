@@ -35,52 +35,52 @@ namespace ctsTraffic
     private:
         // expanded beyond 80 to handle very long IPv6 address strings
         // - buffer is expected to be protected by only a single caller at a time
-        static const unsigned long OutputBufferSize = 128;
+        static const unsigned long c_outputBufferSize = 128;
         // one more for the null terminator
-        wchar_t OutputBuffer[OutputBufferSize + 1]{};
+        wchar_t m_outputBuffer[c_outputBufferSize + 1]{};
 
-        void reset_buffer() noexcept
+        void ResetBuffer() noexcept
         {
             // fill the output buffer with spaces and null terminate
-            wmemset(OutputBuffer, L' ', OutputBufferSize);
-            OutputBuffer[OutputBufferSize] = L'\0';
+            wmemset(m_outputBuffer, L' ', c_outputBufferSize);
+            m_outputBuffer[c_outputBufferSize] = L'\0';
         }
 
     public:
         ctsStatusInformation() noexcept = default;
         virtual ~ctsStatusInformation() noexcept = default;
         // base class is movable
-        ctsStatusInformation(ctsStatusInformation&& _moved_from) noexcept
+        ctsStatusInformation(ctsStatusInformation&& movedFrom) noexcept
         {
-            wmemcpy_s(this->OutputBuffer, OutputBufferSize + 1, _moved_from.OutputBuffer, OutputBufferSize + 1);
-            _moved_from.reset_buffer();
+            wmemcpy_s(m_outputBuffer, c_outputBufferSize + 1, movedFrom.m_outputBuffer, c_outputBufferSize + 1);
+            movedFrom.ResetBuffer();
         }
         ctsStatusInformation(const ctsStatusInformation&) = delete;
         ctsStatusInformation& operator=(const ctsStatusInformation&) = delete;
         ctsStatusInformation& operator=(ctsStatusInformation&&) = delete;
 
-        PCWSTR print_legend(const ctsConfig::StatusFormatting& _format) noexcept
+        PCWSTR PrintLegend(const ctsConfig::StatusFormatting& format) noexcept
         {
-            return (ctsConfig::StatusFormatting::Csv == _format) ?
+            return ctsConfig::StatusFormatting::Csv == format ?
                 nullptr :
-                this->format_legend(_format);
+                FormatLegend(format);
         }
 
-        PCWSTR print_header(const ctsConfig::StatusFormatting& _format) noexcept
+        PCWSTR PrintHeader(const ctsConfig::StatusFormatting& format) noexcept
         {
-            return this->format_header(_format);
+            return FormatHeader(format);
         }
 
         //
         // Expects to be called in a loop
         // - returns nullptr if nothing left to print
         //
-        PCWSTR print_status(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept
+        PCWSTR PrintStatus(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept
         {
-            this->reset_buffer();
-            if (this->format_data(_format, _current_time, _clear_status) != PrintingStatus::NoPrint)
+            ResetBuffer();
+            if (FormatData(format, currentTime, clearStatus) != PrintingStatus::NoPrint)
             {
-                return OutputBuffer;
+                return m_outputBuffer;
             }
             return nullptr;
         }
@@ -89,142 +89,142 @@ namespace ctsTraffic
     protected:
 
         // derived classes are required to implement these three pure virtual function
-        virtual PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept = 0;
-        virtual PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept = 0;
-        virtual PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept = 0;
+        virtual PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept = 0;
+        virtual PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept = 0;
+        virtual PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept = 0;
 
-        void left_justify_output(unsigned long _left_justified_offset, unsigned long _max_length, PCWSTR _value) noexcept
+        void LeftJustifyOutput(unsigned long leftJustifiedOffset, unsigned long maxLength, PCWSTR value) noexcept
         {
             FAIL_FAST_IF_MSG(
-                0 == _left_justified_offset,
+                0 == leftJustifiedOffset,
                 "ctsStatusInformation was given a zero offset in left_justify_output : must be at least 1");
             FAIL_FAST_IF_MSG(
-                _left_justified_offset > OutputBufferSize,
+                leftJustifiedOffset > c_outputBufferSize,
                 "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-                OutputBufferSize, _left_justified_offset);
+                c_outputBufferSize, leftJustifiedOffset);
 
-            const size_t value_length = wcslen(_value);
+            const size_t valueLength = wcslen(value);
             FAIL_FAST_IF_MSG(
-                value_length > _max_length,
+                valueLength > maxLength,
                 "ctsStatusInformation was given a string longer than the max value given (%u) -- '%ws'",
-                _max_length, _value);
+                maxLength, value);
 
             wmemcpy_s(
-                OutputBuffer + _left_justified_offset - 1,
-                OutputBufferSize - _left_justified_offset - 1,
-                _value,
-                value_length);
+                m_outputBuffer + leftJustifiedOffset - 1,
+                c_outputBufferSize - leftJustifiedOffset - 1,
+                value,
+                valueLength);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, float _value) noexcept
+        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, float value) noexcept
         {
-            constexpr unsigned long CoversionBufferLength = 16;
-            wchar_t conversionBuffer[CoversionBufferLength]{};
+            constexpr unsigned long coversionBufferLength = 16;
+            wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
-                _right_justified_offset > OutputBufferSize,
+                rightJustifiedOffset > c_outputBufferSize,
                 "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-                OutputBufferSize, _right_justified_offset);
-            _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
+                c_outputBufferSize, rightJustifiedOffset);
+            _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
             FAIL_FAST_IF_MSG(
-                _max_length > CoversionBufferLength - 1, // minus one for the null terminator
+                maxLength > coversionBufferLength - 1, // minus one for the null terminator
                 "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-                CoversionBufferLength - 1, _max_length);
-            _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
+                coversionBufferLength - 1, maxLength);
+            _Analysis_assume_(maxLength <= coversionBufferLength - 1);
 
             const auto converted = _snwprintf_s(
                 conversionBuffer,
-                CoversionBufferLength,
+                coversionBufferLength,
                 L"%.3f",
-                _value);
+                value);
             FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
-                OutputBuffer + (_right_justified_offset - converted),
-                OutputBufferSize - (_right_justified_offset - converted),
+                m_outputBuffer + (rightJustifiedOffset - converted),
+                c_outputBufferSize - (rightJustifiedOffset - converted),
                 conversionBuffer,
                 converted);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, unsigned long _value) noexcept
+        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, unsigned long value) noexcept
         {
-            constexpr unsigned long CoversionBufferLength = 12;
-            wchar_t conversionBuffer[CoversionBufferLength]{};
+            constexpr unsigned long coversionBufferLength = 12;
+            wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
-                _right_justified_offset > OutputBufferSize,
+                rightJustifiedOffset > c_outputBufferSize,
                 "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-                OutputBufferSize, _right_justified_offset);
-            _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
+                c_outputBufferSize, rightJustifiedOffset);
+            _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
             FAIL_FAST_IF_MSG(
-                _max_length > CoversionBufferLength - 1, // minus one for the null terminator
+                maxLength > coversionBufferLength - 1, // minus one for the null terminator
                 "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-                CoversionBufferLength - 1, _max_length);
-            _Analysis_assume_(_max_length > CoversionBufferLength - 1);
+                coversionBufferLength - 1, maxLength);
+            _Analysis_assume_(maxLength > coversionBufferLength - 1);
 
             const int converted = _snwprintf_s(
                 conversionBuffer,
-                CoversionBufferLength,
+                coversionBufferLength,
                 L"%u",
-                _value);
+                value);
             FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
-                OutputBuffer + (_right_justified_offset - converted),
-                OutputBufferSize - (_right_justified_offset - converted),
+                m_outputBuffer + (rightJustifiedOffset - converted),
+                c_outputBufferSize - (rightJustifiedOffset - converted),
                 conversionBuffer,
                 converted);
         }
-        void right_justify_output(unsigned long _right_justified_offset, unsigned long _max_length, long long _value) noexcept
+        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, long long value) noexcept
         {
-            constexpr unsigned long CoversionBufferLength = 20;
-            wchar_t conversionBuffer[CoversionBufferLength]{};
+            constexpr unsigned long coversionBufferLength = 20;
+            wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
-                _value < 0LL,
+                value < 0LL,
                 "ctsStatusInformation output was given a negative value to print (or greater than MAXLONGLONG): %llx",
-                _value);
-            _Analysis_assume_(_value >= 0LL);
+                value);
+            _Analysis_assume_(value >= 0LL);
 
             FAIL_FAST_IF_MSG(
-                _right_justified_offset > OutputBufferSize,
+                rightJustifiedOffset > c_outputBufferSize,
                 "ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-                OutputBufferSize, _right_justified_offset);
-            _Analysis_assume_(_right_justified_offset <= OutputBufferSize);
+                c_outputBufferSize, rightJustifiedOffset);
+            _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
             FAIL_FAST_IF_MSG(
-                _max_length > CoversionBufferLength - 1, // minus one for the null terminator
+                maxLength > coversionBufferLength - 1, // minus one for the null terminator
                 "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-                CoversionBufferLength - 1, _max_length);
-            _Analysis_assume_(_max_length <= CoversionBufferLength - 1);
+                coversionBufferLength - 1, maxLength);
+            _Analysis_assume_(maxLength <= coversionBufferLength - 1);
 
             const int converted = _snwprintf_s(
                 conversionBuffer,
-                CoversionBufferLength,
+                coversionBufferLength,
                 L"%lld",
-                _value);
+                value);
             FAIL_FAST_IF(-1 == converted);
             _Analysis_assume_(converted != -1);
 
             wmemcpy_s(
-                OutputBuffer + (_right_justified_offset - converted),
-                OutputBufferSize - (_right_justified_offset - converted),
+                m_outputBuffer + (rightJustifiedOffset - converted),
+                c_outputBufferSize - (rightJustifiedOffset - converted),
                 conversionBuffer,
                 converted);
         }
 
-        void terminate_string(unsigned long _offset) noexcept
+        void TerminateString(unsigned long offset) noexcept
         {
-            OutputBuffer[_offset] = L'\n';
-            OutputBuffer[_offset + 1] = L'\0';
+            m_outputBuffer[offset] = L'\n';
+            m_outputBuffer[offset + 1] = L'\0';
         }
-        void terminate_file_string(unsigned long _offset) noexcept
+        void TerminateFileString(unsigned long offset) noexcept
         {
-            OutputBuffer[_offset] = L'\r';
-            OutputBuffer[_offset + 1] = L'\n';
-            OutputBuffer[_offset + 2] = L'\0';
+            m_outputBuffer[offset] = L'\r';
+            m_outputBuffer[offset + 1] = L'\n';
+            m_outputBuffer[offset + 2] = L'\0';
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -232,96 +232,96 @@ namespace ctsTraffic
         /// Functions to write to the output buffer in CSV formatting
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, float _value, bool _add_comma = true) noexcept
+        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, float value, bool addComma = true) noexcept
         {
             const auto converted = _snwprintf_s(
-                OutputBuffer + _offset,
-                OutputBufferSize - _offset,
-                _add_comma ? _value_length + 1 : _value_length,
-                _add_comma ? L"%.3f," : L"%.3f",
-                _value);
+                m_outputBuffer + offset,
+                c_outputBufferSize - offset,
+                addComma ? valueLength + 1 : valueLength,
+                addComma ? L"%.3f," : L"%.3f",
+                value);
             FAIL_FAST_IF(-1 == converted);
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, unsigned long _value, bool _add_comma = true) noexcept
+        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, unsigned long value, bool addComma = true) noexcept
         {
             const errno_t error = _ui64tow_s(
-                _value,
-                OutputBuffer + _offset,
-                OutputBufferSize - _offset,
+                value,
+                m_outputBuffer + offset,
+                c_outputBufferSize - offset,
                 10);
             FAIL_FAST_IF_MSG(
                 error != 0,
-                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %u", this, _value);
+                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %u", this, value);
 
             // find how many characters were printed
             unsigned long converted = 0;
-            wchar_t* output_reference = OutputBuffer + _offset;
-            while (*output_reference != L'\0' && *output_reference != L' ')
+            wchar_t* outputReference = m_outputBuffer + offset;
+            while (*outputReference != L'\0' && *outputReference != L' ')
             {
                 ++converted;
-                ++output_reference;
+                ++outputReference;
             }
 
             FAIL_FAST_IF_MSG(
-                converted > (OutputBufferSize - _offset),
-                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
+                converted > c_outputBufferSize - offset,
+                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset, this);
             FAIL_FAST_IF_MSG(
-                converted > _value_length,
-                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
+                converted > valueLength,
+                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", valueLength, this);
 
-            if (_add_comma)
+            if (addComma)
             {
                 ++converted;
-                *output_reference = L',';
+                *outputReference = L',';
             }
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, long long _value, bool _add_comma = true) noexcept
+        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, long long value, bool addComma = true) noexcept
         {
             const errno_t error = _ui64tow_s(
-                _value,
-                OutputBuffer + _offset,
-                OutputBufferSize - _offset,
+                value,
+                m_outputBuffer + offset,
+                c_outputBufferSize - offset,
                 10);
             FAIL_FAST_IF_MSG(
                 error != 0,
-                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %lld", this, _value);
+                "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %lld", this, value);
 
             // find how many characters were printed
             unsigned long converted = 0;
-            wchar_t* output_reference = OutputBuffer + _offset;
-            while (*output_reference != L'\0' && *output_reference != L' ')
+            wchar_t* outputReference = m_outputBuffer + offset;
+            while (*outputReference != L'\0' && *outputReference != L' ')
             {
                 ++converted;
-                ++output_reference;
+                ++outputReference;
             }
 
             FAIL_FAST_IF_MSG(
-                converted > (OutputBufferSize - _offset),
-                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, _offset, this);
+                converted > c_outputBufferSize - offset,
+                "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset, this);
             FAIL_FAST_IF_MSG(
-                converted > _value_length,
-                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", _value_length, this);
+                converted > valueLength,
+                "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", valueLength, this);
 
-            if (_add_comma)
+            if (addComma)
             {
                 ++converted;
-                *output_reference = L',';
+                *outputReference = L',';
             }
             return converted;
         }
 
-        unsigned long append_csvoutput(unsigned long _offset, unsigned long _value_length, PCWSTR _value, bool _add_comma = true) noexcept
+        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, PCWSTR value, bool addComma = true) noexcept
         {
             const auto converted = _snwprintf_s(
-                OutputBuffer + _offset,
-                OutputBufferSize - _offset,
-                _add_comma ? _value_length + 1 : _value_length,
-                _add_comma ? L"%ws," : L"%ws",
-                _value);
+                m_outputBuffer + offset,
+                c_outputBufferSize - offset,
+                addComma ? valueLength + 1 : valueLength,
+                addComma ? L"%ws," : L"%ws",
+                value);
             FAIL_FAST_IF(-1 == converted);
             return converted;
         }
@@ -352,9 +352,9 @@ namespace ctsTraffic
         //
         // Pure-Virtual functions required to be defined
         //
-        PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            if (ctsConfig::StatusFormatting::ConsoleOutput == format)
             {
                 return
                     L"Legend:\n"
@@ -382,16 +382,16 @@ namespace ctsTraffic
             }
         }
 
-        PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::Csv == _format)
+            if (ctsConfig::StatusFormatting::Csv == format)
             {
                 return
                     L"TimeSlice,Bits/Sec,Streams,Completed,Dropped,Repeated,Errors\r\n";
 
             }
 
-            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            if (ctsConfig::StatusFormatting::ConsoleOutput == format)
             {
                 // Formatted to fit on an 80-column command shell
                 return
@@ -405,54 +405,53 @@ namespace ctsTraffic
                 L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \r\n";
         }
 
-        PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept override
+        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept override
         {
-            const ctsUdpStatistics udp_data(ctsConfig::Settings->UdpStatusDetails.snap_view(_clear_status));
-            const ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
+            const ctsUdpStatistics udpData(ctsConfig::g_configSettings->UdpStatusDetails.SnapView(clearStatus));
+            const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
 
-            if (ctsConfig::StatusFormatting::Csv == _format)
+            if (ctsConfig::StatusFormatting::Csv == format)
             {
-                unsigned long characters_written = 0;
+                unsigned long charactersWritten = 0;
                 // converting milliseconds to seconds before printing
-                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
+                charactersWritten += AppendCsvOutput(charactersWritten, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
-                characters_written += this->append_csvoutput(
-                    characters_written,
-                    BitsPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(udp_data.bits_received.get() * 1000LL / time_elapsed) : 0LL);
+                const long long timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+                charactersWritten += AppendCsvOutput(
+                    charactersWritten,
+                    c_bitsPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed) : 0LL);
 
-                characters_written += this->append_csvoutput(characters_written, CurrentStreamsLength, connection_data.active_connection_count.get());
-                characters_written += this->append_csvoutput(characters_written, CompetedFramesLength, udp_data.successful_frames.get());
-                characters_written += this->append_csvoutput(characters_written, DroppedFramesLength, udp_data.dropped_frames.get());
-                characters_written += this->append_csvoutput(characters_written, DuplicatedFramesLength, udp_data.duplicate_frames.get());
-                characters_written += this->append_csvoutput(characters_written, ErrorFramesLength, udp_data.error_frames.get(), false); // no comma at the end
-                this->terminate_file_string(characters_written);
-
+                charactersWritten += AppendCsvOutput(charactersWritten, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_droppedFramesLength, udpData.m_droppedFrames.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_errorFramesLength, udpData.m_errorFrames.GetValue(), false); // no comma at the end
+                TerminateFileString(charactersWritten);
             }
             else
             {
                 // converting milliseconds to seconds before printing
-                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
+                RightJustifyOutput(c_timeSliceOffset, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                const long long time_elapsed = udp_data.end_time.get() - udp_data.start_time.get();
-                this->right_justify_output(
-                    BitsPerSecondOffset,
-                    BitsPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(udp_data.bits_received.get() * 1000LL / time_elapsed) : 0LL);
+                const long long timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+                RightJustifyOutput(
+                    c_bitsPerSecondOffset,
+                    c_bitsPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed) : 0LL);
 
-                this->right_justify_output(CurrentStreamsOffset, CurrentStreamsLength, connection_data.active_connection_count.get());
-                this->right_justify_output(CompetedFramesOffset, CompetedFramesLength, udp_data.successful_frames.get());
-                this->right_justify_output(DroppedFramesOffset, DroppedFramesLength, udp_data.dropped_frames.get());
-                this->right_justify_output(DuplicatedFramesOffset, DuplicatedFramesLength, udp_data.duplicate_frames.get());
-                this->right_justify_output(ErrorFramesOffset, ErrorFramesLength, udp_data.error_frames.get());
-                if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+                RightJustifyOutput(c_currentStreamsOffset, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
+                RightJustifyOutput(c_competedFramesOffset, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
+                RightJustifyOutput(c_droppedFramesOffset, c_droppedFramesLength, udpData.m_droppedFrames.GetValue());
+                RightJustifyOutput(c_duplicatedFramesOffset, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValue());
+                RightJustifyOutput(c_errorFramesOffset, c_errorFramesLength, udpData.m_errorFrames.GetValue());
+                if (format == ctsConfig::StatusFormatting::ConsoleOutput)
                 {
-                    this->terminate_string(ErrorFramesOffset);
+                    TerminateString(c_errorFramesOffset);
                 }
                 else
                 {
-                    this->terminate_file_string(ErrorFramesOffset);
+                    TerminateFileString(c_errorFramesOffset);
                 }
             }
             return PrintingStatus::PrintComplete;
@@ -461,26 +460,26 @@ namespace ctsTraffic
 
     private:
         // constant offsets for each numeric value to print
-        static const unsigned long TimeSliceOffset = 10;
-        static const unsigned long TimeSliceLength = 10;
+        static const unsigned long c_timeSliceOffset = 10;
+        static const unsigned long c_timeSliceLength = 10;
 
-        static const unsigned long BitsPerSecondOffset = 25;
-        static const unsigned long BitsPerSecondLength = 12;
+        static const unsigned long c_bitsPerSecondOffset = 25;
+        static const unsigned long c_bitsPerSecondLength = 12;
 
-        static const unsigned long CurrentStreamsOffset = 36;
-        static const unsigned long CurrentStreamsLength = 8;
+        static const unsigned long c_currentStreamsOffset = 36;
+        static const unsigned long c_currentStreamsLength = 8;
 
-        static const unsigned long CompetedFramesOffset = 48;
-        static const unsigned long CompetedFramesLength = 9;
+        static const unsigned long c_competedFramesOffset = 48;
+        static const unsigned long c_competedFramesLength = 9;
 
-        static const unsigned long DroppedFramesOffset = 58;
-        static const unsigned long DroppedFramesLength = 7;
+        static const unsigned long c_droppedFramesOffset = 58;
+        static const unsigned long c_droppedFramesLength = 7;
 
-        static const unsigned long DuplicatedFramesOffset = 69;
-        static const unsigned long DuplicatedFramesLength = 7;
+        static const unsigned long c_duplicatedFramesOffset = 69;
+        static const unsigned long c_duplicatedFramesLength = 7;
 
-        static const unsigned long ErrorFramesOffset = 79;
-        static const unsigned long ErrorFramesLength = 7;
+        static const unsigned long c_errorFramesOffset = 79;
+        static const unsigned long c_errorFramesLength = 7;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -501,73 +500,72 @@ namespace ctsTraffic
         ctsTcpStatusInformation(ctsTcpStatusInformation&&) = delete;
         ctsTcpStatusInformation& operator=(ctsTcpStatusInformation&&) = delete;
 
-        PrintingStatus format_data(const ctsConfig::StatusFormatting& _format, long long _current_time, bool _clear_status) noexcept override
+        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept override
         {
-            const ctsTcpStatistics tcp_data(ctsConfig::Settings->TcpStatusDetails.snap_view(_clear_status));
-            const ctsConnectionStatistics connection_data(ctsConfig::Settings->ConnectionStatusDetails.snap_view(_clear_status));
+            const ctsTcpStatistics tcpData(ctsConfig::g_configSettings->TcpStatusDetails.SnapView(clearStatus));
+            const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
 
-            const long long time_elapsed = tcp_data.end_time.get() - tcp_data.start_time.get();
+            const long long timeElapsed = tcpData.m_endTime.GetValue() - tcpData.m_startTime.GetValue();
 
-            if (_format == ctsConfig::StatusFormatting::Csv)
+            if (format == ctsConfig::StatusFormatting::Csv)
             {
-                unsigned long characters_written = 0;
+                unsigned long charactersWritten = 0;
                 // converting milliseconds to seconds before printing
-                characters_written += this->append_csvoutput(characters_written, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
+                charactersWritten += AppendCsvOutput(charactersWritten, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
 
                 // calculating # of bytes that were sent between the previous format() and current call to format()
-                characters_written += this->append_csvoutput(
-                    characters_written,
-                    SendBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
+                charactersWritten += AppendCsvOutput(
+                    charactersWritten,
+                    c_sendBytesPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed) : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                characters_written += this->append_csvoutput(
-                    characters_written,
-                    RecvBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
+                charactersWritten += AppendCsvOutput(
+                    charactersWritten,
+                    c_recvBytesPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed) : 0LL);
 
-                characters_written += this->append_csvoutput(characters_written, CurrentTransactionsLength, connection_data.active_connection_count.get());
-                characters_written += this->append_csvoutput(characters_written, CompletedTransactionsLength, connection_data.successful_completion_count.get());
-                characters_written += this->append_csvoutput(characters_written, ConnectionErrorsLength, connection_data.connection_error_count.get());
-                characters_written += this->append_csvoutput(characters_written, ProtocolErrorsLength, connection_data.protocol_error_count.get(), false); // no comma at the end
-                this->terminate_file_string(characters_written);
-
+                charactersWritten += AppendCsvOutput(charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValue());
+                charactersWritten += AppendCsvOutput(charactersWritten, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValue(), false); // no comma at the end
+                TerminateFileString(charactersWritten);
             }
             else
             {
                 // converting milliseconds to seconds before printing
-                this->right_justify_output(TimeSliceOffset, TimeSliceLength, static_cast<float>(_current_time) / 1000.0f);
+                RightJustifyOutput(c_timeSliceOffset, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
 
                 // calculating # of bytes that were sent between the previous format() and current call to format()
-                this->right_justify_output(
-                    SendBytesPerSecondOffset,
-                    SendBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_sent.get() * 1000LL / time_elapsed) : 0LL);
+                RightJustifyOutput(
+                    c_sendBytesPerSecondOffset,
+                    c_sendBytesPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed) : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                this->right_justify_output(
-                    RecvBytesPerSecondOffset,
-                    RecvBytesPerSecondLength,
-                    (time_elapsed > 0LL) ? static_cast<long long>(tcp_data.bytes_recv.get() * 1000LL / time_elapsed) : 0LL);
+                RightJustifyOutput(
+                    c_recvBytesPerSecondOffset,
+                    c_recvBytesPerSecondLength,
+                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed) : 0LL);
 
-                this->right_justify_output(CurrentTransactionsOffset, CurrentTransactionsLength, connection_data.active_connection_count.get());
-                this->right_justify_output(CompletedTransactionsOffset, CompletedTransactionsLength, connection_data.successful_completion_count.get());
-                this->right_justify_output(ConnectionErrorsOffset, ConnectionErrorsLength, connection_data.connection_error_count.get());
-                this->right_justify_output(ProtocolErrorsOffset, ProtocolErrorsLength, connection_data.protocol_error_count.get());
-                if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+                RightJustifyOutput(c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
+                RightJustifyOutput(c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());
+                RightJustifyOutput(c_connectionErrorsOffset, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValue());
+                RightJustifyOutput(c_protocolErrorsOffset, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValue());
+                if (format == ctsConfig::StatusFormatting::ConsoleOutput)
                 {
-                    this->terminate_string(ProtocolErrorsOffset);
+                    TerminateString(c_protocolErrorsOffset);
                 }
                 else
                 {
-                    this->terminate_file_string(ProtocolErrorsOffset);
+                    TerminateFileString(c_protocolErrorsOffset);
                 }
             }
 
             return PrintingStatus::PrintComplete;
         }
 
-        PCWSTR format_legend(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept override
         {
-            if (ctsConfig::StatusFormatting::ConsoleOutput == _format)
+            if (ctsConfig::StatusFormatting::ConsoleOutput == format)
             {
                 return
                     L"Legend:\n"
@@ -593,15 +591,15 @@ namespace ctsTraffic
             }
         }
 
-        PCWSTR format_header(const ctsConfig::StatusFormatting& _format) noexcept override
+        PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept override
         {
-            if (_format == ctsConfig::StatusFormatting::Csv)
+            if (format == ctsConfig::StatusFormatting::Csv)
             {
                 return
                     L"TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError\r\n";
 
             }
-            if (_format == ctsConfig::StatusFormatting::ConsoleOutput)
+            if (format == ctsConfig::StatusFormatting::ConsoleOutput)
             {
                 return
                     L" TimeSlice      SendBps      RecvBps  In-Flight  Completed  NetError  DataError \n";
@@ -614,34 +612,34 @@ namespace ctsTraffic
 
     private:
         // constant offsets for each numeric value to print
-        static const unsigned long TimeSliceOffset = 10;
-        static const unsigned long TimeSliceLength = 10;
+        static const unsigned long c_timeSliceOffset = 10;
+        static const unsigned long c_timeSliceLength = 10;
 
-        static const unsigned long SendBytesPerSecondOffset = 23;
-        static const unsigned long SendBytesPerSecondLength = 11;
+        static const unsigned long c_sendBytesPerSecondOffset = 23;
+        static const unsigned long c_sendBytesPerSecondLength = 11;
 
-        static const unsigned long RecvBytesPerSecondOffset = 36;
-        static const unsigned long RecvBytesPerSecondLength = 11;
+        static const unsigned long c_recvBytesPerSecondOffset = 36;
+        static const unsigned long c_recvBytesPerSecondLength = 11;
 
-        static const unsigned long CurrentTransactionsOffset = 47;
-        static const unsigned long CurrentTransactionsLength = 7;
+        static const unsigned long c_currentTransactionsOffset = 47;
+        static const unsigned long c_currentTransactionsLength = 7;
 
-        static const unsigned long CompletedTransactionsOffset = 58;
-        static const unsigned long CompletedTransactionsLength = 7;
+        static const unsigned long c_completedTransactionsOffset = 58;
+        static const unsigned long c_completedTransactionsLength = 7;
 
-        static const unsigned long ConnectionErrorsOffset = 68;
-        static const unsigned long ConnectionErrorsLength = 7;
+        static const unsigned long c_connectionErrorsOffset = 68;
+        static const unsigned long c_connectionErrorsLength = 7;
 
-        static const unsigned long ProtocolErrorsOffset = 79;
-        static const unsigned long ProtocolErrorsLength = 7;
+        static const unsigned long c_protocolErrorsOffset = 79;
+        static const unsigned long c_protocolErrorsLength = 7;
 
-        static const unsigned long DetailedSentOffset = 23;
-        static const unsigned long DetailedSentLength = 10;
+        static const unsigned long c_detailedSentOffset = 23;
+        static const unsigned long c_detailedSentLength = 10;
 
-        static const unsigned long DetailedRecvOffset = 35;
-        static const unsigned long DetailedRecvLength = 10;
+        static const unsigned long c_detailedRecvOffset = 35;
+        static const unsigned long c_detailedRecvLength = 10;
 
-        static const unsigned long DetailedAddressOffset = 39;
-        static const unsigned long DetailedAddressLength = 46;
+        static const unsigned long c_detailedAddressOffset = 39;
+        static const unsigned long c_detailedAddressLength = 46;
     };
 } // namespace

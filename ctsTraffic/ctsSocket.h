@@ -53,15 +53,15 @@ namespace ctsTraffic
             SocketReference& operator=(const SocketReference&) = delete;
             ~SocketReference() = default;
 
-            [[nodiscard]] SOCKET socket() const noexcept
+            [[nodiscard]] SOCKET Get() const noexcept
             {
                 return m_socket;
             }
 
         private:
             friend class ctsSocket;
-            SocketReference(wil::cs_leave_scope_exit&& socket_lock, SOCKET socket) noexcept :
-                m_csExit(std::move(socket_lock)), m_socket(socket)
+            SocketReference(wil::cs_leave_scope_exit&& socketLock, SOCKET socket) noexcept :
+                m_csExit(std::move(socketLock)), m_socket(socket)
             {
             }
 
@@ -69,17 +69,17 @@ namespace ctsTraffic
             const SOCKET m_socket = INVALID_SOCKET;
         };
 
-        [[nodiscard]] SocketReference socket_reference() const noexcept
+        [[nodiscard]] SocketReference AcquireSocketLock() const noexcept
         {
-            auto lock = socket_cs.lock();
-            const SOCKET locked_socket_value = socket.get();
-            return SocketReference(std::move(lock), locked_socket_value);
+            auto lock = m_socketCs.lock();
+            const SOCKET lockedSocketValue = m_socket.get();
+            return SocketReference(std::move(lock), lockedSocketValue);
         }
 
         //
         // c'tor requiring a parent ctsSocket reference
         //
-        explicit ctsSocket(std::weak_ptr<ctsSocketState> _parent) noexcept;
+        explicit ctsSocket(std::weak_ptr<ctsSocketState> parent) noexcept;
 
         _No_competing_thread_ ~ctsSocket() noexcept;
 
@@ -93,7 +93,7 @@ namespace ctsTraffic
         //
         // A no-fail operation
         //
-        void set_socket(SOCKET _socket) noexcept;
+        void SetSocket(SOCKET socket) noexcept;
 
         //
         // Safely closes the encapsulated socket 
@@ -104,7 +104,7 @@ namespace ctsTraffic
         //
         // It's made available for injectors who may want to close the SOCKET at random times
         // 
-        int close_socket(int _error_code = NO_ERROR) noexcept;
+        int CloseSocket(int errorCode = NO_ERROR) noexcept;
 
         //
         // Provides access to the IOCP ThreadPool associated with the SOCKET
@@ -113,45 +113,45 @@ namespace ctsTraffic
         // This can fail under low-resource conditions
         // - can throw std::bad_alloc or wil::ResultException
         //
-        const std::shared_ptr<ctl::ctThreadIocp>& thread_pool();
+        const std::shared_ptr<ctl::ctThreadIocp>& GetIocpThreadpool();
 
         //
         // Callers are expected to call this when their 'stage' is complete for this SOCKET
         // The only successful DWORD value is NO_ERROR (0)
         // Any other DWORD indicates error
         //
-        void complete_state(DWORD _error_code) noexcept;
+        void CompleteState(DWORD errorCode) noexcept;
 
         //
         // Gets/Sets the local address of the SOCKET
         //
-        const ctl::ctSockaddr& local_address() const noexcept;
-        void set_local_address(const ctl::ctSockaddr& _local) noexcept;
+        const ctl::ctSockaddr& GetLocalSockaddr() const noexcept;
+        void SetLocalSockaddr(const ctl::ctSockaddr& local) noexcept;
 
         //
         // Gets/Sets the target address of the SOCKET, if there is one
         //
-        const ctl::ctSockaddr& target_address() const noexcept;
-        void set_target_address(const ctl::ctSockaddr& _target) noexcept;
+        const ctl::ctSockaddr& GetRemoteSockaddr() const noexcept;
+        void SetRemoteSockaddr(const ctl::ctSockaddr& target) noexcept;
 
         //
         // Get/Set the ctsIOPattern
         //
-        std::shared_ptr<ctsIOPattern> io_pattern() const noexcept;
-        void set_io_pattern(const std::shared_ptr<ctsIOPattern>& _pattern) noexcept;
+        ctsIoPattern::LockedIoPattern LockIoPattern() const noexcept;
+        void SetIoPattern(const std::shared_ptr<ctsIoPattern>& pattern) noexcept;
 
         //
         // methods for functors to use for refcounting the # of IO they have issued on this socket
         //
-        long increment_io() noexcept;
-        long decrement_io() noexcept;
-        long pended_io() noexcept;
+        long IncrementIo() noexcept;
+        long DecrementIo() noexcept;
+        long GetPendedIoCount() noexcept;
 
         //
         // method for the parent to instruct the ctsSocket to print the connection data
         // - which it is tracking, including the internal statistics
         //
-        void print_pattern_results(unsigned long _last_error) const noexcept;
+        void PrintPatternResults(unsigned long lastError) const noexcept;
 
         //
         // Function to register a task for completion at the future point in time referenced
@@ -160,7 +160,7 @@ namespace ctsTraffic
         // set_timer stores a weak_ptr to 'this' ctsSocket object
         // - so that the object lifetime is not maintained just from a scheduled work item
         //
-        void set_timer(const ctsIOTask& _task, std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)>&& _func);
+        void SetTimer(const ctsTask& task, std::function<void(std::weak_ptr<ctsSocket>, const ctsTask&)>&& func);
 
         // not copyable or movable
         ctsSocket(const ctsSocket&) = delete;
@@ -173,31 +173,31 @@ namespace ctsTraffic
         // ctsSocketState is given friend-access to call shutdown
         //
         friend class ctsSocketState;
-        void shutdown() noexcept;
+        void Shutdown() noexcept;
 
-        void initiate_isb_notification()  noexcept;
-        void process_isb_notification() noexcept;
+        void InitiateIsbNotification()  noexcept;
+        void ProcessIsbNotification() noexcept;
 
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
-        mutable wil::critical_section socket_cs;
-        _Guarded_by_(socket_cs) wil::unique_socket socket;
-        _Interlocked_ long io_count = 0L;
+        mutable wil::critical_section m_socketCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        _Guarded_by_(m_socketCs) wil::unique_socket m_socket;
+        _Interlocked_ long m_ioCount = 0L;
 
         // maintain a weak-reference to the parent and child
-        std::weak_ptr<ctsSocketState> parent;
+        std::weak_ptr<ctsSocketState> m_parent;
         // maintain a shared_ptr to the pattern
-        std::shared_ptr<ctsIOPattern> pattern;
+        std::shared_ptr<ctsIoPattern> m_pattern;
 
         /// only guarded when returning to the caller
-        std::shared_ptr<ctl::ctThreadIocp> tp_iocp;
-        wil::unique_threadpool_timer tp_timer;
-        ctsIOTask timer_task{};
-        std::function<void(std::weak_ptr<ctsSocket>, const ctsIOTask&)> timer_callback;
+        std::shared_ptr<ctl::ctThreadIocp> m_tpIocp;
+        wil::unique_threadpool_timer m_tpTimer;
+        ctsTask m_timerTask{};
+        std::function<void(std::weak_ptr<ctsSocket>, const ctsTask&)> m_timerCallback;
 
-        ctl::ctSockaddr local_sockaddr;
-        ctl::ctSockaddr target_sockaddr;
+        ctl::ctSockaddr m_localSockaddr;
+        ctl::ctSockaddr m_targetSockaddr;
 
         static void NTAPI ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER);
     };

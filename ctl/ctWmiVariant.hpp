@@ -29,21 +29,21 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // since WMI has limitations on what VARIANT types it accepts
 namespace ctl
 {
-    inline bool ctIsVariantEmptyOrNull(const VARIANT* variant) noexcept
+    inline bool IsVariantEmptyOrNull(const VARIANT* variant) noexcept
     {
         return V_VT(variant) == VT_EMPTY || V_VT(variant) == VT_NULL;
     }
 
     inline wil::unique_variant ctWmiMakeVariant(const bool value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_BOOL;
-        V_BOOL(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_BOOL;
+        V_BOOL(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, bool* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BOOL);
         *value = V_BOOL(variant);
         return true;
@@ -51,14 +51,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const char value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_UI1;
-        V_UI1(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_UI1;
+        V_UI1(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, char* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_UI1);
         *value = V_UI1(variant);
         return true;
@@ -66,14 +66,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_UI1;
-        V_UI1(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_UI1;
+        V_UI1(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned char* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_UI1);
         *value = V_UI1(variant);
         return true;
@@ -81,14 +81,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const short value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I2;
-        V_I2(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I2;
+        V_I2(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, short* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I2);
         *value = V_I2(variant);
         return true;
@@ -96,14 +96,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I2;
-        V_I2(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I2;
+        V_I2(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned short* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I2);
         *value = V_I2(variant);
         return true;
@@ -111,14 +111,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const long value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I4;
-        V_I4(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I4;
+        V_I4(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, long* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -126,14 +126,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I4;
-        V_I4(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I4;
+        V_I4(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned long* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -141,14 +141,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const int value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I4;
-        V_I4(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I4;
+        V_I4(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, int* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -156,14 +156,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_I4;
-        V_I4(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_I4;
+        V_I4(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned int* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -171,14 +171,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const float value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_R4;
-        V_R4(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_R4;
+        V_R4(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, float* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_R4);
         *value = V_R4(variant);
         return true;
@@ -186,14 +186,14 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const double value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_R8;
-        V_R8(local_variant.addressof()) = value;
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_R8;
+        V_R8(localVariant.addressof()) = value;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, double* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_R8);
         *value = V_R8(variant);
         return true;
@@ -201,16 +201,16 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
     {
-        wil::unique_variant local_variant;
+        wil::unique_variant localVariant;
         DOUBLE time{};
         THROW_HR_IF(E_INVALIDARG, !::SystemTimeToVariantTime(&value, &time));
-        V_VT(local_variant.addressof()) = VT_DATE;
-        V_DATE(local_variant.addressof()) = time;
-        return local_variant;
+        V_VT(localVariant.addressof()) = VT_DATE;
+        V_DATE(localVariant.addressof()) = time;
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, SYSTEMTIME* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_DATE);
         THROW_HR_IF(E_INVALIDARG, !::VariantTimeToSystemTime(V_DATE(variant), value));
         return true;
@@ -218,15 +218,15 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const BSTR value)  // NOLINT(misc-misplaced-const)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = SysAllocString(value);
-        THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_BSTR;
+        V_BSTR(localVariant.addressof()) = SysAllocString(value);
+        THROW_IF_NULL_ALLOC(V_BSTR(localVariant.addressof()));
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, BSTR* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = SysAllocString(V_BSTR(variant));
         THROW_IF_NULL_ALLOC(*value);
@@ -235,15 +235,15 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const PCWSTR value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = SysAllocString(value);
-        THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_BSTR;
+        V_BSTR(localVariant.addressof()) = SysAllocString(value);
+        THROW_IF_NULL_ALLOC(V_BSTR(localVariant.addressof()));
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::wstring* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         value->assign(V_BSTR(variant));
         return true;
@@ -252,15 +252,15 @@ namespace ctl
     // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
     inline wil::unique_variant ctWmiMakeVariant(const UINT64 value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
-        THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_BSTR;
+        V_BSTR(localVariant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
+        THROW_IF_NULL_ALLOC(V_BSTR(localVariant.addressof()));
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ UINT64* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = _wcstoui64(V_BSTR(variant), nullptr, 10);
         return true;
@@ -269,15 +269,15 @@ namespace ctl
     // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
     inline wil::unique_variant ctWmiMakeVariant(const INT64 value)
     {
-        wil::unique_variant local_variant;
-        V_VT(local_variant.addressof()) = VT_BSTR;
-        V_BSTR(local_variant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
-        THROW_IF_NULL_ALLOC(V_BSTR(local_variant.addressof()));
-        return local_variant;
+        wil::unique_variant localVariant;
+        V_VT(localVariant.addressof()) = VT_BSTR;
+        V_BSTR(localVariant.addressof()) = SysAllocString(std::to_wstring(value).c_str());
+        THROW_IF_NULL_ALLOC(V_BSTR(localVariant.addressof()));
+        return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ INT64* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = _wcstoi64(V_BSTR(variant), nullptr, 10);
         return true;
@@ -296,7 +296,7 @@ namespace ctl
     template <typename T>
     bool ctWmiReadFromVariant(const VARIANT* variant, wil::com_ptr<T>* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_UNKNOWN);
         THROW_IF_FAILED(V_UNKNOWN(variant)->QueryInterface(__uuidof(T), reinterpret_cast<void**>(value->put())));
         return true;
@@ -305,7 +305,7 @@ namespace ctl
     template <typename T>
     bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<wil::com_ptr<T>>* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UNKNOWN | VT_ARRAY));
 
         IUnknown** iUnknownArray;
@@ -325,9 +325,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<std::wstring>& data)
     {
-        auto* const temp_safe_array = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
-        THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
+        auto* const tempSafeArray = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
+        THROW_IF_NULL_ALLOC(tempSafeArray);
+        auto guardArray = wil::scope_exit([&]() noexcept {SafeArrayDestroy(tempSafeArray); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -337,20 +337,20 @@ namespace ctl
 
             auto* const bstr = SysAllocString(data[loop].c_str());
             THROW_IF_NULL_ALLOC(bstr);
-            THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, bstr));
+            THROW_IF_FAILED(::SafeArrayPutElement(tempSafeArray, index, bstr));
         }
 
         wil::unique_variant variant;
-        variant.parray = temp_safe_array;
+        variant.parray = tempSafeArray;
         variant.vt = VT_BSTR | VT_ARRAY;
 
         // don't free the SAFEARRAY on success - its lifetime is transferred to variant
-        guard_array.release();
+        guardArray.release();
         return variant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<std::wstring>* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_BSTR | VT_ARRAY));
 
         BSTR* stringArray{};
@@ -368,9 +368,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned long>& data)
     {
-        auto* const temp_safe_array = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
-        THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
+        auto* const tempSafeArray = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
+        THROW_IF_NULL_ALLOC(tempSafeArray);
+        auto guardArray = wil::scope_exit([&]() noexcept {SafeArrayDestroy(tempSafeArray); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -379,20 +379,20 @@ namespace ctl
             long index[1]{ static_cast<long>(loop) };
 
             unsigned long value = data[loop];
-            THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            THROW_IF_FAILED(::SafeArrayPutElement(tempSafeArray, index, &value));
         }
 
         wil::unique_variant variant;
-        variant.parray = temp_safe_array;
+        variant.parray = tempSafeArray;
         variant.vt = VT_UI4 | VT_ARRAY;
 
         // don't free the SAFEARRAY on success - its lifetime is transferred to variant
-        guard_array.release();
+        guardArray.release();
         return variant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned long>* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UI4 | VT_ARRAY));
 
         unsigned long* intArray{};
@@ -411,9 +411,9 @@ namespace ctl
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& data)
     {
         // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
-        auto* const temp_safe_array = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
-        THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
+        auto* const tempSafeArray = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
+        THROW_IF_NULL_ALLOC(tempSafeArray);
+        auto guardArray = wil::scope_exit([&]() noexcept {SafeArrayDestroy(tempSafeArray); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -423,21 +423,21 @@ namespace ctl
 
             // Expand unsigned short to long because the SAFEARRAY created assumes VT_I4 elements
             long value = data[loop];
-            THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            THROW_IF_FAILED(::SafeArrayPutElement(tempSafeArray, index, &value));
         }
 
         wil::unique_variant variant;
-        variant.parray = temp_safe_array;
+        variant.parray = tempSafeArray;
         variant.vt = VT_I4 | VT_ARRAY;
 
         // don't free the SAFEARRAY on success - its lifetime is transferred to variant
-        guard_array.release();
+        guardArray.release();
         return variant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned short>* value)
     {
         // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_I4 | VT_ARRAY));
 
         long* intArray{};
@@ -456,9 +456,9 @@ namespace ctl
 
     inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned char>& data)
     {
-        auto* const temp_safe_array = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
-        THROW_IF_NULL_ALLOC(temp_safe_array);
-        auto guard_array = wil::scope_exit([&]() noexcept {SafeArrayDestroy(temp_safe_array); });
+        auto* const tempSafeArray = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
+        THROW_IF_NULL_ALLOC(tempSafeArray);
+        auto guardArray = wil::scope_exit([&]() noexcept {SafeArrayDestroy(tempSafeArray); });
 
         for (size_t loop = 0; loop < data.size(); ++loop)
         {
@@ -467,20 +467,20 @@ namespace ctl
             long index[1]{ static_cast<long>(loop) };
 
             unsigned char value = data[loop];
-            THROW_IF_FAILED(::SafeArrayPutElement(temp_safe_array, index, &value));
+            THROW_IF_FAILED(::SafeArrayPutElement(tempSafeArray, index, &value));
         }
 
         wil::unique_variant variant;
-        variant.parray = temp_safe_array;
+        variant.parray = tempSafeArray;
         variant.vt = VT_UI1 | VT_ARRAY;
 
         // don't free the SAFEARRAY on success - its lifetime is transferred to variant
-        guard_array.release();
+        guardArray.release();
         return variant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned char>* value)
     {
-        if (ctIsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant)) return false;
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UI1 | VT_ARRAY));
 
         unsigned char* charArray{};

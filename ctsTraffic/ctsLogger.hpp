@@ -42,47 +42,47 @@ namespace ctsTraffic
     class ctsLogger
     {
     public:
-        explicit ctsLogger(ctsConfig::StatusFormatting _format) noexcept :
-            m_format(_format)
+        explicit ctsLogger(ctsConfig::StatusFormatting format) noexcept :
+            m_format(format)
         {
         }
         virtual ~ctsLogger() noexcept = default;
 
-        void LogLegend(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
+        void LogLegend(const std::shared_ptr<ctsStatusInformation>& status_info) noexcept
         {
-            const auto* const message = _status_info->print_legend(m_format);
+            const auto* const message = status_info->PrintLegend(m_format);
             if (message != nullptr)
             {
-                log_message_impl(message);
+                LogMessageImpl(message);
             }
         }
 
-        void LogHeader(const std::shared_ptr<ctsStatusInformation>& _status_info) noexcept
+        void LogHeader(const std::shared_ptr<ctsStatusInformation>& status_info) noexcept
         {
-            const auto* const message = _status_info->print_header(m_format);
+            const auto* const message = status_info->PrintHeader(m_format);
             if (message != nullptr)
             {
-                log_message_impl(message);
+                LogMessageImpl(message);
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsStatusInformation>& _status_info, long long _current_time, bool _clear_status) noexcept
+        void LogStatus(const std::shared_ptr<ctsStatusInformation>& status_info, long long current_time, bool clear_status) noexcept
         {
-            const auto* const message = _status_info->print_status(m_format, _current_time, _clear_status);
+            const auto* const message = status_info->PrintStatus(m_format, current_time, clear_status);
             if (message != nullptr)
             {
-                log_message_impl(message);
+                LogMessageImpl(message);
             }
         }
 
-        void LogMessage(_In_ PCWSTR _message) noexcept
+        void LogMessage(_In_ PCWSTR message) noexcept
         {
-            log_message_impl(_message);
+            LogMessageImpl(message);
         }
 
-        void LogError(_In_ PCWSTR _message) noexcept
+        void LogError(_In_ PCWSTR message) noexcept
         {
-            log_error_impl(_message);
+            LogErrorImpl(message);
         }
 
         [[nodiscard]] bool IsCsvFormat() const noexcept
@@ -100,46 +100,46 @@ namespace ctsTraffic
         ctsConfig::StatusFormatting m_format;
 
         /// pure virtual methods concrete classes must implement
-        virtual void log_message_impl(_In_ PCWSTR _message) noexcept = 0;
-        virtual void log_error_impl(_In_ PCWSTR _message) noexcept = 0;
+        virtual void LogMessageImpl(_In_ PCWSTR message) noexcept = 0;
+        virtual void LogErrorImpl(_In_ PCWSTR message) noexcept = 0;
     };
 
     class ctsTextLogger : public ctsLogger
     {
     public:
-        ctsTextLogger(_In_ PCWSTR _file_name, ctsConfig::StatusFormatting _format) :
-            ctsLogger(_format)
+        ctsTextLogger(_In_ PCWSTR file_name, ctsConfig::StatusFormatting format) :
+            ctsLogger(format)
         {
-            file_handle.reset(CreateFileW(
-                _file_name,
+            m_fileHandle.reset(CreateFileW(
+                file_name,
                 GENERIC_WRITE,
                 FILE_SHARE_READ, // allow others to read the file while we write to it
                 nullptr,
                 CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL,
                 nullptr));
-            THROW_LAST_ERROR_IF_NULL(file_handle.get());
+            THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
             // write the UTF16 Byte order mark
             constexpr WCHAR bom_utf16 = 0xFEFF;
             DWORD bytesWritten{};
             THROW_LAST_ERROR_IF(!WriteFile(
-                file_handle.get(),
+                m_fileHandle.get(),
                 &bom_utf16,
                 static_cast<DWORD>(sizeof WCHAR),
                 &bytesWritten,
                 nullptr));
         }
-        ~ctsTextLogger() noexcept = default;
+        ~ctsTextLogger() noexcept override = default;
 
-        void log_message_impl(_In_ PCWSTR _message) noexcept override
+        void LogMessageImpl(_In_ PCWSTR message) noexcept override
         {
-            write_impl(_message);
+            WriteImpl(message);
         }
 
-        void log_error_impl(_In_ PCWSTR _message) noexcept override
+        void LogErrorImpl(_In_ PCWSTR message) noexcept override
         {
-            write_impl(_message);
+            WriteImpl(message);
         }
 
         ctsTextLogger(const ctsTextLogger&) = delete;
@@ -148,17 +148,17 @@ namespace ctsTraffic
         ctsTextLogger& operator=(ctsTextLogger&&) = delete;
 
     private:
-        wil::critical_section file_cs;
-        wil::unique_hfile file_handle;
+        wil::critical_section m_fileLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        wil::unique_hfile m_fileHandle;
 
-        void write_impl(_In_ PCWSTR _message) noexcept
+        void WriteImpl(_In_ PCWSTR message) noexcept
         {
-            const auto lock = file_cs.lock();
+            const auto lock = m_fileLock.lock();
             DWORD bytesWritten{};
             THROW_LAST_ERROR_IF(!WriteFile(
-                file_handle.get(),
-                _message,
-                static_cast<DWORD>(wcslen(_message) * sizeof(WCHAR)),
+                m_fileHandle.get(),
+                message,
+                static_cast<DWORD>(wcslen(message) * sizeof(WCHAR)),
                 &bytesWritten,
                 nullptr));
         }

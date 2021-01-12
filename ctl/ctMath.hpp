@@ -27,7 +27,7 @@ namespace ctl
     ///   get<1> : the standard deviation
     ///
     template <typename BidirectionalIterator>
-    std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& begin, const BidirectionalIterator& end)
+    std::tuple<double, double> SampledStandardDeviation(const BidirectionalIterator& begin, const BidirectionalIterator& end)
     {
         const auto size = end - begin;
         if (size == 0)
@@ -44,16 +44,16 @@ namespace ctl
         }
 
         const double sum = std::accumulate(begin, end, 0.0);
-        const double mean = sum / size;
+        const double mean = sum / static_cast<double>(size);
         // ReSharper disable once CppUseAuto
         double accum = 0.0;
         for (auto iter = begin; iter != end; ++iter)
         {
             auto& value = *iter;
-            accum += (value - mean) * (value - mean);
+            accum += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
         }
 
-        const auto stdev = std::sqrt(static_cast<double>(accum / (size - 1.0)));
+        const auto stdev = std::sqrt(static_cast<double>(accum / (static_cast<double>(size) - 1.0)));
         return std::make_tuple(mean, stdev);
     }
 
@@ -90,69 +90,71 @@ namespace ctl
                 static_cast<double>(*(begin + 2)));
         }
 
-        const auto split_section = [](const BidirectionalIterator& split_begin, const BidirectionalIterator& split_end)
+        const auto splitSection = [](const BidirectionalIterator& splitBegin, const BidirectionalIterator& splitEnd)
             -> std::tuple<BidirectionalIterator, BidirectionalIterator> {
-            const size_t numeric_count = split_end - split_begin + 1; // this is the N + 1 value
+            const size_t numericCount = splitEnd - splitBegin + 1; // this is the N + 1 value
 
             // if begin and end are already right next to each other, immediately return the same values
-            if (numeric_count < 3)
+            if (numericCount < 3)
             {
-                return std::make_tuple(split_begin, split_end);
+                return std::make_tuple(splitBegin, splitEnd);
             }
 
-            const auto numeric_quotient = numeric_count / 2;
-            const auto numeric_remaineder = numeric_count % 2;
+            const auto numericQuotient = numericCount / 2;
+            const auto numericRemaineder = numericCount % 2;
 
             // choose the (N+1)/2 value
             // - if it lands on a value, the iterator before and after
             // - if it lands between 2 values, return those 2 values
             BidirectionalIterator lhs;
             BidirectionalIterator rhs;
-            if (numeric_remaineder == 0)
+            if (numericRemaineder == 0)
             {
                 // before and after the median
-                lhs = split_begin + numeric_quotient - 2;
-                rhs = split_begin + numeric_quotient;
+                lhs = splitBegin + numericQuotient - 2;
+                rhs = splitBegin + numericQuotient;
             }
             else
             {
                 // the 2 consecutive center iterators
-                lhs = split_begin + numeric_quotient - 1;
-                rhs = split_begin + numeric_quotient;
+                lhs = splitBegin + numericQuotient - 1;
+                rhs = splitBegin + numericQuotient;
             }
             return std::make_tuple(lhs, rhs);
         };
 
-        const auto find_median = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
+        const auto findMedian = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
             const BidirectionalIterator& lhs = std::get<0>(split);
             const BidirectionalIterator& rhs = std::get<1>(split);
             FAIL_FAST_IF_MSG(rhs < lhs, "ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
 
-            double median_value = 0.0;
+            double medianValue;
             switch (rhs - lhs)
             {
-                case 1: {
+                case 1:
+                {
                     // next to each other: take the average for the median
                     // must guard against overflow
-                    auto lhs_value = *lhs;
-                    auto rhs_value = *rhs;
-                    const double sum = static_cast<double>(lhs_value) + static_cast<double>(rhs_value);
-                    if (sum < lhs_value || sum < rhs_value)
+                    const double lhsValue{ static_cast<double>(*lhs) };
+                    const double rhsValue{ static_cast<double>(*rhs) };
+                    const double sum = lhsValue + rhsValue;
+                    if (sum < lhsValue || sum < rhsValue)
                     {
                         // overflow - divide first, then add
-                        median_value = static_cast<double>(lhs_value) / 2.0;
-                        median_value += static_cast<double>(rhs_value) / 2.0;
+                        medianValue = lhsValue / 2.0;
+                        medianValue += rhsValue / 2.0;
                     }
                     else
                     {
-                        median_value = static_cast<double>(sum) / 2.0;
+                        medianValue = sum / 2.0;
                     }
                     break;
                 }
 
-                case 2: {
+                case 2:
+                {
                     // two apart: the one in the middle is the median
-                    median_value = static_cast<double>(*(lhs + 1));
+                    medianValue = static_cast<double>(*(lhs + 1));
                     break;
                 }
 
@@ -160,21 +162,21 @@ namespace ctl
                     FAIL_FAST_MSG("ctInterquartileRange internal error - returned iterators more than two apart [%Iu]", rhs - lhs);
             }
 
-            return median_value;
+            return medianValue;
         };
 
-        const auto median_split = split_section(begin, end);
-        const double median = find_median(median_split);
+        const auto medianSplit = splitSection(begin, end);
+        const double median = findMedian(medianSplit);
 
-        const auto lhs_split = split_section(begin, std::get<0>(median_split) + 1);
-        const double lower_quartile = find_median(lhs_split);
+        const auto lhsSplit = splitSection(begin, std::get<0>(medianSplit) + 1);
+        const double lowerQuartile = findMedian(lhsSplit);
 
-        const auto rhs_split = split_section(std::get<1>(median_split), end);
-        const double higher_quartile = find_median(rhs_split);
+        const auto rhsSplit = splitSection(std::get<1>(medianSplit), end);
+        const double higherQuartile = findMedian(rhsSplit);
 
         return std::make_tuple(
-            lower_quartile,
+            lowerQuartile,
             median,
-            higher_quartile);
+            higherQuartile);
     }
 }

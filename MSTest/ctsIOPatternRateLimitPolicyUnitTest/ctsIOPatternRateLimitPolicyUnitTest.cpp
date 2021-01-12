@@ -19,7 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 
 #include <ctString.hpp>
-
+#include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
 #include "ctsIOPatternRateLimitPolicy.hpp"
 
@@ -51,7 +51,7 @@ namespace ctl::ctTimer
 
 namespace ctsTraffic::ctsConfig
 {
-    ctsConfigSettings* Settings;
+    ctsConfigSettings* g_configSettings;
 
     void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
     {
@@ -109,16 +109,16 @@ namespace ctsUnitTest
     public:
         TEST_CLASS_INITIALIZE(Setup)
         {
-            ctsConfig::Settings = new ctsConfig::ctsConfigSettings;
-            ctsConfig::Settings->Protocol = ctsConfig::ProtocolType::TCP;
-            ctsConfig::Settings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
 
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
         }
 
         TEST_CLASS_CLEANUP(Cleanup)
         {
-            delete ctsConfig::Settings;
+            delete ctsConfig::g_configSettings;
         }
 
         TEST_METHOD(SendingDontThrottlePolicy)
@@ -128,15 +128,15 @@ namespace ctsUnitTest
 
             const auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             NoTimer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime = 2LL;
             NoTimer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
         }
 
         TEST_METHOD(ReceivingDontThrottlePolicy)
@@ -146,15 +146,15 @@ namespace ctsUnitTest
 
             const auto NoTimer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitDontThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Recv;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Recv;
 
             NoTimer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime = 2LL;
             NoTimer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
         }
 
         TEST_METHOD(ReceivingThrottlingPolicy)
@@ -164,15 +164,15 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Recv;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Recv;
 
             test_timer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime = 2LL;
             test_timer->update_time_offset(test_task, 100);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
         }
 
 
@@ -181,7 +181,7 @@ namespace ctsUnitTest
         ///
         TEST_METHOD(ExactlyOneBufferPerInterval_RequestBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // one byte every 100ms
@@ -189,23 +189,23 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             long long time_offset = 0LL;
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 time_offset += 100LL;
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(time_offset, test_task.time_offset_milliseconds);
+                Assert::AreEqual(time_offset, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(MoreThanOneBufferPerInterval_RequestBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 100LL;
             // ten bytes every 100ms
@@ -213,8 +213,8 @@ namespace ctsUnitTest
             // should send 10 every 100ms
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             long long time_offset = 0LL;
             for (unsigned long counter = 0; counter < 200; ++counter)
@@ -228,12 +228,12 @@ namespace ctsUnitTest
                 }
 
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(time_offset, test_task.time_offset_milliseconds);
+                Assert::AreEqual(time_offset, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(LessThanOneBufferPerInterval_RequestBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // 100 bytes every 10 seconds
@@ -241,18 +241,18 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             long long time_offset = 0LL;
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 time_offset += 10000LL; // 10 seconds
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(time_offset, test_task.time_offset_milliseconds);
+                Assert::AreEqual(time_offset, test_task.m_timeOffsetMilliseconds);
             }
         }
 
@@ -261,7 +261,7 @@ namespace ctsUnitTest
         ///
         TEST_METHOD(ExactlyOneBufferPerInterval_RequestOnSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // one byte every 100ms
@@ -269,22 +269,22 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 s_QpcTime += 100LL;
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(MoreThanOneBufferPerInterval_RequestOnSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 100LL;
             // ten bytes every 100ms
@@ -292,8 +292,8 @@ namespace ctsUnitTest
             // should send 10 every 100ms
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
@@ -305,12 +305,12 @@ namespace ctsUnitTest
                     }
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(LessThanOneBufferPerInterval_RequestOnSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // 100 bytes every 10 seconds
@@ -318,8 +318,8 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
@@ -328,7 +328,7 @@ namespace ctsUnitTest
                     s_QpcTime += 10000LL; // 10 seconds
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
 
@@ -337,7 +337,7 @@ namespace ctsUnitTest
         ///
         TEST_METHOD(ExactlyOneBufferPerInterval_RequestOneQuantumAfterSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // one byte every 100ms
@@ -345,22 +345,22 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 s_QpcTime += 200LL;
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(MoreThanOneBufferPerInterval_RequestOneQuantumAfterSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 100LL;
             // ten bytes every 100ms
@@ -368,8 +368,8 @@ namespace ctsUnitTest
             // should send 10 every 100ms
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
@@ -381,12 +381,12 @@ namespace ctsUnitTest
                     }
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(LessThanOneBufferPerInterval_RequestOneQuantumAfterSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // 100 bytes every 10 seconds
@@ -394,8 +394,8 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
@@ -404,7 +404,7 @@ namespace ctsUnitTest
                     s_QpcTime += 11000; // 1 second after time expected
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
         }
 
@@ -413,7 +413,7 @@ namespace ctsUnitTest
         ///
         TEST_METHOD(ExactlyOneBufferPerInterval_RequestOneQuantumBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // one byte every 100ms
@@ -421,25 +421,25 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(100LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(100LL, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 s_QpcTime += 100LL;
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(100LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(100LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(MoreThanOneBufferPerInterval_RequestOneQuantumBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 100LL;
             // ten bytes every 100ms
@@ -447,8 +447,8 @@ namespace ctsUnitTest
             // should send 10 every 100ms
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             // fill the first 1 second (10 quantums)
             long long expected_time = 0LL;
@@ -462,7 +462,7 @@ namespace ctsUnitTest
                     }
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(expected_time, test_task.time_offset_milliseconds);
+                Assert::AreEqual(expected_time, test_task.m_timeOffsetMilliseconds);
             }
 
             for (unsigned long counter = 0; counter < 200; ++counter)
@@ -475,12 +475,12 @@ namespace ctsUnitTest
                     }
                 }
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(1000LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(1000LL, test_task.m_timeOffsetMilliseconds);
             }
         }
         TEST_METHOD(LessThanOneBufferPerInterval_RequestOneQuantumBeforeSchedule)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
             s_TcpBytesPerSecond = 10LL;
             // 100 bytes every 10 seconds
@@ -488,20 +488,20 @@ namespace ctsUnitTest
 
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(10000LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(10000LL, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
                 s_QpcTime += 10000LL;
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(10000LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(10000LL, test_task.m_timeOffsetMilliseconds);
             }
         }
 
@@ -509,7 +509,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(SendingOneEvenlySplitPerQuantum)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
 
             s_TcpBytesPerSecond = 10LL;
@@ -518,17 +518,17 @@ namespace ctsUnitTest
             // - should be evenly split 5 times per second (every 200ms)
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             const long long ExpectedTimeOffset = 199LL;
 
             s_QpcTime = 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
-            Assert::AreEqual(ExpectedTimeOffset, test_task.time_offset_milliseconds);
+            Assert::AreEqual(ExpectedTimeOffset, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 200; ++counter)
             {
@@ -537,13 +537,13 @@ namespace ctsUnitTest
                 //   and we will aways be 1ms passed the 200ms slot,
                 //   we should always require to wait 199ms
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(ExpectedTimeOffset, test_task.time_offset_milliseconds);
+                Assert::AreEqual(ExpectedTimeOffset, test_task.m_timeOffsetMilliseconds);
             }
         }
 
         TEST_METHOD(SendingManyEvenlySplitPerQuantum)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
 
             s_TcpBytesPerSecond = 100LL;
@@ -553,8 +553,8 @@ namespace ctsUnitTest
             // - followed by a time offset to the next 100ms offset
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             // expect the time offsets to look like:
             // send #1 : qpc_time 0 : time_offset 0 (sent 2 bytes)
@@ -568,7 +568,7 @@ namespace ctsUnitTest
                     L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                     s_QpcTime, TestBytes, 0LL).c_str());
                 test_timer->update_time_offset(test_task, TestBytes);
-                Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
                 // starting at zero, so increment afterwards in this loop
                 ++s_QpcTime;
             }
@@ -594,7 +594,7 @@ namespace ctsUnitTest
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 95LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
-                    Assert::AreEqual(95LL, test_task.time_offset_milliseconds);
+                    Assert::AreEqual(95LL, test_task.m_timeOffsetMilliseconds);
 
                 }
                 else if (counter % 5 == 1)
@@ -605,7 +605,7 @@ namespace ctsUnitTest
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 0LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
-                    Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
                 }
                 else
@@ -615,14 +615,14 @@ namespace ctsUnitTest
                         L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
                         s_QpcTime, TestBytes, 0LL).c_str());
                     test_timer->update_time_offset(test_task, TestBytes);
-                    Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
                 }
             }
         }
 
         TEST_METHOD(SendingSingleBufferPerQuantum)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
 
             s_TcpBytesPerSecond = 10LL;
@@ -631,23 +631,23 @@ namespace ctsUnitTest
             // - should be evenly split 5 times per second (every 200ms)
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
             s_QpcTime = 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime += 1LL;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(998LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(998LL, test_task.m_timeOffsetMilliseconds);
 
             for (unsigned long counter = 0; counter < 10; ++counter)
             {
@@ -656,14 +656,14 @@ namespace ctsUnitTest
                 Logger::WriteMessage(
                     wil::str_printf<std::wstring>(
                         L"QPC %lld  -  offset %lld\n",
-                        s_QpcTime, test_task.time_offset_milliseconds).c_str());
-                Assert::AreEqual(998LL, test_task.time_offset_milliseconds);
+                        s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+                Assert::AreEqual(998LL, test_task.m_timeOffsetMilliseconds);
             }
         }
 
         TEST_METHOD(SendingDoubleBufferPerQuantum)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
 
             s_TcpBytesPerSecond = 10LL;
@@ -672,8 +672,8 @@ namespace ctsUnitTest
             // - should be evenly split 5 times per second (every 200ms)
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             // first can be sent immediately
             s_QpcTime = 1LL;
@@ -681,8 +681,8 @@ namespace ctsUnitTest
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             // second can be sent at half second
             s_QpcTime = 2LL;
@@ -690,8 +690,8 @@ namespace ctsUnitTest
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(498LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(498LL, test_task.m_timeOffsetMilliseconds);
 
             // third must be sent at the next second
             s_QpcTime = 3LL;
@@ -699,21 +699,21 @@ namespace ctsUnitTest
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(997LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(997LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime = 1000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(500LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(500LL, test_task.m_timeOffsetMilliseconds);
         }
 
         TEST_METHOD(SendingTripleBufferPerQuantum)
         {
-            ctsConfig::Settings->TcpBytesPerSecondPeriod = 100LL;
+            ctsConfig::g_configSettings->TcpBytesPerSecondPeriod = 100LL;
             s_QpcTime = 0LL;
 
             s_TcpBytesPerSecond = 10LL;
@@ -722,54 +722,54 @@ namespace ctsUnitTest
             // - should be evenly split 5 times per second (every 200ms)
             auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
-            ctsIOTask test_task;
-            test_task.ioAction = IOTaskAction::Send;
+            ctsTask test_task;
+            test_task.m_ioAction = ctsTaskAction::Send;
 
             // first can be sent immediately
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
             // second can be sent at one-thrid second
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(300LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(300LL, test_task.m_timeOffsetMilliseconds);
 
             // third must be sent at two-thrids second
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(600LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(600LL, test_task.m_timeOffsetMilliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(900LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(900LL, test_task.m_timeOffsetMilliseconds);
 
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(1200LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(1200LL, test_task.m_timeOffsetMilliseconds);
 
             s_QpcTime = 1000;
             test_timer->update_time_offset(test_task, TestBytes);
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(500LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(500LL, test_task.m_timeOffsetMilliseconds);
             // for the time period 1500
 
             s_QpcTime = 2000;
@@ -777,8 +777,8 @@ namespace ctsUnitTest
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(0LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             // resets the quantum to time 2000
 
             s_QpcTime = 2000;
@@ -786,8 +786,8 @@ namespace ctsUnitTest
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(
                     L"QPC %lld  -  offset %lld\n",
-                    s_QpcTime, test_task.time_offset_milliseconds).c_str());
-            Assert::AreEqual(300LL, test_task.time_offset_milliseconds);
+                    s_QpcTime, test_task.m_timeOffsetMilliseconds).c_str());
+            Assert::AreEqual(300LL, test_task.m_timeOffsetMilliseconds);
             // still in the time period 2000 - next should be in 2300
         }
     };
