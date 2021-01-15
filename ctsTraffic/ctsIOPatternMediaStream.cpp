@@ -104,19 +104,14 @@ namespace ctsTraffic
 
     ctsIoPatternMediaStreamClient::~ctsIoPatternMediaStreamClient() noexcept
     {
-        auto lock = AcquireIoPatternLock();
-        // ReSharper disable once CppLocalVariableMayBeConst
-        PTP_TIMER originalTimer = m_rendererTimer;
-        m_rendererTimer = nullptr;
-        lock.reset();
         // stop both timers
         SetThreadpoolTimer(m_startTimer, nullptr, 0, 0);
         WaitForThreadpoolTimerCallbacks(m_startTimer, FALSE);
         CloseThreadpoolTimer(m_startTimer);
 
-        SetThreadpoolTimer(originalTimer, nullptr, 0, 0);
-        WaitForThreadpoolTimerCallbacks(originalTimer, FALSE);
-        CloseThreadpoolTimer(originalTimer);
+        SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
+        WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
+        CloseThreadpoolTimer(m_rendererTimer);
     }
 
     ctsTask ctsIoPatternMediaStreamClient::GetNextTaskFromPattern() noexcept

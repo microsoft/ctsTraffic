@@ -147,6 +147,11 @@ namespace ctsTraffic
         return s_IOStatus;
     }
 
+    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    {
+        return {};
+    }
+
     // test IO pattern for fakes for this test
     class ctsMediaStreamServerUnitTestIOPattern : public ctsIoPattern
     {
@@ -227,9 +232,9 @@ namespace ctsTraffic
         ::SetEvent(s_RemovedSocketEvent);
     }
 
-    ctsIoPattern::LockedIoPattern ctsSocket::LockIoPattern() const noexcept
+    ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
     {
-        return ctsIoPattern::LockedIoPattern(m_pattern);
+        return ctsSocket::SocketReference({}, m_socket.get(), m_pattern);
     }
 
     // one callout fake to ctsMediaStreamServerImpl
@@ -294,7 +299,7 @@ namespace ctsUnitTest
                 ++callback_invoked;
 
                 const auto socket_guard(test_socket->AcquireSocketLock());
-                const SOCKET cts_socket = socket_guard.Get();
+                const SOCKET cts_socket = socket_guard.GetSocket();
                 const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
@@ -340,7 +345,7 @@ namespace ctsUnitTest
                 ++callback_invoked;
 
                 const auto socket_guard(test_socket->AcquireSocketLock());
-                const SOCKET cts_socket = socket_guard.Get();
+                const SOCKET cts_socket = socket_guard.GetSocket();
                 const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
@@ -385,7 +390,7 @@ namespace ctsUnitTest
                 ++callback_invoked;
 
                 const auto socket_guard(test_socket->AcquireSocketLock());
-                const SOCKET cts_socket = socket_guard.Get();
+                const SOCKET cts_socket = socket_guard.GetSocket();
                 const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
@@ -435,7 +440,7 @@ namespace ctsUnitTest
                 ++callback_invoked;
 
                 const auto socket_guard(test_socket->AcquireSocketLock());
-                const SOCKET cts_socket = socket_guard.Get();
+                const SOCKET cts_socket = socket_guard.GetSocket();
                 const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
@@ -481,7 +486,7 @@ namespace ctsUnitTest
                 ++callback_invoked;
 
                 const auto socket_guard(test_socket->AcquireSocketLock());
-                const SOCKET cts_socket = socket_guard.Get();
+                const SOCKET cts_socket = socket_guard.GetSocket();
                 const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
                 Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());

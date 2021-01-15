@@ -97,8 +97,9 @@ namespace ctsTraffic
             return;
         }
 
-        // hold a reference on the iopattern
-        auto lockedPattern = sharedSocket->LockIoPattern();
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             return;

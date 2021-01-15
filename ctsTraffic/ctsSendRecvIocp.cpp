@@ -53,19 +53,20 @@ namespace ctsTraffic
         }
 
         int gle = NO_ERROR;
-        // hold a reference on the iopattern
-        auto lockedPattern = sharedSocket->LockIoPattern();
+
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             gle = WSAECONNABORTED;
         }
 
+        const SOCKET socket = lockedSocket.GetSocket();
         DWORD transferred = 0;
         if (gle == NO_ERROR)
         {
             // try to get the success/error code and bytes transferred (under the socket lock)
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-            const SOCKET socket = socketReference.Get();
             // if we no longer have a valid socket or the pattern was destroyed, return early
             if (INVALID_SOCKET == socket)
             {
@@ -128,7 +129,7 @@ namespace ctsTraffic
     /// ** ctsSocket::increment_io must have been called before this function was invoked
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static ctsSendRecvStatus ctsSendRecvProcessTask(SOCKET socket, const std::shared_ptr<ctsSocket>& sharedSocket, ctsIoPattern& sharedPattern, const ctsTask& nextIo) noexcept
+    static ctsSendRecvStatus ctsSendRecvProcessTask(SOCKET socket, const std::shared_ptr<ctsSocket>& sharedSocket, const std::shared_ptr<ctsIoPattern>& sharedPattern, const ctsTask& nextIo) noexcept
     {
         ctsSendRecvStatus returnStatus;
 
@@ -139,7 +140,7 @@ namespace ctsTraffic
             returnStatus.m_ioStarted = false;
             returnStatus.m_ioDone = true;
             // even if the socket was closed we still must complete the IO request
-            sharedPattern.CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode);
+            sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode);
             return returnStatus;
         }
 
@@ -149,7 +150,7 @@ namespace ctsTraffic
             {
                 returnStatus.m_ioErrorcode = WSAGetLastError();
             }
-            returnStatus.m_ioDone = sharedPattern.CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
+            returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
             returnStatus.m_ioStarted = false;
 
         }
@@ -157,7 +158,7 @@ namespace ctsTraffic
         {
             // pass through -1 to force an RST with the closesocket
             returnStatus.m_ioErrorcode = sharedSocket->CloseSocket(-1);
-            returnStatus.m_ioDone = sharedPattern.CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
+            returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
             returnStatus.m_ioStarted = false;
 
         }
@@ -226,7 +227,7 @@ namespace ctsTraffic
                     // must cancel the IOCP TP since IO is not pended
                     ioThreadPool->cancel_request(pOverlapped);
                     // call back to the socket to see if wants more IO
-                    const ctsIoStatus protocolStatus = sharedPattern.CompleteIo(nextIo, bytesTransferred, returnStatus.m_ioErrorcode);
+                    const ctsIoStatus protocolStatus = sharedPattern->CompleteIo(nextIo, bytesTransferred, returnStatus.m_ioErrorcode);
                     switch (protocolStatus)
                     {
                         case ctsIoStatus::ContinueIo:
@@ -245,9 +246,9 @@ namespace ctsTraffic
 
                         case ctsIoStatus::FailedIo:
                             // write out the error
-                            ctsConfig::PrintErrorIfFailed(functionName, sharedPattern.GetLastPatternError());
+                            ctsConfig::PrintErrorIfFailed(functionName, sharedPattern->GetLastPatternError());
                             // the protocol acknoledged the failure - socket is done with IO
-                            returnStatus.m_ioErrorcode = sharedPattern.GetLastPatternError();
+                            returnStatus.m_ioErrorcode = sharedPattern->GetLastPatternError();
                             returnStatus.m_ioDone = true;
                             break;
 
@@ -259,7 +260,7 @@ namespace ctsTraffic
             catch (...)
             {
                 returnStatus.m_ioErrorcode = ctsConfig::PrintThrownException();
-                returnStatus.m_ioDone = sharedPattern.CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
+                returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
                 returnStatus.m_ioStarted = false;
             }
         }
@@ -282,20 +283,21 @@ namespace ctsTraffic
             return;
         }
 
-        // hold a reference on the iopattern
-        const auto lockedPattern(sharedSocket->LockIoPattern());
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             return;
         }
+        // if lockedSocket has an INVALID_SOCKET, continue below to ctsSendRecvProcessTask
+        // where it's handled appropriately
 
-        // take a lock on the socket before working with it
-        const auto socketReference(sharedSocket->AcquireSocketLock());
         // increment IO for this IO request
         sharedSocket->IncrementIo();
 
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
-        const ctsSendRecvStatus status = ctsSendRecvProcessTask(socketReference.Get(), sharedSocket, *lockedPattern, nextIo);
+        const ctsSendRecvStatus status = ctsSendRecvProcessTask(lockedSocket.GetSocket(), sharedSocket, lockedPattern, nextIo);
         // if no IO was started, decrement the IO counter
         if (!status.m_ioStarted)
         {
@@ -329,15 +331,15 @@ namespace ctsTraffic
             return;
         }
 
-        // hold a reference on the iopattern
-        auto lockedPattern(sharedSocket->LockIoPattern());
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             return;
         }
-
-        // take a lock on the socket before working with it
-        const auto socketReference(sharedSocket->AcquireSocketLock());
+        // if lockedSocket has an INVALID_SOCKET, continue below to ctsSendRecvProcessTask
+        // where it's handled appropriately
 
         //
         // loop until failure or initiate_io returns None
@@ -350,7 +352,7 @@ namespace ctsTraffic
         //
         sharedSocket->IncrementIo();
 
-        ctsSendRecvStatus status;
+        ctsSendRecvStatus status{};
         while (!status.m_ioDone)
         {
             const ctsTask nextIo = lockedPattern->InitiateIo();
@@ -381,7 +383,7 @@ namespace ctsTraffic
             }
             else
             {
-                status = ctsSendRecvProcessTask(socketReference.Get(), sharedSocket, *lockedPattern, nextIo);
+                status = ctsSendRecvProcessTask(lockedSocket.GetSocket(), sharedSocket, lockedPattern, nextIo);
             }
 
             // if no IO was started, decrement the IO counter

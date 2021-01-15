@@ -184,18 +184,16 @@ namespace ctsTraffic
         void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
 
         // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
-#define PRINT_DEBUG_INFO(fmt, ...)                                      \
-        do                                                              \
-        {                                                               \
-            if (!::ctsTraffic::ctsConfig::ShutdownCalled()) {           \
-                switch (::ctsTraffic::ctsConfig::ConsoleVerbosity()) {  \
-                    case 6:                                             \
-                        ::wprintf_s(fmt, ##__VA_ARGS__);                \
-                        break;                                          \
-                }                                                       \
-            }                                                           \
-        }                                                               \
-        while ((void)0, 0)                                              \
+#define PRINT_DEBUG_INFO(fmt, ...)                                            \
+        do                                                                    \
+        {                                                                     \
+            if (!::ctsTraffic::ctsConfig::ShutdownCalled()) {                 \
+                if (6 == ::ctsTraffic::ctsConfig::ConsoleVerbosity()) {       \
+                    try { ::wprintf_s(fmt, ##__VA_ARGS__);  }  catch (...) {} \
+                }                                                             \
+            }                                                                 \
+        }                                                                     \
+        while ((void)0, 0)                                                    \
 
         void PrintErrorIfFailed(PCSTR what, unsigned long why) noexcept;
         void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;

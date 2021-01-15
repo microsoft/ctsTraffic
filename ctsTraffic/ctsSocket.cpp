@@ -60,9 +60,16 @@ namespace ctsTraffic
         m_pattern.reset();
     }
 
+    [[nodiscard]] ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
+    {
+        auto lock = m_lock.lock();
+        const SOCKET lockedSocketValue = m_socket.get();
+        return SocketReference(std::move(lock), lockedSocketValue, m_pattern);
+    }
+
     void ctsSocket::SetSocket(SOCKET socket) noexcept
     {
-        const auto lock = m_socketCs.lock();
+        const auto lock = m_lock.lock();
 
         FAIL_FAST_IF_MSG(
             !!m_socket,
@@ -74,7 +81,7 @@ namespace ctsTraffic
 
     int ctsSocket::CloseSocket(int errorCode) noexcept
     {
-        const auto lock = m_socketCs.lock();
+        const auto lock = m_lock.lock();
 
         int error = 0;
         if (m_socket)
@@ -94,7 +101,7 @@ namespace ctsTraffic
     const shared_ptr<ctThreadIocp>& ctsSocket::GetIocpThreadpool()
     {
         // use the SOCKET cs to also guard creation of this TP object
-        const auto lock = m_socketCs.lock();
+        const auto lock = m_lock.lock();
         // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
         if (m_socket && !m_tpIocp)
         {
@@ -107,6 +114,7 @@ namespace ctsTraffic
     {
         if (m_pattern)
         {
+            const auto lock = m_lock.lock();
             m_pattern->PrintStatistics(
                 GetLocalSockaddr(),
                 GetRemoteSockaddr());
@@ -129,6 +137,7 @@ namespace ctsTraffic
         DWORD recordedError = errorCode;
         if (m_pattern)
         {
+            const auto lock = m_lock.lock();
             // get the pattern's last_error
             recordedError = m_pattern->GetLastPatternError();
             // no longer allow any more callbacks
@@ -147,9 +156,9 @@ namespace ctsTraffic
         return m_localSockaddr;
     }
 
-    void ctsSocket::SetLocalSockaddr(const ctSockaddr& _local) noexcept
+    void ctsSocket::SetLocalSockaddr(const ctSockaddr& localAddress) noexcept
     {
-        m_localSockaddr = _local;
+        m_localSockaddr = localAddress;
     }
 
     const ctSockaddr& ctsSocket::GetRemoteSockaddr() const noexcept
@@ -157,19 +166,22 @@ namespace ctsTraffic
         return m_targetSockaddr;
     }
 
-    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& target) noexcept
+    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& targetAddress) noexcept
     {
-        m_targetSockaddr = target;
+        m_targetSockaddr = targetAddress;
     }
 
-    ctsIoPattern::LockedIoPattern ctsSocket::LockIoPattern() const noexcept
+    void ctsSocket::SetIoPattern() noexcept
     {
-        return ctsIoPattern::LockedIoPattern(m_pattern);
-    }
+        m_pattern = ctsIoPattern::MakeIoPattern();
+        if (!m_pattern)
+        {
+            // in test scenarios
+            return;
+        }
 
-    void ctsSocket::SetIoPattern(const std::shared_ptr<ctsIoPattern>& pattern) noexcept
-    {
-        m_pattern = pattern;
+        m_pattern->SetParent(shared_from_this());
+
         if (ctsConfig::g_configSettings->PrePostSends == 0)
         {
             // user didn't specify a specific # of sends to pend
@@ -178,104 +190,94 @@ namespace ctsTraffic
         }
     }
 
-    void ctsSocket::ProcessIsbNotification() noexcept
+    void ctsSocket::InitiateIsbNotification() noexcept
+        try
     {
-        // lock the socket
         const auto sharedThis = shared_from_this();
-        const auto socketLock(sharedThis->AcquireSocketLock());
-        const auto localSocket = socketLock.Get();
-        if (localSocket != INVALID_SOCKET)
-        {
-            ULONG isb;
-            if (0 == idealsendbacklogquery(localSocket, &isb))
+        const auto lockedSocket(sharedThis->AcquireSocketLock());
+
+        const auto& sharedIocp = GetIocpThreadpool();
+        OVERLAPPED* ov = sharedIocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* pOverlapped) noexcept {
+
+            auto lambdaSharedThis = weak_this_ptr.lock();
+            if (!lambdaSharedThis)
             {
-                PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
-                m_pattern->SetIdealSendBacklog(isb);
+                return;
+            }
+
+            DWORD gle = NO_ERROR;
+            const auto lambdaLockedSocket(lambdaSharedThis->AcquireSocketLock());
+            const auto lambdaSocket = lambdaLockedSocket.GetSocket();
+            if (lambdaSocket != INVALID_SOCKET)
+            {
+                DWORD transferred, flags; // unneeded
+                if (!WSAGetOverlappedResult(lambdaSocket, pOverlapped, &transferred, FALSE, &flags))
+                {
+                    gle = WSAGetLastError();
+                    if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
+                    {
+                        // aborted is expected whenever the socket is closed
+                        ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
+                    }
+                }
             }
             else
             {
-                const auto gle = WSAGetLastError();
-                if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
-                {
-                    ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
-                }
+                gle = WSAECANCELLED;
             }
-        }
-    }
 
-    void ctsSocket::InitiateIsbNotification() noexcept
-    {
-        try
-        {
-            const auto& sharedIocp = GetIocpThreadpool();
-            OVERLAPPED* ov = sharedIocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* pOverlapped) noexcept {
-                DWORD gle = NO_ERROR;
-
-                auto sharedThisPtr = weak_this_ptr.lock();
-                if (!sharedThisPtr)
+            if (gle == NO_ERROR)
+            {
+                // if the request succeeded, handle the ISB change
+                // and issue the next
+                ULONG isb;
+                if (0 == idealsendbacklogquery(lambdaSocket, &isb))
                 {
-                    return;
-                }
-
-                const auto socketLock(sharedThisPtr->AcquireSocketLock());
-                const auto localSocket = socketLock.Get();
-                if (localSocket != INVALID_SOCKET)
-                {
-                    DWORD transferred, flags; // unneeded
-                    if (!WSAGetOverlappedResult(localSocket, pOverlapped, &transferred, FALSE, &flags))
-                    {
-                        gle = WSAGetLastError();
-                        if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
-                        {
-                            // aborted is expected whenever the socket is closed
-                            ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
-                        }
-                    }
+                    const auto lock = lambdaSharedThis->m_lock.lock();
+                    PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                    lambdaSharedThis->m_pattern->SetIdealSendBacklog(isb);
                 }
                 else
                 {
-                    gle = WSAECANCELLED;
-                }
-                if (gle == NO_ERROR)
-                {
-                    // if the request succeeded, handle the ISB change
-                    // and issue the next
-                    sharedThisPtr->ProcessIsbNotification();
-                    sharedThisPtr->InitiateIsbNotification();
-                }
-            }); // lambda for new_request
-
-            const auto sharedThis = shared_from_this();
-            const auto socketLock(sharedThis->AcquireSocketLock());
-            const auto localSocket = socketLock.Get();
-            if (localSocket != INVALID_SOCKET)
-            {
-                const auto error = idealsendbacklognotify(localSocket, ov, nullptr);
-                if (SOCKET_ERROR == error)
-                {
-                    const auto gle = WSAGetLastError();
-                    // expect this to be pending
-                    if (gle != WSA_IO_PENDING)
+                    gle = WSAGetLastError();
+                    if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
                     {
-                        // if the ISB notification failed, tell the TP to no longer track that IO
-                        sharedIocp->cancel_request(ov);
-                        if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
-                        {
-                            ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
-                        }
+                        ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_QUERY)", gle);
+                    }
+                }
+
+                lambdaSharedThis->InitiateIsbNotification();
+            }
+        }); // lambda for new_request
+
+        const auto localSocket = lockedSocket.GetSocket();
+        if (localSocket != INVALID_SOCKET)
+        {
+            const auto error = idealsendbacklognotify(localSocket, ov, nullptr);
+            if (SOCKET_ERROR == error)
+            {
+                const auto gle = WSAGetLastError();
+                // expect this to be pending
+                if (gle != WSA_IO_PENDING)
+                {
+                    // if the ISB notification failed, tell the TP to no longer track that IO
+                    sharedIocp->cancel_request(ov);
+                    if (gle != ERROR_OPERATION_ABORTED && gle != WSAEINTR)
+                    {
+                        ctsConfig::PrintErrorIfFailed("WSAIoctl(SIO_IDEAL_SEND_BACKLOG_CHANGE)", gle);
                     }
                 }
             }
-            else
-            {
-                // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
-                sharedIocp->cancel_request(ov);
-            }
         }
-        catch (...)
+        else
         {
-            ctsConfig::PrintThrownException();
+            // there wasn't a SOCKET to initiate the ISB notification, tell the TP to no longer track that IO
+            sharedIocp->cancel_request(ov);
         }
+    }
+    catch (...)
+    {
+        ctsConfig::PrintThrownException();
     }
 
     long ctsSocket::IncrementIo() noexcept
@@ -318,7 +320,7 @@ namespace ctsTraffic
     ///
     void ctsSocket::SetTimer(const ctsTask& task, function<void(weak_ptr<ctsSocket>, const ctsTask&)>&& func)
     {
-        const auto lock = m_socketCs.lock();
+        const auto lock = m_lock.lock();
         m_timerTask = task;
         m_timerCallback = std::move(func);
 
@@ -339,7 +341,7 @@ namespace ctsTraffic
         ctsTask task{};
         function<void(weak_ptr<ctsSocket>, const ctsTask&)> callback;
         {
-            const auto lock = pThis->m_socketCs.lock();
+            const auto lock = pThis->m_lock.lock();
             task = pThis->m_timerTask;
             callback = std::move(pThis->m_timerCallback);
         }

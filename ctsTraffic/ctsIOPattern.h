@@ -29,6 +29,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
+    // forward declaring the parent ctsSocket class
+    // cannot include its header in this header as there will be a circular reference
+    class ctsSocket;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -52,38 +55,6 @@ namespace ctsTraffic
     class ctsIoPattern
     {
     public:
-        class LockedIoPattern
-        {
-            const std::shared_ptr<ctsIoPattern> m_pattern;
-            const wil::cs_leave_scope_exit m_releaseLockOnExit;
-        public:
-            explicit LockedIoPattern(const std::shared_ptr<ctsIoPattern>& ioPattern) noexcept :
-                m_pattern(ioPattern),
-                m_releaseLockOnExit(ioPattern ? ioPattern->AcquireIoPatternLock() : nullptr)
-            {
-            }
-            ~LockedIoPattern() = default;
-            LockedIoPattern(const LockedIoPattern&) = delete;
-            LockedIoPattern& operator=(const LockedIoPattern&) = delete;
-            LockedIoPattern(LockedIoPattern&&) = delete;
-            LockedIoPattern& operator=(LockedIoPattern&&) = delete;
-
-            ctsIoPattern* operator-> () const noexcept
-            {
-                return m_pattern.get();
-            }
-
-            ctsIoPattern& operator* () const noexcept
-            {
-                return *m_pattern;
-            }
-
-            explicit operator bool() const noexcept
-            {
-                return m_pattern != nullptr;
-            }
-        };
-
         constexpr static bool IsProtocolError(unsigned long status) noexcept
         {
             return status >= c_statusMinimumValue && status < c_statusIoRunning;
@@ -125,34 +96,31 @@ namespace ctsTraffic
         ///
         virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
 
-        ///
-        /// Some derived IO types require callbacks to the IO functions
-        /// - to request tasks from the normal initiate_io / complete_io pattern
-        ///
+        //
+        // These are public functions exposed to ctsSocket and the derived types
+        // it's required they have already acquired the socket or pattern lock
+        //
         virtual void RegisterCallback(std::function<void(const ctsTask&)> callback) noexcept
         {
-            const auto lock = m_lock.lock();
             m_callback = std::move(callback);
         }
 
-        virtual unsigned long GetLastPatternError() const noexcept
+        [[nodiscard]] virtual unsigned long GetLastPatternError() const noexcept
         {
-            const auto lock = m_lock.lock();
             return m_lastError;
         }
 
-        ctsUnsignedLong GetIdealSendBacklog() const noexcept
+        void SetParent(const std::shared_ptr<ctsSocket>& parentSocket) noexcept
         {
-            const auto lock = m_lock.lock();
-            return m_patternState.GetIdealSendBacklog();
+            m_parentSocket = parentSocket;
         }
+
         void SetIdealSendBacklog(const ctsUnsignedLong& newIsb) noexcept
         {
-            const auto lock = m_lock.lock();
             m_patternState.SetIdealSendBacklog(newIsb);
         }
 
-        size_t GetRioBufferIdCount() const noexcept
+        [[nodiscard]] size_t GetRioBufferIdCount() const noexcept
         {
             if (WI_IsFlagClear(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
             {
@@ -193,7 +161,7 @@ namespace ctsTraffic
         ctsIoPattern& operator= (ctsIoPattern&&) = delete;
 
     private:
-        ctsIoStatus GetCurrentStatus() const noexcept
+        [[nodiscard]] ctsIoStatus GetCurrentStatus() const noexcept
         {
             if (c_statusIoRunning == m_lastError)
             {
@@ -231,9 +199,9 @@ namespace ctsTraffic
         virtual ctsTask GetNextTaskFromPattern() = 0;
         virtual ctsIoPatternError CompleteTaskBackToPattern(const ctsTask&, unsigned long currentTransfer) noexcept = 0;
 
-        // CS memory guard for data within this object
-        // - it's mutable to allow us to take the CS in const methods
-        mutable wil::critical_section m_lock{ ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };
+        // holding a weak reference to the parent socket object
+        // since these will share the same locking requirements
+        std::weak_ptr<ctsSocket> m_parentSocket;
 
         // track the state of the L4 protocol (TCP or UDP)
         ctsIoPatternState m_patternState;
@@ -320,6 +288,7 @@ namespace ctsTraffic
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         explicit ctsIoPattern(unsigned long recvCount);
+
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///
         /// The derived template class for tracking statistics must implement these pure virtual functions
@@ -351,36 +320,33 @@ namespace ctsTraffic
         ctsTask CreateTrackedTask(ctsTaskAction, unsigned long maxTransfer = 0) noexcept;
         ctsTask CreateUntrackedTask(ctsTaskAction, unsigned long maxTransfer = 0) noexcept;
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Exposing to the derived class the # of bytes to be transferred as tracked in the base class
-        /// Make it possible for the derived type to also override the total transfer 
-        ///  - to meet its requirements (e.g. must be an even total # for balanced send & recv's)
-        ///
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-        uint64_t GetTotalTransfer() const noexcept
+        // Exposing to the derived class the # of bytes to be transferred as tracked in the base class
+        // Make it possible for the derived type to also override the total transfer 
+        //  - to meet its requirements (e.g. must be an even total # for balanced send & recv's)
+        [[nodiscard]] uint64_t GetTotalTransfer() const noexcept
         {
             return m_patternState.GetMaxTransfer();
         }
+
+        // Exposing to the derived classes the total transfer configured for this pattern instance
         void SetTotalTransfer(uint64_t newTotal) noexcept
         {
             m_patternState.SetMaxTransfer(newTotal);
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Expose to the derived class the option to verify the buffers in their ctsIOTask which
-        /// - they created through untracked_task
-        ///
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // Exposing to the derived classes the total ideal send backlog value
+        // currently configured for this pattern instance
+        [[nodiscard]] ctsUnsignedLong GetIdealSendBacklog() const noexcept
+        {
+            return m_patternState.GetIdealSendBacklog();
+        }
+
+        // Expose to the derived class the option to verify the buffers in their ctsIOTask which
+        // - they created through untracked_task
         static bool VerifyBuffer(const ctsTask& originalTask, unsigned long transferredBytes) noexcept;
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Expose to the derived class the option to have a ctsIOTask sent OOB to the IO caller
-        /// - not that this will take the same internal lock as the publicly exposed functions
-        ///
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // Expose to the derived class the option to have a ctsIOTask sent OOB to the IO caller
+        // - requires the caller to already have the pattern lock
         void SendTaskToCallback(const ctsTask& task) const noexcept
         {
             if (m_callback)
@@ -389,17 +355,12 @@ namespace ctsTraffic
             }
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
         /// Enabling derived types to update the internally tracked last-error
-        ///
-        /// update_last_error will attempt to keep the first error reported
-        /// - this will only update the value if an error has not yet been report for this state
-        ///
-        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // update_last_error will attempt to keep the first error reported
+        // - this will only update the value if an error has not yet been report for this state
         unsigned long UpdateLastError(const DWORD error) noexcept
         {
-            const auto lock = m_lock.lock();
             if (c_statusIoRunning == m_lastError)
             {
                 const auto statusError = m_patternState.UpdateError(error);
@@ -457,10 +418,7 @@ namespace ctsTraffic
         ///    class.
         ///
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        wil::cs_leave_scope_exit AcquireIoPatternLock() const noexcept
-        {
-            return m_lock.lock();
-        }
+        [[nodiscard]] wil::cs_leave_scope_exit AcquireIoPatternLock() const noexcept;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -768,27 +726,20 @@ namespace ctsTraffic
         bool m_finishedStream = false;
 
         // member functions - all require the base lock
-        _Requires_lock_held_(m_lock)
-            std::vector<ctsConfig::JitterFrameEntry>::iterator FindSequenceNumber(long long sequenceNumber) noexcept;
+        std::vector<ctsConfig::JitterFrameEntry>::iterator FindSequenceNumber(long long sequenceNumber) noexcept;
 
-        _Requires_lock_held_(m_lock)
-            bool ReceivedBufferedFrames() noexcept;
+        bool ReceivedBufferedFrames() noexcept;
 
-        _Requires_lock_held_(m_lock)
-            bool SetNextTimer(bool initialTimer) const noexcept;
+        [[nodiscard]] bool SetNextTimer(bool initialTimer) const noexcept;
 
-        _Requires_lock_held_(m_lock)
-            void SetNextStartTimer() const noexcept;
+        void SetNextStartTimer() const noexcept;
 
-        _Requires_lock_held_(m_lock)
-            void RenderFrame() noexcept;
+        void RenderFrame() noexcept;
 
         /// The "Renderer" processes frames at the specified frame rate
-        static
-            VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept;
+        static VOID CALLBACK TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept;
         /// Callback to track when the server has actually started sending
-        static
-            VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept;
+        static VOID CALLBACK StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept;
     };
 
 } //namespace

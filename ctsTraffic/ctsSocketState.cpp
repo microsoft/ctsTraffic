@@ -194,7 +194,7 @@ namespace ctsTraffic
 
                 try
                 {
-                    thisPtr->m_socket->SetIoPattern(ctsIoPattern::MakeIoPattern());
+                    thisPtr->m_socket->SetIoPattern();
 
                     auto lock = thisPtr->m_stateGuard.lock();
                     thisPtr->m_state = InternalState::InitiatedIo;
@@ -244,12 +244,15 @@ namespace ctsTraffic
                     ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.Increment();
                 }
 
-                thisPtr->m_socket->CloseSocket(thisPtr->m_lastError);
-                thisPtr->m_socket->PrintPatternResults(thisPtr->m_lastError);
-
-                if (ctsConfig::g_configSettings->ClosingFunction)
+                if (thisPtr->m_socket)
                 {
-                    ctsConfig::g_configSettings->ClosingFunction(thisPtr->m_socket);
+                    thisPtr->m_socket->CloseSocket(thisPtr->m_lastError);
+                    thisPtr->m_socket->PrintPatternResults(thisPtr->m_lastError);
+
+                    if (ctsConfig::g_configSettings->ClosingFunction)
+                    {
+                        ctsConfig::g_configSettings->ClosingFunction(thisPtr->m_socket);
+                    }
                 }
 
                 // update the state last, since ctsBroker looks for this state value

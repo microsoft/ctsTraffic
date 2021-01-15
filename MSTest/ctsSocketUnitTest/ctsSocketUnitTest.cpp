@@ -52,6 +52,11 @@ namespace ctsTraffic
         return nullptr;
     }
 
+    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    {
+        return {};
+    }
+
     void ctsSocketState::CompleteState(DWORD) noexcept
     {
         Logger::WriteMessage(L"ctsSocketState::complete_state\n");
@@ -170,7 +175,7 @@ namespace ctsUnitTest
 
             // get the socket under lock
             const auto socket_guard(test->AcquireSocketLock());
-            Assert::AreEqual(socket_value, socket_guard.Get());
+            Assert::AreEqual(socket_value, socket_guard.GetSocket());
         }
 
         TEST_METHOD(SocketGuardIsMovable)
@@ -185,7 +190,7 @@ namespace ctsUnitTest
 
             // validate the object guard
             const auto socket_guard(test->AcquireSocketLock());
-            Assert::AreEqual(socket_value, socket_guard.Get());
+            Assert::AreEqual(socket_value, socket_guard.GetSocket());
         }
 
         TEST_METHOD(CloseSocket)
@@ -198,13 +203,13 @@ namespace ctsUnitTest
             test->SetSocket(socket_value);
             {
                 const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(socket_value, socket_guard.Get());
+                Assert::AreEqual(socket_value, socket_guard.GetSocket());
             }
 
             test->CloseSocket();
             {
                 const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(INVALID_SOCKET, socket_guard.Get());
+                Assert::AreEqual(INVALID_SOCKET, socket_guard.GetSocket());
             }
         }
 
@@ -218,7 +223,7 @@ namespace ctsUnitTest
             test->SetSocket(socket_value);
             {
                 const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(socket_value, socket_guard.Get());
+                Assert::AreEqual(socket_value, socket_guard.GetSocket());
             }
 
             test.reset();

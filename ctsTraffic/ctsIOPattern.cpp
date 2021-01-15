@@ -241,9 +241,11 @@ namespace ctsTraffic
         }
     }
 
+    ///
+    /// requires that the caller has locked the socket
+    /// 
     ctsTask ctsIoPattern::InitiateIo() noexcept
     {
-        const auto lock = m_lock.lock();
         // make sure stats starts tracking IO at the first IO request
         StartStatistics();
 
@@ -346,6 +348,8 @@ namespace ctsTraffic
     ///
     /// CompleteIo
     ///
+    /// requires that the caller has locked the socket
+    /// 
     /// updates its internal counters to prepare for the next IO request
     /// - the fact that complete_io was called assumes that the IO was successful
     /// 
@@ -358,8 +362,6 @@ namespace ctsTraffic
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, unsigned long currentTransfer, unsigned long statusCode) noexcept  // NOLINT(bugprone-exception-escape)
     {
-        const auto lock = m_lock.lock();
-
         // preserve the initial state for the prior task
         const bool wasIoRequestedFromPattern = m_patternState.IsCurrentStateMoreIo();
 
@@ -526,7 +528,6 @@ namespace ctsTraffic
 
     ctsTask ctsIoPattern::CreateTrackedTask(ctsTaskAction action, unsigned long maxTransfer) noexcept
     {
-        const auto lock = m_lock.lock();
         ctsTask returnTask(CreateNewTask(action, maxTransfer));
         returnTask.m_trackIo = true;
         return returnTask;
@@ -534,7 +535,6 @@ namespace ctsTraffic
 
     ctsTask ctsIoPattern::CreateUntrackedTask(ctsTaskAction action, unsigned long maxTransfer) noexcept
     {
-        const auto lock = m_lock.lock();
         ctsTask returnTask(CreateNewTask(action, maxTransfer));
         returnTask.m_trackIo = false;
         return returnTask;
@@ -751,6 +751,18 @@ namespace ctsTraffic
         }
 
         return lengthMatched == transferredBytes;
+    }
+
+    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    {
+        const auto sharedSocket = m_parentSocket.lock();
+        if (!sharedSocket)
+        {
+            // possible if we are in the d'tor of the pattern while the socket is being closed
+            // and one of the pattern's timer or callback threads is completing
+            return {};
+        }
+        return sharedSocket->AcquireLock();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////

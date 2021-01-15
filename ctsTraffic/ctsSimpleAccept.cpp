@@ -104,8 +104,7 @@ namespace ctsTraffic
                     // socket is now being tracked in listening_sockets, dismiss the scope guard
                     closeSocketOnError.release();
 
-                    PRINT_DEBUG_INFO(
-                        L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
                 }
 
                 if (m_listeningSockets.empty())

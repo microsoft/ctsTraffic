@@ -36,11 +36,10 @@ namespace ctsTraffic
     // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSARecvFrom(
         const std::shared_ptr<ctsSocket>& sharedSocket,
+        SOCKET socket,
         const ctsTask& task,
         std::function<void(OVERLAPPED*)>&& callback) noexcept
     {
-        const auto socketLock(sharedSocket->AcquireSocketLock());
-        const SOCKET socket = socketLock.Get();
         if (INVALID_SOCKET == socket)
         {
             return wsIOResult(WSAECONNABORTED);
@@ -99,11 +98,10 @@ namespace ctsTraffic
     // ReSharper disable once CppInconsistentNaming
     wsIOResult ctsWSASendTo(
         const std::shared_ptr<ctsSocket>& sharedSocket,
+        SOCKET socket,
         const ctsTask& task,
         std::function<void(OVERLAPPED*)>&& callback) noexcept
     {
-        const auto socketLock(sharedSocket->AcquireSocketLock());
-        const SOCKET socket = socketLock.Get();
         if (INVALID_SOCKET == socket)
         {
             return wsIOResult(WSAECONNABORTED);

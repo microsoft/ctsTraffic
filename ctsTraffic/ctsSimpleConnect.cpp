@@ -42,7 +42,7 @@ namespace ctsTraffic
 
         int error = 0;
         const auto socketReference(sharedSocket->AcquireSocketLock());
-        const auto socket = socketReference.Get();
+        const auto socket = socketReference.GetSocket();
         if (socket != INVALID_SOCKET)
         {
             const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();

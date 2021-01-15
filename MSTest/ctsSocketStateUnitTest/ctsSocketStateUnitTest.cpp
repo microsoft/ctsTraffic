@@ -120,6 +120,11 @@ namespace ctsTraffic {
     void ctsSocketBroker::Closing(bool ) noexcept
     {
     }
+
+    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    {
+        return {};
+    }
 }
 ///
 /// End of Fakes

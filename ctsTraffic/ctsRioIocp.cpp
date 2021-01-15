@@ -503,15 +503,15 @@ namespace ctsTraffic
             }
 
             // lock the socket when doing IO on it
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-            const SOCKET socket = socketReference.Get();
+            const auto lockedSocket(sharedSocket->AcquireSocketLock());
+            const SOCKET socket = lockedSocket.GetSocket();
             if (INVALID_SOCKET == socket)
             {
                 THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: invalid socket given to RioSocketContext");
             }
 
             // hold a reference on the iopattern to ask for the RIO IO count
-            auto lockedPattern(sharedSocket->LockIoPattern());
+            auto lockedPattern(lockedSocket.GetPattern());
             if (!lockedPattern)
             {
                 THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: failed to get a lock on the ctsIoPatter");
@@ -595,10 +595,8 @@ namespace ctsTraffic
             }
 
             // Must lock the socket before doing anything on it
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-
-            // hold a reference on the iopattern
-            auto lockedPattern(sharedSocket->LockIoPattern());
+            const auto lockedSocket(sharedSocket->AcquireSocketLock());
+            auto lockedPattern(lockedSocket.GetPattern());
             if (!lockedPattern)
             {
                 const auto lock = m_lock.lock();
@@ -673,19 +671,15 @@ namespace ctsTraffic
             FAIL_FAST_IF_MSG(
                 !sharedSocket,
                 "RioSocketContext::execute_io (this == %p): the ctsSocket should always be valid - it's now nullshared_socket, get() should always return a valid ptr", this);
+
             // hold onto the RIO socket lock while posting IO on it
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-            SOCKET rioSocket = socketReference.Get();
+            const auto lockedSocket(sharedSocket->AcquireSocketLock());
+            SOCKET rioSocket = lockedSocket.GetSocket();
             if (INVALID_SOCKET == rioSocket)
             {
                 return WSAECONNABORTED;
             }
-
-            // hold a reference on the iopattern
-            // must maintain a lock to guarantee the order is correct:
-            // we must send or recv the buffers that the IOPattern returns us in the order they give to us
-            // i.e. without a lock we could have 2 threads get 2 buffers but randomly send them in different orders
-            auto lockedPattern(sharedSocket->LockIoPattern());
+            auto lockedPattern(lockedSocket.GetPattern());
             if (!lockedPattern)
             {
                 return WSAECONNABORTED;

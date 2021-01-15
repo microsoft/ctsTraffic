@@ -112,7 +112,6 @@ namespace ctsTraffic::ctsConfig
         return s_IsListening;
     }
 
-
     const MediaStreamSettings& GetMediaStream() noexcept
     {
         return s_MediaStreamSettings;

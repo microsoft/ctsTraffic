@@ -40,7 +40,7 @@ namespace ctsTraffic
         int gle = 0;
         const ctl::ctSockaddr localAddr;
         const auto socketReference(sharedSocket->AcquireSocketLock());
-        const SOCKET socket = socketReference.Get();
+        const SOCKET socket = socketReference.GetSocket();
         if (socket == INVALID_SOCKET)
         {
             gle = WSAECONNABORTED;
@@ -66,7 +66,7 @@ namespace ctsTraffic
             FAIL_FAST_IF_MSG(
                 err != 0,
                 "setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
-                WSAGetLastError(), static_cast<long long>(socketReference.Get()));
+                WSAGetLastError(), static_cast<long long>(socketReference.GetSocket()));
         }
 
         ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
@@ -101,7 +101,7 @@ namespace ctsTraffic
         try
         {
             const auto socketReference(sharedSocket->AcquireSocketLock());
-            const SOCKET socket = socketReference.Get();
+            const SOCKET socket = socketReference.GetSocket();
             if (socket != INVALID_SOCKET)
             {
                 const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();

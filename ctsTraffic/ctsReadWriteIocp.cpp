@@ -39,67 +39,72 @@ namespace ctsTraffic
         {
             return;
         }
-        // hold a reference on the iopattern
-        auto lockedPattern(sharedSocket->LockIoPattern());
+
+        unsigned long gle = NO_ERROR;
+
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
-            return;
+            gle = WSAECONNABORTED;
         }
 
-        int gle = NO_ERROR;
         DWORD transferred = 0;
-        // lock the socket just long enough to read the result
+        const SOCKET socket = lockedSocket.GetSocket();
+        if (INVALID_SOCKET == socket)
         {
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-            const SOCKET socket = socketReference.Get();
-            if (INVALID_SOCKET == socket)
+            gle = WSAECONNABORTED;
+        }
+        else
+        {
+            DWORD flags;
+            if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
             {
-                gle = WSAECONNABORTED;
-            }
-            else
-            {
-                DWORD flags;
-                if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
-                {
-                    gle = WSAGetLastError();
-                }
+                gle = WSAGetLastError();
             }
         }
 
         const char* functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
-        if (gle != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsReadWriteIocp]\n", functionName, gle);
-        // see if complete_io requests more IO
-        DWORD readwriteStatus = NO_ERROR;
-        const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle);
-        switch (protocolStatus)
+        if (gle != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle);
+
+        if (lockedPattern)
         {
-            case ctsIoStatus::ContinueIo:
-                // more IO is requested from the protocol
-                // - invoke the new IO call while holding a refcount to the prior IO
-                ctsReadWriteIocp(weakSocket);
-                break;
+            // see if complete_io requests more IO
+            DWORD readwriteStatus = NO_ERROR;
+            const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle);
+            switch (protocolStatus)
+            {
+                case ctsIoStatus::ContinueIo:
+                    // more IO is requested from the protocol
+                    // - invoke the new IO call while holding a refcount to the prior IO
+                    ctsReadWriteIocp(weakSocket);
+                    break;
 
-            case ctsIoStatus::CompletedIo:
-                // protocol didn't fail this IO: no more IO is requested from the protocol
-                readwriteStatus = NO_ERROR;
-                break;
+                case ctsIoStatus::CompletedIo:
+                    // protocol didn't fail this IO: no more IO is requested from the protocol
+                    readwriteStatus = NO_ERROR;
+                    break;
 
-            case ctsIoStatus::FailedIo:
-                // write out the error
-                ctsConfig::PrintErrorIfFailed(functionName, gle);
-                // protocol sees this as a failure - capture the error the protocol recorded
-                readwriteStatus = lockedPattern->GetLastPatternError();
-                break;
+                case ctsIoStatus::FailedIo:
+                    // write out the error
+                    ctsConfig::PrintErrorIfFailed(functionName, gle);
+                    // protocol sees this as a failure - capture the error the protocol recorded
+                    readwriteStatus = lockedPattern->GetLastPatternError();
+                    break;
 
-            default:
-                FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocolStatus));
+                default:
+                    FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocolStatus));
+            }
+
+            gle = readwriteStatus;
         }
 
         // always decrement *after* attempting new IO - the prior IO is now formally "done"
         if (sharedSocket->DecrementIo() == 0)
         {
             // if we have no more IO pended, complete the state
-            sharedSocket->CompleteState(readwriteStatus);
+            sharedSocket->CompleteState(gle);
         }
     }
 
@@ -112,8 +117,10 @@ namespace ctsTraffic
         {
             return;
         }
-        // hold a reference on the iopattern
-        auto lockedPattern(sharedSocket->LockIoPattern());
+
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             return;
@@ -124,9 +131,7 @@ namespace ctsTraffic
         bool ioDone = false;
         int ioError = NO_ERROR;
 
-        // lock the socket while doing IO
-        const auto socketReference(sharedSocket->AcquireSocketLock());
-        SOCKET socket = socketReference.Get();
+        auto socket = lockedSocket.GetSocket();
         if (socket != INVALID_SOCKET)
         {
             // loop until failure or initiate_io returns None

@@ -25,6 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
+#include <utility>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
@@ -53,31 +54,31 @@ namespace ctsTraffic
             SocketReference& operator=(const SocketReference&) = delete;
             ~SocketReference() = default;
 
-            [[nodiscard]] SOCKET Get() const noexcept
+            [[nodiscard]] SOCKET GetSocket() const noexcept
             {
                 return m_socket;
+            }
+            [[nodiscard]] std::shared_ptr<ctsIoPattern> GetPattern() const noexcept
+            {
+                return m_patternWeakRef.lock();
             }
 
         private:
             friend class ctsSocket;
-            SocketReference(wil::cs_leave_scope_exit&& socketLock, SOCKET socket) noexcept :
-                m_csExit(std::move(socketLock)), m_socket(socket)
+            SocketReference(wil::cs_leave_scope_exit&& socketLock, SOCKET socket, std::weak_ptr<ctsIoPattern> patternWeakRef) noexcept :
+                m_socketLock(std::move(socketLock)), m_socket(socket), m_patternWeakRef(std::move(patternWeakRef))
             {
             }
 
-            const wil::cs_leave_scope_exit m_csExit;
+            const wil::cs_leave_scope_exit m_socketLock;
             const SOCKET m_socket = INVALID_SOCKET;
+            const std::weak_ptr<ctsIoPattern> m_patternWeakRef;
         };
 
-        [[nodiscard]] SocketReference AcquireSocketLock() const noexcept
-        {
-            auto lock = m_socketCs.lock();
-            const SOCKET lockedSocketValue = m_socket.get();
-            return SocketReference(std::move(lock), lockedSocketValue);
-        }
+        [[nodiscard]] SocketReference AcquireSocketLock() const noexcept;
 
         //
-        // c'tor requiring a parent ctsSocket reference
+        // c'tor requiring a parent ctsSocketState weak reference
         //
         explicit ctsSocket(std::weak_ptr<ctsSocketState> parent) noexcept;
 
@@ -126,19 +127,18 @@ namespace ctsTraffic
         // Gets/Sets the local address of the SOCKET
         //
         const ctl::ctSockaddr& GetLocalSockaddr() const noexcept;
-        void SetLocalSockaddr(const ctl::ctSockaddr& local) noexcept;
+        void SetLocalSockaddr(const ctl::ctSockaddr& localAddress) noexcept;
 
         //
         // Gets/Sets the target address of the SOCKET, if there is one
         //
         const ctl::ctSockaddr& GetRemoteSockaddr() const noexcept;
-        void SetRemoteSockaddr(const ctl::ctSockaddr& target) noexcept;
+        void SetRemoteSockaddr(const ctl::ctSockaddr& targetAddress) noexcept;
 
         //
         // Get/Set the ctsIOPattern
         //
-        ctsIoPattern::LockedIoPattern LockIoPattern() const noexcept;
-        void SetIoPattern(const std::shared_ptr<ctsIoPattern>& pattern) noexcept;
+        void SetIoPattern() noexcept;
 
         //
         // methods for functors to use for refcounting the # of IO they have issued on this socket
@@ -169,20 +169,25 @@ namespace ctsTraffic
         ctsSocket& operator= (ctsSocket&&) = delete;
 
     private:
-        //
+
         // ctsSocketState is given friend-access to call shutdown
-        //
         friend class ctsSocketState;
         void Shutdown() noexcept;
 
+        // ctsIoPattern is given friend-access to acquire the socket lock
+        friend class ctsIoPattern;
+        auto AcquireLock() const noexcept
+        {
+            return m_lock.lock();
+        }
+
         void InitiateIsbNotification()  noexcept;
-        void ProcessIsbNotification() noexcept;
 
         // private members for this socket instance
         // mutable is requred to EnterCS/LeaveCS in const methods
 
-        mutable wil::critical_section m_socketCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-        _Guarded_by_(m_socketCs) wil::unique_socket m_socket;
+        mutable wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        _Guarded_by_(m_lock) wil::unique_socket m_socket;
         _Interlocked_ long m_ioCount = 0L;
 
         // maintain a weak-reference to the parent and child
