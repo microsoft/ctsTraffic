@@ -744,19 +744,24 @@ namespace ctsTraffic
                     switch (pNextTask->m_ioAction)
                     {
                         case ctsTaskAction::Recv:
+                        {
                             pRioFunction = "RIOReceive";
-                            if (!ctl::ctRIOReceive(m_rioRequestQueue, &rioBuffer, 1, 0, pNextTask))
+                            const DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? RIO_MSG_WAITALL : 0;
+                            if (!ctl::ctRIOReceive(m_rioRequestQueue, &rioBuffer, 1, flags, pNextTask))
                             {
                                 error = WSAGetLastError();
                             }
                             break;
+                        }
                         case ctsTaskAction::Send:
+                        {
                             pRioFunction = "RIOSend";
                             if (!ctl::ctRIOSend(m_rioRequestQueue, &rioBuffer, 1, 0, pNextTask))
                             {
                                 error = WSAGetLastError();
                             }
                             break;
+                        }
                         default: FAIL_FAST();
                     }
 
