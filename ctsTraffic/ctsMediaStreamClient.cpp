@@ -396,6 +396,13 @@ namespace ctsTraffic
             }
         }
 
+        if (gle == WSAEMSGSIZE)
+        {
+            // something truncated the datagram - don't treat it as a hard-error
+            ctsConfig::PrintErrorInfo(L"MediaStream Client: IO failed with WSAEMSGSIZE: received [%d bytes] - expected [%d bytes]", transferred, task.m_bufferLength);
+            gle = NO_ERROR;
+        }
+
         // see if complete_io requests more IO
         const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle);
         switch (protocolStatus)
