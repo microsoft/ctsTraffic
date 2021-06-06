@@ -136,7 +136,7 @@ namespace ctl
                 wil::make_bstr(L"WQL").get(),
                 wil::make_bstr(query).get(),
                 WBEM_FLAG_BIDIRECTIONAL,
-                const_cast<IWbemContext*>(context.get()),
+                context.get(),
                 m_wbemEnumerator.put()));
         }
 

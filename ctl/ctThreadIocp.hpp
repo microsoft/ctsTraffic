@@ -35,7 +35,7 @@ namespace ctl
     // typedef used for the std::function to be given to ctThreadIocpCallbackInfo
     // - constructed by ctThreadIocp
     //
-    typedef std::function<void(OVERLAPPED*)> ctThreadIocpCallback_t;
+    using ctThreadIocpCallback_t = std::function<void (OVERLAPPED*)>;
 
     //
     // structure passed to the ctThreadIocp IO completion function

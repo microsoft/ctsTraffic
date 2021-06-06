@@ -43,7 +43,7 @@ namespace ctsTraffic
     // - function pointers, functors, lambdas, etc.
     //
     class ctsSocket;
-    typedef std::function<void(std::weak_ptr<ctsSocket>)> ctsSocketFunction;
+    using ctsSocketFunction = std::function<void (std::weak_ptr<ctsSocket>)>;
 
     namespace ctsConfig
     {
@@ -283,7 +283,7 @@ namespace ctsTraffic
                 }
 
                 // convert rate to bytes / second -> calculate the total # of bytes
-                ctsUnsignedLongLong totalStreamLengthBytes = static_cast<unsigned long long>(static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds));
+                ctsUnsignedLongLong totalStreamLengthBytes = static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds);
 
                 // guarantee that the total stream length aligns evenly with total_frames
                 if (totalStreamLengthBytes % totalStreamLengthFrames != 0)

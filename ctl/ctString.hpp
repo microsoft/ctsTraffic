@@ -357,13 +357,13 @@ namespace ctl
 
             // We carefully avoid using the FORMAT_MESSAGE_ALLOCATE_BUFFER flag.
             // It triggers a use of the LocalAlloc() function. LocalAlloc() and LocalFree() are in an API set that is obsolete.
-            constexpr DWORD FormatMsgFlags =
+            constexpr DWORD formatMsgFlags =
                 FORMAT_MESSAGE_FROM_SYSTEM |
                 FORMAT_MESSAGE_IGNORE_INSERTS |
                 FORMAT_MESSAGE_MAX_WIDTH_MASK;
 
             const auto dwReturn = FormatMessageW(
-                FormatMsgFlags,
+                formatMsgFlags,
                 nullptr, // just search the system
                 messageId,
                 0, // allow for proper MUI language fallback
@@ -420,41 +420,41 @@ namespace ctl
         /// Can throw a std::exception under low-resources
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline void ctReplaceAll(std::wstring& original_string, const std::wstring& search_string, const std::wstring& replacement_string)  // NOLINT(google-runtime-references)
+        inline void ctReplaceAll(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString)  // NOLINT(google-runtime-references)
         {
-            const auto search_size = search_string.size();
-            const auto replacement_size = replacement_string.size();
+            const auto searchSize = searchString.size();
+            const auto replacementSize = replacementString.size();
             size_t index = 0;
-            while ((index = original_string.find(search_string, index)) != std::wstring::npos)
+            while ((index = originalString.find(searchString, index)) != std::wstring::npos)
             {
-                original_string.replace(index, search_size, replacement_string);
-                index += replacement_size;
+                originalString.replace(index, searchSize, replacementString);
+                index += replacementSize;
             }
         }
 
         inline
-            std::wstring ctReplaceAllCopy(std::wstring original_string, const std::wstring& search_string, const std::wstring& replacement_string)
+            std::wstring ctReplaceAllCopy(std::wstring originalString, const std::wstring& searchString, const std::wstring& replacementString)
         {
-            ctReplaceAll(original_string, search_string, replacement_string);
-            return original_string;
+            ctReplaceAll(originalString, searchString, replacementString);
+            return originalString;
         }
 
-        inline void ctReplaceAll(std::string& original_string, const std::string& search_string, const std::string& replacement_string)  // NOLINT(google-runtime-references)
+        inline void ctReplaceAll(std::string& originalString, const std::string& searchString, const std::string& replacementString)  // NOLINT(google-runtime-references)
         {
-            const auto search_size = search_string.size();
-            const auto replacement_size = replacement_string.size();
+            const auto searchSize = searchString.size();
+            const auto replacementSize = replacementString.size();
             size_t index = 0;
-            while ((index = original_string.find(search_string, index)) != std::string::npos)
+            while ((index = originalString.find(searchString, index)) != std::string::npos)
             {
-                original_string.replace(index, search_size, replacement_string);
-                index += replacement_size;
+                originalString.replace(index, searchSize, replacementString);
+                index += replacementSize;
             }
         }
 
-        inline std::string ctReplaceAllCopy(std::string original_string, const std::string& search_string, const std::string& replacement_string)
+        inline std::string ctReplaceAllCopy(std::string originalString, const std::string& searchString, const std::string& replacementString)
         {
-            ctReplaceAll(original_string, search_string, replacement_string);
-            return original_string;
+            ctReplaceAll(originalString, searchString, replacementString);
+            return originalString;
         }
     } // namespace ctString
 } // namespace ctl

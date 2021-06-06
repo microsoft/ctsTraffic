@@ -44,73 +44,73 @@ namespace ctsPerf
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsSynOpts>
         {
-            typedef void* read_write_type;
-            typedef TCP_ESTATS_SYN_OPTS_ROS_v0 read_only_static_type;
-            typedef void* read_only_dynamic_type;
+            using read_write_type = void*;
+            using read_only_static_type = TCP_ESTATS_SYN_OPTS_ROS_v0;
+            using read_only_dynamic_type = void*;
         };
 
         template<>
         struct EstatsTypeConverter<TcpConnectionEstatsData>
         {
-            typedef TCP_ESTATS_DATA_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_DATA_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_DATA_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_DATA_ROD_v0;
         };
 
         template<>
         struct EstatsTypeConverter<TcpConnectionEstatsSndCong>
         {
-            typedef TCP_ESTATS_SND_CONG_RW_v0 read_write_type;
-            typedef TCP_ESTATS_SND_CONG_ROS_v0 read_only_static_type;
-            typedef TCP_ESTATS_SND_CONG_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_SND_CONG_RW_v0;
+            using read_only_static_type = TCP_ESTATS_SND_CONG_ROS_v0;
+            using read_only_dynamic_type = TCP_ESTATS_SND_CONG_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsPath>
         {
-            typedef TCP_ESTATS_PATH_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_PATH_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_PATH_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_PATH_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsSendBuff>
         {
-            typedef TCP_ESTATS_SEND_BUFF_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_SEND_BUFF_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_SEND_BUFF_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_SEND_BUFF_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsRec>
         {
-            typedef TCP_ESTATS_REC_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_REC_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_REC_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_REC_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsObsRec>
         {
-            typedef TCP_ESTATS_OBS_REC_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_OBS_REC_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_OBS_REC_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_OBS_REC_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsBandwidth>
         {
-            typedef TCP_ESTATS_BANDWIDTH_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_BANDWIDTH_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_BANDWIDTH_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_BANDWIDTH_ROD_v0;
         };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsFineRtt>
         {
-            typedef TCP_ESTATS_FINE_RTT_RW_v0 read_write_type;
-            typedef void* read_only_static_type;
-            typedef TCP_ESTATS_FINE_RTT_ROD_v0 read_only_dynamic_type;
+            using read_write_type = TCP_ESTATS_FINE_RTT_RW_v0;
+            using read_only_static_type = void*;
+            using read_only_dynamic_type = TCP_ESTATS_FINE_RTT_ROD_v0;
         };
 
         template <TCP_ESTATS_TYPE TcpType>

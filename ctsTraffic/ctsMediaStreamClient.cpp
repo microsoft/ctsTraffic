@@ -262,7 +262,10 @@ namespace ctsTraffic
                 {
                     // IO successfully completed inline and the async completion won't be invoke
                     // - or the IO failed
-                    if (result.m_errorCode != 0) PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", functionName, result.m_errorCode);
+                    if (result.m_errorCode != 0)
+                    {
+                        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", functionName, result.m_errorCode);
+                    }
 
                     const auto protocolStatus = lockedPattern->CompleteIo(
                         task,
@@ -489,7 +492,9 @@ namespace ctsTraffic
         }
         else
         {
-            DWORD transferred, flags; // unused
+            // unused
+            DWORD transferred;
+            DWORD flags;
             if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
             {
                 gle = WSAGetLastError();

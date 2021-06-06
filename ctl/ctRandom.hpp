@@ -38,7 +38,7 @@ namespace ctl
     class ctRandomTwister
     {
     public:
-        typedef std::mt19937 engine_type;
+        using engine_type = std::mt19937;
 
         /// Constructs the generator with an explicitly specified seed.
         /// This is usually unnecessary, since the default constructor will seed the generator

@@ -30,7 +30,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
     class ctsMediaStreamServerConnectedSocket;
-    typedef std::function<wsIOResult(ctsMediaStreamServerConnectedSocket*)> ctsMediaStreamConnectedSocketIoFunctor;
+    using ctsMediaStreamConnectedSocketIoFunctor = std::function<wsIOResult (ctsMediaStreamServerConnectedSocket*)>;
 
     class ctsMediaStreamServerConnectedSocket
     {

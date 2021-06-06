@@ -38,6 +38,11 @@ namespace ctsTraffic
     public:
         virtual ~ctsIoPattern() = default;
 
+        ctsIoPattern(const ctsIoPattern&) = delete;
+        ctsIoPattern& operator=(const ctsIoPattern&) = delete;
+        ctsIoPattern(ctsIoPattern&&) = delete;
+        ctsIoPattern& operator=(ctsIoPattern&&) = delete;
+
         ///
         /// none of these *_io functions can throw
         /// failures are critical and will RaiseException to be debugged
@@ -57,7 +62,7 @@ namespace ctsTraffic
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
         ctsTask InitiateIo() noexcept;
-        virtual ctsIoStatus CompleteIo(const ctsTask& task, unsigned long bytes_transferred, unsigned long statusCode) noexcept = 0;
+        virtual ctsIoStatus CompleteIo(const ctsTask& task, unsigned long currentTransfer, unsigned long statusCode) noexcept = 0;
 
         ///
         /// Enabling callers to trigger writing statistics via ctsConfig
@@ -84,9 +89,9 @@ namespace ctsTraffic
     {
     public:
         ctsIoPatternT() = default;
-        ~ctsIoPatternT() = default;
+        ~ctsIoPatternT() override = default;
 
-        void PrintStatistics(const ctl::ctSockaddr& local_addr, const ctl::ctSockaddr& remote_addr) noexcept final
+        void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept final
         {
             // before printing the final results, make sure the timers are stopped
             if (0 == GetLastPatternError() && 0 == m_stats.current_bytes())
@@ -95,21 +100,21 @@ namespace ctsTraffic
                 m_protocolPolicy.update_protocol_error(ctsIoPatternError::TooFewBytes);
             }
             ctsConfig::PrintConnectionResults(
-                local_addr,
-                remote_addr,
+                localAddr,
+                remoteAddr,
                 GetLastPatternError(),
                 m_stats);
         }
 
         void RegisterCallback(std::function<void(const ctsTask&)> callback) final
         {
-            const auto take_lock = m_cs.lock();
+            const auto takeLock = m_cs.lock();
             m_callback = std::move(callback);
         }
 
         unsigned long GetLastPatternError() const noexcept final
         {
-            const auto auto_lock = m_cs.lock();
+            const auto autoLock = m_cs.lock();
             return m_protocolPolicy.get_last_error();
         }
 

@@ -261,15 +261,15 @@ namespace ctsTraffic
                         PRINT_DEBUG_INFO(
                             L"\t\tctsIOPatternMediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
                             receivedsequenceNumber,
-                            static_cast<long long>(m_headEntry->m_sequenceNumber));
+                            m_headEntry->m_sequenceNumber);
                     }
                     else
                     {
                         PRINT_DEBUG_INFO(
                             L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
                             receivedsequenceNumber,
-                            static_cast<long long>(m_headEntry->m_sequenceNumber),
-                            static_cast<long long>(m_headEntry->m_sequenceNumber + m_frameEntries.size() - 1));
+                            m_headEntry->m_sequenceNumber,
+                            m_headEntry->m_sequenceNumber + m_frameEntries.size() - 1);
                     }
                 }
             }
@@ -396,7 +396,7 @@ namespace ctsTraffic
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternMediaStreamClient rendered frame %lld\n",
-                static_cast<long long>(m_headEntry->m_sequenceNumber));
+                m_headEntry->m_sequenceNumber);
 
             // Directly write this status update if jitter is enabled
             PrintJitterUpdate(*m_headEntry, m_previousFrame);

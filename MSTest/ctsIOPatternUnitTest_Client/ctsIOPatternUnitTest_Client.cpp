@@ -146,7 +146,7 @@ namespace ctsTraffic::ctsConfig
 
     float GetStatusTimeStamp() noexcept
     {
-        return static_cast<float>((ctl::ctTimer::SnapQpcInMillis() - static_cast<long long>(g_configSettings->StartTimeMilliseconds)) / 1000.0);
+        return static_cast<float>((ctl::ctTimer::SnapQpcInMillis() - g_configSettings->StartTimeMilliseconds) / 1000.0);
     }
     bool ShutdownCalled() noexcept
     {

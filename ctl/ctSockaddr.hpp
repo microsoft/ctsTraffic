@@ -50,10 +50,15 @@ namespace ctl
         static std::vector<ctSockaddr> ResolveName(PCWSTR name)
         {
             ADDRINFOW* addrResult = nullptr;
-            auto freeAddrOnExit = wil::scope_exit([&]() noexcept { if (addrResult) FreeAddrInfoW(addrResult); });
+            auto freeAddrOnExit = wil::scope_exit([&]() noexcept {
+                if (addrResult)
+                {
+                    ::FreeAddrInfoW(addrResult);
+                }
+            });
 
             std::vector<ctSockaddr> returnAddrs;
-            if (0 == GetAddrInfoW(name, nullptr, nullptr, &addrResult))
+            if (0 == ::GetAddrInfoW(name, nullptr, nullptr, &addrResult))
             {
                 for (auto* pAddrInfo = addrResult; pAddrInfo != nullptr; pAddrInfo = pAddrInfo->ai_next)
                 {
@@ -62,7 +67,7 @@ namespace ctl
             }
             else
             {
-                THROW_WIN32_MSG(WSAGetLastError(), "GetAddrInfoW");
+                THROW_WIN32_MSG(::WSAGetLastError(), "GetAddrInfoW");
             }
 
             return returnAddrs;
@@ -289,7 +294,7 @@ namespace ctl
 
     inline bool ctSockaddr::operator==(const ctSockaddr& inAddr) const noexcept
     {
-        return 0 == memcmp(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+        return 0 == ::memcmp(&m_saddr, &inAddr.m_saddr, c_saddrSize);
     }
 
     inline bool ctSockaddr::operator!=(const ctSockaddr& inAddr) const noexcept
@@ -426,7 +431,7 @@ namespace ctl
     inline bool ctSockaddr::SetAddress(SOCKET s) const noexcept
     {
         auto namelen = length();
-        return 0 == getsockname(s, sockaddr(), &namelen);
+        return 0 == ::getsockname(s, sockaddr(), &namelen);
     }
 
     inline void ctSockaddr::set(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) noexcept
@@ -481,13 +486,13 @@ namespace ctl
     inline bool ctSockaddr::IsAddressAny() const noexcept
     {
         const ctSockaddr anyAddr(m_saddr.si_family, AddressType::Any);
-        return 0 == memcmp(&anyAddr.m_saddr, &m_saddr, c_saddrSize);
+        return 0 == ::memcmp(&anyAddr.m_saddr, &m_saddr, c_saddrSize);
     }
 
     inline bool ctSockaddr::IsAddressLoopback() const noexcept
     {
         const ctSockaddr anyAddr(m_saddr.si_family, AddressType::Loopback);
-        return 0 == memcmp(&anyAddr.m_saddr, &m_saddr, c_saddrSize);
+        return 0 == ::memcmp(&anyAddr.m_saddr, &m_saddr, c_saddrSize);
     }
 
     inline bool ctSockaddr::SetAddress(_In_ PCWSTR wszAddr) noexcept
@@ -497,10 +502,10 @@ namespace ctl
         hints.ai_flags = AI_NUMERICHOST;
 
         ADDRINFOW* pResult = nullptr;
-        if (0 == GetAddrInfoW(wszAddr, nullptr, &hints, &pResult))
+        if (0 == ::GetAddrInfoW(wszAddr, nullptr, &hints, &pResult))
         {
             set(pResult->ai_addr, static_cast<int>(pResult->ai_addrlen));
-            FreeAddrInfoW(pResult);
+            ::FreeAddrInfoW(pResult);
             return true;
         }
         return false;
@@ -563,7 +568,7 @@ namespace ctl
 
     inline std::wstring ctSockaddr::WriteAddress() const
     {
-        WCHAR returnString[c_ipStringMaxLength];
+        WCHAR returnString[c_ipStringMaxLength]{};
         WriteAddress(returnString);
         returnString[c_ipStringMaxLength - 1] = L'\0';
         return returnString;
@@ -576,7 +581,7 @@ namespace ctl
         const auto* const pAddr = AF_INET == m_saddr.si_family
                                 ? reinterpret_cast<PVOID>(in_addr())
                                 : reinterpret_cast<PVOID>(in6_addr());
-        return nullptr != InetNtopW(m_saddr.si_family, pAddr, address, c_ipStringMaxLength);
+        return nullptr != ::InetNtopW(m_saddr.si_family, pAddr, address, c_ipStringMaxLength);
     }
 
     inline bool ctSockaddr::WriteAddress(CHAR(&address)[c_ipStringMaxLength]) const noexcept
@@ -591,7 +596,7 @@ namespace ctl
 
     inline std::wstring ctSockaddr::WriteCompleteAddress(bool trimScope) const
     {
-        WCHAR returnString[c_ipStringMaxLength];
+        WCHAR returnString[c_ipStringMaxLength]{};
         WriteCompleteAddress(returnString, trimScope);
         returnString[c_ipStringMaxLength - 1] = L'\0';
         return returnString;
@@ -602,7 +607,7 @@ namespace ctl
         ::ZeroMemory(address, c_ipStringMaxLength * sizeof(WCHAR));
 
         DWORD addressLength = c_ipStringMaxLength;
-        if (0 == WSAAddressToStringW(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
+        if (0 == ::WSAAddressToStringW(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
         {
             if (family() == AF_INET6 && trimScope)
             {
@@ -636,12 +641,13 @@ namespace ctl
         return false;
     }
 
+#ifdef _WINSOCK_DEPRECATED_NO_WARNINGS
     inline bool ctSockaddr::WriteCompleteAddress(CHAR(&address)[c_ipStringMaxLength], bool trimScope) const noexcept
     {
         ::ZeroMemory(address, c_ipStringMaxLength * sizeof(CHAR));
 
         DWORD addressLength = c_ipStringMaxLength;
-        if (0 == WSAAddressToStringA(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
+        if (0 == ::WSAAddressToStringA(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
         {
             if (family() == AF_INET6 && trimScope)
             {
@@ -674,6 +680,7 @@ namespace ctl
         }
         return false;
     }
+#endif
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
     inline int ctSockaddr::length() const noexcept
@@ -689,7 +696,7 @@ namespace ctl
     inline unsigned short ctSockaddr::port() const noexcept
     {
         const auto* const pSockaddrIn = reinterpret_cast<const SOCKADDR_IN*>(&m_saddr);
-        return ntohs(pSockaddrIn->sin_port);
+        return ::ntohs(pSockaddrIn->sin_port);
     }
 
     inline unsigned long ctSockaddr::flowinfo() const noexcept
@@ -732,8 +739,7 @@ namespace ctl
 
     inline SOCKADDR_INET* ctSockaddr::sockaddr_inet() const noexcept
     {
-        return const_cast<SOCKADDR_INET*>(
-            reinterpret_cast<const SOCKADDR_INET*>(&m_saddr));
+        return const_cast<SOCKADDR_INET*>(&m_saddr);
     }
 
     inline IN_ADDR* ctSockaddr::in_addr() const noexcept

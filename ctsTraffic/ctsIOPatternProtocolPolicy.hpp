@@ -101,9 +101,9 @@ namespace ctsTraffic
     }
 
 
-    typedef struct ctsIOPatternProtocolTcpClient_t ctsIoPatternProtocolTcpClient;
-    typedef struct ctsIOPatternProtocolTcpServer_t ctsIoPatternProtocolTcpServer;
-    typedef struct ctsIOPatternProtocolUdp_t       ctsIoPatternProtocolUdp;
+    using ctsIoPatternProtocolTcpClient = struct ctsIOPatternProtocolTcpClient_t;
+    using ctsIoPatternProtocolTcpServer = struct ctsIOPatternProtocolTcpServer_t;
+    using ctsIoPatternProtocolUdp = struct ctsIOPatternProtocolUdp_t;
 
     template <typename Protocol>
     class ctsIoPatternProtocolPolicy

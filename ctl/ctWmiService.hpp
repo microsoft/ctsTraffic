@@ -100,7 +100,7 @@ namespace ctl
             THROW_IF_FAILED(m_wbemServices->DeleteInstance(
                 wil::make_bstr(objPath).get(),
                 WBEM_FLAG_RETURN_IMMEDIATELY,
-                const_cast<IWbemContext*>(context.get()),
+                context.get(),
                 result.addressof()));
             // wait for the call to complete
             HRESULT status;

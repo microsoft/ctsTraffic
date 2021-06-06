@@ -38,12 +38,15 @@ namespace ctl
     {
         wil::unique_variant localVariant;
         V_VT(localVariant.addressof()) = VT_BOOL;
-        V_BOOL(localVariant.addressof()) = value;
+        V_BOOL(localVariant.addressof()) = value ? TRUE : FALSE;
         return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, bool* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BOOL);
         *value = V_BOOL(variant);
         return true;
@@ -58,7 +61,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, char* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_UI1);
         *value = V_UI1(variant);
         return true;
@@ -73,7 +79,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned char* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_UI1);
         *value = V_UI1(variant);
         return true;
@@ -88,7 +97,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, short* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I2);
         *value = V_I2(variant);
         return true;
@@ -103,7 +115,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned short* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I2);
         *value = V_I2(variant);
         return true;
@@ -118,7 +133,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, long* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -133,7 +151,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned long* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -148,7 +169,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, int* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -163,7 +187,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned int* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_I4);
         *value = V_I4(variant);
         return true;
@@ -178,7 +205,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, float* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_R4);
         *value = V_R4(variant);
         return true;
@@ -193,7 +223,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, double* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_R8);
         *value = V_R8(variant);
         return true;
@@ -210,7 +243,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, SYSTEMTIME* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_DATE);
         THROW_HR_IF(E_INVALIDARG, !::VariantTimeToSystemTime(V_DATE(variant), value));
         return true;
@@ -226,7 +262,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, BSTR* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = SysAllocString(V_BSTR(variant));
         THROW_IF_NULL_ALLOC(*value);
@@ -243,7 +282,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::wstring* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         value->assign(V_BSTR(variant));
         return true;
@@ -260,7 +302,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ UINT64* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = _wcstoui64(V_BSTR(variant), nullptr, 10);
         return true;
@@ -277,7 +322,10 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ INT64* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
         *value = _wcstoi64(V_BSTR(variant), nullptr, 10);
         return true;
@@ -310,7 +358,7 @@ namespace ctl
 
         IUnknown** iUnknownArray;
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&iUnknownArray)));
-        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
+        const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<wil::com_ptr<T>> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -350,12 +398,15 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<std::wstring>* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_BSTR | VT_ARRAY));
 
         BSTR* stringArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&stringArray)));
-        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
+        const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<std::wstring> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -392,12 +443,15 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned long>* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UI4 | VT_ARRAY));
 
         unsigned long* intArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
+        const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned long> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -437,12 +491,15 @@ namespace ctl
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned short>* value)
     {
         // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_I4 | VT_ARRAY));
 
         long* intArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
+        const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned short> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -480,12 +537,15 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned char>* value)
     {
-        if (IsVariantEmptyOrNull(variant)) return false;
+        if (IsVariantEmptyOrNull(variant))
+        {
+            return false;
+        }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UI1 | VT_ARRAY));
 
         unsigned char* charArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&charArray)));
-        auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
+        const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned char> tempData;
         for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)

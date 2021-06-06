@@ -48,28 +48,28 @@ namespace ctsTraffic
         }
         virtual ~ctsLogger() noexcept = default;
 
-        void LogLegend(const std::shared_ptr<ctsStatusInformation>& status_info) noexcept
+        void LogLegend(const std::shared_ptr<ctsStatusInformation>& statusInfo) noexcept
         {
-            const auto* const message = status_info->PrintLegend(m_format);
-            if (message != nullptr)
+            const auto* const message = statusInfo->PrintLegend(m_format);
+            if (message)
             {
                 LogMessageImpl(message);
             }
         }
 
-        void LogHeader(const std::shared_ptr<ctsStatusInformation>& status_info) noexcept
+        void LogHeader(const std::shared_ptr<ctsStatusInformation>& statusInfo) noexcept
         {
-            const auto* const message = status_info->PrintHeader(m_format);
-            if (message != nullptr)
+            const auto* const message = statusInfo->PrintHeader(m_format);
+            if (message)
             {
                 LogMessageImpl(message);
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsStatusInformation>& status_info, long long current_time, bool clear_status) noexcept
+        void LogStatus(const std::shared_ptr<ctsStatusInformation>& statusInfo, long long currentTime, bool clearStatus) noexcept
         {
-            const auto* const message = status_info->PrintStatus(m_format, current_time, clear_status);
-            if (message != nullptr)
+            const auto* const message = statusInfo->PrintStatus(m_format, currentTime, clearStatus);
+            if (message)
             {
                 LogMessageImpl(message);
             }
@@ -121,11 +121,11 @@ namespace ctsTraffic
             THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
             // write the UTF16 Byte order mark
-            constexpr WCHAR bom_utf16 = 0xFEFF;
+            constexpr WCHAR bomUtf16 = 0xFEFF;
             DWORD bytesWritten{};
             THROW_LAST_ERROR_IF(!WriteFile(
                 m_fileHandle.get(),
-                &bom_utf16,
+                &bomUtf16,
                 static_cast<DWORD>(sizeof WCHAR),
                 &bytesWritten,
                 nullptr));

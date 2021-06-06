@@ -53,7 +53,7 @@ namespace ctl
             accum += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
         }
 
-        const auto stdev = std::sqrt(static_cast<double>(accum / (static_cast<double>(size) - 1.0)));
+        const auto stdev = std::sqrt(accum / (static_cast<double>(size) - 1.0));
         return std::make_tuple(mean, stdev);
     }
 

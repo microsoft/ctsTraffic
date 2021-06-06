@@ -316,11 +316,11 @@ namespace ctsTraffic
             FAIL_FAST_IF_MSG(
                 completedTransferBytes > m_inflightBytes,
                 "ctsIOPatternState::CompletedTask : ctsIOTask (%p) returned more bytes (%u) than were in flight (%llu)",
-                &completedTask, completedTransferBytes, static_cast<uint64_t>(m_inflightBytes));
+                &completedTask, completedTransferBytes, m_inflightBytes);
             FAIL_FAST_IF_MSG(
                 completedTask.m_bufferLength > m_inflightBytes,
                 "ctsIOPatternState::CompletedTask : the ctsIOTask (%p) had requested more bytes (%u) than were in-flight (%llu)\n",
-                &completedTask, completedTask.m_bufferLength, static_cast<uint64_t>(m_inflightBytes));
+                &completedTask, completedTask.m_bufferLength, m_inflightBytes);
             FAIL_FAST_IF_MSG(
                 completedTransferBytes > completedTask.m_bufferLength,
                 "ctsIOPatternState::CompletedTask : ctsIOTask (%p) returned more bytes (%u) than were posted (%u)\n",
@@ -353,7 +353,7 @@ namespace ctsTraffic
                 PRINT_DEBUG_INFO(
                     L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooFewBytes) [transferred %llu, expected transfer %llu]\n",
                     static_cast<uint64_t>(alreadyTransferred),
-                    static_cast<uint64_t>(m_maxTransfer));
+                    m_maxTransfer);
                 m_internalState = InternalPatternState::ErrorIoFailed;
                 return ctsIoPatternError::TooFewBytes;
             }
@@ -484,7 +484,7 @@ namespace ctsTraffic
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooManyBytes) [transferred %llu, expected transfer %llu]\n",
                 static_cast<uint64_t>(alreadyTransferred),
-                static_cast<uint64_t>(m_maxTransfer));
+                m_maxTransfer);
             m_internalState = InternalPatternState::ErrorIoFailed;
             return ctsIoPatternError::TooManyBytes;
         }

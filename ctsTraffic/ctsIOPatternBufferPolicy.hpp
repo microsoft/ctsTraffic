@@ -15,20 +15,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
+    using ctsIOPatternAllocationTypeStatic = struct ctsIOPatternAllocationTypeStatic_t;
+    using ctsIOPatternAllocationtypeDynamic = struct ctsIOPatternAllocationtypeDynamic_t;
 
-    typedef struct ctsIOPatternAllocationTypeStatic_t   ctsIOPatternAllocationTypeStatic;
-    typedef struct ctsIOPatternAllocationtypeDynamic_t  ctsIOPatternAllocationtypeDynamic;
-
-    typedef struct ctsIOPatternBufferTypeHeap_t         ctsIOPatternBufferTypeHeap;
-    typedef struct ctsIOPatternBufferTypeRegisteredIo_t ctsIOPatternBufferTypeRegisteredIo;
+    using ctsIOPatternBufferTypeHeap = struct ctsIOPatternBufferTypeHeap_t;
+    using ctsIOPatternBufferTypeRegisteredIo = struct ctsIOPatternBufferTypeRegisteredIo_t;
 
 
     template <typename AllocationType, typename BufferType>
     class ctsIOPatternBufferPolicy
     {
     public:
-        char* get_buffer(size_t _size) noexcept;
-        bool  verify_buffer(const char* _buffer) noexcept;
+        char* get_buffer(size_t size) noexcept;
+        bool  verify_buffer(const char* buffer) noexcept;
     };
 
 

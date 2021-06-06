@@ -130,18 +130,16 @@ namespace ctl
             /// - allows <algorithm> functions to be used
             ///
             ////////////////////////////////////////////////////////////////////////////////
-            typedef std::forward_iterator_tag iterator_category;
-            typedef IP_ADAPTER_ADDRESSES value_type;
-            typedef int difference_type;
-            typedef IP_ADAPTER_ADDRESSES* pointer;
-            typedef IP_ADAPTER_ADDRESSES& reference;
+            using iterator_category = std::forward_iterator_tag;
+            using value_type = IP_ADAPTER_ADDRESSES;
+            using difference_type = int;
+            using pointer = IP_ADAPTER_ADDRESSES*;
+            using reference = IP_ADAPTER_ADDRESSES&;
 
         private:
             std::shared_ptr<std::vector<BYTE>> m_buffer;
             PIP_ADAPTER_ADDRESSES m_current = nullptr;
         };
-
-    public:
 
         ////////////////////////////////////////////////////////////////////////////////
         ///

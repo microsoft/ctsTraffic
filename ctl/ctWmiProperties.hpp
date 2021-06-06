@@ -200,15 +200,15 @@ namespace ctl
 
             // iterator_traits (allows <algorithm> functions to be used)
             // ReSharper disable once CppInconsistentNaming
-            typedef std::forward_iterator_tag iterator_category;
+            using iterator_category = std::forward_iterator_tag;
             // ReSharper disable once CppInconsistentNaming
-            typedef wil::shared_bstr value_type;
+            using value_type = wil::shared_bstr;
             // ReSharper disable once CppInconsistentNaming
-            typedef int difference_type;
+            using difference_type = int;
             // ReSharper disable once CppInconsistentNaming
-            typedef wil::shared_bstr* pointer;
+            using pointer = wil::shared_bstr*;
             // ReSharper disable once CppInconsistentNaming
-            typedef wil::shared_bstr& reference;
+            using reference = wil::shared_bstr&;
 
         private:
             void increment()

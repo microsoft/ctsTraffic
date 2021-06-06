@@ -1952,8 +1952,29 @@ namespace ctsTraffic::ctsConfig
     /// currently not exposing this as a command-line parameter
     ///
     //////////////////////////////////////////////////////////////////////////////////////////
-    static void ParseForThreadpool(vector<const wchar_t*>&)
+    static void ParseForThreadpool(vector<const wchar_t*>& args)
     {
+        bool setRunsLong = false;
+        const auto foundArgument = find_if(begin(args), end(args), [](const wchar_t* parameter) -> bool {
+            const auto* const value = ParseArgument(parameter, L"-threadpool");
+            return value != nullptr;
+            });
+        if (foundArgument != end(args))
+        {
+            const auto* const value = ParseArgument(*foundArgument, L"-threadpool");
+            if (ctString::ctOrdinalEqualsCaseInsensative(L"default", value))
+            {
+                setRunsLong = false;
+            }
+            else if (ctString::ctOrdinalEqualsCaseInsensative(L"runslong", value))
+            {
+                setRunsLong = true;
+            }
+
+            // always remove the arg from our vector
+            args.erase(foundArgument);
+        }
+
         SYSTEM_INFO systemInfo;
         GetSystemInfo(&systemInfo);
         g_threadPoolThreadCount = systemInfo.dwNumberOfProcessors * c_defaultThreadpoolFactor;
@@ -1966,6 +1987,10 @@ namespace ctsTraffic::ctsConfig
         SetThreadpoolThreadMaximum(g_threadPool, g_threadPoolThreadCount);
 
         InitializeThreadpoolEnvironment(&g_threadPoolEnvironment);
+        if (setRunsLong)
+        {
+            SetThreadpoolCallbackRunsLong(&g_threadPoolEnvironment);
+        }
         SetThreadpoolCallbackPool(&g_threadPoolEnvironment, g_threadPool);
 
         g_configSettings->pTpEnvironment = &g_threadPoolEnvironment;
@@ -2449,6 +2474,13 @@ namespace ctsTraffic::ctsConfig
                     L"\t- <default> == 1000  (there will be at most 1000 sockets trying to connect at any one time)\n"
                     L"\t  note : zero means no throttling  (will immediately try to connect all '-Connections')\n"
                     L"\t       : this is a client-only option\n"
+                    L"-Threadpool:<default,runslong>\n"
+                    L"   - sets options on the NT threadpool used for IO and work items\n"
+                    L"\t- <default> == default\n"
+                    L"\t- default : uses the default TP_CALLBACK_ENVIRON from InitializeThreadpoolEnvironment\n"
+                    L"\t            this is recommended for must use cases unless we see work not well distributed\n"
+                    L"\t            between different CPUs - usually only at very high throughput rates\n"
+                    L"\t- runslong : calls SetThreadpoolCallbackRunsLong on the TP_CALLBACK_ENVIRON\n"
                     L"-TimeLimit:#####\n"
                     L"   - the maximum number of milliseconds to run before the application is aborted and terminated\n"
                     L"\t- <default> == <no time limit>\n"
@@ -3421,9 +3453,9 @@ namespace ctsTraffic::ctsConfig
                 localAddr.WriteCompleteAddress().c_str(),
                 remoteAddr.WriteCompleteAddress().c_str(),
                 stats.m_bytesSent.GetValue(),
-                totalTime > 0LL ? static_cast<long long>(stats.m_bytesSent.GetValue() * 1000LL / totalTime) : 0LL,
+                totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
                 stats.m_bytesRecv.GetValue(),
-                totalTime > 0LL ? static_cast<long long>(stats.m_bytesRecv.GetValue() * 1000LL / totalTime) : 0LL,
+                totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
                 totalTime,
                 ErrorType::ProtocolError == errorType ?
                 ctsIoPattern::BuildProtocolErrorString(error) :
@@ -3443,9 +3475,9 @@ namespace ctsTraffic::ctsConfig
                     remoteAddr.WriteCompleteAddress().c_str(),
                     stats.m_connectionIdentifier,
                     stats.m_bytesSent.GetValue(),
-                    totalTime > 0LL ? static_cast<long long>(stats.m_bytesSent.GetValue() * 1000LL / totalTime) : 0LL,
+                    totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
                     stats.m_bytesRecv.GetValue(),
-                    totalTime > 0LL ? static_cast<long long>(stats.m_bytesRecv.GetValue() * 1000LL / totalTime) : 0LL,
+                    totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
                     totalTime);
             }
             else
@@ -3458,9 +3490,9 @@ namespace ctsTraffic::ctsConfig
                     remoteAddr.WriteCompleteAddress().c_str(),
                     stats.m_connectionIdentifier,
                     stats.m_bytesSent.GetValue(),
-                    totalTime > 0LL ? static_cast<long long>(stats.m_bytesSent.GetValue() * 1000LL / totalTime) : 0LL,
+                    totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
                     stats.m_bytesRecv.GetValue(),
-                    totalTime > 0LL ? static_cast<long long>(stats.m_bytesRecv.GetValue() * 1000LL / totalTime) : 0LL,
+                    totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
                     totalTime);
             }
         }
@@ -3539,7 +3571,7 @@ namespace ctsTraffic::ctsConfig
 
         const float currentTime = GetStatusTimeStamp();
         const long long elapsedTime(stats.m_endTime.GetValue() - stats.m_startTime.GetValue());
-        const long long bitsPerSecond = elapsedTime > 0LL ? static_cast<long long>(stats.m_bitsReceived.GetValue() * 1000LL / elapsedTime) : 0LL;
+        const long long bitsPerSecond = elapsedTime > 0LL ? stats.m_bitsReceived.GetValue() * 1000LL / elapsedTime : 0LL;
 
         wstring csvString;
         wstring textString;
@@ -4169,11 +4201,11 @@ namespace ctsTraffic::ctsConfig
             }
             if (g_configSettings->Options & SetRecvBuf)
             {
-                settingString.append(wil::str_printf<std::wstring>(L" SO_RCVBUF(%lu)", static_cast<unsigned long>(g_configSettings->RecvBufValue)));
+                settingString.append(wil::str_printf<std::wstring>(L" SO_RCVBUF(%lu)", g_configSettings->RecvBufValue));
             }
             if (g_configSettings->Options & SetSendBuf)
             {
-                settingString.append(wil::str_printf<std::wstring>(L" SO_SNDBUF(%lu)", static_cast<unsigned long>(g_configSettings->SendBufValue)));
+                settingString.append(wil::str_printf<std::wstring>(L" SO_SNDBUF(%lu)", g_configSettings->SendBufValue));
             }
             if (g_configSettings->Options & MsgWaitAll)
             {
@@ -4195,8 +4227,8 @@ namespace ctsTraffic::ctsConfig
                 break;
             case IoPatternType::PushPull:
                 settingString.append(L"PushPull <TCP client/server alternate send/recv>\n");
-                settingString.append(wil::str_printf<std::wstring>(L"\t\tPushBytes: %lu\n", static_cast<unsigned long>(g_configSettings->PushBytes)));
-                settingString.append(wil::str_printf<std::wstring>(L"\t\tPullBytes: %lu\n", static_cast<unsigned long>(g_configSettings->PullBytes)));
+                settingString.append(wil::str_printf<std::wstring>(L"\t\tPushBytes: %lu\n", g_configSettings->PushBytes));
+                settingString.append(wil::str_printf<std::wstring>(L"\t\tPullBytes: %lu\n", g_configSettings->PullBytes));
                 break;
             case IoPatternType::Duplex:
                 settingString.append(L"Duplex <TCP client/server both sending and receiving>\n");
@@ -4210,11 +4242,11 @@ namespace ctsTraffic::ctsConfig
                 FAIL_FAST_MSG("Unexpected Settings IoPattern");
         }
 
-        settingString.append(wil::str_printf<std::wstring>(L"\tPrePostRecvs: %u\n", static_cast<unsigned long>(g_configSettings->PrePostRecvs)));
+        settingString.append(wil::str_printf<std::wstring>(L"\tPrePostRecvs: %u\n", g_configSettings->PrePostRecvs));
 
         if (g_configSettings->PrePostSends > 0)
         {
-            settingString.append(wil::str_printf<std::wstring>(L"\tPrePostSends: %u\n", static_cast<unsigned long>(g_configSettings->PrePostSends)));
+            settingString.append(wil::str_printf<std::wstring>(L"\tPrePostSends: %u\n", g_configSettings->PrePostSends));
         }
         else
         {
@@ -4381,13 +4413,13 @@ namespace ctsTraffic::ctsConfig
             settingString.append(
                 wil::str_printf<std::wstring>(
                     L"\tConnection limit (maximum established connections): %u [0x%x]\n",
-                    static_cast<unsigned long>(g_configSettings->ConnectionLimit),
-                    static_cast<unsigned long>(g_configSettings->ConnectionLimit)));
+                    g_configSettings->ConnectionLimit,
+                    g_configSettings->ConnectionLimit));
             settingString.append(
                 wil::str_printf<std::wstring>(
                     L"\tConnection throttling rate (maximum pended connection attempts): %u [0x%x]\n",
-                    static_cast<unsigned long>(g_configSettings->ConnectionThrottleLimit),
-                    static_cast<unsigned long>(g_configSettings->ConnectionThrottleLimit)));
+                    g_configSettings->ConnectionThrottleLimit,
+                    g_configSettings->ConnectionThrottleLimit));
         }
         // calculate total connections
         if (g_configSettings->AcceptFunction)
@@ -4397,15 +4429,15 @@ namespace ctsTraffic::ctsConfig
                 settingString.append(
                     wil::str_printf<std::wstring>(
                         L"\tServer-accepted connections before exit : 0x%llx\n",
-                        static_cast<ULONGLONG>(g_configSettings->ServerExitLimit)));
+                        g_configSettings->ServerExitLimit));
             }
             else
             {
                 settingString.append(
                     wil::str_printf<std::wstring>(
                         L"\tServer-accepted connections before exit : %llu [0x%llx]\n",
-                        static_cast<ULONGLONG>(g_configSettings->ServerExitLimit),
-                        static_cast<ULONGLONG>(g_configSettings->ServerExitLimit)));
+                        g_configSettings->ServerExitLimit,
+                        g_configSettings->ServerExitLimit));
             }
         }
         else

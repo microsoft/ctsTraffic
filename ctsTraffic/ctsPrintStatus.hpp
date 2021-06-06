@@ -420,7 +420,7 @@ namespace ctsTraffic
                 charactersWritten += AppendCsvOutput(
                     charactersWritten,
                     c_bitsPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed : 0LL);
 
                 charactersWritten += AppendCsvOutput(charactersWritten, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
                 charactersWritten += AppendCsvOutput(charactersWritten, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
@@ -438,7 +438,7 @@ namespace ctsTraffic
                 RightJustifyOutput(
                     c_bitsPerSecondOffset,
                     c_bitsPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed : 0LL);
 
                 RightJustifyOutput(c_currentStreamsOffset, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
                 RightJustifyOutput(c_competedFramesOffset, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
@@ -517,12 +517,12 @@ namespace ctsTraffic
                 charactersWritten += AppendCsvOutput(
                     charactersWritten,
                     c_sendBytesPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 charactersWritten += AppendCsvOutput(
                     charactersWritten,
                     c_recvBytesPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed : 0LL);
 
                 charactersWritten += AppendCsvOutput(charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
                 charactersWritten += AppendCsvOutput(charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());
@@ -539,12 +539,12 @@ namespace ctsTraffic
                 RightJustifyOutput(
                     c_sendBytesPerSecondOffset,
                     c_sendBytesPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed : 0LL);
                 // calculating # of bytes that were received between the previous format() and current call to format()
                 RightJustifyOutput(
                     c_recvBytesPerSecondOffset,
                     c_recvBytesPerSecondLength,
-                    timeElapsed > 0LL ? static_cast<long long>(tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed) : 0LL);
+                    timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed : 0LL);
 
                 RightJustifyOutput(c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
                 RightJustifyOutput(c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());

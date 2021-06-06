@@ -88,15 +88,15 @@ namespace ctsTraffic
             ///
             ////////////////////////////////////////////////////////////////////////////////
             // ReSharper disable once CppInconsistentNaming
-            typedef std::forward_iterator_tag iterator_category;
+            using iterator_category = std::forward_iterator_tag;
             // ReSharper disable once CppInconsistentNaming
-            typedef std::array<WSABUF, c_bufferArraySize> value_type;
+            using value_type = std::array<WSABUF, c_bufferArraySize>;
             // ReSharper disable once CppInconsistentNaming
-            typedef size_t difference_type;
+            using difference_type = size_t;
             // ReSharper disable once CppInconsistentNaming
-            typedef std::array<WSABUF, c_bufferArraySize>* pointer;
+            using pointer = std::array<WSABUF, c_bufferArraySize>*;
             // ReSharper disable once CppInconsistentNaming
-            typedef std::array<WSABUF, c_bufferArraySize>& reference;
+            using reference = std::array<WSABUF, c_bufferArraySize>&;
 
             ~iterator() = default;
             iterator(const iterator&) = default;

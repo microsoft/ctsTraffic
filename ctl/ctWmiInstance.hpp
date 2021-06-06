@@ -92,6 +92,7 @@ namespace ctl
         [[nodiscard]] wil::unique_bstr get_path() const
         {
             wil::unique_variant objectPathVariant;
+            // ReSharper disable once StringLiteralTypo
             get(L"__RELPATH", objectPathVariant.addressof());
 
             if (IsVariantEmptyOrNull(objectPathVariant.addressof()))
@@ -193,7 +194,7 @@ namespace ctl
             THROW_IF_FAILED(m_wbemServices->PutInstance(
                 m_instanceObject.get(),
                 wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
-                const_cast<IWbemContext*>(context.get()),
+                context.get(),
                 result.addressof()));
             // wait for the call to complete
             HRESULT status;
@@ -416,8 +417,7 @@ namespace ctl
     private:
         void get_property(_In_ PCWSTR propertyName, _Inout_ VARIANT* pVariant) const
         {
-            // since COM doesn't support marking methods const, calls to Get() are const_cast out of necessity
-            auto* pInstance = const_cast<IWbemClassObject*>(m_instanceObject.get());
+            auto* pInstance = m_instanceObject.get();
             THROW_IF_FAILED(pInstance->Get(
                 propertyName,
                 0,

@@ -123,7 +123,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 #else
         if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
         {
-            ctsConfig::PrintSummary(L"\n ** Time-limit of %lu reached **\n", static_cast<unsigned long>(ctsConfig::g_configSettings->TimeLimit));
+            ctsConfig::PrintSummary(L"\n ** Time-limit of %lu reached **\n", ctsConfig::g_configSettings->TimeLimit);
         }
 #endif
     }

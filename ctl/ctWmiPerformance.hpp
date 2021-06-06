@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable StringLiteralTypo
 #pragma once
 
 // cpp headers
@@ -115,7 +116,7 @@ namespace ctl
         {
             if (rhs.vt == VT_DATE && lhs.vt == VT_DATE)
             {
-                return rhs.date == lhs.date;
+                return rhs.date == lhs.date;  // NOLINT(clang-diagnostic-float-equal)
             }
             return false;
         }
@@ -307,7 +308,7 @@ namespace ctl
         class ctWmiPerformanceDataAccessor
         {
         public:
-            typedef typename std::vector<TAccess*>::const_iterator ctAccessIterator;
+            using ctAccessIterator = typename std::vector<TAccess*>::const_iterator;
 
             ctWmiPerformanceDataAccessor(ctWmiService wmi, const wil::com_ptr<IWbemConfigureRefresher>& config, _In_ PCWSTR classname);
 
@@ -681,7 +682,8 @@ namespace ctl
             Update,
             Clear
         };
-        typedef std::function<void(CallbackAction action)> ctWmiPerformanceCallback;
+
+        using ctWmiPerformanceCallback = std::function<void (CallbackAction)>;
     } // unnamed namespace
 
 
@@ -718,15 +720,15 @@ namespace ctl
         public:
             // iterator_traits - allows <algorithm> functions to be used
             // ReSharper disable once CppInconsistentNaming
-            typedef std::forward_iterator_tag iterator_category;
+            using iterator_category = std::forward_iterator_tag;
             // ReSharper disable once CppInconsistentNaming
-            typedef T value_type;
+            using value_type = T;
             // ReSharper disable once CppInconsistentNaming
-            typedef size_t difference_type;
+            using difference_type = size_t;
             // ReSharper disable once CppInconsistentNaming
-            typedef T* pointer;
+            using pointer = T*;
             // ReSharper disable once CppInconsistentNaming
-            typedef T& reference;
+            using reference = T&;
 
             explicit iterator(typename std::vector<T>::const_iterator&& instance) noexcept :
                 m_current(std::move(instance)), m_isEmpty(false)
@@ -792,7 +794,7 @@ namespace ctl
             {
                 if (m_isEmpty)
                 {
-                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : preincrementing an iterator referencing an empty container");
+                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : pre-incrementing an iterator referencing an empty container");
                 }
                 ++m_current;
                 return *this;
@@ -802,7 +804,7 @@ namespace ctl
             {
                 if (m_isEmpty)
                 {
-                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
+                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : post-incrementing an iterator referencing an empty container");
                 }
                 iterator temp(*this);
                 ++m_current;
@@ -813,7 +815,7 @@ namespace ctl
             {
                 if (m_isEmpty)
                 {
-                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : postincrementing an iterator referencing an empty container");
+                    throw std::runtime_error("ctWmiPerformanceCounter::iterator : post-incrementing an iterator referencing an empty container");
                 }
                 for (size_t loop = 0; loop < inc; ++loop)
                 {
@@ -1139,7 +1141,7 @@ namespace ctl
     class ctWmiPerformance final
     {
     public:
-        ctWmiPerformance(ctWmiService wmiService) : m_wmiService(std::move(wmiService))
+        explicit ctWmiPerformance(ctWmiService wmiService) : m_wmiService(std::move(wmiService))
         {
             m_lockedData = std::make_unique<LockedData>();
             m_refresher = wil::CoCreateInstance<WbemRefresher, IWbemRefresher>();

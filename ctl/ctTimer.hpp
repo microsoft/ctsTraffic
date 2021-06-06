@@ -34,12 +34,12 @@ namespace ctl
 
         constexpr long long ConvertMillisToHundredNs(long long milliseconds) noexcept
         {
-            return static_cast<long long>(milliseconds * 10000LL);
+            return milliseconds * 10000LL;
         }
 
         constexpr long long ConvertHundredNsToMillis(long long _hundred_nanoseconds) noexcept
         {
-            return static_cast<long long>(_hundred_nanoseconds / 10000LL);
+            return _hundred_nanoseconds / 10000LL;
         }
 
         inline FILETIME ConvertHundredNsToAbsoluteFiletime(long long hundred_nanoseconds) noexcept
@@ -131,7 +131,7 @@ namespace ctl
             LARGE_INTEGER qpc;
             QueryPerformanceCounter(&qpc);
             // multiplying by 1000 as (qpc / qpf) == seconds
-            return static_cast<long long>(qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart);
+            return qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart;
         }
 #endif
 

@@ -589,11 +589,11 @@ namespace ctsTraffic
         const unsigned long m_pushSegmentSize;
         const unsigned long m_pullSegmentSize;
 
-        ctsUnsignedLong m_intraSegmentTransfer;
+        ctsUnsignedLong m_intraSegmentTransfer{ 0 };
 
-        const bool m_listening;
-        bool m_ioNeeded;
-        bool m_sending;
+        const bool m_listening{ false };
+        bool m_ioNeeded{ true };
+        bool m_sending{ false };
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -664,7 +664,7 @@ namespace ctsTraffic
             NotStarted,
             IdSent,
             IoStarted
-        } m_state;
+        } m_state{ ServerState::NotStarted };
     };
 
 

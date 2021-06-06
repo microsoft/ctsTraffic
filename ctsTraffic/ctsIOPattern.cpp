@@ -563,7 +563,7 @@ namespace ctsTraffic
         FAIL_FAST_IF_MSG(
             newBufferSize > MAXDWORD,
             "ctsIOPattern internal error: next buffer size (%llu) is greater than MAXDWORD (%u)",
-            static_cast<ULONGLONG>(newBufferSize), MAXDWORD);
+            newBufferSize, MAXDWORD);
 
         // build the next IO request with a properly calculated buffer size
         // Send must specify the offset because we must align the patterns that we send
@@ -905,9 +905,7 @@ namespace ctsTraffic
         ctsIoPatternStatistics(1), // currently not supporting >1 concurrent IO requests
         m_pushSegmentSize(ctsConfig::g_configSettings->PushBytes),
         m_pullSegmentSize(ctsConfig::g_configSettings->PullBytes),
-        m_intraSegmentTransfer(0ULL),
         m_listening(ctsConfig::IsListening()),
-        m_ioNeeded(true),
         m_sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
     {
     }
@@ -1026,7 +1024,7 @@ namespace ctsTraffic
             "ctsIOPatternDuplex: internal failure - send_bytes (%llu) + recv_bytes (%llu) must equal total bytes (%llu)",
             static_cast<ULONGLONG>(m_remainingSendBytes),
             static_cast<ULONGLONG>(m_remainingRecvBytes),
-            static_cast<ULONGLONG>(GetTotalTransfer()));
+            GetTotalTransfer());
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -1131,8 +1129,7 @@ namespace ctsTraffic
         m_currentFrameCompleted(0UL),
         m_frameRateFps(ctsConfig::GetMediaStream().FramesPerSecond),
         m_currentFrame(1UL),
-        m_baseTimeMilliseconds(0LL),
-        m_state(ServerState::NotStarted)
+        m_baseTimeMilliseconds(0LL)
     {
         PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / m_frameRateFps));
     }

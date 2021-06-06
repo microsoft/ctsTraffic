@@ -46,20 +46,19 @@ namespace ctl
         static BOOL CALLBACK SocketExtensionInitFn(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
         {
             WSADATA wsadata;
-            const auto wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
-            if (wsError != 0)
+            if (::WSAStartup(WINSOCK_VERSION, &wsadata) != 0)
             {
                 return FALSE;
             }
-            auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
+            auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { ::WSACleanup(); });
 
             // check to see if need to create a temp socket
-            SOCKET localSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+            SOCKET localSocket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
             if (INVALID_SOCKET == localSocket)
             {
                 return FALSE;
             }
-            auto closesocketOnExit = wil::scope_exit([&]() noexcept { closesocket(localSocket); });
+            auto closesocketOnExit = wil::scope_exit([&]() noexcept { ::closesocket(localSocket); });
 
             // control code and the size to fetch the extension function pointers
             for (unsigned fnLoop = 0; fnLoop < c_functionPtrCount; ++fnLoop)
@@ -124,7 +123,7 @@ namespace ctl
                     case 8: {
                         functionPtr = &g_rioextensionfunctiontable;
                         constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        ::memcpy(&guid, &tmpGuid, sizeof GUID);
                         controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
                         bytes = static_cast<DWORD>(sizeof g_rioextensionfunctiontable);
                         ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
@@ -135,7 +134,7 @@ namespace ctl
                         FAIL_FAST_MSG("Unknown ctSocketExtension function number");
                 }
 
-                if (0 != WSAIoctl(
+                if (0 != ::WSAIoctl(
                     localSocket,
                     controlCode,
                     &guid,
@@ -146,8 +145,7 @@ namespace ctl
                     nullptr, // lpOverlapped
                     nullptr))  // lpCompletionRoutine
                 {
-                    const auto errorCode = WSAGetLastError();
-                    if (8 == fnLoop && errorCode == WSAEOPNOTSUPP)
+                    if (WSAGetLastError() == WSAEOPNOTSUPP && 8 == fnLoop)
                     {
                         // ignore not-supported errors for RIO APIs to support Win7
                     }

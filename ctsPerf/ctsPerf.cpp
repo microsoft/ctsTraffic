@@ -326,7 +326,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             performanceVector.emplace_back(InstantiatePerProcessByPIDCounters(processId));
         }
 
-        wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", static_cast<DWORD>(timeToRunMs / 1000UL));
+        wprintf(L"\nStarting counters : will run for %lu seconds\n (hit ctrl-c to exit early) ...\n\n", timeToRunMs / 1000UL);
         for (auto& perfObject : performanceVector)
         {
             perfObject.start_all_counters(1000);

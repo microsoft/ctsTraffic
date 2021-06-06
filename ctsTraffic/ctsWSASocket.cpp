@@ -129,8 +129,6 @@ namespace ctsTraffic
             {
                 // sleep up to 5 seconds to allow TCP to cleanup its internal state
                 constexpr unsigned long bindRetryCount = 5;
-                constexpr unsigned long bindRetrySleepMs = 1000;
-
                 for (unsigned long bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
                     if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
@@ -138,6 +136,7 @@ namespace ctsTraffic
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)
                         {
+                            constexpr unsigned long bindRetrySleepMs = 1000;
                             PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bindRetry + 1, bindRetrySleepMs);
                             Sleep(bindRetrySleepMs);
                         }
