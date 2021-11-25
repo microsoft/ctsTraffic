@@ -79,7 +79,7 @@ namespace ctsTraffic
         m_socket.reset(socket);
     }
 
-    int ctsSocket::CloseSocket(int errorCode) noexcept
+    int ctsSocket::CloseSocket(uint32_t errorCode) noexcept
     {
         const auto lock = m_lock.lock();
 
@@ -110,7 +110,7 @@ namespace ctsTraffic
         return m_tpIocp;
     }
 
-    void ctsSocket::PrintPatternResults(unsigned long lastError) const noexcept
+    void ctsSocket::PrintPatternResults(uint32_t lastError) const noexcept
     {
         if (m_pattern)
         {
@@ -144,7 +144,7 @@ namespace ctsTraffic
             m_pattern->RegisterCallback(nullptr);
         }
 
-        auto refParent(m_parent.lock());
+        const auto refParent(m_parent.lock());
         if (refParent)
         {
             refParent->CompleteState(recordedError);
@@ -171,7 +171,7 @@ namespace ctsTraffic
         m_targetSockaddr = targetAddress;
     }
 
-    void ctsSocket::SetIoPattern() noexcept
+    void ctsSocket::SetIoPattern()
     {
         m_pattern = ctsIoPattern::MakeIoPattern();
         if (!m_pattern)
@@ -198,8 +198,7 @@ namespace ctsTraffic
 
         const auto& sharedIocp = GetIocpThreadpool();
         OVERLAPPED* ov = sharedIocp->new_request([weak_this_ptr = std::weak_ptr<ctsSocket>(shared_from_this())](OVERLAPPED* pOverlapped) noexcept {
-
-            auto lambdaSharedThis = weak_this_ptr.lock();
+            const auto lambdaSharedThis = weak_this_ptr.lock();
             if (!lambdaSharedThis)
             {
                 return;
@@ -280,12 +279,12 @@ namespace ctsTraffic
         ctsConfig::PrintThrownException();
     }
 
-    long ctsSocket::IncrementIo() noexcept
+    int32_t ctsSocket::IncrementIo() noexcept
     {
         return ctMemoryGuardIncrement(&m_ioCount);
     }
 
-    long ctsSocket::DecrementIo() noexcept
+    int32_t ctsSocket::DecrementIo() noexcept
     {
         const auto ioValue = ctMemoryGuardDecrement(&m_ioCount);
         FAIL_FAST_IF_MSG(
@@ -294,7 +293,7 @@ namespace ctsTraffic
         return ioValue;
     }
 
-    long ctsSocket::GetPendedIoCount() noexcept
+    int32_t ctsSocket::GetPendedIoCount() noexcept
     {
         return ctMemoryGuardRead(&m_ioCount);
     }

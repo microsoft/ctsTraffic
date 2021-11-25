@@ -66,7 +66,7 @@ namespace ctsTraffic
             }
         }
 
-        void LogStatus(const std::shared_ptr<ctsStatusInformation>& statusInfo, long long currentTime, bool clearStatus) noexcept
+        void LogStatus(const std::shared_ptr<ctsStatusInformation>& statusInfo, int64_t currentTime, bool clearStatus) noexcept
         {
             const auto* const message = statusInfo->PrintStatus(m_format, currentTime, clearStatus);
             if (message)
@@ -155,7 +155,7 @@ namespace ctsTraffic
         {
             const auto lock = m_fileLock.lock();
             DWORD bytesWritten{};
-            THROW_LAST_ERROR_IF(!WriteFile(
+            LOG_LAST_ERROR_IF(!WriteFile(
                 m_fileHandle.get(),
                 message,
                 static_cast<DWORD>(wcslen(message) * sizeof(WCHAR)),

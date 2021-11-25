@@ -36,7 +36,7 @@ namespace ctsTraffic
     // timer to wake up and clean up the socket pool
     // - delete any closed sockets
     // - create new sockets
-    unsigned long ctsSocketBroker::m_timerCallbackTimeoutMs = 333; // millseconds
+    uint32_t ctsSocketBroker::m_timerCallbackTimeoutMs = 333; // millseconds
 
     ctsSocketBroker::ctsSocketBroker()
     {
@@ -64,7 +64,7 @@ namespace ctsTraffic
         // make sure pending_limit cannot be larger than total_connections_remaining
         if (m_pendingLimit > m_totalConnectionsRemaining)
         {
-            m_pendingLimit = static_cast<unsigned long>(m_totalConnectionsRemaining);
+            m_pendingLimit = static_cast<uint32_t>(m_totalConnectionsRemaining);
         }
 
         // create our manual-reset notification event
@@ -216,12 +216,7 @@ namespace ctsTraffic
                     }
                 }
 
-                pBroker->m_socketPool.erase(
-                    remove(
-                        begin(pBroker->m_socketPool),
-                        end(pBroker->m_socketPool),
-                        nullptr),
-                    end(pBroker->m_socketPool));
+                std::erase(pBroker->m_socketPool, nullptr);
 
                 if (0 == pBroker->m_totalConnectionsRemaining &&
                     0 == pBroker->m_pendingSockets &&
@@ -229,7 +224,6 @@ namespace ctsTraffic
                 {
                     // it's time to exit if no more work is to be done
                     SetEvent(pBroker->m_doneEvent.get());
-
                 }
                 else
                 {

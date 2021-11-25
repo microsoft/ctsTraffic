@@ -40,7 +40,7 @@ namespace ctsUnitTest
 {		
     TEST_CLASS(ctsMediaStreamProtocolUnitTest)
     {
-        const long long SequenceNumber = 1LL;
+        const int64_t SequenceNumber = 1LL;
         char* BufferPtr = nullptr;
 
     public:
@@ -59,7 +59,7 @@ namespace ctsUnitTest
                 // verify operator->
                 Assert::AreEqual(static_cast<size_t>(5), starting->size());
                 // verify operator*
-                auto deref = *starting;
+                const auto& deref = *starting;
                 Assert::AreEqual(static_cast<size_t>(5), deref.size());
                 ++starting;
             }
@@ -78,7 +78,7 @@ namespace ctsUnitTest
                 // verify operator->
                 Assert::AreEqual(static_cast<size_t>(5), starting->size());
                 // verify operator*
-                auto deref = *starting;
+                const auto& deref = *starting;
                 Assert::AreEqual(static_cast<size_t>(5), deref.size());
                 ++starting;
             }
@@ -86,78 +86,78 @@ namespace ctsUnitTest
 
         TEST_METHOD(TinySendRequest)
         {
-            static const unsigned long buffer_size = c_udpDatagramDataHeaderLength + 1;
+            static const uint32_t buffer_size = c_udpDatagramDataHeaderLength + 1;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 1;
+            static const uint32_t expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
         
         TEST_METHOD(OneDatagramSendRequest)
         {
-            static const unsigned long buffer_size = c_udpDatagramMaximumSizeBytes;
+            static const uint32_t buffer_size = c_udpDatagramMaximumSizeBytes;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 1;
+            static const uint32_t expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
 
         TEST_METHOD(OneDatagramMinusOneSendRequest)
         {
-            static const unsigned long buffer_size = c_udpDatagramMaximumSizeBytes - 1;
+            static const uint32_t buffer_size = c_udpDatagramMaximumSizeBytes - 1;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, 1, nullptr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 1;
+            static const uint32_t expected_datagram_count = 1;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
 
         TEST_METHOD(OneDatagramPlusOneSendRequest)
         {
-            static const unsigned long buffer_size = c_udpDatagramMaximumSizeBytes + 1;
+            static const uint32_t buffer_size = c_udpDatagramMaximumSizeBytes + 1;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 2;
+            static const uint32_t expected_datagram_count = 2;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
 
         TEST_METHOD(ExactlyTwoDatagramSendRequest)
         {
-            static const unsigned long buffer_size = 2 * c_udpDatagramMaximumSizeBytes;
+            static const uint32_t buffer_size = 2 * c_udpDatagramMaximumSizeBytes;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 2;
+            static const uint32_t expected_datagram_count = 2;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
         TEST_METHOD(LargeSendRequest)
         {
-            static const unsigned long buffer_size = 123456789;
+            static const uint32_t buffer_size = 123456789;
 
             ctsMediaStreamSendRequests testbuffer(buffer_size, SequenceNumber, BufferPtr);
             this->verify_protocol_header(testbuffer);
             const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-            static const unsigned long expected_datagram_count = 1930;
+            static const uint32_t expected_datagram_count = 1930;
             Assert::AreEqual(expected_datagram_count, dgrams_returned);
         }
 
         TEST_METHOD(ConstructStart)
         {
-            Assert::AreEqual(c_udpDatagramStartStringLength, static_cast<unsigned long>(::strlen(g_udpDatagramStartString)));
+            Assert::AreEqual(c_udpDatagramStartStringLength, ::strlen(g_udpDatagramStartString));
 
             const ctsTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
             Assert::AreEqual(c_udpDatagramStartStringLength, test_task.m_bufferLength);
@@ -170,19 +170,19 @@ namespace ctsUnitTest
         void verify_protocol_header(ctsMediaStreamSendRequests& _testbuffer) const
         {
             for (auto& buffer_array : _testbuffer) {
-                Assert::AreEqual(c_udpDatagramProtocolHeaderFlagLength, buffer_array[0].len);
+                Assert::AreEqual(static_cast<ULONG>(c_udpDatagramProtocolHeaderFlagLength), buffer_array[0].len);
                 Assert::AreEqual(c_udpDatagramProtocolHeaderFlagData, *reinterpret_cast<unsigned short*>(buffer_array[0].buf));
             }
         }
-        unsigned long verify_byte_count(ctsMediaStreamSendRequests& _testbuffer, unsigned long _buffer_size) const
+        uint32_t verify_byte_count(ctsMediaStreamSendRequests& _testbuffer, uint32_t _buffer_size) const
         {
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(L"Buffer size %u\n", _buffer_size).c_str());
 
-            unsigned long datagram_count = 0;
-            unsigned long total_bytes = 0;
+            uint32_t datagram_count = 0;
+            uint32_t total_bytes = 0;
             for (auto& buffer_array : _testbuffer) {
-                for (auto& wsa_buf : buffer_array) {
+                for (const auto& wsa_buf : buffer_array) {
                     Logger::WriteMessage(
                         wil::str_printf<std::wstring>(L"Buffer length %u  :  ", wsa_buf.len).c_str());
                     total_bytes += wsa_buf.len;

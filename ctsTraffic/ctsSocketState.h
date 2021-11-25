@@ -99,7 +99,7 @@ namespace ctsTraffic
         std::weak_ptr<ctsSocketBroker> m_broker{};
         std::shared_ptr<ctsSocket> m_socket{};
         InternalState m_state = InternalState::Creating;
-        int m_lastError = 0UL;
+        uint32_t m_lastError = 0UL;
         bool m_initiatedIo = false;
 
         //

@@ -22,16 +22,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace Microsoft::VisualStudio::CppUnitTestFramework
-{
-    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& value)
-    {
-        return std::to_wstring(static_cast<unsigned long long>(value));
-    }
-}
-
-ctsTraffic::ctsUnsignedLongLong g_transferSize = 0ULL;
+uint64_t g_transferSize = 0ULL;
 bool g_isListening = false;
+
 ///
 /// Fakes
 ///
@@ -39,21 +32,28 @@ namespace ctsTraffic::ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t,
+                                const ctsTcpStatistics&) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t,
+                                const ctsUdpStatistics&) noexcept
     {
     }
+
     void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
+
     void PrintException(const std::exception&) noexcept
     {
     }
+
     void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
@@ -63,15 +63,17 @@ namespace ctsTraffic::ctsConfig
         return g_isListening;
     }
 
-    ctsUnsignedLongLong GetTransferSize() noexcept
+    uint64_t GetTransferSize() noexcept
     {
         return g_transferSize;
     }
+
     bool ShutdownCalled() noexcept
     {
         return false;
     }
-    unsigned long ConsoleVerbosity() noexcept
+
+    uint32_t ConsoleVerbosity() noexcept
     {
         return 0;
     }
@@ -82,6 +84,7 @@ namespace ctsTraffic::ctsConfig
 ///
 
 using namespace ctsTraffic;
+
 namespace ctsUnitTest
 {
     TEST_CLASS(ctsStatisticsUnitTest)

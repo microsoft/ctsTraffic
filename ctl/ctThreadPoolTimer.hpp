@@ -34,8 +34,8 @@ namespace ctl
         struct ctThreadpoolTimerCallbackInfo
         {
             std::function<void()> Callback;
-            FILETIME TimerExpiration{ 0, 0 };
-            unsigned long ReoccuringPeriod = 0;
+            FILETIME TimerExpiration{};
+            uint32_t ReoccuringPeriod{};
 
             ctThreadpoolTimerCallbackInfo() = default;
             ~ctThreadpoolTimerCallbackInfo() = default;
@@ -43,7 +43,7 @@ namespace ctl
             ctThreadpoolTimerCallbackInfo(const ctThreadpoolTimerCallbackInfo&) = delete;
             ctThreadpoolTimerCallbackInfo& operator=(const ctThreadpoolTimerCallbackInfo&) = delete;
 
-            explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, long long milliseconds, unsigned long period) noexcept :
+            explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, int64_t milliseconds, uint32_t period) noexcept :
                 Callback(std::move(callback)),
                 ReoccuringPeriod(period)
             {
@@ -121,7 +121,7 @@ namespace ctl
         ctThreadpoolTimer(ctThreadpoolTimer&&) = delete;
         ctThreadpoolTimer& operator=(ctThreadpoolTimer&&) = delete;
 
-        void schedule_reoccuring(std::function<void()> function, long long millisecond_offset, unsigned long period)
+        void schedule_reoccuring(std::function<void()> function, int64_t millisecond_offset, uint32_t period)
         {
             // capture the caller's context in a lambda to be invoked in the callback
             this->insert_callback_info(
@@ -150,7 +150,7 @@ namespace ctl
         //
         // Private members
         //
-        wil::critical_section m_timerLock{500};
+        wil::critical_section m_timerLock{ 500 };
         const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr;  // NOLINT(misc-misplaced-const)
         std::vector<PTP_TIMER> m_tpTimers;
         std::vector<Details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
@@ -158,7 +158,7 @@ namespace ctl
 
         PTP_TIMER create_tp()
         {
-            const PTP_TIMER ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, m_tpEnvironment); // NOLINT(misc-misplaced-const)
+            const auto ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, m_tpEnvironment); // NOLINT(misc-misplaced-const)
             if (!ptp_timer)
             {
                 THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolTimer");
@@ -178,9 +178,8 @@ namespace ctl
             }
 
             // compare each callback_object to check if it contains a null function ptr
-            auto unused_callback = std::find_if(
-                std::begin(m_callbackObjects),
-                std::end(m_callbackObjects),
+            auto unused_callback = std::ranges::find_if(
+                m_callbackObjects,
                 [](const Details::ctThreadpoolTimerCallbackInfo& info) noexcept {
                     // returns if a null callback (not being used)
                     return !static_cast<bool>(info.Callback);
@@ -195,7 +194,7 @@ namespace ctl
                 // ensure this is exception safe with a scope guard
                 auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { m_callbackObjects.pop_back(); });
 
-                PTP_TIMER temp_timer = this->create_tp();
+                const auto temp_timer = this->create_tp();
                 // ensure the timer is closed (is exception safe) with a scope guard
                 auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() noexcept { CloseThreadpoolTimer(temp_timer); });
 
@@ -245,9 +244,8 @@ namespace ctl
 
 
                 // find the timer that was fired to run its callback
-                const auto found_timer = std::find_if(
-                    std::begin(this_ptr->m_tpTimers),
-                    std::end(this_ptr->m_tpTimers),
+                const auto found_timer = std::ranges::find_if(
+                    this_ptr->m_tpTimers,
                     [timer](PTP_TIMER callback_timer) noexcept {
                         // returns if a null callback (not being used)
                         return timer == callback_timer;

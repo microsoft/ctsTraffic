@@ -29,13 +29,12 @@ namespace ctsTraffic
     class ctsMediaStreamServerListeningSocket
     {
     private:
-        static const size_t c_recvBufferSize = 1024;
+        static constexpr size_t c_recvBufferSize = 1024;
 
         std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
 
-        mutable wil::critical_section m_listeningsocketLock{
-            ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-        _Requires_lock_held_(listeningsocket_lock) wil::unique_socket m_listeningSocket;
+        mutable wil::critical_section m_listeningsocketLock{ ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };
+        _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
 
         const ctl::ctSockaddr m_listeningAddr;
         std::array<char, c_recvBufferSize> m_recvBuffer{};

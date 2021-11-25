@@ -41,7 +41,7 @@ namespace ctl
         NetworkOrder
     };
 
-    constexpr DWORD c_ipStringMaxLength = 65;
+    constexpr DWORD SockAddrMaxStringLength = INET6_ADDRSTRLEN;
 
     class ctSockaddr final
     {
@@ -77,7 +77,7 @@ namespace ctl
         // - one must map the v4 address to its mapped v6 address
         static ctSockaddr MapDualMode4To6(const ctSockaddr& inV4) noexcept
         {
-            const IN6_ADDR v4MappedPrefix{ {IN6ADDR_V4MAPPEDPREFIX_INIT} };
+            constexpr IN6_ADDR v4MappedPrefix{ {IN6ADDR_V4MAPPEDPREFIX_INIT} };
 
             ctSockaddr outV6(AF_INET6);
             auto* const pIn6Addr = outV6.in6_addr();
@@ -99,9 +99,9 @@ namespace ctl
             Any
         };
 
-        explicit ctSockaddr(short family = AF_UNSPEC, AddressType type = AddressType::Any) noexcept;
-        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR*, int) noexcept;
-        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR*, size_t) noexcept;
+        explicit ctSockaddr(ADDRESS_FAMILY family = AF_UNSPEC, AddressType type = AddressType::Any) noexcept;
+        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) noexcept;
+        explicit ctSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) noexcept;
         explicit ctSockaddr(const SOCKADDR_IN*) noexcept;
         explicit ctSockaddr(const SOCKADDR_IN6*) noexcept;
         explicit ctSockaddr(const SOCKADDR_INET*) noexcept;
@@ -146,20 +146,20 @@ namespace ctl
         // necessary as the [] operators take precedence over the ref & operator
         // writeAddress only prints the IP address, not the scope or port
         [[nodiscard]] std::wstring WriteAddress() const;
-        bool WriteAddress(WCHAR(&address)[c_ipStringMaxLength]) const noexcept;  // NOLINT(google-runtime-references)
-        bool WriteAddress(CHAR(&address)[c_ipStringMaxLength]) const noexcept;  // NOLINT(google-runtime-references)
+        bool WriteAddress(WCHAR(&address)[SockAddrMaxStringLength]) const noexcept;  // NOLINT(google-runtime-references)
+        bool WriteAddress(CHAR(&address)[SockAddrMaxStringLength]) const noexcept;  // NOLINT(google-runtime-references)
 
         // writeCompleteAddress prints the IP address, scope, and port
         [[nodiscard]] std::wstring WriteCompleteAddress(bool trimScope = false) const;
-        bool WriteCompleteAddress(WCHAR(&address)[c_ipStringMaxLength], bool trimScope = false) const noexcept;  // NOLINT(google-runtime-references)
-        bool WriteCompleteAddress(CHAR(&address)[c_ipStringMaxLength], bool trimScope = false) const noexcept;  // NOLINT(google-runtime-references)
+        bool WriteCompleteAddress(WCHAR(&address)[SockAddrMaxStringLength], bool trimScope = false) const noexcept;  // NOLINT(google-runtime-references)
+        bool WriteCompleteAddress(CHAR(&address)[SockAddrMaxStringLength], bool trimScope = false) const noexcept;  // NOLINT(google-runtime-references)
 
         //
         // Accessors
         //
         [[nodiscard]] int length() const noexcept;
         [[nodiscard]] unsigned short port() const noexcept;
-        [[nodiscard]] short family() const noexcept;
+        [[nodiscard]] ADDRESS_FAMILY family() const noexcept;
         [[nodiscard]] unsigned long flowinfo() const noexcept;
         [[nodiscard]] unsigned long scope_id() const noexcept;
         // returning non-const from const methods, for API compatibility
@@ -185,7 +185,7 @@ namespace ctl
     }
 
 
-    inline ctSockaddr::ctSockaddr(short family, AddressType type) noexcept
+    inline ctSockaddr::ctSockaddr(ADDRESS_FAMILY family, AddressType type) noexcept
     {
         ::ZeroMemory(&m_saddr, c_saddrSize);
         m_saddr.si_family = family;
@@ -568,45 +568,45 @@ namespace ctl
 
     inline std::wstring ctSockaddr::WriteAddress() const
     {
-        WCHAR returnString[c_ipStringMaxLength]{};
+        WCHAR returnString[SockAddrMaxStringLength]{};
         WriteAddress(returnString);
-        returnString[c_ipStringMaxLength - 1] = L'\0';
+        returnString[SockAddrMaxStringLength - 1] = L'\0';
         return returnString;
     }
 
-    inline bool ctSockaddr::WriteAddress(WCHAR(&address)[c_ipStringMaxLength]) const noexcept
+    inline bool ctSockaddr::WriteAddress(WCHAR(&address)[SockAddrMaxStringLength]) const noexcept
     {
-        ::ZeroMemory(address, c_ipStringMaxLength * sizeof(WCHAR));
+        ::ZeroMemory(address, SockAddrMaxStringLength * sizeof(WCHAR));
 
         const auto* const pAddr = AF_INET == m_saddr.si_family
                                 ? reinterpret_cast<PVOID>(in_addr())
                                 : reinterpret_cast<PVOID>(in6_addr());
-        return nullptr != ::InetNtopW(m_saddr.si_family, pAddr, address, c_ipStringMaxLength);
+        return nullptr != ::InetNtopW(m_saddr.si_family, pAddr, address, SockAddrMaxStringLength);
     }
 
-    inline bool ctSockaddr::WriteAddress(CHAR(&address)[c_ipStringMaxLength]) const noexcept
+    inline bool ctSockaddr::WriteAddress(CHAR(&address)[SockAddrMaxStringLength]) const noexcept
     {
-        ::ZeroMemory(address, c_ipStringMaxLength * sizeof(CHAR));
+        ::ZeroMemory(address, SockAddrMaxStringLength * sizeof(CHAR));
 
         const auto* const pAddr = AF_INET == m_saddr.si_family
                                 ? reinterpret_cast<PVOID>(in_addr())
                                 : reinterpret_cast<PVOID>(in6_addr());
-        return nullptr != ::InetNtopA(m_saddr.si_family, pAddr, address, c_ipStringMaxLength);
+        return nullptr != ::InetNtopA(m_saddr.si_family, pAddr, address, SockAddrMaxStringLength);
     }
 
     inline std::wstring ctSockaddr::WriteCompleteAddress(bool trimScope) const
     {
-        WCHAR returnString[c_ipStringMaxLength]{};
+        WCHAR returnString[SockAddrMaxStringLength]{};
         WriteCompleteAddress(returnString, trimScope);
-        returnString[c_ipStringMaxLength - 1] = L'\0';
+        returnString[SockAddrMaxStringLength - 1] = L'\0';
         return returnString;
     }
 
-    inline bool ctSockaddr::WriteCompleteAddress(WCHAR(&address)[c_ipStringMaxLength], bool trimScope) const noexcept
+    inline bool ctSockaddr::WriteCompleteAddress(WCHAR(&address)[SockAddrMaxStringLength], bool trimScope) const noexcept
     {
-        ::ZeroMemory(address, c_ipStringMaxLength * sizeof(WCHAR));
+        ::ZeroMemory(address, SockAddrMaxStringLength * sizeof(WCHAR));
 
-        DWORD addressLength = c_ipStringMaxLength;
+        DWORD addressLength = SockAddrMaxStringLength;
         if (0 == ::WSAAddressToStringW(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
         {
             if (family() == AF_INET6 && trimScope)
@@ -642,11 +642,11 @@ namespace ctl
     }
 
 #ifdef _WINSOCK_DEPRECATED_NO_WARNINGS
-    inline bool ctSockaddr::WriteCompleteAddress(CHAR(&address)[c_ipStringMaxLength], bool trimScope) const noexcept
+    inline bool ctSockaddr::WriteCompleteAddress(CHAR(&address)[SockAddrMaxStringLength], bool trimScope) const noexcept
     {
-        ::ZeroMemory(address, c_ipStringMaxLength * sizeof(CHAR));
+        ::ZeroMemory(address, SockAddrMaxStringLength * sizeof(CHAR));
 
-        DWORD addressLength = c_ipStringMaxLength;
+        DWORD addressLength = SockAddrMaxStringLength;
         if (0 == ::WSAAddressToStringA(sockaddr(), static_cast<DWORD>(c_saddrSize), nullptr, address, &addressLength))
         {
             if (family() == AF_INET6 && trimScope)
@@ -688,7 +688,7 @@ namespace ctl
         return static_cast<int>(c_saddrSize);
     }
 
-    inline short ctSockaddr::family() const noexcept
+    inline ADDRESS_FAMILY ctSockaddr::family() const noexcept
     {
         return m_saddr.si_family;
     }

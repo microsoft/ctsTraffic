@@ -45,7 +45,7 @@ BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
     return TRUE;
 }
 
-static const PCWSTR c_usageStatement =
+constexpr PCWSTR c_usageStatement =
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
 	L" -Networking [will enable performance and reliability related Network counters]\n"
@@ -167,7 +167,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackProcess = argv[argCount - 1];
 
             // strip off the "process:" preface to the string
-            const auto endOfToken = find(trackProcess.begin(), trackProcess.end(), L':');
+            const auto endOfToken = ranges::find(trackProcess, L':');
             trackProcess.erase(trackProcess.begin(), endOfToken + 1);
 
             // the performance counter does not look at the extension, so remove .exe if it's there
@@ -188,7 +188,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             wstring pidString(argv[argCount - 1]);
 
             // strip off the "pid:" preface to the string
-            const auto endOfToken = find(pidString.begin(), pidString.end(), L':');
+            const auto endOfToken = ranges::find(pidString, L':');
             pidString.erase(pidString.begin(), endOfToken + 1);
 
             // the user could have specified zero, which happens to be what is returned from wcstoul on error
@@ -224,7 +224,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackInterfaceDescription = argv[argCount - 1];
 
             // strip off the "-InterfaceDescription:" preface to the string
-            const auto endOfToken = find(trackInterfaceDescription.begin(), trackInterfaceDescription.end(), L':');
+            const auto endOfToken = ranges::find(trackInterfaceDescription, L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
 
         }
@@ -484,9 +484,9 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 			vector<ULONGLONG> normalizedProcessorTime(processorTimeVector);
 
 			// convert to a percentage
-			auto calculatedProcessorTime = processorTimeVector[3] / 100.0;
+			auto calculatedProcessorTime = static_cast<double>(processorTimeVector[3]) / 100.0;
 			calculatedProcessorTime *= processorPercentVector[3] / 100.0;
-			normalizedProcessorTime[3] = static_cast<ULONG>(calculatedProcessorTime * 100UL);
+			normalizedProcessorTime[3] = static_cast<ULONGLONG>(calculatedProcessorTime * 100UL);
 
 			writer.WriteMean(
 				L"Processor",
@@ -528,7 +528,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 			auto percentageIterator(processorPercentVector.begin());
 			for (const auto& processorData : processorTimeVector) {
 				// convert to a percentage
-				auto calculatedProcessorTime = processorData / 100.0;
+				auto calculatedProcessorTime = static_cast<double>(processorData) / 100.0;
 				calculatedProcessorTime *= *percentageIterator / 100.0;
 
 				normalizedProcessorTime.push_back(static_cast<ULONG>(calculatedProcessorTime * 100UL));

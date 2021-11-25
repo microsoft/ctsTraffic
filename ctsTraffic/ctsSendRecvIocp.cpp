@@ -33,7 +33,7 @@ namespace ctsTraffic
     struct ctsSendRecvStatus
     {
         // Winsock error code
-        unsigned long m_ioErrorcode = NO_ERROR;
+        uint32_t m_ioErrorcode = NO_ERROR;
         // flag if to request another ctsIOTask
         bool m_ioDone = false;
         // returns if IO was started (since can return !io_done, but I/O wasn't started yet)
@@ -46,7 +46,7 @@ namespace ctsTraffic
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctsTask& task) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -62,7 +62,7 @@ namespace ctsTraffic
             gle = WSAECONNABORTED;
         }
 
-        const SOCKET socket = lockedSocket.GetSocket();
+        const auto socket = lockedSocket.GetSocket();
         DWORD transferred = 0;
         if (gle == NO_ERROR)
         {
@@ -110,7 +110,7 @@ namespace ctsTraffic
                     break;
 
                 default:
-                    FAIL_FAST_MSG("ctsSendRecvIocp : unknown ctsSocket::IOStatus (%u)", static_cast<unsigned>(protocolStatus));
+                    FAIL_FAST_MSG("ctsSendRecvIocp : unknown ctsSocket::IOStatus %d", protocolStatus);
             }
         }
 
@@ -157,7 +157,7 @@ namespace ctsTraffic
         else if (ctsTaskAction::HardShutdown == nextIo.m_ioAction)
         {
             // pass through -1 to force an RST with the closesocket
-            returnStatus.m_ioErrorcode = sharedSocket->CloseSocket(-1);
+            returnStatus.m_ioErrorcode = sharedSocket->CloseSocket(static_cast<uint32_t>(SOCKET_ERROR));
             returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorcode) != ctsIoStatus::ContinueIo;
             returnStatus.m_ioStarted = false;
 
@@ -253,7 +253,7 @@ namespace ctsTraffic
                             break;
 
                         default:
-                            FAIL_FAST_MSG("ctsSendRecvIocp: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocolStatus));
+                            FAIL_FAST_MSG("ctsSendRecvIocp: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
                     }
                 }
             }
@@ -277,7 +277,7 @@ namespace ctsTraffic
     static void ctsSendRecvTimerCallback(const std::weak_ptr<ctsSocket>& weakSocket, const ctsTask& nextIo) noexcept
     {
         // attempt to get a reference to the socket
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -325,7 +325,7 @@ namespace ctsTraffic
     void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;

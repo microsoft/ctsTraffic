@@ -25,7 +25,7 @@ namespace ctl
     /// This random number generator makes several important assumptions:
     ///   - Cryptographic-level randomness is unnecessary
     ///   - Moderately high space usage is okay (an instance takes ~5kb)
-    ///   - Seeding with only an unsigned long's worth of entropy is okay
+    ///   - Seeding with only an uint32_t's worth of entropy is okay
     ///
     /// These assumptions are perfectly okay in most common cases. If any of them
     /// are invalid, use either the windows cryptographic-quality random generation
@@ -45,7 +45,7 @@ namespace ctl
         /// with an appropriately random seed
         ///
         /// This allocates a large (5kb) chunk of heap memory and may throw std::bad_alloc
-        explicit ctRandomTwister(unsigned long seed);
+        explicit ctRandomTwister(uint32_t seed);
 
         /// Seeds itself randomly with std::random_device
         ///
@@ -77,7 +77,7 @@ namespace ctl
         [[nodiscard]] double normal_real(double distributionMean = 0.0, double distributionSigma = 1.0) const;
 
         /// Seeds the generator manually.
-        void seed(unsigned long seed) const;
+        void seed(uint32_t seed) const;
 
         // Enabling move and swap
         ctRandomTwister(ctRandomTwister&& other) noexcept = default;
@@ -107,7 +107,7 @@ namespace ctl
 
     // Implementation
 
-    inline ctRandomTwister::ctRandomTwister(unsigned long seed) :
+    inline ctRandomTwister::ctRandomTwister(uint32_t seed) :
         m_engine(std::make_unique<engine_type>(seed))
     {
     }
@@ -145,7 +145,7 @@ namespace ctl
         return std::normal_distribution<double>(distributionMean, distributionSigma)(*m_engine);
     }
 
-    inline void ctRandomTwister::seed(unsigned long seed) const
+    inline void ctRandomTwister::seed(uint32_t seed) const
     {
         m_engine->seed(seed);
     }

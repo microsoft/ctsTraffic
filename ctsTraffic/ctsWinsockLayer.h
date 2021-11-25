@@ -33,11 +33,11 @@ namespace ctsTraffic
     // ReSharper disable once CppInconsistentNaming
     struct wsIOResult
     {
-        int m_errorCode = 0;
-        unsigned long m_bytesTransferred = 0;
+        uint32_t m_errorCode = 0;
+        DWORD m_bytesTransferred = 0;
 
         wsIOResult() noexcept = default;
-        explicit wsIOResult(int error) noexcept
+        explicit wsIOResult(uint32_t error) noexcept
         {
             m_errorCode = error;
         }

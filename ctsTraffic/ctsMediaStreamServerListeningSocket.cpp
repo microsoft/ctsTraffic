@@ -67,7 +67,7 @@ namespace ctsTraffic
     {
         // continue to try to post a recv if the call fails
         int error = SOCKET_ERROR;
-        unsigned long failureCounter = 0;
+        uint32_t failureCounter = 0;
         while (error != NO_ERROR)
         {
             try
@@ -134,7 +134,7 @@ namespace ctsTraffic
             }
             catch (...)
             {
-                error = ctsConfig::PrintThrownException();
+                error = static_cast<int>(ctsConfig::PrintThrownException());
             }
 
             if (error != NO_ERROR && error != WSAECONNRESET)

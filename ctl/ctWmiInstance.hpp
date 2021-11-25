@@ -21,7 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <objbase.h>
-#include <OleAuto.h>
+#include <oleauto.h>
 #include <WbemIdl.h>
 // wil headers
 #include <wil/stl.h>
@@ -166,7 +166,7 @@ namespace ctl
         }
         void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
         {
-            set_property(propname, const_cast<VARIANT*>(value));
+            set_property(propname, value);
         }
 
         template <typename T>
@@ -188,13 +188,13 @@ namespace ctl
         //   WBEM_FLAG_CREATE_OR_UPDATE
         //   WBEM_FLAG_UPDATE_ONLY
         //   WBEM_FLAG_CREATE_ONLY
-        void write_class_object(const wil::com_ptr<IWbemContext>& context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
+        void write_class_object(_In_opt_ IWbemContext* context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
             wil::com_ptr<IWbemCallResult> result;
             THROW_IF_FAILED(m_wbemServices->PutInstance(
                 m_instanceObject.get(),
                 wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
-                context.get(),
+                context,
                 result.addressof()));
             // wait for the call to complete
             HRESULT status;
@@ -204,8 +204,7 @@ namespace ctl
 
         void write_class_object(LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
         {
-            const wil::com_ptr<IWbemContext> nullContext;
-            write_class_object(nullContext, wbemFlags);
+            write_class_object(nullptr, wbemFlags);
         }
 
         void delete_class_object()
@@ -426,12 +425,12 @@ namespace ctl
                 nullptr));
         }
 
-        void set_property(_In_ PCWSTR propname, _In_ VARIANT* pVariant) const
+        void set_property(_In_ PCWSTR propname, _In_ const VARIANT* pVariant) const
         {
             THROW_IF_FAILED(m_instanceObject->Put(
                 propname,
                 0,
-                pVariant,
+                const_cast<VARIANT*>(pVariant), // COM is not const-correct
                 0));
         }
 

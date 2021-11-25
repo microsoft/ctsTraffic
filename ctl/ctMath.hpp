@@ -128,7 +128,7 @@ namespace ctl
             const BidirectionalIterator& rhs = std::get<1>(split);
             FAIL_FAST_IF_MSG(rhs < lhs, "ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
 
-            double medianValue;
+            double medianValue{};
             switch (rhs - lhs)
             {
                 case 1:

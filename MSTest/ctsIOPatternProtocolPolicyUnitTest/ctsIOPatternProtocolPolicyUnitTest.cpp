@@ -24,11 +24,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& q)
-    {
-        return std::to_wstring(static_cast<unsigned long long>(q));
-    }
-
     template<> inline std::wstring ToString<ctsTraffic::ctsIoPatternType>(const ctsTraffic::ctsIoPatternType& q)
     {
         switch (q)
@@ -63,8 +58,9 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
     }
 }
 
-ctsTraffic::ctsUnsignedLongLong g_transferSize = 0ULL;
+uint64_t g_transferSize = 0ULL;
 bool g_isListening = false;
+const uint32_t g_TestErrorCode = 1;
 ///
 /// Fakes
 ///
@@ -72,13 +68,13 @@ namespace ctsTraffic::ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
     {
     }
     void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
@@ -96,7 +92,7 @@ namespace ctsTraffic::ctsConfig
         return g_isListening;
     }
 
-    ctsUnsignedLongLong GetTransferSize() noexcept
+    uint64_t GetTransferSize() noexcept
     {
         return g_transferSize;
     }
@@ -104,7 +100,7 @@ namespace ctsTraffic::ctsConfig
     {
         return false;
     }
-    unsigned long ConsoleVerbosity() noexcept
+    uint32_t ConsoleVerbosity() noexcept
     {
         return 0;
     }
@@ -120,10 +116,10 @@ namespace ctsUnitTest
     TEST_CLASS(ctsIOPatternProtocolPolicyUnitTest)
     {
     private:
-        unsigned long m_zero = 0UL;
-        unsigned long m_testError = 1UL;
+        uint32_t m_zero = 0UL;
+        uint32_t m_testError = 1UL;
 
-        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientGracefulShutdownTest(unsigned long long testTransferSize) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientGracefulShutdownTest(uint64_t testTransferSize) const
         {
             ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
             g_isListening = false;
@@ -136,7 +132,7 @@ namespace ctsUnitTest
             return returnPattern;
         }
 
-        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>> InitServerGracefulShutdownTest(unsigned long long testTransferSize) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>> InitServerGracefulShutdownTest(uint64_t testTransferSize) const
         {
             ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
             g_isListening = true;
@@ -149,7 +145,7 @@ namespace ctsUnitTest
             return returnPattern;
         }
 
-        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientHardShutdownTest(unsigned long long testTransferSize) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientHardShutdownTest(uint64_t testTransferSize) const
         {
             ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
             g_isListening = false; // client-only
@@ -162,7 +158,7 @@ namespace ctsUnitTest
             return returnPattern;
         }
 
-        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpClientTest(unsigned long long testTransferSize) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpClientTest(uint64_t testTransferSize) const
         {
             g_isListening = false;
             g_transferSize = testTransferSize;
@@ -174,7 +170,7 @@ namespace ctsUnitTest
             return returnPattern;
         }
 
-        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpServerTest(unsigned long long testTransferSize) const
+        [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>> InitUdpServerTest(uint64_t testTransferSize) const
         {
             g_isListening = true;
             g_transferSize = testTransferSize;
@@ -211,7 +207,7 @@ namespace ctsUnitTest
                 testTask.m_ioAction = ctsTaskAction::Recv;
             }
             testTask.m_trackIo = false;
-            testTask.m_bufferLength = ctsStatistics::c_connectionIdLength;
+            testTask.m_bufferLength = ctsStatistics::ConnectionIdLength;
 
             ioPattern->NotifyNextTask(testTask);
             Assert::IsFalse(ioPattern->IsCompleted());
@@ -220,7 +216,7 @@ namespace ctsUnitTest
         }
 
         template <typename IoPattern>
-        ctsTask RequestMoreIo(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, unsigned long bufferLength)
+        ctsTask RequestMoreIo(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, uint32_t bufferLength)
         {
             auto task = ioPattern->GetNextPatternType();
             Assert::AreEqual(ctsIoPatternType::MoreIo, task);
@@ -237,7 +233,7 @@ namespace ctsUnitTest
         }
 
         template <typename IoPattern>
-        ctsTask RequestSendStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ unsigned long* statusBuffer)
+        ctsTask RequestSendStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ uint32_t* statusBuffer)
         {
             // GetNextPatternType
             auto task = ioPattern->GetNextPatternType();
@@ -260,7 +256,7 @@ namespace ctsUnitTest
         }
 
         template <typename IoPattern>
-        ctsTask RequestRecvStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ unsigned long* statusBuffer)
+        ctsTask RequestRecvStatus(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, _In_ uint32_t* statusBuffer)
         {
             // GetNextPatternType
             auto task = ioPattern->GetNextPatternType();
@@ -366,7 +362,7 @@ namespace ctsUnitTest
         }
 
         template <typename IoPattern>
-        void CompleteIoAndVerifySuccess(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, ctsTask task, unsigned long bytes)
+        void CompleteIoAndVerifySuccess(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern, ctsTask task, uint32_t bytes)
         {
             Assert::AreEqual(m_zero, ioPattern->UpdateLastError(m_zero));
             ioPattern->CompletedTask(task, bytes);
@@ -378,7 +374,7 @@ namespace ctsUnitTest
         void RequestAndCompleteConnectionGuid(std::unique_ptr<ctsIoPatternProtocolPolicy<IoPattern>>& ioPattern)
         {
             ctsTask testTask = RequestConnectionGuid(ioPattern);
-            ioPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            ioPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::AreEqual(m_zero, ioPattern->GetLastError());
             Assert::IsFalse(ioPattern->IsCompleted());
         }
@@ -399,11 +395,11 @@ namespace ctsUnitTest
 
         TEST_METHOD(GracefulShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong testTransferSize(100);
+            const uint64_t testTransferSize(100);
 
-            auto testPattern = InitClientGracefulShutdownTest(250);
+            const auto testPattern = InitClientGracefulShutdownTest(250);
             Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(250ull, testPattern->GetRemainingTransfer());
 
             testPattern->SetMaxTransfer(testTransferSize);
             Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
@@ -412,11 +408,11 @@ namespace ctsUnitTest
 
         TEST_METHOD(HardShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong testTransferSize(100);
+            const uint64_t testTransferSize(100);
 
-            auto testPattern = InitClientHardShutdownTest(250);
+            const auto testPattern = InitClientHardShutdownTest(250);
             Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(250ull, testPattern->GetRemainingTransfer());
 
             testPattern->SetMaxTransfer(testTransferSize);
             Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
@@ -425,11 +421,11 @@ namespace ctsUnitTest
 
         TEST_METHOD(TCPServerShutdownSetMaxTransfer)
         {
-            const ctsUnsignedLongLong testTransferSize(100);
+            const uint64_t testTransferSize(100);
 
-            auto testPattern = InitServerGracefulShutdownTest(250);
+            const auto testPattern = InitServerGracefulShutdownTest(250);
             Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(250ull, testPattern->GetRemainingTransfer());
 
             testPattern->SetMaxTransfer(testTransferSize);
             Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
@@ -438,11 +434,11 @@ namespace ctsUnitTest
 
         TEST_METHOD(UdpClientSetMaxTransfer)
         {
-            const ctsUnsignedLongLong testTransferSize(100);
+            const uint64_t testTransferSize(100);
 
-            auto testPattern = InitUdpClientTest(250);
+            const auto testPattern = InitUdpClientTest(250);
             Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(250ull, testPattern->GetRemainingTransfer());
 
             testPattern->SetMaxTransfer(testTransferSize);
             Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
@@ -451,11 +447,11 @@ namespace ctsUnitTest
 
         TEST_METHOD(UdpServerSetMaxTransfer)
         {
-            const ctsUnsignedLongLong testTransferSize(100);
+            const uint64_t testTransferSize(100);
 
-            auto testPattern = InitUdpServerTest(250);
+            const auto testPattern = InitUdpServerTest(250);
             Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
-            Assert::AreEqual(ctsUnsignedLongLong(250), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(250ull, testPattern->GetRemainingTransfer());
 
             testPattern->SetMaxTransfer(testTransferSize);
             Assert::AreEqual(testTransferSize, testPattern->GetMaxTransfer());
@@ -467,7 +463,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitServerGracefulShutdownTest(100);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(testPattern->IsCompleted());
         }
 
@@ -475,7 +471,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitUdpServerTest(100);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(testPattern->IsCompleted());
         }
 
@@ -499,7 +495,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitClientGracefulShutdownTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(testPattern->IsCompleted());
         }
 
@@ -507,7 +503,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitClientHardShutdownTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(testPattern->IsCompleted());
         }
 
@@ -515,7 +511,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitUdpClientTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength);
             Assert::IsFalse(testPattern->IsCompleted());
         }
 
@@ -571,7 +567,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitClientGracefulShutdownTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
             Assert::IsTrue(testPattern->IsCompleted());
             VerifyNoMoreIo(testPattern);
@@ -581,7 +577,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitClientHardShutdownTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
             Assert::IsTrue(testPattern->IsCompleted());
             VerifyNoMoreIo(testPattern);
@@ -591,7 +587,7 @@ namespace ctsUnitTest
         {
             auto testPattern = InitUdpClientTest(250);
             const ctsTask testTask = RequestConnectionGuid(testPattern);
-            testPattern->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1);
+            testPattern->CompletedTask(testTask, ctsStatistics::ConnectionIdLength - 1);
             Assert::AreEqual(ctsIoPatternError::NoConnectionGuid, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
             Assert::IsTrue(testPattern->IsCompleted());
             VerifyNoMoreIo(testPattern);
@@ -896,10 +892,10 @@ namespace ctsUnitTest
 
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 2)
-            unsigned long status_code = m_zero;
+            uint32_t status_code = m_zero;
             testTask = RequestRecvStatus(testPattern, &status_code);
             testPattern->CompletedTask(testTask, 2);
             Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
@@ -915,10 +911,10 @@ namespace ctsUnitTest
 
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 2)
-            unsigned long status_code = m_zero;
+            uint32_t status_code = m_zero;
             testTask = RequestRecvStatus(testPattern, &status_code);
             testPattern->CompletedTask(testTask, 2);
             Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
@@ -936,10 +932,10 @@ namespace ctsUnitTest
 
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - completing 0 - as in a FIN)
-            unsigned long status_code = m_zero;
+            uint32_t status_code = m_zero;
             testTask = RequestRecvStatus(testPattern, &status_code);
             testPattern->CompletedTask(testTask, 0);
             Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
@@ -955,10 +951,10 @@ namespace ctsUnitTest
 
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (should be 4 bytes - only completing 0 - as in a FIN)
-            unsigned long status_code = m_zero;
+            uint32_t status_code = m_zero;
             testTask = RequestRecvStatus(testPattern, &status_code);
             testPattern->CompletedTask(testTask, 0);
             Assert::AreEqual(ctsIoPatternError::TooFewBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
@@ -974,24 +970,24 @@ namespace ctsUnitTest
 
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv server status (4 bytes)
-            unsigned long status_code = m_zero;
+            uint32_t status_code = m_zero;
             testTask = RequestRecvStatus(testPattern, &status_code);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown (0 byte FIN)
             testTask = RequestGracefulShutdown(testPattern);
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN 
             testTask = RequestFin(testPattern);
             testPattern->CompletedTask(testTask, 1);
             Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::IsTrue(testPattern->IsCompleted());
             Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
             VerifyNoMoreIo(testPattern);
@@ -1007,19 +1003,19 @@ namespace ctsUnitTest
             // IO Task
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
             testTask = RequestFin(testPattern);
             testPattern->CompletedTask(testTask, 1);
             Assert::AreEqual(ctsIoPatternError::TooManyBytes, ctsIoPatternStateCheckProtocolError(testPattern->GetLastError()));
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::IsTrue(testPattern->IsCompleted());
             Assert::AreEqual(c_statusErrorTooMuchDataTransferred, testPattern->UpdateLastError(m_zero));
             VerifyNoMoreIo(testPattern);
@@ -1034,26 +1030,26 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Receive server status
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestRecvStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown Task
             testTask = RequestGracefulShutdown(testPattern);
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
             testTask = RequestFin(testPattern);
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1066,20 +1062,20 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Receive server status
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestRecvStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Shutdown Task
             testTask = RequestHardShutdown(testPattern);
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1092,7 +1088,7 @@ namespace ctsUnitTest
             const ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1105,7 +1101,7 @@ namespace ctsUnitTest
             const ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1118,20 +1114,20 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
             testTask = RequestFin(testPattern);
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1144,21 +1140,21 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAECONNRESET - which is OK if the client wanted to RST instead of FIN
             [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
             Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAECONNRESET));
             //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1171,21 +1167,21 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAECONNABORTED - which is OK if the client wanted to RST instead of FIN
             [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
             Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAECONNABORTED));
             //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1198,21 +1194,21 @@ namespace ctsUnitTest
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send status to client
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task - but that fails with WSAETIMEDOUT - which is OK if the client wanted to RST instead of FIN
             [[maybe_unused]] const ctsTask finTask = RequestFin(testPattern);
             Assert::AreEqual(m_zero, testPattern->UpdateLastError(WSAETIMEDOUT));
             //            CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1224,51 +1220,51 @@ namespace ctsUnitTest
             // IO Task #1
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv the server status
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestRecvStatus(testPattern, &status);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Graceful shutdown
             testTask = RequestGracefulShutdown(testPattern);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
             testTask = RequestFin(testPattern);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1280,43 +1276,43 @@ namespace ctsUnitTest
             // IO Task #1
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Recv the server status
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestRecvStatus(testPattern, &status);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // shutdown
             testTask = RequestHardShutdown(testPattern);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             VerifyNoMoreIo(testPattern);
         }
 
@@ -1328,43 +1324,43 @@ namespace ctsUnitTest
             // IO Task #1
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Send server status
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             testTask = RequestSendStatus(testPattern, &status);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             // Request FIN task
             testTask = RequestFin(testPattern);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(m_zero, testPattern->UpdateLastError(m_zero));
             VerifyNoMoreIo(testPattern);
         }
@@ -1377,26 +1373,26 @@ namespace ctsUnitTest
             // IO Task #1
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1408,26 +1404,26 @@ namespace ctsUnitTest
             // IO Task #1
             ctsTask testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
 
             // IO Task #2
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
 
             // IO Task #3
             testTask = RequestMoreIo(testPattern, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             CompleteIoAndVerifySuccess(testPattern, testTask, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1439,13 +1435,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1455,7 +1451,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1466,7 +1462,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1477,29 +1473,29 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Recv server status
             //
-            unsigned long status_buffer = m_zero;
+            uint32_t status_buffer = m_zero;
             const ctsTask server_status_task = RequestRecvStatus(testPattern, &status_buffer);
             CompleteIoAndVerifySuccess(testPattern, server_status_task, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Shutdown Task
             //
             const ctsTask shutdown_task = RequestGracefulShutdown(testPattern);
             CompleteIoAndVerifySuccess(testPattern, shutdown_task, 0);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Request FIN task
             //
             const ctsTask final_fin_task = RequestFin(testPattern);
             CompleteIoAndVerifySuccess(testPattern, final_fin_task, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1511,13 +1507,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1527,7 +1523,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1538,7 +1534,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1549,22 +1545,22 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Recv server status
             //
-            unsigned long status_buffer = m_zero;
+            uint32_t status_buffer = m_zero;
             const ctsTask server_status_task = RequestRecvStatus(testPattern, &status_buffer);
             CompleteIoAndVerifySuccess(testPattern, server_status_task, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Shutdown Task
             //
             const ctsTask shutdown_task = RequestHardShutdown(testPattern);
             CompleteIoAndVerifySuccess(testPattern, shutdown_task, 4);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1576,13 +1572,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1592,7 +1588,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1603,7 +1599,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1614,22 +1610,22 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Send server status
             //
-            unsigned long status = m_zero;
+            uint32_t status = m_zero;
             const ctsTask send_status_task = RequestSendStatus(testPattern, &status);
             CompleteIoAndVerifySuccess(testPattern, send_status_task, 4);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // Request FIN task
             //
             const ctsTask fin_task = RequestFin(testPattern);
             CompleteIoAndVerifySuccess(testPattern, fin_task, 0);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1641,13 +1637,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1657,7 +1653,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1668,7 +1664,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1679,7 +1675,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1690,13 +1686,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             const ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1706,7 +1702,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask1, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1717,7 +1713,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask2, 100);
             Assert::IsFalse(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1728,7 +1724,7 @@ namespace ctsUnitTest
             //
             CompleteIoAndVerifySuccess(testPattern, testTask3, 100);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
 
             VerifyNoMoreIo(testPattern);
         }
@@ -1740,13 +1736,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             //
             // all IO is now posted
@@ -1757,7 +1753,7 @@ namespace ctsUnitTest
             //
             FailIoAndVerify(testPattern);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1766,11 +1762,11 @@ namespace ctsUnitTest
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask2, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1779,11 +1775,11 @@ namespace ctsUnitTest
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask3, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
@@ -1798,13 +1794,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1814,7 +1810,7 @@ namespace ctsUnitTest
             //
             FailIoAndVerify(testPattern);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1823,11 +1819,11 @@ namespace ctsUnitTest
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask2, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1836,11 +1832,11 @@ namespace ctsUnitTest
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask3, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
@@ -1855,13 +1851,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1871,7 +1867,7 @@ namespace ctsUnitTest
             //
             FailIoAndVerify(testPattern);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1880,11 +1876,11 @@ namespace ctsUnitTest
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask2, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1893,11 +1889,11 @@ namespace ctsUnitTest
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask3, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
@@ -1912,13 +1908,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1928,7 +1924,7 @@ namespace ctsUnitTest
             //
             FailIoAndVerify(testPattern);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1937,11 +1933,11 @@ namespace ctsUnitTest
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask2, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1950,11 +1946,11 @@ namespace ctsUnitTest
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask3, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO
@@ -1969,13 +1965,13 @@ namespace ctsUnitTest
 
             // IO Task #1
             [[maybe_unused]] ctsTask testTask1 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(200), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(200), testPattern->GetRemainingTransfer());
             // IO Task #2
             const ctsTask testTask2 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(100), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(100), testPattern->GetRemainingTransfer());
             // IO Task #3
             const ctsTask testTask3 = RequestMoreIo(testPattern, 100);
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             //
             // all IO is now posted
             //
@@ -1985,7 +1981,7 @@ namespace ctsUnitTest
             //
             FailIoAndVerify(testPattern);
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -1994,11 +1990,11 @@ namespace ctsUnitTest
             //
             // complete_io 2 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask2, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // should return NoIO while IO is still pended
@@ -2007,11 +2003,11 @@ namespace ctsUnitTest
             //
             // complete_io 3 successfully - after the first failed
             //
-            Assert::AreEqual(1UL, testPattern->UpdateLastError(m_zero));
+            Assert::AreEqual(g_TestErrorCode, testPattern->UpdateLastError(m_zero));
             testPattern->CompletedTask(testTask3, 100);
-            Assert::AreEqual(1UL, testPattern->GetLastError());
+            Assert::AreEqual(g_TestErrorCode, testPattern->GetLastError());
             Assert::IsTrue(testPattern->IsCompleted());
-            Assert::AreEqual(ctsUnsignedLongLong(m_zero), testPattern->GetRemainingTransfer());
+            Assert::AreEqual(uint64_t(m_zero), testPattern->GetRemainingTransfer());
             Assert::AreEqual(ctsIoPatternType::NoIo, testPattern->GetNextPatternType());
             //
             // Since failed should be no more IO

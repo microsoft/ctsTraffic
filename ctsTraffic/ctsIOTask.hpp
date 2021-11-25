@@ -37,13 +37,13 @@ namespace ctsTraffic
 
     struct ctsTask
     {
-        long long m_timeOffsetMilliseconds = 0LL;
+        int64_t m_timeOffsetMilliseconds = 0LL;
         RIO_BUFFERID m_rioBufferid = RIO_INVALID_BUFFERID;
 
-        _Field_size_full_(buffer_length) char* m_buffer = nullptr;
-        unsigned long m_bufferLength = 0UL;
-        unsigned long m_bufferOffset = 0UL;
-        unsigned long m_expectedPatternOffset = 0UL;
+        _Field_size_full_(m_bufferLength) char* m_buffer = nullptr;
+        uint32_t m_bufferLength = 0UL;
+        uint32_t m_bufferOffset = 0UL;
+        uint32_t m_expectedPatternOffset = 0UL;
         ctsTaskAction m_ioAction = ctsTaskAction::None;
 
         // (internal) flag identifying the type of buffer

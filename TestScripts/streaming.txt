@@ -20,11 +20,11 @@ ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:45 -ConsoleVerbosity:1 -verify:connection
 
 
-UDP:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:130
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:130 -ConsoleVerbosity:1 -verify:connection
+Max UDP:
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:200
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:200 -ConsoleVerbosity:1 -verify:connection
 
-TCP:
+Max TCP:
 ctsTraffic.exe -listen:* -consoleverbosity:1 -verify:connection -buffer:1048576 -transfer:0xffffffffffffffff -msgwaitall:on
 ctsTraffic.exe -target:localhost -buffer:1048576 -consoleverbosity:1 -transfer:0xffffffffffffffff -msgwaitall:on
 

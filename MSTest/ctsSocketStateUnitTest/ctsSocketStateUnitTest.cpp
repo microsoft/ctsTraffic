@@ -53,23 +53,23 @@ namespace ctsTraffic {
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , unsigned long ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , uint32_t) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsTcpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , uint32_t, const ctsTcpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , unsigned long , const ctsUdpStatistics& ) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr& , const ctl::ctSockaddr& , uint32_t, const ctsUdpStatistics& ) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintConnectionResults(unsigned long) noexcept
+        void PrintConnectionResults(uint32_t) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
+        void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
         {
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
@@ -107,7 +107,7 @@ namespace ctsTraffic {
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() noexcept
+        uint32_t ConsoleVerbosity() noexcept
         {
             return 0;
         }
@@ -149,7 +149,7 @@ void ResetStatics(DWORD _create = s_ShouldNeverHitErrorCode, DWORD _connect = s_
 
 void CreateFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    auto shared_socket(socket.lock());
+    const auto shared_socket(socket.lock());
     Assert::IsNotNull(shared_socket.get());
 
     Assert::AreNotEqual(s_ShouldNeverHitErrorCode, s_CreateReturnCode);
@@ -162,7 +162,7 @@ void CreateFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 
 void ConnectFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    auto shared_socket(socket.lock());
+    const auto shared_socket(socket.lock());
     Assert::IsNotNull(shared_socket.get());
 
     Assert::AreNotEqual(s_ShouldNeverHitErrorCode, s_ConnectReturnCode);
@@ -179,7 +179,7 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 
 void IoFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    auto shared_socket(socket.lock());
+    const auto shared_socket(socket.lock());
     Assert::IsNotNull(shared_socket.get());
 
     Assert::AreNotEqual(s_ShouldNeverHitErrorCode, s_IOReturnCode);
@@ -217,7 +217,7 @@ namespace ctsUnitTest {
             // expect all to pass
             ResetStatics(0, 0, 0);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            const std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->Start();
 
             do {
@@ -232,7 +232,7 @@ namespace ctsUnitTest {
             // create should fail, the others never invoked
             ResetStatics(1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            const std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->Start();
 
             do {
@@ -247,7 +247,7 @@ namespace ctsUnitTest {
             // connect should fail, IO should never invoked
             ResetStatics(0, 1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            const std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->Start();
 
             do {
@@ -262,7 +262,7 @@ namespace ctsUnitTest {
             // IO should fail
             ResetStatics(0, 0, 1);
 
-            std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            const std::shared_ptr<ctsSocketState> test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
             test->Start();
 
             do {

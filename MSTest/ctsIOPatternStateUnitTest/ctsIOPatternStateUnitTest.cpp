@@ -22,11 +22,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-    template<> inline std::wstring ToString<ctsTraffic::ctsUnsignedLongLong>(const ctsTraffic::ctsUnsignedLongLong& value)
-    {
-        return std::to_wstring(static_cast<unsigned long long>(value));
-    }
-
     template<> inline std::wstring ToString<ctsTraffic::ctsIoPatternType>(const ctsTraffic::ctsIoPatternType& value)
     {
         switch (value)
@@ -70,13 +65,13 @@ namespace ctsTraffic::ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
     {
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
     {
     }
     void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
@@ -94,20 +89,20 @@ namespace ctsTraffic::ctsConfig
         return g_isListening;
     }
 
-    ctsUnsignedLongLong GetTransferSize() noexcept
+    uint64_t GetTransferSize() noexcept
     {
         return g_transferSize;
     }
 
-    ctsUnsignedLong GetMaxBufferSize() noexcept
+    uint32_t GetMaxBufferSize() noexcept
     {
-        return g_transferSize;
+        return static_cast<uint32_t>(g_transferSize);
     }
     bool ShutdownCalled() noexcept
     {
         return false;
     }
-    unsigned long ConsoleVerbosity() noexcept
+    uint32_t ConsoleVerbosity() noexcept
     {
         return 0;
     }
@@ -134,7 +129,7 @@ namespace ctsUnitTest
             Server
         };
 
-        void InitGracefulShutdownTest(unsigned long long testTransferSize, Role _role = Client)
+        void InitGracefulShutdownTest(uint64_t testTransferSize, Role _role = Client)
         {
             ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
             g_isListening = (Server == _role);
@@ -144,7 +139,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(m_ioPatternState->GetRemainingTransfer(), g_transferSize);
         }
-        void InitHardShutdownTest(unsigned long long testTransferSize)
+        void InitHardShutdownTest(uint64_t testTransferSize)
         {
             ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
             g_isListening = false; // client-only
@@ -181,7 +176,7 @@ namespace ctsUnitTest
                 testTask.m_ioAction = ctsTaskAction::Recv;
             }
             testTask.m_trackIo = false;
-            testTask.m_bufferLength = ctsStatistics::c_connectionIdLength;
+            testTask.m_bufferLength = ctsStatistics::ConnectionIdLength;
 
             m_ioPatternState->NotifyNextTask(testTask);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
@@ -189,7 +184,7 @@ namespace ctsUnitTest
             return testTask;
         }
 
-        [[nodiscard]] ctsTask RequestMoreIo(unsigned long bufferLength) const
+        [[nodiscard]] ctsTask RequestMoreIo(uint32_t bufferLength) const
         {
             const auto task = m_ioPatternState->GetNextPatternType();
             Assert::AreEqual(ctsIoPatternType::MoreIo, task);
@@ -205,7 +200,7 @@ namespace ctsUnitTest
             return testTask;
         }
 
-        [[nodiscard]] ctsTask RequestSendStatus(_In_ unsigned long* statusBuffer) const
+        [[nodiscard]] ctsTask RequestSendStatus(_In_ uint32_t* statusBuffer) const
         {
             // get_next_task
             const auto task = m_ioPatternState->GetNextPatternType();
@@ -227,7 +222,7 @@ namespace ctsUnitTest
             return testTask;
         }
 
-        [[nodiscard]] ctsTask RequestRecvStatus(_In_ unsigned long* statusBuffer) const
+        [[nodiscard]] ctsTask RequestRecvStatus(_In_ uint32_t* statusBuffer) const
         {
             // get_next_task
             const auto task = m_ioPatternState->GetNextPatternType();
@@ -403,8 +398,8 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             const ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             Assert::IsFalse(m_ioPatternState->IsCompleted());
         }
 
@@ -412,7 +407,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             const ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
             // indicate an error
             Assert::AreEqual(ctsIoPatternError::ErrorIoFailed, m_ioPatternState->UpdateError(1));
             Assert::IsTrue(m_ioPatternState->IsCompleted());
@@ -422,14 +417,14 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             Assert::IsFalse(m_ioPatternState->IsCompleted());
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             Assert::IsFalse(m_ioPatternState->IsCompleted());
         }
 
@@ -437,7 +432,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
             // indicate an error
             Assert::AreEqual(ctsIoPatternError::ErrorIoFailed, m_ioPatternState->UpdateError(1));
             Assert::IsTrue(m_ioPatternState->IsCompleted());
@@ -445,7 +440,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
             // indicate an error
             Assert::AreEqual(ctsIoPatternError::ErrorIoFailed, m_ioPatternState->UpdateError(1));
             Assert::IsTrue(m_ioPatternState->IsCompleted());
@@ -456,14 +451,14 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
-            Assert::AreEqual(ctsIoPatternError::TooFewBytes, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1));
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength - 1));
             Assert::IsTrue(m_ioPatternState->IsCompleted());
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsStatistics::c_connectionIdLength, testTask.m_bufferLength);
-            Assert::AreEqual(ctsIoPatternError::TooFewBytes, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength - 1));
+            Assert::AreEqual(ctsStatistics::ConnectionIdLength, testTask.m_bufferLength);
+            Assert::AreEqual(ctsIoPatternError::TooFewBytes, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength - 1));
             Assert::IsTrue(m_ioPatternState->IsCompleted());
         }
 
@@ -471,7 +466,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(50);
             // indicate an error
             Assert::AreEqual(ctsIoPatternError::ErrorIoFailed, m_ioPatternState->UpdateError(1));
@@ -484,7 +479,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(50);
             // indicate an error
             Assert::AreEqual(ctsIoPatternError::ErrorIoFailed, m_ioPatternState->UpdateError(1));
@@ -499,7 +494,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(50);
 
             // indicate an error
@@ -516,7 +511,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(150, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 100));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -529,7 +524,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(150);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 100));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -544,7 +539,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(150, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 100));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -560,7 +555,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // 2 IO tasks - completing too few bytes
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 50));
@@ -574,7 +569,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // 2 IO tasks - completing too few bytes
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 50));
@@ -590,7 +585,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // 2 IO tasks - completing too few bytes
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 50));
@@ -607,7 +602,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 100));
@@ -615,7 +610,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             // Recv server status
-            unsigned long statusCode = NO_ERROR;
+            uint32_t statusCode = NO_ERROR;
             testTask = this->RequestRecvStatus(&statusCode);
             // write "DONE" in the message to complete it
             memcpy_s(testTask.m_buffer, testTask.m_bufferLength, "DONE", 4);
@@ -644,7 +639,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 100));
@@ -652,7 +647,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             // Send status to client
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 4));
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
@@ -671,7 +666,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -680,7 +675,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Receive server status
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestRecvStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             // write "DONE" in the message to complete it
@@ -707,7 +702,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -738,7 +733,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -747,7 +742,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Send status to client
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 4));
@@ -768,7 +763,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -777,7 +772,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Send status to client
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 4));
@@ -798,7 +793,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task
             testTask = this->RequestMoreIo(100);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
@@ -807,7 +802,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Send status to client
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->UpdateError(0));
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, 4));
@@ -828,7 +823,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100 * 3, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             testTask = this->RequestMoreIo(100);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
@@ -854,7 +849,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Recv the server status
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestRecvStatus(&status);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
@@ -884,7 +879,7 @@ namespace ctsUnitTest
 
             this->InitGracefulShutdownTest(100 * 3, Client);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             testTask = this->RequestMoreIo(100);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
@@ -922,7 +917,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100 * 3);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             testTask = this->RequestMoreIo(100);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
@@ -973,7 +968,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100 * 3, Server);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             testTask = this->RequestMoreIo(100);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
@@ -999,7 +994,7 @@ namespace ctsUnitTest
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
             // Send server status
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             testTask = this->RequestSendStatus(&status);
             Assert::IsFalse(m_ioPatternState->IsCompleted());
             Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
@@ -1023,7 +1018,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100 * 3, Client);
             ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             ctsTask testTask1 = this->RequestMoreIo(100);
             Assert::AreEqual(static_cast<uint64_t>(200), m_ioPatternState->GetRemainingTransfer());
@@ -1062,7 +1057,7 @@ namespace ctsUnitTest
             //
             // Recv server status
             //
-            unsigned long statusBuffer = NO_ERROR;
+            uint32_t statusBuffer = NO_ERROR;
             ctsTask serverStatusTask = this->RequestRecvStatus(&statusBuffer);
             // write "DONE" in the message to complete it
             memcpy_s(serverStatusTask.m_buffer, testTask.m_bufferLength, "DONE", 4);
@@ -1088,7 +1083,7 @@ namespace ctsUnitTest
 
             this->InitHardShutdownTest(100 * 3);
             testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             testTask1 = this->RequestMoreIo(100);
             Assert::AreEqual(static_cast<uint64_t>(200), m_ioPatternState->GetRemainingTransfer());
@@ -1147,7 +1142,7 @@ namespace ctsUnitTest
         {
             this->InitGracefulShutdownTest(100 * 3, Server);
             const ctsTask testTask = this->RequestConnectionId();
-            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::c_connectionIdLength));
+            Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(testTask, ctsStatistics::ConnectionIdLength));
             // IO Task #1
             const ctsTask testTask1 = this->RequestMoreIo(100);
             Assert::AreEqual(static_cast<uint64_t>(200), m_ioPatternState->GetRemainingTransfer());
@@ -1186,7 +1181,7 @@ namespace ctsUnitTest
             //
             // Send server status
             //
-            unsigned long status = NO_ERROR;
+            uint32_t status = NO_ERROR;
             const ctsTask sendStatusTask = this->RequestSendStatus(&status);
             Assert::AreEqual(ctsIoPatternError::NoError, m_ioPatternState->CompletedTask(sendStatusTask, 100));
             Assert::IsFalse(m_ioPatternState->IsCompleted());

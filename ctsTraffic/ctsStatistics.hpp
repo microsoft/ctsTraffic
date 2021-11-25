@@ -26,7 +26,7 @@ namespace ctsTraffic
 {
     namespace ctsStatistics
     {
-        constexpr unsigned long c_connectionIdLength = 36 + 1; // UUID strings are 36 chars
+        constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
         template <typename T>
         void GenerateConnectionId(_In_ T& statisticsObject)
@@ -46,17 +46,17 @@ namespace ctsTraffic
             }
             FAIL_FAST_IF_MSG(
                 // ReSharper disable once CppRedundantParentheses
-                strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (c_connectionIdLength - 1),
+                strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (ConnectionIdLength - 1),
                 "UuidToString returned a string not 36 characters long (%Iu)",
                 strlen(reinterpret_cast<LPSTR>(connectionIdString)));
 
-            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, c_connectionIdLength, connectionIdString, c_connectionIdLength);
+            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
             FAIL_FAST_IF_MSG(
                 copyError != 0,
                 "memcpy_s failed trying to copy a UUID string (%d)", copyError);
 
             RpcStringFreeA(&connectionIdString);
-            statisticsObject.m_connectionIdentifier[c_connectionIdLength - 1] = '\0';
+            statisticsObject.m_connectionIdentifier[ConnectionIdLength - 1] = '\0';
         }
 
         template <typename T>
@@ -81,12 +81,12 @@ namespace ctsTraffic
     struct ctsStatsTracking
     {
     private:
-        long long m_currentValue = 0ll;
-        long long m_previousValue = 0ll;
+        int64_t m_currentValue = 0ll;
+        int64_t m_previousValue = 0ll;
 
     public:
         ctsStatsTracking() noexcept = default;
-        explicit ctsStatsTracking(long long initial_value) noexcept :
+        explicit ctsStatsTracking(int64_t initial_value) noexcept :
             m_currentValue(initial_value),
             m_previousValue(initial_value)
         {
@@ -107,57 +107,57 @@ namespace ctsTraffic
         ctsStatsTracking& operator=(const ctsStatsTracking&) = delete;
         ctsStatsTracking& operator=(ctsStatsTracking&&) = delete;
 
-        [[nodiscard]] long long GetValue() const noexcept
+        [[nodiscard]] int64_t GetValue() const noexcept
         {
             return ctl::ctMemoryGuardRead(&m_currentValue);
         }
         //
         // Safely writes to the current value, returning the *prior* value
         //
-        long long SetValue(long long new_value) noexcept
+        int64_t SetValue(int64_t new_value) noexcept
         {
             return ctl::ctMemoryGuardWrite(&m_currentValue, new_value);
         }
-        long long SetConditionally(long long new_value, long long if_equals) noexcept
+        int64_t SetConditionally(int64_t new_value, int64_t if_equals) noexcept
         {
             return ctl::ctMemoryGuardWriteConditionally(&m_currentValue, new_value, if_equals);
         }
         //
         // Adds 1 to the current value, returning the new value
         //
-        long long Increment() noexcept
+        int64_t Increment() noexcept
         {
             return ctl::ctMemoryGuardIncrement(&m_currentValue);
         }
         //
         // Subtracts 1 from the current value, returning the new value
         //
-        long long Decrement() noexcept
+        int64_t Decrement() noexcept
         {
             return ctl::ctMemoryGuardDecrement(&m_currentValue);
         }
         //
         // Adds the [in] value to the current value, returning the original value
         //
-        long long Add(long long value) noexcept
+        int64_t Add(int64_t value) noexcept
         {
             return ctl::ctMemoryGuardAdd(&m_currentValue, value);
         }
         //
         // Subtracts the [in] value from the current value, returning the original value
         //
-        long long Subtract(long long value) noexcept
+        int64_t Subtract(int64_t value) noexcept
         {
             return ctl::ctMemoryGuardSubtract(&m_currentValue, value);
         }
         //
         // Get / Sets a new value to the 'previous' value, returning the prior 'previous' value
         //
-        [[nodiscard]] long long GetPriorValue() noexcept
+        [[nodiscard]] int64_t GetPriorValue() noexcept
         {
             return ctl::ctMemoryGuardRead(&m_previousValue);
         }
-        long long SetPriorValue(long long new_value) noexcept
+        int64_t SetPriorValue(int64_t new_value) noexcept
         {
             return ctl::ctMemoryGuardWrite(&m_previousValue, new_value);
         }
@@ -165,7 +165,7 @@ namespace ctsTraffic
         // Updates the previous value with the current value
         // - returning the difference (current_value - previous_value)
         //
-        [[nodiscard]] long long SnapValueDifference() noexcept
+        [[nodiscard]] int64_t SnapValueDifference() noexcept
         {
             const auto captureCurrentValue = ctl::ctMemoryGuardRead(&m_currentValue);
             const auto capturePriorValue = ctl::ctMemoryGuardWrite(&m_previousValue, captureCurrentValue);
@@ -175,7 +175,7 @@ namespace ctsTraffic
         // Returns the difference (current_value - previous_value)
         // - without modifying either value
         //
-        [[nodiscard]] long long ReadValueDifference() const noexcept
+        [[nodiscard]] int64_t ReadValueDifference() const noexcept
         {
             const auto captureCurrentValue = ctl::ctMemoryGuardRead(&m_currentValue);
             const auto capturePriorValue = ctl::ctMemoryGuardRead(&m_previousValue);
@@ -193,7 +193,7 @@ namespace ctsTraffic
         ctsStatsTracking m_connectionErrorCount;
         ctsStatsTracking m_protocolErrorCount;
 
-        explicit ctsConnectionStatistics(long long start_time = 0LL) noexcept :
+        explicit ctsConnectionStatistics(int64_t start_time = 0LL) noexcept :
             m_startTime(start_time)
         {
         }
@@ -214,8 +214,8 @@ namespace ctsTraffic
         //
         ctsConnectionStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
-            const long long priorTimeRead = clear_settings ?
+            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t priorTimeRead = clear_settings ?
                 m_startTime.SetPriorValue(currentTime) :
                 m_startTime.GetPriorValue();
 
@@ -241,9 +241,9 @@ namespace ctsTraffic
         ctsStatsTracking m_duplicateFrames;
         ctsStatsTracking m_errorFrames;
         // unique connection identifier
-        char m_connectionIdentifier[ctsStatistics::c_connectionIdLength]{};
+        char m_connectionIdentifier[ctsStatistics::ConnectionIdLength]{};
 
-        explicit ctsUdpStatistics(long long start_time = 0LL) noexcept :
+        explicit ctsUdpStatistics(int64_t start_time = 0LL) noexcept :
             m_startTime(start_time)
         {
             m_connectionIdentifier[0] = '\0';
@@ -256,7 +256,7 @@ namespace ctsTraffic
         ctsUdpStatistics& operator=(const ctsUdpStatistics&) = delete;
         ctsUdpStatistics& operator=(ctsUdpStatistics&&) = delete;
 
-        [[nodiscard]] long long GetBytesReceived() const noexcept
+        [[nodiscard]] int64_t GetBytesReceived() const noexcept
         {
             return m_bitsReceived.GetValue() / 8;
         }
@@ -266,8 +266,8 @@ namespace ctsTraffic
         //
         ctsUdpStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
-            const long long priorTimeRead = clear_settings ?
+            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t priorTimeRead = clear_settings ?
                 m_startTime.SetPriorValue(currentTime) :
                 m_startTime.GetPriorValue();
 
@@ -303,9 +303,9 @@ namespace ctsTraffic
         ctsStatsTracking m_bytesSent;
         ctsStatsTracking m_bytesRecv;
         // unique connection identifier
-        char m_connectionIdentifier[ctsStatistics::c_connectionIdLength]{};
+        char m_connectionIdentifier[ctsStatistics::ConnectionIdLength]{};
 
-        explicit ctsTcpStatistics(long long current_time = 0LL) noexcept :
+        explicit ctsTcpStatistics(int64_t current_time = 0LL) noexcept :
             m_startTime(current_time)
         {
             static const char* nullGuidString = "00000000-0000-0000-0000-000000000000";
@@ -321,7 +321,7 @@ namespace ctsTraffic
         ctsTcpStatistics operator=(const ctsTcpStatistics&) = delete;
         ctsTcpStatistics operator=(ctsTcpStatistics&&) = delete;
 
-        [[nodiscard]] long long GetBytesReceived() const noexcept
+        [[nodiscard]] int64_t GetBytesReceived() const noexcept
         {
             return m_bytesRecv.GetValue() + m_bytesSent.GetValue();
         }
@@ -332,8 +332,8 @@ namespace ctsTraffic
         //
         ctsTcpStatistics SnapView(bool clear_settings) noexcept
         {
-            const long long currentTime = ctl::ctTimer::SnapQpcInMillis();
-            const long long priorTimeRead = clear_settings ?
+            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t priorTimeRead = clear_settings ?
                 m_startTime.SetPriorValue(currentTime) :
                 m_startTime.GetPriorValue();
 

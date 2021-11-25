@@ -21,7 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <OleAuto.h>
+#include <oleauto.h>
 #include <WbemIdl.h>
 // wil headers
 #include <wil/stl.h>
@@ -95,12 +95,12 @@ namespace ctl
         // ReSharper disable once CppInconsistentNaming
         class iterator
         {
-            const unsigned m_endIteratorIndex = 0xffffffff;
+            const uint32_t m_endIteratorIndex = ULONG_MAX;
 
             wil::com_ptr<IWbemClassObject> m_wbemClassObject;
             wil::shared_bstr m_propertyName;
             CIMTYPE m_propertyType = 0;
-            unsigned m_index = m_endIteratorIndex;
+            uint32_t m_index = m_endIteratorIndex;
 
         public:
             // Iterator requires the caller's IWbemServices interface and class name
@@ -187,7 +187,7 @@ namespace ctl
             // increment by integer
             iterator& operator+=(DWORD _inc)
             {
-                for (unsigned loop = 0; loop < _inc; ++loop)
+                for (auto loop = 0ul; loop < _inc; ++loop)
                 {
                     increment();
                     if (m_index == m_endIteratorIndex)

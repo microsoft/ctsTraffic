@@ -20,7 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <OleAuto.h>
+#include <oleauto.h>
 #include <WbemIdl.h>
 // wil headers
 #include <wil/stl.h>
@@ -117,12 +117,12 @@ namespace ctl
         class property_iterator
         {
         private:
-            static constexpr unsigned long c_endIteratorIndex = 0xffffffff;
+            static constexpr uint32_t c_endIteratorIndex = ULONG_MAX;
 
             wil::com_ptr<IWbemClassObject> m_wbemClassObj;
             wil::shared_bstr m_propertyName;
             CIMTYPE m_propertyType = 0;
-            DWORD m_index = c_endIteratorIndex;
+            uint32_t m_index = c_endIteratorIndex;
 
         public:
             property_iterator() = default;
@@ -226,7 +226,7 @@ namespace ctl
             // increment by integer
             property_iterator& operator+=(DWORD inc)
             {
-                for (unsigned loop = 0; loop < inc; ++loop)
+                for (auto loop = 0ul; loop < inc; ++loop)
                 {
                     increment();
                     if (m_index == c_endIteratorIndex)

@@ -74,7 +74,7 @@ namespace ctsTraffic
                     returnResult.m_errorCode = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    returnResult.m_bytesTransferred = static_cast<unsigned long>(pOverlapped->InternalHigh);
+                    returnResult.m_bytesTransferred = static_cast<uint32_t>(pOverlapped->InternalHigh);
                     // completed inline, so the TP won't be notified
                     ioThreadPool->cancel_request(pOverlapped);
                 }
@@ -136,7 +136,7 @@ namespace ctsTraffic
                     returnResult.m_errorCode = ERROR_SUCCESS;
                     // OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
                     // - this member is set when the request is completed inline
-                    returnResult.m_bytesTransferred = static_cast<unsigned long>(pOverlapped->InternalHigh);
+                    returnResult.m_bytesTransferred = static_cast<uint32_t>(pOverlapped->InternalHigh);
                     // completed inline, so the TP won't be notified
                     ioThreadPool->cancel_request(pOverlapped);
                 }
@@ -159,7 +159,7 @@ namespace ctsTraffic
 
     wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept
     {
-        wsIOResult returnResult;
+        wsIOResult returnResult{};
         linger lingerOption{};
         lingerOption.l_onoff = 1;
         lingerOption.l_linger = 0;

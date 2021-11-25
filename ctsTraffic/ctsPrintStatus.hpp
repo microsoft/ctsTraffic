@@ -35,7 +35,7 @@ namespace ctsTraffic
     private:
         // expanded beyond 80 to handle very long IPv6 address strings
         // - buffer is expected to be protected by only a single caller at a time
-        static const unsigned long c_outputBufferSize = 128;
+        static constexpr uint32_t c_outputBufferSize = 128;
         // one more for the null terminator
         wchar_t m_outputBuffer[c_outputBufferSize + 1]{};
 
@@ -75,7 +75,7 @@ namespace ctsTraffic
         // Expects to be called in a loop
         // - returns nullptr if nothing left to print
         //
-        PCWSTR PrintStatus(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept
+        PCWSTR PrintStatus(const ctsConfig::StatusFormatting& format, int64_t currentTime, bool clearStatus) noexcept
         {
             ResetBuffer();
             if (FormatData(format, currentTime, clearStatus) != PrintingStatus::NoPrint)
@@ -89,11 +89,11 @@ namespace ctsTraffic
     protected:
 
         // derived classes are required to implement these three pure virtual function
-        virtual PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept = 0;
+        virtual PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, int64_t currentTime, bool clearStatus) noexcept = 0;
         virtual PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept = 0;
         virtual PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept = 0;
 
-        void LeftJustifyOutput(unsigned long leftJustifiedOffset, unsigned long maxLength, PCWSTR value) noexcept
+        void LeftJustifyOutput(uint32_t leftJustifiedOffset, uint32_t maxLength, PCWSTR value) noexcept
         {
             FAIL_FAST_IF_MSG(
                 0 == leftJustifiedOffset,
@@ -115,9 +115,9 @@ namespace ctsTraffic
                 value,
                 valueLength);
         }
-        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, float value) noexcept
+        void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, float value) noexcept
         {
-            constexpr unsigned long coversionBufferLength = 16;
+            constexpr uint32_t coversionBufferLength = 16;
             wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
@@ -146,9 +146,9 @@ namespace ctsTraffic
                 conversionBuffer,
                 converted);
         }
-        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, unsigned long value) noexcept
+        void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, uint32_t value) noexcept
         {
-            constexpr unsigned long coversionBufferLength = 12;
+            constexpr uint32_t coversionBufferLength = 12;
             wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
@@ -163,7 +163,7 @@ namespace ctsTraffic
                 coversionBufferLength - 1, maxLength);
             _Analysis_assume_(maxLength > coversionBufferLength - 1);
 
-            const int converted = _snwprintf_s(
+            const auto converted = _snwprintf_s(
                 conversionBuffer,
                 coversionBufferLength,
                 L"%u",
@@ -177,9 +177,9 @@ namespace ctsTraffic
                 conversionBuffer,
                 converted);
         }
-        void RightJustifyOutput(unsigned long rightJustifiedOffset, unsigned long maxLength, long long value) noexcept
+        void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, int64_t value) noexcept
         {
-            constexpr unsigned long coversionBufferLength = 20;
+            constexpr uint32_t coversionBufferLength = 20;
             wchar_t conversionBuffer[coversionBufferLength]{};
 
             FAIL_FAST_IF_MSG(
@@ -200,7 +200,7 @@ namespace ctsTraffic
                 coversionBufferLength - 1, maxLength);
             _Analysis_assume_(maxLength <= coversionBufferLength - 1);
 
-            const int converted = _snwprintf_s(
+            const auto converted = _snwprintf_s(
                 conversionBuffer,
                 coversionBufferLength,
                 L"%lld",
@@ -215,12 +215,12 @@ namespace ctsTraffic
                 converted);
         }
 
-        void TerminateString(unsigned long offset) noexcept
+        void TerminateString(uint32_t offset) noexcept
         {
             m_outputBuffer[offset] = L'\n';
             m_outputBuffer[offset + 1] = L'\0';
         }
-        void TerminateFileString(unsigned long offset) noexcept
+        void TerminateFileString(uint32_t offset) noexcept
         {
             m_outputBuffer[offset] = L'\r';
             m_outputBuffer[offset + 1] = L'\n';
@@ -232,7 +232,7 @@ namespace ctsTraffic
         /// Functions to write to the output buffer in CSV formatting
         ///
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, float value, bool addComma = true) noexcept
+        uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, float value, bool addComma = true) noexcept
         {
             const auto converted = _snwprintf_s(
                 m_outputBuffer + offset,
@@ -244,7 +244,7 @@ namespace ctsTraffic
             return converted;
         }
 
-        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, unsigned long value, bool addComma = true) noexcept
+        uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, uint32_t value, bool addComma = true) noexcept
         {
             const errno_t error = _ui64tow_s(
                 value,
@@ -256,7 +256,7 @@ namespace ctsTraffic
                 "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %u", this, value);
 
             // find how many characters were printed
-            unsigned long converted = 0;
+            uint32_t converted = 0;
             wchar_t* outputReference = m_outputBuffer + offset;
             while (*outputReference != L'\0' && *outputReference != L' ')
             {
@@ -279,7 +279,7 @@ namespace ctsTraffic
             return converted;
         }
 
-        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, long long value, bool addComma = true) noexcept
+        uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, int64_t value, bool addComma = true) noexcept
         {
             const errno_t error = _ui64tow_s(
                 value,
@@ -291,7 +291,7 @@ namespace ctsTraffic
                 "_ui64tow_s failed to convert this (%p) ctsUdpStatusInformation - %lld", this, value);
 
             // find how many characters were printed
-            unsigned long converted = 0;
+            uint32_t converted = 0;
             wchar_t* outputReference = m_outputBuffer + offset;
             while (*outputReference != L'\0' && *outputReference != L' ')
             {
@@ -314,7 +314,7 @@ namespace ctsTraffic
             return converted;
         }
 
-        unsigned long AppendCsvOutput(unsigned long offset, unsigned long valueLength, PCWSTR value, bool addComma = true) noexcept
+        uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, PCWSTR value, bool addComma = true) noexcept
         {
             const auto converted = _snwprintf_s(
                 m_outputBuffer + offset,
@@ -405,18 +405,18 @@ namespace ctsTraffic
                 L" TimeSlice       Bits/Sec    Streams   Completed   Dropped   Repeated    Errors \r\n";
         }
 
-        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept override
+        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, int64_t currentTime, bool clearStatus) noexcept override
         {
             const ctsUdpStatistics udpData(ctsConfig::g_configSettings->UdpStatusDetails.SnapView(clearStatus));
             const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
 
             if (ctsConfig::StatusFormatting::Csv == format)
             {
-                unsigned long charactersWritten = 0;
+                uint32_t charactersWritten = 0;
                 // converting milliseconds to seconds before printing
                 charactersWritten += AppendCsvOutput(charactersWritten, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                const long long timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+                const int64_t timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
                 charactersWritten += AppendCsvOutput(
                     charactersWritten,
                     c_bitsPerSecondLength,
@@ -434,7 +434,7 @@ namespace ctsTraffic
                 // converting milliseconds to seconds before printing
                 RightJustifyOutput(c_timeSliceOffset, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
                 // calculating # of bytes that were received between the previous format() and current call to format()
-                const long long timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+                const int64_t timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
                 RightJustifyOutput(
                     c_bitsPerSecondOffset,
                     c_bitsPerSecondLength,
@@ -460,26 +460,26 @@ namespace ctsTraffic
 
     private:
         // constant offsets for each numeric value to print
-        static const unsigned long c_timeSliceOffset = 10;
-        static const unsigned long c_timeSliceLength = 10;
+        static constexpr uint32_t c_timeSliceOffset = 10;
+        static constexpr uint32_t c_timeSliceLength = 10;
 
-        static const unsigned long c_bitsPerSecondOffset = 25;
-        static const unsigned long c_bitsPerSecondLength = 12;
+        static constexpr uint32_t c_bitsPerSecondOffset = 25;
+        static constexpr uint32_t c_bitsPerSecondLength = 12;
 
-        static const unsigned long c_currentStreamsOffset = 36;
-        static const unsigned long c_currentStreamsLength = 8;
+        static constexpr uint32_t c_currentStreamsOffset = 36;
+        static constexpr uint32_t c_currentStreamsLength = 8;
 
-        static const unsigned long c_competedFramesOffset = 48;
-        static const unsigned long c_competedFramesLength = 9;
+        static constexpr uint32_t c_competedFramesOffset = 48;
+        static constexpr uint32_t c_competedFramesLength = 9;
 
-        static const unsigned long c_droppedFramesOffset = 58;
-        static const unsigned long c_droppedFramesLength = 7;
+        static constexpr uint32_t c_droppedFramesOffset = 58;
+        static constexpr uint32_t c_droppedFramesLength = 7;
 
-        static const unsigned long c_duplicatedFramesOffset = 69;
-        static const unsigned long c_duplicatedFramesLength = 7;
+        static constexpr uint32_t c_duplicatedFramesOffset = 69;
+        static constexpr uint32_t c_duplicatedFramesLength = 7;
 
-        static const unsigned long c_errorFramesOffset = 79;
-        static const unsigned long c_errorFramesLength = 7;
+        static constexpr uint32_t c_errorFramesOffset = 79;
+        static constexpr uint32_t c_errorFramesLength = 7;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -500,16 +500,16 @@ namespace ctsTraffic
         ctsTcpStatusInformation(ctsTcpStatusInformation&&) = delete;
         ctsTcpStatusInformation& operator=(ctsTcpStatusInformation&&) = delete;
 
-        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, long long currentTime, bool clearStatus) noexcept override
+        PrintingStatus FormatData(const ctsConfig::StatusFormatting& format, int64_t currentTime, bool clearStatus) noexcept override
         {
             const ctsTcpStatistics tcpData(ctsConfig::g_configSettings->TcpStatusDetails.SnapView(clearStatus));
             const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
 
-            const long long timeElapsed = tcpData.m_endTime.GetValue() - tcpData.m_startTime.GetValue();
+            const int64_t timeElapsed = tcpData.m_endTime.GetValue() - tcpData.m_startTime.GetValue();
 
             if (format == ctsConfig::StatusFormatting::Csv)
             {
-                unsigned long charactersWritten = 0;
+                uint32_t charactersWritten = 0;
                 // converting milliseconds to seconds before printing
                 charactersWritten += AppendCsvOutput(charactersWritten, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
 
@@ -612,34 +612,34 @@ namespace ctsTraffic
 
     private:
         // constant offsets for each numeric value to print
-        static const unsigned long c_timeSliceOffset = 10;
-        static const unsigned long c_timeSliceLength = 10;
+        static constexpr uint32_t c_timeSliceOffset = 10;
+        static constexpr uint32_t c_timeSliceLength = 10;
 
-        static const unsigned long c_sendBytesPerSecondOffset = 23;
-        static const unsigned long c_sendBytesPerSecondLength = 11;
+        static constexpr uint32_t c_sendBytesPerSecondOffset = 23;
+        static constexpr uint32_t c_sendBytesPerSecondLength = 11;
 
-        static const unsigned long c_recvBytesPerSecondOffset = 36;
-        static const unsigned long c_recvBytesPerSecondLength = 11;
+        static constexpr uint32_t c_recvBytesPerSecondOffset = 36;
+        static constexpr uint32_t c_recvBytesPerSecondLength = 11;
 
-        static const unsigned long c_currentTransactionsOffset = 47;
-        static const unsigned long c_currentTransactionsLength = 7;
+        static constexpr uint32_t c_currentTransactionsOffset = 47;
+        static constexpr uint32_t c_currentTransactionsLength = 7;
 
-        static const unsigned long c_completedTransactionsOffset = 58;
-        static const unsigned long c_completedTransactionsLength = 7;
+        static constexpr uint32_t c_completedTransactionsOffset = 58;
+        static constexpr uint32_t c_completedTransactionsLength = 7;
 
-        static const unsigned long c_connectionErrorsOffset = 68;
-        static const unsigned long c_connectionErrorsLength = 7;
+        static constexpr uint32_t c_connectionErrorsOffset = 68;
+        static constexpr uint32_t c_connectionErrorsLength = 7;
 
-        static const unsigned long c_protocolErrorsOffset = 79;
-        static const unsigned long c_protocolErrorsLength = 7;
+        static constexpr uint32_t c_protocolErrorsOffset = 79;
+        static constexpr uint32_t c_protocolErrorsLength = 7;
 
-        static const unsigned long c_detailedSentOffset = 23;
-        static const unsigned long c_detailedSentLength = 10;
+        static constexpr uint32_t c_detailedSentOffset = 23;
+        static constexpr uint32_t c_detailedSentLength = 10;
 
-        static const unsigned long c_detailedRecvOffset = 35;
-        static const unsigned long c_detailedRecvLength = 10;
+        static constexpr uint32_t c_detailedRecvOffset = 35;
+        static constexpr uint32_t c_detailedRecvLength = 10;
 
-        static const unsigned long c_detailedAddressOffset = 39;
-        static const unsigned long c_detailedAddressLength = 46;
+        static constexpr uint32_t c_detailedAddressOffset = 39;
+        static constexpr uint32_t c_detailedAddressLength = 46;
     };
 } // namespace

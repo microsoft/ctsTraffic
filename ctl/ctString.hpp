@@ -58,7 +58,7 @@ namespace ctl
                 return std::string();
             }
 
-            int len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            auto len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
             if (len == 0)
             {
                 THROW_WIN32_MSG(GetLastError(), "WideCharToMultiByte");
@@ -71,7 +71,9 @@ namespace ctl
                 THROW_WIN32_MSG(GetLastError(), "WideCharToMultiByte");
             }
 
-            buf.resize(len - 1); // We needed room for it earlier, but the \0 isn't considered a part of the std::string
+            // We needed room for it earlier, but the \0 cannot be embedded in the returned std::string
+            --len;
+            buf.resize(len);
             return buf;
         }
 
@@ -82,7 +84,7 @@ namespace ctl
                 return std::wstring();
             }
 
-            int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+            auto len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
             if (len == 0)
             {
                 THROW_WIN32_MSG(GetLastError(), "MultiByteToWideChar");
@@ -95,7 +97,9 @@ namespace ctl
                 THROW_WIN32_MSG(GetLastError(), "MultiByteToWideChar");
             }
 
-            buf.resize(len - 1); // We needed room for it earlier, but the \0 isn't considered a part of the std::string
+            // We needed room for it earlier, but the \0 cannot be embedded in the returned std::string
+            --len;
+            buf.resize(len);
             return buf;
         }
 
@@ -132,9 +136,9 @@ namespace ctl
         namespace Detail
         {
             inline bool OrdinalEquals(
-                _In_NLS_string_(_lhs_size) const wchar_t* lhs,
+                _In_NLS_string_(lhs_size) const wchar_t* lhs,
                 size_t lhs_size,
-                _In_NLS_string_(_rhs_size) const wchar_t* rhs,
+                _In_NLS_string_(rhs_size) const wchar_t* rhs,
                 size_t rhs_size,
                 BOOL case_insensitive)
             {

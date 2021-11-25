@@ -27,9 +27,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    static long long g_bindCounter = 0LL;
-    static long long g_targetCounter = 0LL;
-    static long long g_portCounter = 0LL;
+    static int64_t g_bindCounter = 0LL;
+    static int64_t g_targetCounter = 0LL;
+    static int64_t g_portCounter = 0LL;
 
     // ReSharper disable once CppInconsistentNaming
     void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
@@ -77,7 +77,7 @@ namespace ctsTraffic
         }
 
         auto socket = INVALID_SOCKET;
-        int gle = 0;
+        uint32_t gle = 0;
         PCSTR functionName = "CreateSocket";
         try
         {
@@ -128,16 +128,16 @@ namespace ctsTraffic
             else
             {
                 // sleep up to 5 seconds to allow TCP to cleanup its internal state
-                constexpr unsigned long bindRetryCount = 5;
-                for (unsigned long bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
+                constexpr auto bindRetryCount = 5;
+                for (auto bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
                     if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
                     {
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)
                         {
-                            constexpr unsigned long bindRetrySleepMs = 1000;
-                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %lu, sleeping %lu ms.\n", bindRetry + 1, bindRetrySleepMs);
+                            constexpr uint32_t bindRetrySleepMs = 1000;
+                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %ld, sleeping %lu ms.\n", bindRetry + 1, bindRetrySleepMs);
                             Sleep(bindRetrySleepMs);
                         }
                     }
@@ -145,7 +145,7 @@ namespace ctsTraffic
                     {
                         // succeeded - exit the loop
                         gle = NO_ERROR;
-                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %lu\n", bindRetry + 1);
+                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %ld\n", bindRetry + 1);
                         break;
                     }
                 }

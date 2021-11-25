@@ -49,7 +49,7 @@ namespace ctsTraffic
         catch (...)
         {
             const auto error = ctsConfig::PrintThrownException();
-            auto sharedSocket(weakSocket.lock());
+            const auto sharedSocket(weakSocket.lock());
             if (sharedSocket)
             {
                 sharedSocket->CompleteState(error);
@@ -86,8 +86,7 @@ namespace ctsTraffic
                 {
                     ctsMediaStreamServerImpl::ScheduleIo(weakSocket, nextTask);
                 }
-            }
-            while (nextTask.m_ioAction != ctsTaskAction::None);
+            } while (nextTask.m_ioAction != ctsTaskAction::None);
         }
         catch (...)
         {
@@ -176,7 +175,7 @@ namespace ctsTraffic
                 }
 
                 // initiate the recv's in the 'listening' sockets
-                for (auto& listener : g_listeningSockets)
+                for (const auto& listener : g_listeningSockets)
                 {
                     listener->InitiateRecv();
                 }
@@ -212,9 +211,8 @@ namespace ctsTraffic
                 const auto lockConnectedObject = g_socketVectorGuard.lock();
 
                 // find the matching connected_socket
-                const auto foundSocket = std::find_if(
-                    std::begin(g_connectedSockets),
-                    std::end(g_connectedSockets),
+                const auto foundSocket = std::ranges::find_if(
+                    g_connectedSockets,
                     [&sharedSocket](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
                         return sharedSocket->GetRemoteSockaddr() == connectedSocket->GetRemoteAddress();
                     }
@@ -241,7 +239,7 @@ namespace ctsTraffic
         //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
         void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket)
         {
-            auto sharedSocket(weakSocket.lock());
+            const auto sharedSocket(weakSocket.lock());
             if (sharedSocket)
             {
                 const auto lockAwaitingObject = g_socketVectorGuard.lock();
@@ -255,9 +253,8 @@ namespace ctsTraffic
                 {
                     auto waitingEndpoint = g_awaitingEndpoints.rbegin();
 
-                    const auto existingSocket = std::find_if(
-                        std::begin(g_connectedSockets),
-                        std::end(g_connectedSockets),
+                    const auto existingSocket = std::ranges::find_if(
+                        g_connectedSockets,
                         [&](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
                             return waitingEndpoint->second == connectedSocket->GetRemoteAddress();
                         });
@@ -283,9 +280,8 @@ namespace ctsTraffic
                         waitingEndpoint->second.WriteCompleteAddress().c_str());
 
                     // now complete the ctsSocket 'Create' request
-                    const auto foundSocket = std::find_if(
-                        g_listeningSockets.begin(),
-                        g_listeningSockets.end(),
+                    const auto foundSocket = std::ranges::find_if(
+                        g_listeningSockets,
                         [&waitingEndpoint](const std::unique_ptr<ctsMediaStreamServerListeningSocket>& listener) noexcept {
                             return listener->GetSocket() == waitingEndpoint->first;
                         });
@@ -311,9 +307,8 @@ namespace ctsTraffic
         {
             const auto lockConnectedObject = g_socketVectorGuard.lock();
 
-            const auto foundSocket = std::find_if(
-                std::begin(g_connectedSockets),
-                std::end(g_connectedSockets),
+            const auto foundSocket = std::ranges::find_if(
+                g_connectedSockets,
                 [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
                     return targetAddr == connectedSocket->GetRemoteAddress();
                 });
@@ -331,9 +326,8 @@ namespace ctsTraffic
         {
             const auto lockAwaitingObject = g_socketVectorGuard.lock();
 
-            const auto existingSocket = std::find_if(
-                std::begin(g_connectedSockets),
-                std::end(g_connectedSockets),
+            const auto existingSocket = std::ranges::find_if(
+                g_connectedSockets,
                 [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
                     return targetAddr == connectedSocket->GetRemoteAddress();
                 });
@@ -346,9 +340,8 @@ namespace ctsTraffic
                 // between the client and server as they attempt to negotiating starting a new stream
                 return;
             }
-            const auto awaitingEndpoint = std::find_if(
-                std::begin(g_awaitingEndpoints),
-                std::end(g_awaitingEndpoints),
+            const auto awaitingEndpoint = std::ranges::find_if(
+                g_awaitingEndpoints,
                 [&targetAddr](const std::pair<SOCKET, ctl::ctSockaddr>& endpoint) noexcept {
                     return targetAddr == endpoint.second;
                 });
@@ -474,9 +467,9 @@ namespace ctsTraffic
                         const auto error = WSAGetLastError();
                         if (WSAEMSGSIZE == error)
                         {
-                            unsigned long bytesRequested = 0;
+                            uint32_t bytesRequested = 0;
                             // iterate across each WSABUF* in the array
-                            for (auto& wasbuffer : sendRequest)
+                            for (const auto& wasbuffer : sendRequest)
                             {
                                 bytesRequested += wasbuffer.len;
                             }

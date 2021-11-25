@@ -18,6 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <WinSock2.h>
 #include <MSWSock.h>
 // wil headers
+// ReSharper disable once CppUnusedIncludeDirective
 #include <wil/stl.h>
 #include <wil/resource.h>
 
@@ -26,7 +27,7 @@ namespace ctl
 {
     namespace Details
     {
-        constexpr unsigned c_functionPtrCount = 9;
+        constexpr uint32_t c_functionPtrCount = 9;
         static LPFN_TRANSMITFILE g_transmitfile = nullptr; // WSAID_TRANSMITFILE
         static LPFN_ACCEPTEX g_acceptex = nullptr; // WSAID_ACCEPTEX
         static LPFN_GETACCEPTEXSOCKADDRS g_getacceptexsockaddrs = nullptr; // WSAID_GETACCEPTEXSOCKADDRS
@@ -53,7 +54,7 @@ namespace ctl
             auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { ::WSACleanup(); });
 
             // check to see if need to create a temp socket
-            SOCKET localSocket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+            const auto localSocket = ::socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
             if (INVALID_SOCKET == localSocket)
             {
                 return FALSE;
@@ -61,77 +62,77 @@ namespace ctl
             auto closesocketOnExit = wil::scope_exit([&]() noexcept { ::closesocket(localSocket); });
 
             // control code and the size to fetch the extension function pointers
-            for (unsigned fnLoop = 0; fnLoop < c_functionPtrCount; ++fnLoop)
+            for (auto fnLoop = 0ul; fnLoop < c_functionPtrCount; ++fnLoop)
             {
-                VOID* functionPtr = nullptr;
-                DWORD controlCode = SIO_GET_EXTENSION_FUNCTION_POINTER;
-                auto bytes = static_cast<DWORD>(sizeof(VOID*));
+                VOID* functionPtr{ nullptr };
+                DWORD controlCode{ SIO_GET_EXTENSION_FUNCTION_POINTER };
+                DWORD bytes{ sizeof(VOID*) };
                 // must declare GUID explicitly at a global scope as some commonly used test libraries
                 // - incorrectly pull it into their own namespace
                 GUID guid{};
 
                 switch (fnLoop)
                 {
-                    case 0: {
-                        functionPtr = &g_transmitfile;
-                        constexpr GUID tmpGuid = WSAID_TRANSMITFILE;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 1: {
-                        functionPtr = &g_acceptex;
-                        constexpr GUID tmpGuid = WSAID_ACCEPTEX;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 2: {
-                        functionPtr = &g_getacceptexsockaddrs;
-                        constexpr GUID tmpGuid = WSAID_GETACCEPTEXSOCKADDRS;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 3: {
-                        functionPtr = &g_transmitpackets;
-                        constexpr GUID tmpGuid = WSAID_TRANSMITPACKETS;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 4: {
-                        functionPtr = &g_connectex;
-                        constexpr GUID tmpGuid = WSAID_CONNECTEX;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 5: {
-                        functionPtr = &g_disconnectex;
-                        constexpr GUID tmpGuid = WSAID_DISCONNECTEX;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 6: {
-                        functionPtr = &g_wsarecvmsg;
-                        constexpr GUID tmpGuid = WSAID_WSARECVMSG;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 7: {
-                        functionPtr = &g_wsasendmsg;
-                        constexpr GUID tmpGuid = WSAID_WSASENDMSG;
-                        memcpy(&guid, &tmpGuid, sizeof GUID);
-                        break;
-                    }
-                    case 8: {
-                        functionPtr = &g_rioextensionfunctiontable;
-                        constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
-                        ::memcpy(&guid, &tmpGuid, sizeof GUID);
-                        controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
-                        bytes = static_cast<DWORD>(sizeof g_rioextensionfunctiontable);
-                        ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
-                        g_rioextensionfunctiontable.cbSize = bytes;
-                        break;
-                    }
-                    default:
-                        FAIL_FAST_MSG("Unknown ctSocketExtension function number");
+                case 0: {
+                    functionPtr = &g_transmitfile;
+                    constexpr GUID tmpGuid = WSAID_TRANSMITFILE;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 1: {
+                    functionPtr = &g_acceptex;
+                    constexpr GUID tmpGuid = WSAID_ACCEPTEX;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 2: {
+                    functionPtr = &g_getacceptexsockaddrs;
+                    constexpr GUID tmpGuid = WSAID_GETACCEPTEXSOCKADDRS;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 3: {
+                    functionPtr = &g_transmitpackets;
+                    constexpr GUID tmpGuid = WSAID_TRANSMITPACKETS;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 4: {
+                    functionPtr = &g_connectex;
+                    constexpr GUID tmpGuid = WSAID_CONNECTEX;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 5: {
+                    functionPtr = &g_disconnectex;
+                    constexpr GUID tmpGuid = WSAID_DISCONNECTEX;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 6: {
+                    functionPtr = &g_wsarecvmsg;
+                    constexpr GUID tmpGuid = WSAID_WSARECVMSG;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 7: {
+                    functionPtr = &g_wsasendmsg;
+                    constexpr GUID tmpGuid = WSAID_WSASENDMSG;
+                    memcpy(&guid, &tmpGuid, sizeof GUID);
+                    break;
+                }
+                case 8: {
+                    functionPtr = &g_rioextensionfunctiontable;
+                    constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
+                    ::memcpy(&guid, &tmpGuid, sizeof GUID);
+                    controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
+                    bytes = {sizeof g_rioextensionfunctiontable};
+                    ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
+                    g_rioextensionfunctiontable.cbSize = bytes;
+                    break;
+                }
+                default:
+                    FAIL_FAST_MSG("Unknown ctSocketExtension function number");
                 }
 
                 if (0 != ::WSAIoctl(

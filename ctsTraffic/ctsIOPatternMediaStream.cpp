@@ -23,7 +23,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsStatistics.hpp"
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
-#include "ctsSafeInt.hpp"
 #include "ctsMediaStreamProtocol.hpp"
 // wil headers
 #include <wil/stl.h>
@@ -53,7 +52,7 @@ namespace ctsTraffic
 
     ctsIoPatternMediaStreamClient::ctsIoPatternMediaStreamClient() :
         ctsIoPatternStatistics(ctsConfig::g_configSettings->PrePostRecvs),
-        m_frameRateMsPerFrame(1000.0 / static_cast<unsigned long>(ctsConfig::GetMediaStream().FramesPerSecond))
+        m_frameRateMsPerFrame(1000.0 / static_cast<uint32_t>(ctsConfig::GetMediaStream().FramesPerSecond))
     {
         // if the entire session fits in the inital buffer, update accordingly
         if (m_finalFrame < m_initialBufferFrames)
@@ -64,7 +63,7 @@ namespace ctsTraffic
 
         constexpr long extraBufferDepthFactor = 2;
         // queue_size is intentionally a signed long: will catch overflows
-        const ctsSignedLong queueSize = extraBufferDepthFactor * m_initialBufferFrames;
+        const auto queueSize = extraBufferDepthFactor * m_initialBufferFrames;
         if (queueSize < extraBufferDepthFactor)
         {
             THROW_WIN32_MSG(
@@ -72,14 +71,14 @@ namespace ctsTraffic
                 "BufferDepth & FrameSize don't allow for enough buffered stream");
         }
 
-        PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamClient - queue size for this new connection is %d\n", static_cast<long>(queueSize));
+        PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamClient - queue size for this new connection is %u\n", queueSize);
         PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamClient - frame rate in milliseconds per frame : %f\n", m_frameRateMsPerFrame);
 
         m_frameEntries.resize(queueSize);
         m_headEntry = m_frameEntries.begin();
 
         // pre-populate the queue of frames with the initial seq numbers
-        ctsSignedLong lastUsedSequenceNumber = 1;
+        int64_t lastUsedSequenceNumber = 1;
         for (auto& entry : m_frameEntries)
         {
             entry.m_sequenceNumber = lastUsedSequenceNumber;
@@ -121,7 +120,7 @@ namespace ctsTraffic
             // initiate the timers the first time the object is used
             m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
             SetNextStartTimer();
-            (void)SetNextTimer(true);
+            std::ignore = SetNextTimer(true);
         }
 
         // defaulting to an empty task (do nothing)
@@ -129,7 +128,7 @@ namespace ctsTraffic
         if (m_recvNeeded > 0)
         {
             // don't try posting more than UdpDatagramMaximumSizeBytes at a time
-            unsigned long maxSizeBuffer;
+            uint32_t maxSizeBuffer{};
             if (m_frameSizeBytes > c_udpDatagramMaximumSizeBytes)
             {
                 maxSizeBuffer = c_udpDatagramMaximumSizeBytes;
@@ -141,13 +140,13 @@ namespace ctsTraffic
 
             returnTask = CreateUntrackedTask(ctsTaskAction::Recv, maxSizeBuffer);
             // always write in a zero for the seq number to initialize the buffer
-            *reinterpret_cast<long long*>(returnTask.m_buffer) = 0LL;
+            *reinterpret_cast<int64_t*>(returnTask.m_buffer) = 0LL;
             --m_recvNeeded;
         }
         return returnTask;
     }
 
-    ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const ctsTask& task, unsigned long completedBytes) noexcept
+    ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
         LARGE_INTEGER qpc;
         QueryPerformanceCounter(&qpc);
@@ -205,7 +204,7 @@ namespace ctsTraffic
             ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(completedBytes * 8);
             m_statistics.m_bitsReceived.Add(completedBytes * 8);
 
-            const long long receivedsequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
+            const auto receivedsequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
             if (receivedsequenceNumber > m_finalFrame)
             {
                 ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
@@ -225,8 +224,8 @@ namespace ctsTraffic
                 const auto foundSlot = FindSequenceNumber(receivedsequenceNumber);
                 if (foundSlot != m_frameEntries.end())
                 {
-                    const long long bufferedQpc = *reinterpret_cast<long long*>(task.m_buffer + 8);
-                    const long long bufferedQpf = *reinterpret_cast<long long*>(task.m_buffer + 16);
+                    const auto bufferedQpc = *reinterpret_cast<int64_t*>(task.m_buffer + 8);
+                    const auto bufferedQpf = *reinterpret_cast<int64_t*>(task.m_buffer + 16);
 
                     // always overwrite qpc & qpf values with the latest datagram details
                     foundSlot->m_senderQpc = bufferedQpc;
@@ -244,7 +243,7 @@ namespace ctsTraffic
                     // stop the timer once we receive the last frame
                     // - it's not perfect (e.g. might have received them out of order)
                     // - but it will be very close for tracking the total bits/sec
-                    if (static_cast<unsigned long>(receivedsequenceNumber) == m_finalFrame)
+                    if (static_cast<uint32_t>(receivedsequenceNumber) == m_finalFrame)
                     {
                         EndStatistics();
                     }
@@ -266,7 +265,7 @@ namespace ctsTraffic
                     else
                     {
                         PRINT_DEBUG_INFO(
-                            L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%lld)\n",
+                            L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%llu)\n",
                             receivedsequenceNumber,
                             m_headEntry->m_sequenceNumber,
                             m_headEntry->m_sequenceNumber + m_frameEntries.size() - 1);
@@ -287,11 +286,11 @@ namespace ctsTraffic
     // If the sequence number was not found, will return end(frame_entries)
     //
     // _Requires_lock_held_(m_lock)
-    vector<ctsConfig::JitterFrameEntry>::iterator ctsIoPatternMediaStreamClient::FindSequenceNumber(long long sequenceNumber) noexcept
+    vector<ctsConfig::JitterFrameEntry>::iterator ctsIoPatternMediaStreamClient::FindSequenceNumber(int64_t sequenceNumber) noexcept
     {
-        const ctsSignedLongLong headSequenceNumber = m_headEntry->m_sequenceNumber;
-        const ctsSignedLongLong tailSequenceNumber = headSequenceNumber + m_frameEntries.size() - 1;
-        const ctsSignedLongLong vectorEndSequenceNumber = m_frameEntries.rbegin()->m_sequenceNumber;
+        const auto headSequenceNumber = m_headEntry->m_sequenceNumber;
+        const auto tailSequenceNumber = headSequenceNumber + static_cast<int64_t>(m_frameEntries.size()) - 1;
+        const auto vectorEndSequenceNumber = m_frameEntries.rbegin()->m_sequenceNumber;
 
         if (sequenceNumber > tailSequenceNumber || sequenceNumber < headSequenceNumber)
         {
@@ -307,7 +306,7 @@ namespace ctsTraffic
             return m_headEntry + offset;
         }
         // offset from the beginning since it wrapped around from the end
-        const auto offset = static_cast<size_t>(sequenceNumber - vectorEndSequenceNumber - 1LL);
+        const auto offset = static_cast<size_t>(sequenceNumber - vectorEndSequenceNumber - 1);
         return m_frameEntries.begin() + offset;
     }
 
@@ -325,7 +324,7 @@ namespace ctsTraffic
             return true;
         }
 
-        return std::any_of(m_frameEntries.begin(), m_frameEntries.end(), [](const auto udpFrame) { return udpFrame.m_bytesReceived > 0UL; });
+        return std::ranges::any_of(m_frameEntries, [](const auto udpFrame) { return udpFrame.m_bytesReceived > 0UL; });
     }
 
     // _Requires_lock_held_(m_lock)
@@ -337,10 +336,10 @@ namespace ctsTraffic
         {
             // calculate when that time should be relative to base_time_milliseconds 
             // (base_time_milliseconds is the start milliseconds from ctTimer::snap_qpc_msec())
-            long long timerOffset = m_baseTimeMilliseconds;
+            auto timerOffset = m_baseTimeMilliseconds;
             // offset to the time when we need to check the next frame
             // - we'll also render a frame at the same time if the initial buffer is full
-            timerOffset += static_cast<long long>(static_cast<double>(m_timerWheelOffsetFrames) * m_frameRateMsPerFrame);
+            timerOffset += static_cast<int64_t>(static_cast<double>(m_timerWheelOffsetFrames) * m_frameRateMsPerFrame);
             // subtract out the current time to get the delta # of milliseconds
             timerOffset -= ctTimer::SnapQpcInMillis();
             // only set the timer if we have time to wait
@@ -365,7 +364,7 @@ namespace ctsTraffic
         {
             // convert to filetime from milliseconds
             // - make a 'relative' for SetThreadpoolTimer
-            FILETIME relativeFileTime(ctTimer::ConvertMillisToRelativeFiletime(static_cast<long long>(m_frameRateMsPerFrame) + 500LL));
+            FILETIME relativeFileTime(ctTimer::ConvertMillisToRelativeFiletime(static_cast<int64_t>(m_frameRateMsPerFrame) + 500LL));
             // TP Timer APIs work off of the UTC time
             SetThreadpoolTimer(m_startTimer, &relativeFileTime, 0, 0);
         }
@@ -436,7 +435,7 @@ namespace ctsTraffic
         }
 
         // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)
-        m_headEntry->m_sequenceNumber = m_headEntry->m_sequenceNumber + static_cast<long long>(m_frameEntries.size());
+        m_headEntry->m_sequenceNumber = m_headEntry->m_sequenceNumber + static_cast<int64_t>(m_frameEntries.size());
         m_headEntry->m_bytesReceived = 0;
 
         // move the head entry to the next sequence number
@@ -449,7 +448,7 @@ namespace ctsTraffic
 
     VOID CALLBACK ctsIoPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept
     {
-        static const char c_startBuffer[] = "START";
+        static constexpr char c_startBuffer[] = "START";
 
         auto* thisPtr = static_cast<ctsIoPatternMediaStreamClient*>(pContext);
         // take the base lock before touching any internal members
@@ -470,7 +469,7 @@ namespace ctsTraffic
             resendTask.m_trackIo = false;
             resendTask.m_buffer = const_cast<char*>(c_startBuffer);
             resendTask.m_bufferOffset = 0;
-            resendTask.m_bufferLength = static_cast<unsigned long>(strlen(c_startBuffer));
+            resendTask.m_bufferLength = sizeof(c_startBuffer) - 1; // minus null at the end of the string
             resendTask.m_bufferType = ctsTask::BufferType::Static; // this is our own buffer: the base class should not mess with it
 
             thisPtr->SetNextStartTimer();

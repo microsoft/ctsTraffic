@@ -32,17 +32,17 @@ namespace ctl
         /// millisecond == 10 ^ -3
         ///
 
-        constexpr long long ConvertMillisToHundredNs(long long milliseconds) noexcept
+        constexpr int64_t ConvertMillisToHundredNs(int64_t milliseconds) noexcept
         {
             return milliseconds * 10000LL;
         }
 
-        constexpr long long ConvertHundredNsToMillis(long long _hundred_nanoseconds) noexcept
+        constexpr int64_t ConvertHundredNsToMillis(int64_t _hundred_nanoseconds) noexcept
         {
             return _hundred_nanoseconds / 10000LL;
         }
 
-        inline FILETIME ConvertHundredNsToAbsoluteFiletime(long long hundred_nanoseconds) noexcept
+        inline FILETIME ConvertHundredNsToAbsoluteFiletime(int64_t hundred_nanoseconds) noexcept
         {
             ULARGE_INTEGER ulongInteger;
             ulongInteger.QuadPart = hundred_nanoseconds;
@@ -55,7 +55,7 @@ namespace ctl
 
         // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
         // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
-        inline FILETIME ConvertHundredNsToRelativeFiletime(long long hundred_nanoseconds) noexcept
+        inline FILETIME ConvertHundredNsToRelativeFiletime(int64_t hundred_nanoseconds) noexcept
         {
             ULARGE_INTEGER ulongInteger;
             ulongInteger.QuadPart = static_cast<ULONGLONG>(-hundred_nanoseconds);
@@ -66,34 +66,32 @@ namespace ctl
             return returnFiletime;
         }
 
-        inline long long ConvertFiletimeToHundredNs(const FILETIME& filetime) noexcept
+        inline int64_t ConvertFiletimeToHundredNs(const FILETIME& filetime) noexcept
         {
             ULARGE_INTEGER ulongInteger;
             ulongInteger.HighPart = filetime.dwHighDateTime;
             ulongInteger.LowPart = filetime.dwLowDateTime;
-
-            return ulongInteger.QuadPart;
+            return static_cast<int64_t>(ulongInteger.QuadPart);
         }
 
-        inline FILETIME ConvertMillisToAbsoluteFiletime(long long milliseconds) noexcept
+        inline FILETIME ConvertMillisToAbsoluteFiletime(int64_t milliseconds) noexcept
         {
             return ConvertHundredNsToAbsoluteFiletime(ConvertMillisToHundredNs(milliseconds));
         }
 
         // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
         // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
-        inline FILETIME ConvertMillisToRelativeFiletime(long long milliseconds) noexcept
+        inline FILETIME ConvertMillisToRelativeFiletime(int64_t milliseconds) noexcept
         {
             return ConvertHundredNsToRelativeFiletime(ConvertMillisToHundredNs(milliseconds));
         }
 
-        inline long long ConvertFiletimeToMillis(const FILETIME& filetime) noexcept
+        inline int64_t ConvertFiletimeToMillis(const FILETIME& filetime) noexcept
         {
             ULARGE_INTEGER ulongInteger;
             ulongInteger.HighPart = filetime.dwHighDateTime;
             ulongInteger.LowPart = filetime.dwLowDateTime;
-
-            return ConvertHundredNsToMillis(ulongInteger.QuadPart);
+            return ConvertHundredNsToMillis(static_cast<int64_t>(ulongInteger.QuadPart));
         }
 
         namespace Details
@@ -113,19 +111,19 @@ namespace ctl
             }
         }
 
-        inline long long SnapQpf() noexcept
+        inline int64_t SnapQpf() noexcept
         {
             InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
             return Details::g_qpf.QuadPart;
         }
 
 #ifdef CTSTRAFFIC_UNIT_TESTS
-        inline long long SnapQpcInMillis() noexcept
+        inline int64_t SnapQpcInMillis() noexcept
         {
             return 0;
         }
 #else
-        inline long long SnapQpcInMillis() noexcept
+        inline int64_t SnapQpcInMillis() noexcept
         {
             InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
             LARGE_INTEGER qpc;
@@ -140,7 +138,7 @@ namespace ctl
             return ConvertHundredNsToAbsoluteFiletime(SnapQpcInMillis());
         }
 
-        inline long long SnapSystemTimeInMillis() noexcept
+        inline int64_t SnapSystemTimeInMillis() noexcept
         {
             FILETIME filetime;
             GetSystemTimeAsFileTime(&filetime);

@@ -66,7 +66,7 @@ namespace ctsTraffic
         //
         // constant defining how many acceptex requests we want maintained per listener
         //
-        constexpr unsigned c_pendedAcceptRequests = 100;
+        constexpr uint32_t c_pendedAcceptRequests = 100;
 
         //
         // necessary forward declarations of internal classes
@@ -101,15 +101,15 @@ namespace ctsTraffic
             explicit ctsListenSocketInfo(ctl::ctSockaddr addr) : m_sockaddr(std::move(addr))
             {
                 wil::unique_socket tempsocket(
-                    ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags));
+                    ctsConfig::CreateSocket(m_sockaddr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags));
 
-                const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), addr);
+                const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), m_sockaddr);
                 if (error != 0)
                 {
                     THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
                 }
 
-                if (SOCKET_ERROR == bind(tempsocket.get(), addr.sockaddr(), addr.length()))
+                if (SOCKET_ERROR == bind(tempsocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
                 {
                     THROW_WIN32_MSG(error, "bind (ctsAcceptEx)");
                 }
@@ -175,7 +175,7 @@ namespace ctsTraffic
             ctsAcceptSocketInfo& operator=(ctsAcceptSocketInfo&&) = delete;
 
         private:
-            static const size_t c_singleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
+            static constexpr size_t c_singleOutputBufferSize = sizeof(SOCKADDR_INET) + 16;
 
             // the lock to guard access to the SOCKET
             wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
@@ -224,7 +224,7 @@ namespace ctsTraffic
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
-                    for (unsigned acceptCounter = 0; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
+                    for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
                     {
                         std::shared_ptr<ctsAcceptSocketInfo> acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
                         listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
@@ -594,7 +594,7 @@ namespace ctsTraffic
         {
             // set the local addr
             const ctl::ctSockaddr localAddr;
-            int localAddrLen = localAddr.length();
+            auto localAddrLen = localAddr.length();
             if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

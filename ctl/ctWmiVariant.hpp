@@ -110,7 +110,7 @@ namespace ctl
     {
         wil::unique_variant localVariant;
         V_VT(localVariant.addressof()) = VT_I2;
-        V_I2(localVariant.addressof()) = value;
+        V_I2(localVariant.addressof()) = static_cast<short>(value);
         return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned short* value)
@@ -146,7 +146,7 @@ namespace ctl
     {
         wil::unique_variant localVariant;
         V_VT(localVariant.addressof()) = VT_I4;
-        V_I4(localVariant.addressof()) = value;
+        V_I4(localVariant.addressof()) = static_cast<long>(value);
         return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned long* value)
@@ -182,7 +182,7 @@ namespace ctl
     {
         wil::unique_variant localVariant;
         V_VT(localVariant.addressof()) = VT_I4;
-        V_I4(localVariant.addressof()) = value;
+        V_I4(localVariant.addressof()) = static_cast<long>(value);
         return localVariant;
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned int* value)
@@ -302,6 +302,7 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ UINT64* value)
     {
+        *value = 0;
         if (IsVariantEmptyOrNull(variant))
         {
             return false;
@@ -322,6 +323,7 @@ namespace ctl
     }
     inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ INT64* value)
     {
+        *value = 0;
         if (IsVariantEmptyOrNull(variant))
         {
             return false;
@@ -361,7 +363,7 @@ namespace ctl
         const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<wil::com_ptr<T>> tempData;
-        for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
+        for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
         {
             wil::com_ptr<T> tempPtr;
             THROW_IF_FAILED(iUnknownArray[loop]->QueryInterface(__uuidof(T), reinterpret_cast<void**>(tempPtr.put())));
@@ -409,7 +411,7 @@ namespace ctl
         const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<std::wstring> tempData;
-        for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
+        for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
         {
             tempData.emplace_back(stringArray[loop]);
         }
@@ -417,7 +419,7 @@ namespace ctl
         return true;
     }
 
-    inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned long>& data)
+    inline wil::unique_variant ctWmiMakeVariant(const std::vector<uint32_t>& data)
     {
         auto* const tempSafeArray = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
         THROW_IF_NULL_ALLOC(tempSafeArray);
@@ -429,7 +431,7 @@ namespace ctl
             // - in this case, we have a 1-dimensional array, thus an array of 1 LONG - assigned to the loop variable
             long index[1]{ static_cast<long>(loop) };
 
-            unsigned long value = data[loop];
+            uint32_t value = data[loop];
             THROW_IF_FAILED(::SafeArrayPutElement(tempSafeArray, index, &value));
         }
 
@@ -441,7 +443,7 @@ namespace ctl
         guardArray.release();
         return variant;
     }
-    inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned long>* value)
+    inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<uint32_t>* value)
     {
         if (IsVariantEmptyOrNull(variant))
         {
@@ -449,12 +451,12 @@ namespace ctl
         }
         THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UI4 | VT_ARRAY));
 
-        unsigned long* intArray{};
+        uint32_t* intArray{};
         THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
         const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
-        std::vector<unsigned long> tempData;
-        for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
+        std::vector<uint32_t> tempData;
+        for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
         {
             tempData.push_back(intArray[loop]);
         }
@@ -502,7 +504,7 @@ namespace ctl
         const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned short> tempData;
-        for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
+        for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
         {
             THROW_HR_IF(E_INVALIDARG, intArray[loop] > MAXUINT16);
             tempData.push_back(static_cast<unsigned short>(intArray[loop]));
@@ -548,7 +550,7 @@ namespace ctl
         const auto unaccessArray = wil::scope_exit([&]() noexcept {SafeArrayUnaccessData(variant->parray); });
 
         std::vector<unsigned char> tempData;
-        for (unsigned loop = 0; loop < variant->parray->rgsabound[0].cElements; ++loop)
+        for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
         {
             tempData.push_back(charArray[loop]);
         }

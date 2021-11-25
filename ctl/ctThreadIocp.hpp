@@ -114,7 +114,7 @@ namespace ctl
 
         explicit ctThreadIocp(SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr)
         {
-            ptp_io = CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);
+            ptp_io = CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env);  // NOLINT(performance-no-int-to-ptr)
             if (!ptp_io)
             {
                 THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolIo");
@@ -188,10 +188,10 @@ namespace ctl
         // This function does *not* cancel the IO call (e.g. does not cancel the ReadFile or WSARecv request)
         // - it is only to notify the threadpool that there will not be any IO over the OVERLAPPED*
         //
-        void cancel_request(OVERLAPPED* pOverlapped) const noexcept
+        void cancel_request(const OVERLAPPED* pOverlapped) const noexcept
         {
             CancelThreadpoolIo(ptp_io);
-            const auto* const old_request = reinterpret_cast<ctThreadIocpCallbackInfo*>(pOverlapped);
+            const auto* const old_request = reinterpret_cast<const ctThreadIocpCallbackInfo*>(pOverlapped);
             delete old_request;
         }
 
@@ -219,10 +219,10 @@ namespace ctl
             // it is *not* expected that callers can/will harden their callback functions to be resilient to running out of stack at any momemnt
             // since we *do* hit this in stress, and we face ugly lock-related breaks since an SEH was swallowed while a callback held a lock, 
             // we're working really hard to break and never let TP swalling SEH exceptions
-            EXCEPTION_POINTERS* exr = nullptr;
+            const EXCEPTION_POINTERS* exr = nullptr;
             __try
             {
-                auto* _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
+                const auto* _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
                 _request->callback(static_cast<OVERLAPPED*>(_overlapped));
                 delete _request;
             }

@@ -105,7 +105,7 @@ namespace ctsTraffic
         //
         // It's made available for injectors who may want to close the SOCKET at random times
         // 
-        int CloseSocket(int errorCode = NO_ERROR) noexcept;
+        int CloseSocket(uint32_t errorCode = NO_ERROR) noexcept;
 
         //
         // Provides access to the IOCP ThreadPool associated with the SOCKET
@@ -138,20 +138,20 @@ namespace ctsTraffic
         //
         // Get/Set the ctsIOPattern
         //
-        void SetIoPattern() noexcept;
+        void SetIoPattern();
 
         //
         // methods for functors to use for refcounting the # of IO they have issued on this socket
         //
-        long IncrementIo() noexcept;
-        long DecrementIo() noexcept;
-        long GetPendedIoCount() noexcept;
+        int32_t IncrementIo() noexcept;
+        int32_t DecrementIo() noexcept;
+        int32_t GetPendedIoCount() noexcept;
 
         //
         // method for the parent to instruct the ctsSocket to print the connection data
         // - which it is tracking, including the internal statistics
         //
-        void PrintPatternResults(unsigned long lastError) const noexcept;
+        void PrintPatternResults(uint32_t lastError) const noexcept;
 
         //
         // Function to register a task for completion at the future point in time referenced

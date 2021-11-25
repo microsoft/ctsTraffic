@@ -37,7 +37,7 @@ namespace ctsTraffic
     private:
         // the CS is mutable so we can take a lock / release a lock in const methods
         mutable wil::critical_section m_objectGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-        _Guarded_by_(object_guard) ctsTask m_nextTask;
+        _Guarded_by_(m_objectGuard) ctsTask m_nextTask;
 
         wil::unique_threadpool_timer m_taskTimer;
 
@@ -54,8 +54,8 @@ namespace ctsTraffic
         const SOCKET m_sendingSocket;
         const ctl::ctSockaddr m_remoteAddr;
 
-        long long m_sequenceNumber = 0LL;
-        const long long m_connectTime = 0LL;
+        int64_t m_sequenceNumber = 0LL;
+        const int64_t m_connectTime = 0LL;
 
     public:
         ctsMediaStreamServerConnectedSocket(
@@ -75,7 +75,7 @@ namespace ctsTraffic
         {
             return m_sendingSocket;
         }
-        long long GetStartTime() const noexcept
+        int64_t GetStartTime() const noexcept
         {
             return m_connectTime;
         }
@@ -86,14 +86,14 @@ namespace ctsTraffic
             return m_nextTask;
         }
 
-        long long IncrementSequence() noexcept
+        int64_t IncrementSequence() noexcept
         {
             return InterlockedIncrement64(&m_sequenceNumber);
         }
 
         void ScheduleTask(const ctsTask& task) noexcept;
 
-        void CompleteState(unsigned long errorCode) const noexcept;
+        void CompleteState(uint32_t errorCode) const noexcept;
 
         // non-copyable
         ctsMediaStreamServerConnectedSocket(const ctsMediaStreamServerConnectedSocket&) = delete;

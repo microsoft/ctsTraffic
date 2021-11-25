@@ -32,7 +32,7 @@ namespace ctsTraffic
     using namespace ctl;
     using namespace std;
 
-    constexpr unsigned long c_bufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
+    constexpr uint32_t c_bufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
     static unsigned char g_bufferPattern[c_bufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
 
     /// SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
@@ -44,15 +44,15 @@ namespace ctsTraffic
     static INIT_ONCE g_ctsIoPatternInitializer = INIT_ONCE_STATIC_INIT;
     static char* g_receiverSharedBuffer = nullptr;
     static char* g_senderSharedBuffer = nullptr;
-    static unsigned long g_maximumBufferSize = 0;
+    static uint32_t g_maximumBufferSize = 0;
 
     constexpr auto c_maxSupportedBytesInFlight = 0x1000000ul;
-    static unsigned long g_maxNumberOfRioSendBuffers = 0;
+    static uint32_t g_maxNumberOfRioSendBuffers = 0;
 
     BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID*) noexcept  // NOLINT(bugprone-exception-escape)
     {
         // first create the buffer pattern
-        for (unsigned long fillSlot = 0; fillSlot < c_bufferPatternSize; ++fillSlot)
+        for (auto fillSlot = 0ul; fillSlot < c_bufferPatternSize; ++fillSlot)
         {
             *reinterpret_cast<unsigned short*>(&g_bufferPattern[fillSlot * 2]) = static_cast<unsigned short>(fillSlot);
         }
@@ -96,28 +96,28 @@ namespace ctsTraffic
     {
         switch (ctsConfig::g_configSettings->IoPattern)
         {
-            case ctsConfig::IoPatternType::Pull:
-                return make_shared<ctsIoPatternPull>();
+        case ctsConfig::IoPatternType::Pull:
+            return make_shared<ctsIoPatternPull>();
 
-            case ctsConfig::IoPatternType::Push:
-                return make_shared<ctsIoPatternPush>();
+        case ctsConfig::IoPatternType::Push:
+            return make_shared<ctsIoPatternPush>();
 
-            case ctsConfig::IoPatternType::PushPull:
-                return make_shared<ctsIoPatternPushPull>();
+        case ctsConfig::IoPatternType::PushPull:
+            return make_shared<ctsIoPatternPushPull>();
 
-            case ctsConfig::IoPatternType::Duplex:
-                return make_shared<ctsIoPatternDuplex>();
+        case ctsConfig::IoPatternType::Duplex:
+            return make_shared<ctsIoPatternDuplex>();
 
-            case ctsConfig::IoPatternType::MediaStream:
-                if (ctsConfig::IsListening())
-                {
-                    return make_shared<ctsIoPatternMediaStreamServer>();
-                }
-                return make_shared<ctsIoPatternMediaStreamClient>();
+        case ctsConfig::IoPatternType::MediaStream:
+            if (ctsConfig::IsListening())
+            {
+                return make_shared<ctsIoPatternMediaStreamServer>();
+            }
+            return make_shared<ctsIoPatternMediaStreamClient>();
 
-            case ctsConfig::IoPatternType::NoIoSet: // fall through
-            default:  // NOLINT(clang-diagnostic-covered-switch-default)
-                FAIL_FAST_MSG("ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::g_configSettings->IoPattern);
+        case ctsConfig::IoPatternType::NoIoSet: // fall through
+        default:  // NOLINT(clang-diagnostic-covered-switch-default)
+            FAIL_FAST_MSG("ctsIOPattern::MakeIOPattern - Unknown IoPattern specified (%d)", ctsConfig::g_configSettings->IoPattern);
         }
     }
 
@@ -136,7 +136,7 @@ namespace ctsTraffic
             // recv will only use the same shared buffer when the user specified to do so on the cmdline
             if (ctsConfig::g_configSettings->UseSharedBuffer)
             {
-                for (unsigned long bufferCount = 0; bufferCount < recvCount; ++bufferCount)
+                for (auto bufferCount = 0ul; bufferCount < recvCount; ++bufferCount)
                 {
                     m_recvBufferFreeList[bufferCount] = g_receiverSharedBuffer;
                     if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
@@ -156,7 +156,7 @@ namespace ctsTraffic
                 m_recvBufferContainer.resize(ctsConfig::GetMaxBufferSize() * recvCount);
                 auto* const rawRecvBuffer = &m_recvBufferContainer[0];
 
-                for (unsigned long bufferCount = 0; bufferCount < recvCount; ++bufferCount)
+                for (auto bufferCount = 0ul; bufferCount < recvCount; ++bufferCount)
                 {
                     auto* const nextBuffer = rawRecvBuffer + static_cast<size_t>(bufferCount * ctsConfig::GetMaxBufferSize());
                     m_recvBufferFreeList[bufferCount] = nextBuffer;
@@ -176,7 +176,7 @@ namespace ctsTraffic
         // register buffers for the connection ID and the completion message
         if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
         {
-            m_rioConnectionId.m_bufferId = ctRIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::c_connectionIdLength);
+            m_rioConnectionId.m_bufferId = ctRIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::ConnectionIdLength);
             if (m_rioConnectionId.m_bufferId == RIO_INVALID_BUFFERID)
             {
                 THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -209,14 +209,14 @@ namespace ctsTraffic
             }
 
             // CreateRecvBuffers should have already created these 2 RIO Buffers
-            FAIL_FAST_IF(m_rioConnectionId.m_bufferId == RIO_INVALID_BUFFERID);
-            FAIL_FAST_IF(m_rioCompletionMessage.m_bufferId == RIO_INVALID_BUFFERID);
+            FAIL_FAST_IF(m_rioConnectionId.m_bufferId == RIO_INVALID_BUFFERID);  // NOLINT(performance-no-int-to-ptr)
+            FAIL_FAST_IF(m_rioCompletionMessage.m_bufferId == RIO_INVALID_BUFFERID);  // NOLINT(performance-no-int-to-ptr)
         }
     }
 
-    ctsIoPattern::ctsIoPattern(unsigned long recvCount) :
+    ctsIoPattern::ctsIoPattern(uint32_t recvCount) :
         // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
-        m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* static_cast<unsigned long long>(ctsConfig::g_configSettings->TcpBytesPerSecondPeriod) / 1000LL),
+        m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
         m_quantumStartTimeMs(ctTimer::SnapQpcInMillis())
     {
         FAIL_FAST_IF_MSG(
@@ -252,92 +252,92 @@ namespace ctsTraffic
         ctsTask returnTask;
         switch (m_patternState.GetNextPatternType())
         {
-            case ctsIoPatternType::MoreIo:
-                returnTask = GetNextTaskFromPattern();
-                break;
+        case ctsIoPatternType::MoreIo:
+            returnTask = GetNextTaskFromPattern();
+            break;
 
-            case ctsIoPatternType::NoIo:
-                break;
+        case ctsIoPatternType::NoIo:
+            break;
 
-            case ctsIoPatternType::SendConnectionId: {
-                returnTask.m_ioAction = ctsTaskAction::Send;
-                returnTask.m_buffer = GetConnectionIdentifier();
-                returnTask.m_rioBufferid = m_rioConnectionId.m_bufferId;
-                returnTask.m_bufferLength = ctsStatistics::c_connectionIdLength;
-                returnTask.m_bufferOffset = 0;
-                returnTask.m_bufferType = ctsTask::BufferType::TcpConnectionId;
-                returnTask.m_trackIo = false;
-                break;
-            }
+        case ctsIoPatternType::SendConnectionId: {
+            returnTask.m_ioAction = ctsTaskAction::Send;
+            returnTask.m_buffer = GetConnectionIdentifier();
+            returnTask.m_rioBufferid = m_rioConnectionId.m_bufferId;
+            returnTask.m_bufferLength = ctsStatistics::ConnectionIdLength;
+            returnTask.m_bufferOffset = 0;
+            returnTask.m_bufferType = ctsTask::BufferType::TcpConnectionId;
+            returnTask.m_trackIo = false;
+            break;
+        }
 
-            case ctsIoPatternType::RecvConnectionId:
-                returnTask.m_ioAction = ctsTaskAction::Recv;
-                returnTask.m_buffer = GetConnectionIdentifier();
-                returnTask.m_rioBufferid = m_rioConnectionId.m_bufferId;
-                returnTask.m_bufferLength = ctsStatistics::c_connectionIdLength;
-                returnTask.m_bufferOffset = 0;
-                returnTask.m_bufferType = ctsTask::BufferType::TcpConnectionId;
-                returnTask.m_trackIo = false;
-                break;
+        case ctsIoPatternType::RecvConnectionId:
+            returnTask.m_ioAction = ctsTaskAction::Recv;
+            returnTask.m_buffer = GetConnectionIdentifier();
+            returnTask.m_rioBufferid = m_rioConnectionId.m_bufferId;
+            returnTask.m_bufferLength = ctsStatistics::ConnectionIdLength;
+            returnTask.m_bufferOffset = 0;
+            returnTask.m_bufferType = ctsTask::BufferType::TcpConnectionId;
+            returnTask.m_trackIo = false;
+            break;
 
-            case ctsIoPatternType::SendCompletion:
-                // end-stats as early as possible after the actual IO finished
-                EndStatistics();
+        case ctsIoPatternType::SendCompletion:
+            // end-stats as early as possible after the actual IO finished
+            EndStatistics();
 
-                returnTask.m_ioAction = ctsTaskAction::Send;
-                returnTask.m_buffer = m_completionMessageBuffer.data();
-                returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
-                returnTask.m_bufferLength = c_completionMessageSize;
-                returnTask.m_bufferOffset = 0;
-                returnTask.m_bufferType = ctsTask::BufferType::CompletionMessage;
-                returnTask.m_trackIo = false;
-                break;
+            returnTask.m_ioAction = ctsTaskAction::Send;
+            returnTask.m_buffer = m_completionMessageBuffer.data();
+            returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
+            returnTask.m_bufferLength = c_completionMessageSize;
+            returnTask.m_bufferOffset = 0;
+            returnTask.m_bufferType = ctsTask::BufferType::CompletionMessage;
+            returnTask.m_trackIo = false;
+            break;
 
-            case ctsIoPatternType::RecvCompletion:
-                // end-stats as early as possible after the actual IO finished
-                EndStatistics();
+        case ctsIoPatternType::RecvCompletion:
+            // end-stats as early as possible after the actual IO finished
+            EndStatistics();
 
-                returnTask.m_ioAction = ctsTaskAction::Recv;
-                returnTask.m_buffer = m_completionMessageBuffer.data();
-                returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
-                returnTask.m_bufferLength = c_completionMessageSize;
-                returnTask.m_bufferOffset = 0;
-                returnTask.m_bufferType = ctsTask::BufferType::CompletionMessage;
-                returnTask.m_trackIo = false;
-                break;
+            returnTask.m_ioAction = ctsTaskAction::Recv;
+            returnTask.m_buffer = m_completionMessageBuffer.data();
+            returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
+            returnTask.m_bufferLength = c_completionMessageSize;
+            returnTask.m_bufferOffset = 0;
+            returnTask.m_bufferType = ctsTask::BufferType::CompletionMessage;
+            returnTask.m_trackIo = false;
+            break;
 
-            case ctsIoPatternType::HardShutdown:
-                // end-stats as early as possible after the actual IO finished
-                EndStatistics();
+        case ctsIoPatternType::HardShutdown:
+            // end-stats as early as possible after the actual IO finished
+            EndStatistics();
 
-                returnTask.m_ioAction = ctsTaskAction::HardShutdown;
-                returnTask.m_trackIo = false;
-                break;
+            returnTask.m_ioAction = ctsTaskAction::HardShutdown;
+            returnTask.m_trackIo = false;
+            break;
 
-            case ctsIoPatternType::GracefulShutdown:
-                // end-stats as early as possible after the actual IO finished
-                EndStatistics();
+        case ctsIoPatternType::GracefulShutdown:
+            // end-stats as early as possible after the actual IO finished
+            EndStatistics();
 
-                returnTask.m_ioAction = ctsTaskAction::GracefulShutdown;
-                returnTask.m_trackIo = false;
-                break;
+            returnTask.m_ioAction = ctsTaskAction::GracefulShutdown;
+            returnTask.m_trackIo = false;
+            break;
 
-            case ctsIoPatternType::RequestFin:
-                // post one final recv for the zero byte FIN
-                // end-stats as early as possible after the actual IO finished
-                EndStatistics();
+        case ctsIoPatternType::RequestFin:
+            // post one final recv for the zero byte FIN
+            // end-stats as early as possible after the actual IO finished
+            EndStatistics();
 
-                returnTask.m_ioAction = ctsTaskAction::Recv;
-                returnTask.m_buffer = m_completionMessageBuffer.data();
-                returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
-                returnTask.m_bufferLength = c_completionMessageSize;
-                returnTask.m_bufferOffset = 0;
-                returnTask.m_trackIo = false;
-                returnTask.m_bufferType = ctsTask::BufferType::Static;
-                break;
+            returnTask.m_ioAction = ctsTaskAction::Recv;
+            returnTask.m_buffer = m_completionMessageBuffer.data();
+            returnTask.m_rioBufferid = m_rioCompletionMessage.m_bufferId;
+            returnTask.m_bufferLength = c_completionMessageSize;
+            returnTask.m_bufferOffset = 0;
+            returnTask.m_trackIo = false;
+            returnTask.m_bufferType = ctsTask::BufferType::Static;
+            break;
 
-            default:  // NOLINT(clang-diagnostic-covered-switch-default)
-                FAIL_FAST_MSG("ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
+        default:  // NOLINT(clang-diagnostic-covered-switch-default)
+            FAIL_FAST_MSG("ctsIOPattern::initiate_io was called in an invalid state: dt %p ctsTraffic!ctsTraffic::ctsIOPattern", this);
         }
 
         m_patternState.NotifyNextTask(returnTask);
@@ -360,7 +360,7 @@ namespace ctsTraffic
     /// Returns the current status of the IO operation on this socket
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, unsigned long currentTransfer, unsigned long statusCode) noexcept  // NOLINT(bugprone-exception-escape)
+    ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, uint32_t currentTransfer, uint32_t statusCode) noexcept  // NOLINT(bugprone-exception-escape)
     {
         // preserve the initial state for the prior task
         const bool wasIoRequestedFromPattern = m_patternState.IsCurrentStateMoreIo();
@@ -389,104 +389,104 @@ namespace ctsTraffic
 
         switch (originalTask.m_ioAction)
         {
-            case ctsTaskAction::None:
-                // ignore completions for tasks on None
-                break;
+        case ctsTaskAction::None:
+            // ignore completions for tasks on None
+            break;
 
-            case ctsTaskAction::FatalAbort:
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a FatalAbort\n");
-                UpdateLastError(c_statusErrorNotAllDataTransferred);
-                break;
+        case ctsTaskAction::FatalAbort:
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a FatalAbort\n");
+            UpdateLastError(c_statusErrorNotAllDataTransferred);
+            break;
 
-            case ctsTaskAction::Abort:
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing an Abort\n");
-                break;
+        case ctsTaskAction::Abort:
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing an Abort\n");
+            break;
 
-            case ctsTaskAction::GracefulShutdown:
-                // Fall-through to be processed like send or recv IO
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
-            case ctsTaskAction::HardShutdown:
-                // Fall-through to be processed like send or recv IO
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown\n");
-            case ctsTaskAction::Recv:
-                // Fall-through to Send - where the IO will be processed
-            case ctsTaskAction::Send:
+        case ctsTaskAction::GracefulShutdown:
+            // Fall-through to be processed like send or recv IO
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
+        case ctsTaskAction::HardShutdown:
+            // Fall-through to be processed like send or recv IO
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown\n");
+        case ctsTaskAction::Recv:
+            // Fall-through to Send - where the IO will be processed
+        case ctsTaskAction::Send:
+        {
+            bool verifyIo = true;
+            if (ctsTask::BufferType::TcpConnectionId == originalTask.m_bufferType ||
+                ctsTask::BufferType::CompletionMessage == originalTask.m_bufferType)
             {
-                bool verifyIo = true;
-                if (ctsTask::BufferType::TcpConnectionId == originalTask.m_bufferType ||
-                    ctsTask::BufferType::CompletionMessage == originalTask.m_bufferType)
+                // not verifying the buffer since it's the connection Id - but must complete the task to update the protocol
+                verifyIo = false;
+
+                if (statusCode != NO_ERROR)
                 {
-                    // not verifying the buffer since it's the connection Id - but must complete the task to update the protocol
-                    verifyIo = false;
-
-                    if (statusCode != NO_ERROR)
-                    {
-                        UpdateLastError(statusCode);
-                    }
-                    else
-                    {
-                        // process the TCP protocol state machine in pattern_state after receiving the connection id
-                        UpdateLastPatternError(m_patternState.CompletedTask(originalTask, currentTransfer));
-                    }
+                    UpdateLastError(statusCode);
                 }
-                else if (statusCode != NO_ERROR)
+                else
                 {
-                    //
-                    // if the IO task failed, the entire IO pattern is now failed
-                    // - unless this is an extra recv that was canceled once we completed the transfer
-                    //
-                    if (ctsTaskAction::Recv == originalTask.m_ioAction && m_patternState.IsCompleted())
-                    {
-                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", statusCode);
-                    }
-                    else
-                    {
-                        const auto currentStatus = UpdateLastError(statusCode);
-                        if (currentStatus != c_statusIoRunning)
-                        {
-                            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", statusCode, currentStatus);
-                            verifyIo = false;
-                        }
-                    }
+                    // process the TCP protocol state machine in pattern_state after receiving the connection id
+                    UpdateLastPatternError(m_patternState.CompletedTask(originalTask, currentTransfer));
                 }
-
-                if (verifyIo)
-                {
-                    //
-                    // IO succeeded - update state machine with the completed task if this task had IO
-                    //
-                    const auto patternStatus = m_patternState.CompletedTask(originalTask, currentTransfer);
-                    // update the last_error if the pattern_state detected an error
-                    UpdateLastPatternError(patternStatus);
-                    //
-                    // if this is a TCP receive completion
-                    // and no IO or protocol errors
-                    // and the user requested to verify buffers
-                    // then actually validate the received completion
-                    //
-                    if (ctsConfig::g_configSettings->Protocol == ctsConfig::ProtocolType::TCP &&
-                        ctsConfig::g_configSettings->ShouldVerifyBuffers &&
-                        originalTask.m_ioAction == ctsTaskAction::Recv &&
-                        originalTask.m_trackIo &&
-                        (ctsIoPatternError::SuccessfullyCompleted == patternStatus || ctsIoPatternError::NoError == patternStatus))
-                    {
-
-                        FAIL_FAST_IF_MSG(
-                            originalTask.m_expectedPatternOffset != m_recvPatternOffset,
-                            "ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%Iu)",
-                            &originalTask, originalTask.m_expectedPatternOffset, static_cast<size_t>(m_recvPatternOffset));
-
-                        if (!VerifyBuffer(originalTask, currentTransfer))
-                        {
-                            UpdateLastError(c_statusErrorDataDidNotMatchBitPattern);
-                        }
-
-                        m_recvPatternOffset += currentTransfer;
-                        m_recvPatternOffset %= c_bufferPatternSize;
-                    }
-                }
-                break;
             }
+            else if (statusCode != NO_ERROR)
+            {
+                //
+                // if the IO task failed, the entire IO pattern is now failed
+                // - unless this is an extra recv that was canceled once we completed the transfer
+                //
+                if (ctsTaskAction::Recv == originalTask.m_ioAction && m_patternState.IsCompleted())
+                {
+                    PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed after the pattern completed (error %u)\n", statusCode);
+                }
+                else
+                {
+                    const auto currentStatus = UpdateLastError(statusCode);
+                    if (currentStatus != c_statusIoRunning)
+                    {
+                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : Recv failed before the pattern completed (error %u, current status %u)\n", statusCode, currentStatus);
+                        verifyIo = false;
+                    }
+                }
+            }
+
+            if (verifyIo)
+            {
+                //
+                // IO succeeded - update state machine with the completed task if this task had IO
+                //
+                const auto patternStatus = m_patternState.CompletedTask(originalTask, currentTransfer);
+                // update the last_error if the pattern_state detected an error
+                UpdateLastPatternError(patternStatus);
+                //
+                // if this is a TCP receive completion
+                // and no IO or protocol errors
+                // and the user requested to verify buffers
+                // then actually validate the received completion
+                //
+                if (ctsConfig::g_configSettings->Protocol == ctsConfig::ProtocolType::TCP &&
+                    ctsConfig::g_configSettings->ShouldVerifyBuffers &&
+                    originalTask.m_ioAction == ctsTaskAction::Recv &&
+                    originalTask.m_trackIo &&
+                    (ctsIoPatternError::SuccessfullyCompleted == patternStatus || ctsIoPatternError::NoError == patternStatus))
+                {
+
+                    FAIL_FAST_IF_MSG(
+                        originalTask.m_expectedPatternOffset != m_recvPatternOffset,
+                        "ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%lu)",
+                        &originalTask, originalTask.m_expectedPatternOffset, m_recvPatternOffset);
+
+                    if (!VerifyBuffer(originalTask, currentTransfer))
+                    {
+                        UpdateLastError(c_statusErrorDataDidNotMatchBitPattern);
+                    }
+
+                    m_recvPatternOffset += currentTransfer;
+                    m_recvPatternOffset %= c_bufferPatternSize;
+                }
+            }
+            break;
+        }
         }
         //
         // Notify the derived interface that the task completed
@@ -526,21 +526,21 @@ namespace ctsTraffic
         return GetCurrentStatus();
     }
 
-    ctsTask ctsIoPattern::CreateTrackedTask(ctsTaskAction action, unsigned long maxTransfer) noexcept
+    ctsTask ctsIoPattern::CreateTrackedTask(ctsTaskAction action, uint32_t maxTransfer) noexcept
     {
         ctsTask returnTask(CreateNewTask(action, maxTransfer));
         returnTask.m_trackIo = true;
         return returnTask;
     }
 
-    ctsTask ctsIoPattern::CreateUntrackedTask(ctsTaskAction action, unsigned long maxTransfer) noexcept
+    ctsTask ctsIoPattern::CreateUntrackedTask(ctsTaskAction action, uint32_t maxTransfer) noexcept
     {
         ctsTask returnTask(CreateNewTask(action, maxTransfer));
         returnTask.m_trackIo = false;
         return returnTask;
     }
 
-    ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, unsigned long maxTransfer) noexcept
+    ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) noexcept
     {
         //
         // with TCP, we need to calculate the buffer size based off bytes remaining
@@ -564,6 +564,7 @@ namespace ctsTraffic
             newBufferSize > MAXDWORD,
             "ctsIOPattern internal error: next buffer size (%llu) is greater than MAXDWORD (%u)",
             newBufferSize, MAXDWORD);
+        const uint32_t verifiedNewBufferSize{ static_cast<uint32_t>(newBufferSize) };
 
         // build the next IO request with a properly calculated buffer size
         // Send must specify the offset because we must align the patterns that we send
@@ -587,7 +588,7 @@ namespace ctsTraffic
                 if (m_bytesSendingThisQuantum < m_bytesSendingPerQuantum)
                 {
                     // adjust bytes_sending_this_quantum
-                    m_bytesSendingThisQuantum += newBufferSize;
+                    m_bytesSendingThisQuantum += verifiedNewBufferSize;
 
                     // no need to adjust quantum_start_time_ms unless we skipped into a new quantum
                     // (meaning the previous quantum had not filled the max bytes for that quantum)
@@ -619,17 +620,17 @@ namespace ctsTraffic
                 {
                     // we have sent more than required for this quantum
                     // - check if this fullfilled future quantums as well
-                    const auto quantumAheadToSchedule = static_cast<unsigned long>(m_bytesSendingThisQuantum / m_bytesSendingPerQuantum);
+                    const auto quantumAheadToSchedule = m_bytesSendingThisQuantum / m_bytesSendingPerQuantum;
 
                     // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
                     // - when we have already sent at least 1 additional quantum of bytes
-                    const ctsSignedLongLong msForQuantumsToSkip = (quantumAheadToSchedule - 1) * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+                    const auto msForQuantumsToSkip = (quantumAheadToSchedule - 1) * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
 
                     // carry forward extra bytes from quantums that will be filled by the bytes we have already sent
                     // (including the current quantum)
                     // then adding the bytes we're about to send
                     m_bytesSendingThisQuantum -= m_bytesSendingPerQuantum * quantumAheadToSchedule;
-                    m_bytesSendingThisQuantum += newBufferSize;
+                    m_bytesSendingThisQuantum += verifiedNewBufferSize;
 
                     // update the return task for when to schedule the send
                     // first, calculate the time to get to the end of this time quantum
@@ -652,8 +653,8 @@ namespace ctsTraffic
 
             returnTask.m_ioAction = ctsTaskAction::Send;
             returnTask.m_bufferType = ctsTask::BufferType::Static;
-            returnTask.m_bufferLength = static_cast<unsigned long>(newBufferSize);
-            returnTask.m_bufferOffset = static_cast<unsigned long>(m_sendPatternOffset);
+            returnTask.m_bufferLength = verifiedNewBufferSize;
+            returnTask.m_bufferOffset = m_sendPatternOffset;
             returnTask.m_expectedPatternOffset = 0;
             returnTask.m_buffer = g_senderSharedBuffer;
 
@@ -670,7 +671,7 @@ namespace ctsTraffic
             }
 
             // now that we are indicating this buffer to send, increment the offset for the next send request
-            m_sendPatternOffset += newBufferSize;
+            m_sendPatternOffset += verifiedNewBufferSize;
             m_sendPatternOffset %= c_bufferPatternSize;
 
             FAIL_FAST_IF_MSG(
@@ -687,9 +688,9 @@ namespace ctsTraffic
         {
             returnTask.m_ioAction = ctsTaskAction::Recv;
             returnTask.m_bufferType = ctsTask::BufferType::Dynamic;
-            returnTask.m_bufferLength = static_cast<unsigned long>(newBufferSize);
+            returnTask.m_bufferLength = verifiedNewBufferSize;
             returnTask.m_bufferOffset = 0; // always recv to the beginning of the buffer
-            returnTask.m_expectedPatternOffset = static_cast<unsigned long>(m_recvPatternOffset);
+            returnTask.m_expectedPatternOffset = m_recvPatternOffset;
 
             FAIL_FAST_IF_MSG(
                 m_recvBufferFreeList.empty(),
@@ -712,16 +713,16 @@ namespace ctsTraffic
                 m_recvPatternOffset >= c_bufferPatternSize,
                 "pattern_offset being too large means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
             FAIL_FAST_IF_MSG(
-                returnTask.m_bufferLength + returnTask.m_bufferOffset > newBufferSize,
+                returnTask.m_bufferLength + returnTask.m_bufferOffset > verifiedNewBufferSize,
                 "return_task (%p) for a Recv request is specifying a buffer that is larger than buffer_size (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
-                &returnTask, static_cast<unsigned long>(newBufferSize), this);
+                &returnTask, verifiedNewBufferSize, this);
         }
 
         return returnTask;
     }
 
     // static
-    bool ctsIoPattern::VerifyBuffer(const ctsTask& originalTask, unsigned long transferredBytes) noexcept
+    bool ctsIoPattern::VerifyBuffer(const ctsTask& originalTask, uint32_t transferredBytes) noexcept
     {
         // only doing deep verification if the user asked us to
         if (!ctsConfig::g_configSettings->ShouldVerifyBuffers)
@@ -809,7 +810,7 @@ namespace ctsTraffic
 
         return ctsTask();
     }
-    ctsIoPatternError ctsIoPatternPull::CompleteTaskBackToPattern(const ctsTask& task, unsigned long completedBytes) noexcept
+    ctsIoPatternError ctsIoPatternPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
         if (ctsTaskAction::Send == task.m_ioAction)
         {
@@ -870,7 +871,7 @@ namespace ctsTraffic
 
         return ctsTask();
     }
-    ctsIoPatternError ctsIoPatternPush::CompleteTaskBackToPattern(const ctsTask& task, unsigned long completedBytes) noexcept
+    ctsIoPatternError ctsIoPatternPush::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
         if (ctsTaskAction::Send == task.m_ioAction)
         {
@@ -921,7 +922,7 @@ namespace ctsTraffic
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ctsTask ctsIoPatternPushPull::GetNextTaskFromPattern() noexcept
     {
-        ctsUnsignedLong segmentSize;
+        uint32_t segmentSize{};
         if (m_listening)
         {
             // server role is opposite client
@@ -935,7 +936,7 @@ namespace ctsTraffic
         FAIL_FAST_IF_MSG(
             m_intraSegmentTransfer >= segmentSize,
             "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
-            static_cast<unsigned long>(m_intraSegmentTransfer), static_cast<unsigned long>(segmentSize));
+            m_intraSegmentTransfer, segmentSize);
 
         if (m_ioNeeded)
         {
@@ -953,7 +954,7 @@ namespace ctsTraffic
         }
         return ctsTask();
     }
-    ctsIoPatternError ctsIoPatternPushPull::CompleteTaskBackToPattern(const ctsTask& task, unsigned long currentTransfer) noexcept
+    ctsIoPatternError ctsIoPatternPushPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept
     {
         if (ctsTaskAction::Send == task.m_ioAction)
         {
@@ -967,7 +968,7 @@ namespace ctsTraffic
         m_ioNeeded = true;
         m_intraSegmentTransfer += currentTransfer;
 
-        ctsUnsignedLong segmentSize;
+        uint32_t segmentSize;
         if (m_listening)
         {
             // server role is opposite client
@@ -981,7 +982,7 @@ namespace ctsTraffic
         FAIL_FAST_IF_MSG(
             m_intraSegmentTransfer > segmentSize,
             "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
-            static_cast<unsigned long>(m_intraSegmentTransfer), static_cast<unsigned long>(segmentSize));
+            m_intraSegmentTransfer, segmentSize);
 
         if (segmentSize == m_intraSegmentTransfer)
         {
@@ -1002,7 +1003,7 @@ namespace ctsTraffic
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIoPatternDuplex::ctsIoPatternDuplex() :
+    ctsIoPatternDuplex::ctsIoPatternDuplex() noexcept :
         ctsIoPatternStatistics(ctsConfig::g_configSettings->PrePostRecvs),
         m_remainingSendBytes(0),
         m_remainingRecvBytes(0),
@@ -1022,8 +1023,8 @@ namespace ctsTraffic
         FAIL_FAST_IF_MSG(
             m_remainingSendBytes + m_remainingRecvBytes != GetTotalTransfer(),
             "ctsIOPatternDuplex: internal failure - send_bytes (%llu) + recv_bytes (%llu) must equal total bytes (%llu)",
-            static_cast<ULONGLONG>(m_remainingSendBytes),
-            static_cast<ULONGLONG>(m_remainingRecvBytes),
+            m_remainingSendBytes,
+            m_remainingRecvBytes,
             GetTotalTransfer());
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1043,11 +1044,11 @@ namespace ctsTraffic
         // since we can have multiple receives in flight, must also check that we have remaining_recv_bytes
         if (m_remainingRecvBytes > 0 && m_recvNeeded > 0)
         {
-            // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
-            // to unsigned long when passed to tracked_task()
-            const ctsUnsignedLong maxRemainingBytes = m_remainingRecvBytes > MAXLONG ?
+            // for very large transfers, we need to ensure our SafeInt<int64_t> doesn't overflow when it's cast 
+            // to uint32_t when passed to tracked_task()
+            const uint32_t maxRemainingBytes = m_remainingRecvBytes > MAXLONG ?
                 MAXLONG :
-                static_cast<unsigned long>(m_remainingRecvBytes);
+                static_cast<uint32_t>(m_remainingRecvBytes);
             returnTask = CreateTrackedTask(ctsTaskAction::Recv, maxRemainingBytes);
             // for tracking purposes, assume that this recv *might* end up receiving the entire buffer size
             // - only on completion will we adjust to the actual # of bytes received
@@ -1056,11 +1057,11 @@ namespace ctsTraffic
         }
         else if (m_remainingSendBytes > 0 && GetIdealSendBacklog() > m_sendBytesInflight)
         {
-            // for very large transfers, we need to ensure our SafeInt<long long> doesn't overflow when it's cast 
-            // to unsigned long when passed to tracked_task()
-            const ctsUnsignedLong maxRemainingBytes = m_remainingSendBytes > MAXLONG ?
+            // for very large transfers, we need to ensure our SafeInt<int64_t> doesn't overflow when it's cast 
+            // to uint32_t when passed to tracked_task()
+            const uint32_t maxRemainingBytes = m_remainingSendBytes > MAXLONG ?
                 MAXLONG :
-                static_cast<unsigned long>(m_remainingSendBytes);
+                static_cast<uint32_t>(m_remainingSendBytes);
             returnTask = CreateTrackedTask(ctsTaskAction::Send, maxRemainingBytes);
             m_remainingSendBytes -= returnTask.m_bufferLength;
             m_sendBytesInflight += returnTask.m_bufferLength;
@@ -1072,38 +1073,38 @@ namespace ctsTraffic
 
         return returnTask;
     }
-    ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& task, unsigned long completedBytes) noexcept
+    ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
         // ReSharper disable once CppIncompleteSwitchStatement
         switch (task.m_ioAction)
         {
-            case ctsTaskAction::Send:
-                m_statistics.m_bytesSent.Add(completedBytes);
-                m_sendBytesInflight -= completedBytes;
+        case ctsTaskAction::Send:
+            m_statistics.m_bytesSent.Add(completedBytes);
+            m_sendBytesInflight -= completedBytes;
 
-                // first, we need to adjust the total back from our over-subscription guard when this task was created
-                m_remainingSendBytes += task.m_bufferLength;
-                // then we need to subtract back out the actual number of bytes sent
-                m_remainingSendBytes -= completedBytes;
-                break;
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
+            m_remainingSendBytes += task.m_bufferLength;
+            // then we need to subtract back out the actual number of bytes sent
+            m_remainingSendBytes -= completedBytes;
+            break;
 
-            case ctsTaskAction::Recv:
-                m_statistics.m_bytesRecv.Add(completedBytes);
-                ++m_recvNeeded;
+        case ctsTaskAction::Recv:
+            m_statistics.m_bytesRecv.Add(completedBytes);
+            ++m_recvNeeded;
 
-                // first, we need to adjust the total back from our over-subscription guard when this task was created
-                m_remainingRecvBytes += task.m_bufferLength;
-                // then we need to subtract back out the actual number of bytes received
-                m_remainingRecvBytes -= completedBytes;
-                break;
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
+            m_remainingRecvBytes += task.m_bufferLength;
+            // then we need to subtract back out the actual number of bytes received
+            m_remainingRecvBytes -= completedBytes;
+            break;
 
-            case ctsTaskAction::None:
-            case ctsTaskAction::GracefulShutdown:
-            case ctsTaskAction::HardShutdown:
-            case ctsTaskAction::Abort:
-            case ctsTaskAction::FatalAbort:
-            default:;  // NOLINT(clang-diagnostic-covered-switch-default)
-                // fall through to return NoError
+        case ctsTaskAction::None:
+        case ctsTaskAction::GracefulShutdown:
+        case ctsTaskAction::HardShutdown:
+        case ctsTaskAction::Abort:
+        case ctsTaskAction::FatalAbort:
+        default:;  // NOLINT(clang-diagnostic-covered-switch-default)
+            // fall through to return NoError
         }
 
         return ctsIoPatternError::NoError;
@@ -1122,16 +1123,12 @@ namespace ctsTraffic
     ///
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ctsIoPatternMediaStreamServer::ctsIoPatternMediaStreamServer() :
+    ctsIoPatternMediaStreamServer::ctsIoPatternMediaStreamServer() noexcept :
         ctsIoPatternStatistics(1), // the pattern will use the recv writeable-buffer for sending a connection ID
         m_frameSizeBytes(ctsConfig::GetMediaStream().FrameSizeBytes),
-        m_currentFrameRequested(0UL),
-        m_currentFrameCompleted(0UL),
-        m_frameRateFps(ctsConfig::GetMediaStream().FramesPerSecond),
-        m_currentFrame(1UL),
-        m_baseTimeMilliseconds(0LL)
+        m_frameRateFps(ctsConfig::GetMediaStream().FramesPerSecond)
     {
-        PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<long long>(1000UL / m_frameRateFps));
+        PRINT_DEBUG_INFO(L"\t\tctsIOPatternMediaStreamServer - frame rate in milliseconds per frame : %lld\n", static_cast<int64_t>(1000UL / m_frameRateFps));
     }
     // required virtual functions
     ctsTask ctsIoPatternMediaStreamServer::GetNextTaskFromPattern() noexcept
@@ -1139,40 +1136,40 @@ namespace ctsTraffic
         ctsTask returnTask;
         switch (m_state)
         {
-            case ServerState::NotStarted:
-                // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
-                returnTask = ctsMediaStreamMessage::MakeConnectionIdTask(
-                    CreateUntrackedTask(ctsTaskAction::Recv, c_udpDatagramConnectionIdHeaderLength),
-                    GetConnectionIdentifier());
-                m_state = ServerState::IdSent;
-                break;
+        case ServerState::NotStarted:
+            // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
+            returnTask = ctsMediaStreamMessage::MakeConnectionIdTask(
+                CreateUntrackedTask(ctsTaskAction::Recv, c_udpDatagramConnectionIdHeaderLength),
+                GetConnectionIdentifier());
+            m_state = ServerState::IdSent;
+            break;
 
-            case ServerState::IdSent:
-                m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
-                m_state = ServerState::IoStarted;
-                // fall-through
-            case ServerState::IoStarted:
-                if (m_currentFrameRequested < m_frameSizeBytes)
-                {
-                    returnTask = CreateTrackedTask(ctsTaskAction::Send, m_frameSizeBytes);
-                    // calculate the future time to initiate the IO
-                    // - then subtract the start time to give the difference
-                    returnTask.m_timeOffsetMilliseconds =
-                        m_baseTimeMilliseconds
-                        + static_cast<long long>(m_currentFrame) * 1000LL / static_cast<long long>(m_frameRateFps)
-                        - ctTimer::SnapQpcInMillis();
+        case ServerState::IdSent:
+            m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
+            m_state = ServerState::IoStarted;
+            // fall-through
+        case ServerState::IoStarted:
+            if (m_currentFrameRequested < m_frameSizeBytes)
+            {
+                returnTask = CreateTrackedTask(ctsTaskAction::Send, m_frameSizeBytes);
+                // calculate the future time to initiate the IO
+                // - then subtract the start time to give the difference
+                returnTask.m_timeOffsetMilliseconds =
+                    m_baseTimeMilliseconds
+                    + (m_currentFrame * 1000LL / m_frameRateFps)
+                    - ctTimer::SnapQpcInMillis();
 
-                    m_currentFrameRequested += returnTask.m_bufferLength;
-                }
-                break;
+                m_currentFrameRequested += returnTask.m_bufferLength;
+            }
+            break;
         }
         return returnTask;
     }
-    ctsIoPatternError ctsIoPatternMediaStreamServer::CompleteTaskBackToPattern(const ctsTask& task, unsigned long currentTransfer) noexcept
+    ctsIoPatternError ctsIoPatternMediaStreamServer::CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept
     {
         if (task.m_bufferType != ctsTask::BufferType::UdpConnectionId)
         {
-            const ctsUnsignedLong currentTransferBits = currentTransfer * 8UL;
+            const int64_t currentTransferBits = currentTransfer * 8UL;
 
             ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(currentTransferBits);
             m_statistics.m_bitsReceived.Add(currentTransferBits);

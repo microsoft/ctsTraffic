@@ -64,22 +64,22 @@ namespace ctl
                 swap(m_index, rhs.m_index);
                 swap(m_wbemServices, rhs.m_wbemServices);
                 swap(m_wbemEnumerator, rhs.m_wbemEnumerator);
-                swap(m_ctInstance, rhs.m_ctInstance);
+                swap(m_wmiInstance, rhs.m_wmiInstance);
             }
 
-            [[nodiscard]] unsigned long location() const noexcept
+            [[nodiscard]] uint32_t location() const noexcept
             {
                 return m_index;
             }
 
             ctWmiInstance& operator*() const noexcept
             {
-                return *m_ctInstance;
+                return *m_wmiInstance;
             }
 
             ctWmiInstance* operator->() const noexcept
             {
-                return m_ctInstance.get();
+                return m_wmiInstance.get();
             }
 
             bool operator==(const iterator&) const noexcept;
@@ -92,24 +92,24 @@ namespace ctl
             // iterator_traits
             // - allows <algorithm> functions to be used
             // ReSharper disable once CppInconsistentNaming
-            typedef std::forward_iterator_tag iterator_category;
+            using iterator_category = std::forward_iterator_tag;
             // ReSharper disable once CppInconsistentNaming
-            typedef ctWmiInstance value_type;
+            using value_type = ctWmiInstance;
             // ReSharper disable once CppInconsistentNaming
-            typedef int difference_type;
+            using difference_type = int;
             // ReSharper disable once CppInconsistentNaming
-            typedef ctWmiInstance* pointer;
+            using pointer = ctWmiInstance*;
             // ReSharper disable once CppInconsistentNaming
-            typedef ctWmiInstance& reference;
+            using reference = ctWmiInstance&;
 
         private:
             void increment();
 
-            static constexpr unsigned long c_endIteratorIndex = 0xffffffff;
-            unsigned long m_index = c_endIteratorIndex;
+            static constexpr uint32_t c_endIteratorIndex = ULONG_MAX;
+            uint32_t m_index = c_endIteratorIndex;
             ctWmiService m_wbemServices;
             wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;
-            std::shared_ptr<ctWmiInstance> m_ctInstance;
+            std::shared_ptr<ctWmiInstance> m_wmiInstance;
         };
 
 
@@ -184,7 +184,7 @@ namespace ctl
             return m_index == iter.m_index &&
                 m_wbemServices == iter.m_wbemServices &&
                 m_wbemEnumerator == iter.m_wbemEnumerator &&
-                m_ctInstance == iter.m_ctInstance;
+                m_wmiInstance == iter.m_wmiInstance;
         }
         return m_index == iter.m_index &&
             m_wbemServices == iter.m_wbemServices;
@@ -213,7 +213,7 @@ namespace ctl
     // increment by integer
     inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(DWORD inc)
     {
-        for (unsigned loop = 0; loop < inc; ++loop)
+        for (auto loop = 0ul; loop < inc; ++loop)
         {
             increment();
             if (m_index == c_endIteratorIndex)
@@ -243,12 +243,12 @@ namespace ctl
         {
             // at the end...
             m_index = c_endIteratorIndex;
-            m_ctInstance.reset();
+            m_wmiInstance.reset();
         }
         else
         {
             ++m_index;
-            m_ctInstance = std::make_shared<ctWmiInstance>(m_wbemServices, wbemTarget);
+            m_wmiInstance = std::make_shared<ctWmiInstance>(m_wbemServices, wbemTarget);
         }
     }
 } // namespace ctl

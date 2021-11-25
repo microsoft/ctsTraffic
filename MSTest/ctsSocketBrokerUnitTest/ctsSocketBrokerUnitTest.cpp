@@ -38,14 +38,14 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
     {
         switch (state)
         {
-            case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
-            case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
-            case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
-            case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
-            case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIO";
-            case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIO";
-            case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
-            case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
+        case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
+        case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
+        case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
+        case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
+        case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIO";
+        case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIO";
+        case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
+        case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
         }
         return wil::str_printf<std::wstring>(L"Unknown State (0x%x)", state);
     }
@@ -69,15 +69,15 @@ namespace ctsTraffic::ctsConfig
 
         va_end(args);
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }
@@ -85,7 +85,7 @@ namespace ctsTraffic::ctsConfig
     {
         return false;
     }
-    unsigned long ConsoleVerbosity() noexcept
+    uint32_t ConsoleVerbosity() noexcept
     {
         return 0;
     }
@@ -121,20 +121,13 @@ public:
     /// Add/remove ctsSocketState objects
     void add_object(const std::shared_ptr<ctsSocketState>& state_object)
     {
-        const auto hold_lock = m_lock.lock();
-
-        m_stateObjects.push_back(state_object);
+        m_work.QueueAdd(state_object);
     }
     void remove_deleted_objects() noexcept
     {
         const auto hold_lock = m_lock.lock();
 
-        m_stateObjects.erase(
-            std::remove_if(
-                std::begin(m_stateObjects),
-                std::end(m_stateObjects),
-                [&](const std::weak_ptr<ctsSocketState>& weak_ptr) { return weak_ptr.expired(); }),
-            std::end(m_stateObjects));
+        std::erase_if(m_stateObjects, [&](const std::weak_ptr<ctsSocketState>& weak_ptr) { return weak_ptr.expired(); });
     }
     void reset() noexcept
     {
@@ -185,13 +178,83 @@ public:
         Assert::AreEqual(count, matched_state);
     }
 
+    void wait_for_start(size_t count)
+    {
+        bool matched = false;
+        for (auto i = 0; i < 5000; ++i)
+        {
+            // wait outside the lock
+            Sleep(25);
+            const auto hold_lock = m_lock.lock();
+
+            size_t matched_state = 0;
+            for (auto& socket_state : m_stateObjects)
+            {
+                auto shared_state(socket_state.lock());
+                Assert::IsNotNull(shared_state.get());
+                if (shared_state->GetCurrentState() == ctsSocketState::InternalState::Creating)
+                {
+                    ++matched_state;
+                }
+            }
+
+            if (count == matched_state)
+            {
+                matched = true;
+                break;
+            }
+
+            Assert::IsTrue(matched_state < count);
+        }
+
+        Assert::IsTrue(matched);
+    }
+
     // non-copyable
     SocketStatePool(const SocketStatePool&) = delete;
     SocketStatePool& operator=(const SocketStatePool&) = delete;
 
 private:
-    wil::critical_section m_lock{ctsConfig::g_configSettings->c_CriticalSectionSpinlock};
+    wil::critical_section m_lock{ ctsConfig::g_configSettings->c_CriticalSectionSpinlock };
     std::vector<std::weak_ptr<ctsSocketState>> m_stateObjects;
+
+    struct AsyncAddObject
+    {
+        SocketStatePool& m_parent;
+        wil::critical_section m_workLock{ ctsConfig::g_configSettings->c_CriticalSectionSpinlock };
+        std::vector<std::shared_ptr<ctsSocketState>> m_stateObjectsToAdd;
+        wil::shared_threadpool_work m_tpWork;
+
+        AsyncAddObject(SocketStatePool& parent) : m_parent(parent)
+        {
+            m_tpWork.reset(CreateThreadpoolWork(WorkCallback, this, nullptr));
+        }
+
+        void QueueAdd(const std::shared_ptr<ctsSocketState>& new_object)
+        {
+            const auto lock = m_workLock.lock();
+            m_stateObjectsToAdd.push_back(new_object);
+            SubmitThreadpoolWork(m_tpWork.get());
+        }
+
+        static VOID CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, PVOID context, PTP_WORK)
+        {
+            auto* pThis = static_cast<AsyncAddObject*>(context);
+
+            std::shared_ptr<ctsSocketState> objectToAdd;
+            {
+                const auto hold_lock = pThis->m_workLock.lock();
+                if (!pThis->m_stateObjectsToAdd.empty())
+                {
+                    objectToAdd = *pThis->m_stateObjectsToAdd.rbegin();
+                    pThis->m_stateObjectsToAdd.pop_back();
+                }
+            }
+
+            const auto parentLock = pThis->m_parent.m_lock.lock();
+            pThis->m_parent.m_stateObjects.push_back(objectToAdd);
+        }
+    } m_work{ *this };
 };
 
 SocketStatePool* g_socketPool;
@@ -221,36 +284,36 @@ void ctsSocketState::CompleteState(DWORD error_code) noexcept
 {
     if (NO_ERROR == error_code)
     {
-// walk states from creating -> InitiatingIO -> Closed
+        // walk states from creating -> InitiatingIO -> Closed
         switch (m_state)
         {
 
-// Skipping Connecting, since that state doesn't affect ctsSocketBroker
+            // Skipping Connecting, since that state doesn't affect ctsSocketBroker
 
-            case InternalState::Creating:
-            {
-                auto parent = m_broker.lock();
-                parent->InitiatingIo();
-                m_state = InternalState::InitiatingIo;
-                break;
-            }
-            case InternalState::InitiatingIo:
-            {
-                auto parent = m_broker.lock();
-                parent->Closing(true);
-                m_state = InternalState::Closed;
-                break;
-            }
+        case InternalState::Creating:
+        {
+            const auto parent = m_broker.lock();
+            parent->InitiatingIo();
+            m_state = InternalState::InitiatingIo;
+            break;
+        }
+        case InternalState::InitiatingIo:
+        {
+            const auto parent = m_broker.lock();
+            parent->Closing(true);
+            m_state = InternalState::Closed;
+            break;
+        }
 
-            default:
-                Assert::Fail(
-                    wil::str_printf<std::wstring>(L"Unexpected ctsSocketState: 0x%x\n", m_state).c_str());
+        default:
+            Assert::Fail(
+                wil::str_printf<std::wstring>(L"Unexpected ctsSocketState: 0x%x\n", m_state).c_str());
         }
     }
     else
     {
-     // move straight to Closed
-        auto parent = m_broker.lock();
+        // move straight to Closed
+        const auto parent = m_broker.lock();
         parent->Closing(InternalState::InitiatingIo == m_state);
         m_state = InternalState::Closed;
     }
@@ -285,7 +348,7 @@ namespace ctsUnitTest
 
         TEST_METHOD_INITIALIZE(MethodSetup)
         {
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 333;
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
         }
         TEST_METHOD_CLEANUP(MethodCleanup)
         {
@@ -308,10 +371,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -340,11 +403,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -375,10 +438,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -407,11 +470,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -442,10 +505,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -474,11 +537,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -510,10 +573,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Connecting sockets");
             g_socketPool->complete_state(WSAECONNREFUSED);
@@ -538,11 +601,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Connecting sockets");
             g_socketPool->complete_state(WSAECONNREFUSED);
@@ -569,10 +632,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Connecting sockets");
             g_socketPool->complete_state(WSAECONNREFUSED);
@@ -597,11 +660,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Connecting sockets");
             g_socketPool->complete_state(WSAECONNREFUSED);
@@ -628,10 +691,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -660,11 +723,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Starting IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -695,10 +758,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"Initiating IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -727,11 +790,11 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            ctsSocketBroker::m_timerCallbackTimeoutMs = 750;
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
-
-            g_socketPool->validate_expected_count(100);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(100);
 
             Logger::WriteMessage(L"Initiating IO on sockets");
             g_socketPool->complete_state(NO_ERROR);
@@ -761,32 +824,33 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            g_socketPool->validate_expected_count(5);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(5);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 5 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 initiating IO, 10 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 15 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
@@ -809,25 +873,26 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(5);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 waiting, 5 closed\n");
             g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 10 closed\n");
             g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"4. Expecting 15 closed\n");
             g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
@@ -850,26 +915,27 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(5);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
             g_socketPool->complete_state(NO_ERROR); // successful connect
-            Sleep(1000); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 10 closed\n");
             g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
-            Sleep(1000); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
 
             Logger::WriteMessage(L"4. Expecting 15 closed\n");
             g_socketPool->complete_state(WSAECONNREFUSED); // fail connect
-            Sleep(1000); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
@@ -890,32 +956,33 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
-            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(5);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 5 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 5 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 initiating IO, 10 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 15 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
@@ -937,20 +1004,21 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 1 creating\n");
-            g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(1);
 
             Logger::WriteMessage(L"2. Expecting 1 initiating IO\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(1, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 1 completed\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));
@@ -974,135 +1042,136 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 95 waiting\n");
-            g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
+            // wait for all to be started as this is async
+            g_socketPool->wait_for_start(5);
             g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"2. Expecting 5 creating, 5 initiating IO, 90 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"3. Expecting 5 creating, 5 initiating IO, 85 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"4. Expecting 5 creating, 5 initiating IO, 80 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"5. Failing all sockets: 5 creating, 75 waiting\n");
             g_socketPool->complete_state(WSAENOBUFS);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"6. Expecting 5 creating, 5 initiating IO, 70 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"7. Expecting 5 creating, 5 initiating IO, 65 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"8. Failing all sockets: 5 creating, 60 waiting\n");
             g_socketPool->complete_state(WSAENOBUFS);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"9. Expecting 10 creating, 10 initiating IO, 55 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"10. Expecting 10 creating, 10 initiating IO, 50 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"11. Expecting 10 creating, 10 initiating IO, 45 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"12. Failing all sockets: 5 creating, 40 waiting\n");
             g_socketPool->complete_state(WSAENOBUFS);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"13. Expecting 10 creating, 10 initiating IO, 35 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"14. Expecting 10 creating, 10 initiating IO, 30 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"15. Expecting 10 creating, 10 initiating IO, 25 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"16. Expecting 10 creating, 10 initiating IO, 20 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"17. Failing all sockets: 5 creating, 15 waiting\n");
             g_socketPool->complete_state(WSAENOBUFS);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(0, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"18. Expecting 10 creating, 10 initiating IO, 10 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"19. Expecting 10 creating, 10 initiating IO, 5 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"20. Expecting 5 creating, 5 initiating IO, 0 waiting\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::Creating);
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"21. Expecting 5 initiating IO\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(5, ctsSocketState::InternalState::InitiatingIo);
 
             Logger::WriteMessage(L"22. Expecting all done\n");
             g_socketPool->complete_state(NO_ERROR);
-            Sleep(500); // allowing the timer to coalesce
+            Sleep(ctsSocketBroker::m_timerCallbackTimeoutMs * 2); // allowing the timer to coalesce
             g_socketPool->validate_expected_count(0);
 
             Assert::IsTrue(test_broker->Wait(ctsSocketBroker::m_timerCallbackTimeoutMs * 2));

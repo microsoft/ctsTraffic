@@ -81,23 +81,23 @@ namespace ctsTraffic
 
             va_end(args);
         }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsTcpStatistics&) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
         }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, unsigned long, const ctsUdpStatistics&) noexcept
+        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
         }
-        void PrintConnectionResults(unsigned long) noexcept
+        void PrintConnectionResults(uint32_t) noexcept
         {
             Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
         }
-        void PrintErrorIfFailed(_In_ PCSTR _text, unsigned long _why) noexcept
+        void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
         {
             Logger::WriteMessage(
                 wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
@@ -131,7 +131,7 @@ namespace ctsTraffic
         {
             return false;
         }
-        unsigned long ConsoleVerbosity() noexcept
+        uint32_t ConsoleVerbosity() noexcept
         {
             return 0;
         }
@@ -168,7 +168,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // set the socket
             test->SetSocket(socket_value);
@@ -183,7 +183,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // set the socket
             test->SetSocket(socket_value);
@@ -198,7 +198,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             test->SetSocket(socket_value);
             {
@@ -243,7 +243,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             // when the socket is INVALID_SOCKET, should return a nullptr
             const auto tp1(test->GetIocpThreadpool());
@@ -258,7 +258,7 @@ namespace ctsUnitTest
         TEST_METHOD(LocalAddrs)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
             test_address.SetPort(55555);
@@ -271,7 +271,7 @@ namespace ctsUnitTest
         TEST_METHOD(TargetAddrs)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
             test_address.SetPort(55555);
@@ -284,23 +284,23 @@ namespace ctsUnitTest
         TEST_METHOD(IOCounters)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
 
             Logger::WriteMessage(L"Incrementing to 1\n");
-            Assert::AreEqual(1L, test->IncrementIo());
-            Assert::AreEqual(1L, test->GetPendedIoCount());
+            Assert::AreEqual(1, test->IncrementIo());
+            Assert::AreEqual(1, test->GetPendedIoCount());
 
             Logger::WriteMessage(L"Incrementing to 2\n");
-            Assert::AreEqual(2L, test->IncrementIo());
-            Assert::AreEqual(2L, test->GetPendedIoCount());
+            Assert::AreEqual(2, test->IncrementIo());
+            Assert::AreEqual(2, test->GetPendedIoCount());
 
             Logger::WriteMessage(L"Decrementing to 1\n");
-            Assert::AreEqual(1L, test->DecrementIo());
-            Assert::AreEqual(1L, test->GetPendedIoCount());
+            Assert::AreEqual(1, test->DecrementIo());
+            Assert::AreEqual(1, test->GetPendedIoCount());
 
             Logger::WriteMessage(L"Decrementing to 0\n");
-            Assert::AreEqual(0L, test->DecrementIo());
-            Assert::AreEqual(0L, test->GetPendedIoCount());
+            Assert::AreEqual(0, test->DecrementIo());
+            Assert::AreEqual(0, test->GetPendedIoCount());
 
             // todo: not sure how to validate going below 0 invokes fail-fast
         }

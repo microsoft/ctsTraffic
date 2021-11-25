@@ -28,10 +28,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
 // - with the below exceptions : these do not include any cts* headers
-//   -- ctsSafeInt.hpp
 //   -- ctsStatistics.hpp
 //
-#include "ctsSafeInt.hpp"
 #include "ctsStatistics.hpp"
 
 namespace ctsTraffic
@@ -111,7 +109,7 @@ namespace ctsTraffic
         // OR
         inline OptionType operator| (OptionType& lhs, OptionType rhs) noexcept
         {
-            return static_cast<OptionType>(static_cast<unsigned long>(lhs) | static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
         }
         inline OptionType& operator|= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -122,7 +120,7 @@ namespace ctsTraffic
         // AND
         inline OptionType operator& (OptionType lhs, OptionType rhs) noexcept
         {
-            return static_cast<OptionType>(static_cast<unsigned long>(lhs) & static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
         }
         inline OptionType& operator&= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -133,7 +131,7 @@ namespace ctsTraffic
         // XOR
         inline OptionType operator^ (OptionType lhs, OptionType rhs) noexcept
         {
-            return static_cast<OptionType>(static_cast<unsigned long>(lhs) ^ static_cast<unsigned long>(rhs));
+            return static_cast<OptionType>(static_cast<uint32_t>(lhs) ^ static_cast<uint32_t>(rhs));
         }
         inline OptionType& operator^= (OptionType& lhs, OptionType rhs) noexcept
         {
@@ -144,7 +142,7 @@ namespace ctsTraffic
         // NOT
         inline OptionType operator~ (OptionType lhs) noexcept
         {
-            return static_cast<OptionType>(~static_cast<unsigned long>(lhs));
+            return static_cast<OptionType>(~static_cast<uint32_t>(lhs));
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,12 +168,12 @@ namespace ctsTraffic
 
         struct JitterFrameEntry
         {
-            unsigned long m_bytesReceived = 0UL;
-            long long m_sequenceNumber = 0LL;
-            long long m_senderQpc = 0LL;
-            long long m_senderQpf = 0LL;
-            long long m_receiverQpc = 0LL;
-            long long m_receiverQpf = 0LL;
+            uint32_t m_bytesReceived = 0UL;
+            int64_t m_sequenceNumber = 0LL;
+            int64_t m_senderQpc = 0LL;
+            int64_t m_senderQpf = 0LL;
+            int64_t m_receiverQpc = 0LL;
+            int64_t m_receiverQpf = 0LL;
             double m_estimatedTimeInFlightMs = 0;
         };
         void PrintJitterUpdate(const JitterFrameEntry& currentFrame, const JitterFrameEntry& previousFrame) noexcept;
@@ -195,7 +193,7 @@ namespace ctsTraffic
         }                                                                     \
         while ((void)0, 0)                                                    \
 
-        void PrintErrorIfFailed(PCSTR what, unsigned long why) noexcept;
+        void PrintErrorIfFailed(PCSTR what, uint32_t why) noexcept;
         void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
@@ -214,40 +212,40 @@ namespace ctsTraffic
         void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept;
 
         void PrintNewConnection(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, unsigned long error, const ctsTcpStatistics& stats) noexcept;
-        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, unsigned long error, const ctsUdpStatistics& stats) noexcept;
-        void PrintConnectionResults(unsigned long error) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, uint32_t error, const ctsTcpStatistics& stats) noexcept;
+        void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, uint32_t error, const ctsUdpStatistics& stats) noexcept;
+        void PrintConnectionResults(uint32_t error) noexcept;
 
         // Get* functions
-        ctsSignedLongLong GetTcpBytesPerSecond() noexcept;
-        ctsUnsignedLong GetMaxBufferSize() noexcept;
-        ctsUnsignedLong GetMinBufferSize() noexcept;
-        ctsUnsignedLong GetBufferSize() noexcept;
-        ctsUnsignedLongLong GetTransferSize() noexcept;
+        int64_t GetTcpBytesPerSecond() noexcept;
+        uint32_t GetMaxBufferSize() noexcept;
+        uint32_t GetMinBufferSize() noexcept;
+        uint32_t GetBufferSize() noexcept;
+        uint64_t GetTransferSize() noexcept;
 
         float GetStatusTimeStamp() noexcept;
 
-        int  GetListenBacklog() noexcept;
+        int32_t  GetListenBacklog() noexcept;
         bool IsListening() noexcept;
 
         // Set* functions
-        int SetPreBindOptions(SOCKET socket, const ctl::ctSockaddr& localAddress) noexcept;
-        int SetPreConnectOptions(SOCKET) noexcept;
+        int32_t SetPreBindOptions(SOCKET socket, const ctl::ctSockaddr& localAddress) noexcept;
+        int32_t SetPreConnectOptions(SOCKET) noexcept;
 
         // for the MediaStream pattern
         struct MediaStreamSettings
         {
             // set by ctsConfig from command-line arguments
-            ctsSignedLongLong BitsPerSecond = 0;
-            ctsUnsignedLong FramesPerSecond = 0;
-            ctsUnsignedLong BufferDepthSeconds = 0;
-            ctsUnsignedLong StreamLengthSeconds = 0;
+            int64_t BitsPerSecond = 0;
+            uint32_t FramesPerSecond = 0;
+            uint32_t BufferDepthSeconds = 0;
+            uint32_t StreamLengthSeconds = 0;
             // internally calculated
-            ctsUnsignedLong FrameSizeBytes = 0;
-            ctsUnsignedLong StreamLengthFrames = 0;
-            ctsUnsignedLong BufferedFrames = 0;
+            uint32_t FrameSizeBytes = 0;
+            uint32_t StreamLengthFrames = 0;
+            uint32_t BufferedFrames = 0;
 
-            ctsUnsignedLongLong CalculateTransferSize()
+            uint64_t CalculateTransferSize()
             {
                 FAIL_FAST_IF_MSG(
                     0LL == BitsPerSecond,
@@ -260,7 +258,7 @@ namespace ctsTraffic
                     "StreamLengthSeconds cannot be set to zero");
                 FAIL_FAST_IF_MSG(
                     BitsPerSecond % 8LL != 0LL,
-                    "The BitsPerSecond value (%lld) must be evenly divisible by 8", static_cast<long long>(BitsPerSecond));
+                    "The BitsPerSecond value (%lld) must be evenly divisible by 8", BitsPerSecond);
 
                 // number of frames to keep buffered - only relevant on the client
                 if (!IsListening())
@@ -276,14 +274,14 @@ namespace ctsTraffic
                     }
                 }
 
-                const ctsUnsignedLongLong totalStreamLengthFrames = StreamLengthSeconds * FramesPerSecond;
+                const auto totalStreamLengthFrames = StreamLengthSeconds * FramesPerSecond;
                 if (totalStreamLengthFrames > MAXULONG32)
                 {
                     throw std::invalid_argument("The total stream length in frame-count exceeds the maximum allowed to be streamed (2^32)");
                 }
 
                 // convert rate to bytes / second -> calculate the total # of bytes
-                ctsUnsignedLongLong totalStreamLengthBytes = static_cast<long long>(BitsPerSecond) / 8ULL * static_cast<unsigned long>(StreamLengthSeconds);
+                auto totalStreamLengthBytes = BitsPerSecond / 8ULL * StreamLengthSeconds;
 
                 // guarantee that the total stream length aligns evenly with total_frames
                 if (totalStreamLengthBytes % totalStreamLengthFrames != 0)
@@ -291,24 +289,24 @@ namespace ctsTraffic
                     totalStreamLengthBytes -= totalStreamLengthBytes % totalStreamLengthFrames;
                 }
 
-                const ctsUnsignedLongLong totalFrameSizeBytes = totalStreamLengthBytes / totalStreamLengthFrames;
+                const auto totalFrameSizeBytes = totalStreamLengthBytes / totalStreamLengthFrames;
                 if (totalFrameSizeBytes > MAXULONG32)
                 {
                     throw std::invalid_argument("The frame size in bytes exceeds the maximum allowed to be streamed (2^32)");
                 }
 
-                FrameSizeBytes = static_cast<unsigned long>(totalFrameSizeBytes);
+                FrameSizeBytes = static_cast<uint32_t>(totalFrameSizeBytes);
                 if (FrameSizeBytes < 40)
                 {
                     throw std::invalid_argument("The frame size is too small - it must be at least 40 bytes");
                 }
-                StreamLengthFrames = static_cast<unsigned long>(totalStreamLengthFrames);
+                StreamLengthFrames = static_cast<uint32_t>(totalStreamLengthFrames);
 
                 // guarantee frame alignment
                 FAIL_FAST_IF_MSG(
-                    static_cast<unsigned long long>(FrameSizeBytes) * static_cast<unsigned long long>(StreamLengthFrames) != totalStreamLengthBytes,
+                    static_cast<uint64_t>(FrameSizeBytes) * static_cast<uint64_t>(StreamLengthFrames) != totalStreamLengthBytes,
                     "FrameSizeBytes (%u) * StreamLengthFrames (%u) != TotalStreamLength (%llx)",
-                    static_cast<unsigned long>(FrameSizeBytes), static_cast<unsigned long>(StreamLengthFrames), static_cast<unsigned long long>(totalStreamLengthBytes));
+                    FrameSizeBytes, StreamLengthFrames, totalStreamLengthBytes);
 
                 return totalStreamLengthBytes;
             }
@@ -344,13 +342,13 @@ namespace ctsTraffic
             OptionType Options = NoOptionSet;
 
             DWORD SocketFlags = 0;
-            WORD  Port = 0;
+            WORD Port = 0;
 
-            unsigned long long Iterations = 0;
-            unsigned long long ServerExitLimit = 0;
-            unsigned long AcceptLimit = 0;
-            unsigned long ConnectionLimit = 0;
-            unsigned long ConnectionThrottleLimit = 0;
+            uint64_t Iterations = 0;
+            uint64_t ServerExitLimit = 0;
+            uint32_t AcceptLimit = 0;
+            uint32_t ConnectionLimit = 0;
+            uint32_t ConnectionThrottleLimit = 0;
 
             std::vector<ctl::ctSockaddr> ListenAddresses{};
             std::vector<ctl::ctSockaddr> TargetAddresses{};
@@ -361,30 +359,30 @@ namespace ctsTraffic
             ctsTcpStatistics TcpStatusDetails;
             ctsUdpStatistics UdpStatusDetails;
 
-            unsigned long StatusUpdateFrequencyMilliseconds = 0;
+            uint32_t StatusUpdateFrequencyMilliseconds = 0;
 
-            long long TcpBytesPerSecondPeriod = 100LL;
-            long long StartTimeMilliseconds = 0;
+            int64_t TcpBytesPerSecondPeriod = 100LL;
+            int64_t StartTimeMilliseconds = 0;
 
-            unsigned long TimeLimit = 0;
-            unsigned long PrePostRecvs = 0;
-            unsigned long PrePostSends = 0;
-            unsigned long RecvBufValue = 0;
-            unsigned long SendBufValue = 0;
-            unsigned long KeepAliveValue = 0;
+            uint32_t TimeLimit = 0;
+            uint32_t PrePostRecvs = 0;
+            uint32_t PrePostSends = 0;
+            uint32_t RecvBufValue = 0;
+            uint32_t SendBufValue = 0;
+            uint32_t KeepAliveValue = 0;
 
-            unsigned long PushBytes = 0;
-            unsigned long PullBytes = 0;
+            uint32_t PushBytes = 0;
+            uint32_t PullBytes = 0;
 
-            unsigned long OutgoingIfIndex = 0;
+            uint32_t OutgoingIfIndex = 0;
 
-            unsigned short LocalPortLow = 0;
-            unsigned short LocalPortHigh = 0;
+            uint16_t LocalPortLow = 0;
+            uint16_t LocalPortHigh = 0;
 
             bool UseSharedBuffer = false;
             bool ShouldVerifyBuffers = false;
 
-            static const DWORD c_CriticalSectionSpinlock = 500ul;
+            static constexpr DWORD c_CriticalSectionSpinlock = 500ul;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -397,6 +395,6 @@ namespace ctsTraffic
 
         SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);
         bool ShutdownCalled() noexcept;
-        unsigned long ConsoleVerbosity() noexcept;
+        uint32_t ConsoleVerbosity() noexcept;
     } // namespace ctsConfig
 } // namespace ctsTraffic

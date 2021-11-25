@@ -34,7 +34,7 @@ namespace ctsTraffic
     void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;

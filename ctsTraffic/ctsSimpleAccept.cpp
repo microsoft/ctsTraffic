@@ -162,7 +162,7 @@ namespace ctsTraffic
                 const std::weak_ptr<ctsSocket> weakSocket(*pimpl->m_acceptingSockets.rbegin());
                 pimpl->m_acceptingSockets.pop_back();
 
-                auto acceptSocket(weakSocket.lock());
+                const auto acceptSocket(weakSocket.lock());
                 if (!acceptSocket)
                 {
                     return;
@@ -170,9 +170,9 @@ namespace ctsTraffic
 
                 // based off of the refcount, choose a socket that's least used
                 // - not taking a lock: it doesn't have to be that precise
-                LONG lowestRefcount = pimpl->m_listeningSocketsRefcount[0];
-                unsigned listenerCounter = 0;
-                unsigned listenerPosition = 0;
+                auto lowestRefcount = pimpl->m_listeningSocketsRefcount[0];
+                uint32_t listenerCounter = 0;
+                uint32_t listenerPosition = 0;
                 for (const auto& refcount : pimpl->m_listeningSocketsRefcount)
                 {
                     if (refcount < lowestRefcount)
@@ -195,9 +195,9 @@ namespace ctsTraffic
                 // increment the listening socket before calling accept on the blocking socket
                 ::InterlockedIncrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
                 const ctl::ctSockaddr remoteAddr;
-                int remoteAddrLen = remoteAddr.length();
+                auto remoteAddrLen = remoteAddr.length();
                 const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
-                DWORD gle = WSAGetLastError();
+                auto gle = WSAGetLastError();
                 ::InterlockedDecrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
 
                 // if failed complete the ctsSocket and return
@@ -268,7 +268,7 @@ namespace ctsTraffic
         DWORD error = 0;
         if (!InitOnceExecuteOnce(&details::g_ctsSimpleAcceptImplInitOnce, details::ctsSimpleAcceptImplInitFn, &error, nullptr))
         {
-            auto sharedSocket(weakSocket.lock());
+            const auto sharedSocket(weakSocket.lock());
             if (sharedSocket)
             {
                 sharedSocket->CompleteState(error);
@@ -280,7 +280,7 @@ namespace ctsTraffic
             try { details::g_pimpl->AcceptSocket(weakSocket); }
             catch (...)
             {
-                auto sharedSocket(weakSocket.lock());
+                const auto sharedSocket(weakSocket.lock());
                 if (sharedSocket)
                 {
                     sharedSocket->CompleteState(ERROR_OUTOFMEMORY);

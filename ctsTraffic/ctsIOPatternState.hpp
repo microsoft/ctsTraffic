@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // project headers
-#include "ctsSafeInt.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 
@@ -229,8 +228,8 @@ namespace ctsTraffic
 
             default:
                 FAIL_FAST_MSG(
-                    "ctsIOPatternState::GetNextPatternType was called in an invalid state (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                    static_cast<uint32_t>(m_internalState), this);
+                    "ctsIOPatternState::GetNextPatternType was called in an invalid state (%d): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
+                    m_internalState, this);
         }
     }
 
@@ -296,12 +295,12 @@ namespace ctsTraffic
         if (InternalPatternState::ServerSendConnectionId == m_internalState || InternalPatternState::ClientRecvConnectionId == m_internalState)
         {
             // must have received the full id
-            if (completedTransferBytes != ctsStatistics::c_connectionIdLength)
+            if (completedTransferBytes != ctsStatistics::ConnectionIdLength)
             {
                 PRINT_DEBUG_INFO(
-                    L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooFewBytes) [transfered %llu, Expected ConnectionID (%u)]\n",
-                    static_cast<uint64_t>(completedTransferBytes),
-                    ctsStatistics::c_connectionIdLength);
+                    L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooFewBytes) [transfered %u, Expected ConnectionID (%u)]\n",
+                    completedTransferBytes,
+                    ctsStatistics::ConnectionIdLength);
 
                 m_internalState = InternalPatternState::ErrorIoFailed;
                 return ctsIoPatternError::TooFewBytes;
@@ -352,8 +351,9 @@ namespace ctsTraffic
             {
                 PRINT_DEBUG_INFO(
                     L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooFewBytes) [transferred %llu, expected transfer %llu]\n",
-                    static_cast<uint64_t>(alreadyTransferred),
+                    alreadyTransferred,
                     m_maxTransfer);
+
                 m_internalState = InternalPatternState::ErrorIoFailed;
                 return ctsIoPatternError::TooFewBytes;
             }
@@ -400,8 +400,8 @@ namespace ctsTraffic
 
                         default:
                             FAIL_FAST_MSG(
-                                "ctsIOPatternState::CompletedTask - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
-                                static_cast<uint32_t>(m_internalState), this);
+                                "ctsIOPatternState::CompletedTask - invalid internal_status (%d): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState",
+                                m_internalState, this);
                     }
                 }
                 else
@@ -473,8 +473,8 @@ namespace ctsTraffic
 
                         default:
                             FAIL_FAST_MSG(
-                                "ctsIOPatternState::CompletedTask - invalid internal_status (%u): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
-                                static_cast<uint32_t>(m_internalState), this, &completedTask);
+                                "ctsIOPatternState::CompletedTask - invalid m_internalState (%d): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
+                                m_internalState, this, &completedTask);
                     }
                 }
             }
@@ -483,8 +483,9 @@ namespace ctsTraffic
         {
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternState::CompletedTask : ErrorIOFailed (TooManyBytes) [transferred %llu, expected transfer %llu]\n",
-                static_cast<uint64_t>(alreadyTransferred),
+                alreadyTransferred,
                 m_maxTransfer);
+
             m_internalState = InternalPatternState::ErrorIoFailed;
             return ctsIoPatternError::TooManyBytes;
         }

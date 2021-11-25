@@ -77,9 +77,9 @@ namespace ctsTraffic
         }
     }
 
-    void ctsMediaStreamServerConnectedSocket::CompleteState(unsigned long errorCode) const noexcept
+    void ctsMediaStreamServerConnectedSocket::CompleteState(uint32_t errorCode) const noexcept
     {
-        std::shared_ptr<ctsSocket> sharedSocket(m_weakSocket);
+        const std::shared_ptr<ctsSocket> sharedSocket(m_weakSocket);
         if (sharedSocket)
         {
             sharedSocket->CompleteState(errorCode);
@@ -151,9 +151,8 @@ namespace ctsTraffic
                 case ctsTaskAction::FatalAbort: // fall-through
                 default:  // NOLINT(clang-diagnostic-covered-switch-default)
                     FAIL_FAST_MSG(
-                        "Unexpected task action returned from initiate_io - %u (dt %p ctsTraffic::ctsIOTask)",
-                        static_cast<unsigned long>(currentTask.m_ioAction),
-                        &currentTask);
+                        "Unexpected task action returned from initiate_io - %d (dt %p ctsTraffic::ctsIOTask)",
+                        currentTask.m_ioAction, &currentTask);
             }
         }
 
@@ -162,7 +161,7 @@ namespace ctsTraffic
             // if IO has failed, we won't have anymore scheduled in the future
             // - deliberately stop processing now
             // must guarantee a failed error code is returned
-            unsigned long returnedStatus = sendResults.m_errorCode;
+            uint32_t returnedStatus = sendResults.m_errorCode;
             if (0 == returnedStatus)
             {
                 returnedStatus = WSAECONNABORTED;

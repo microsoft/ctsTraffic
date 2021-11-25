@@ -38,7 +38,7 @@ namespace ctsTraffic
         // timer to wake up and clean up the socket pool
         // - delete any closed sockets
         // - create new sockets
-        static unsigned long m_timerCallbackTimeoutMs;
+        static uint32_t m_timerCallbackTimeoutMs;
 
         // only the c'tor can throw
         ctsSocketBroker();
@@ -73,9 +73,9 @@ namespace ctsTraffic
         // keep a burn-down count as connections are made to know when to be 'done'
         ULONGLONG m_totalConnectionsRemaining = 0ULL;
         // track what's pended and what's active
-        unsigned long m_pendingLimit = 0UL;
-        unsigned long m_pendingSockets = 0UL;
-        unsigned long m_activeSockets = 0UL;
+        uint32_t m_pendingLimit = 0UL;
+        uint32_t m_pendingSockets = 0UL;
+        uint32_t m_activeSockets = 0UL;
 
         //
         // Callback for the threadpool timer to scavenge closed sockets and recreate new ones

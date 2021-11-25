@@ -101,8 +101,7 @@ namespace ctsTraffic
                     // it's possible though, for example if the IO pattern had a functor that went off racing the state machine
                     // deliberately not changing any internal values these since the socket is already being close
                     PRINT_DEBUG_INFO(
-                        L"\t\tctsSocketState::complete_state called while closing (InternalState %u)\n",
-                        static_cast<unsigned long>(m_state));
+                        L"\t\tctsSocketState::complete_state called while closing (InternalState %d)\n", m_state);
                     break;
 
                 default:
@@ -113,8 +112,7 @@ namespace ctsTraffic
                     // case InitiatingIO:
                     //
                     FAIL_FAST_MSG(
-                        "ctsSocketState::complete_state - invalid internal state [%d]",
-                        m_state);
+                        "ctsSocketState::complete_state - invalid internal state [%d]", m_state);
             }
 
         }
@@ -186,7 +184,7 @@ namespace ctsTraffic
             case InternalState::InitiatingIo:
             {
                 // notify the broker when initiating IO
-                auto parent = thisPtr->m_broker.lock();
+                const auto parent = thisPtr->m_broker.lock();
                 if (parent)
                 {
                     parent->InitiatingIo();
@@ -261,7 +259,7 @@ namespace ctsTraffic
                 thisPtr->m_state = InternalState::Closed;
                 lock.reset();
 
-                auto parent = thisPtr->m_broker.lock();
+                const auto parent = thisPtr->m_broker.lock();
                 if (parent)
                 {
                     parent->Closing(thisPtr->m_initiatedIo);

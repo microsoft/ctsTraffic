@@ -25,7 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <objbase.h>
-#include <OleAuto.h>
+#include <oleauto.h>
 // wil headers
 #include <wil/stl.h>
 #include <wil/resource.h>
@@ -144,65 +144,65 @@ namespace ctl
         //
         // Comparing integer types - not tightly enforcing type by default
         //
-        unsigned rhsInteger = 0;
+        uint32_t rhsInteger = 0;
         switch (rhs.vt)
         {
-            case VT_I1:
-                rhsInteger += rhs.cVal;
-                break;
-            case VT_UI1:
-                rhsInteger += rhs.bVal;
-                break;
-            case VT_I2:
-                rhsInteger += rhs.iVal;
-                break;
-            case VT_UI2:
-                rhsInteger += rhs.uiVal;
-                break;
-            case VT_I4:
-                rhsInteger += rhs.lVal;
-                break;
-            case VT_UI4:
-                rhsInteger += rhs.ulVal;
-                break;
-            case VT_INT:
-                rhsInteger += rhs.intVal;
-                break;
-            case VT_UINT:
-                rhsInteger += rhs.uintVal;
-                break;
-            default:
-                return false;
+        case VT_I1:
+            rhsInteger += rhs.cVal;
+            break;
+        case VT_UI1:
+            rhsInteger += rhs.bVal;
+            break;
+        case VT_I2:
+            rhsInteger += rhs.iVal;
+            break;
+        case VT_UI2:
+            rhsInteger += rhs.uiVal;
+            break;
+        case VT_I4:
+            rhsInteger += rhs.lVal;
+            break;
+        case VT_UI4:
+            rhsInteger += rhs.ulVal;
+            break;
+        case VT_INT:
+            rhsInteger += rhs.intVal;
+            break;
+        case VT_UINT:
+            rhsInteger += rhs.uintVal;
+            break;
+        default:
+            return false;
         }
-        unsigned lhsInteger = 0;
+        uint32_t lhsInteger = 0;
         switch (lhs.vt)
         {
-            case VT_I1:
-                lhsInteger += lhs.cVal;
-                break;
-            case VT_UI1:
-                lhsInteger += lhs.bVal;
-                break;
-            case VT_I2:
-                lhsInteger += lhs.iVal;
-                break;
-            case VT_UI2:
-                lhsInteger += lhs.uiVal;
-                break;
-            case VT_I4:
-                lhsInteger += lhs.lVal;
-                break;
-            case VT_UI4:
-                lhsInteger += lhs.ulVal;
-                break;
-            case VT_INT:
-                lhsInteger += lhs.intVal;
-                break;
-            case VT_UINT:
-                lhsInteger += lhs.uintVal;
-                break;
-            default:
-                return false;
+        case VT_I1:
+            lhsInteger += lhs.cVal;
+            break;
+        case VT_UI1:
+            lhsInteger += lhs.bVal;
+            break;
+        case VT_I2:
+            lhsInteger += lhs.iVal;
+            break;
+        case VT_UI2:
+            lhsInteger += lhs.uiVal;
+            break;
+        case VT_I4:
+            lhsInteger += lhs.lVal;
+            break;
+        case VT_UI4:
+            lhsInteger += lhs.ulVal;
+            break;
+        case VT_INT:
+            lhsInteger += lhs.intVal;
+            break;
+        case VT_UINT:
+            lhsInteger += lhs.uintVal;
+            break;
+        default:
+            return false;
         }
 
         return lhsInteger == rhsInteger;
@@ -224,46 +224,46 @@ namespace ctl
             wil::unique_variant currentValue;
             switch (propertyType)
             {
-                case CIM_SINT32:
-                case CIM_UINT32:
-                {
-                    ULONG value{};
-                    THROW_IF_FAILED(instance->ReadDWORD(propertyHandle, &value));
-                    currentValue = ctWmiMakeVariant(value);
-                    break;
-                }
+            case CIM_SINT32:
+            case CIM_UINT32:
+            {
+                ULONG value{};
+                THROW_IF_FAILED(instance->ReadDWORD(propertyHandle, &value));
+                currentValue = ctWmiMakeVariant(value);
+                break;
+            }
 
-                case CIM_SINT64:
-                case CIM_UINT64:
-                {
-                    ULONGLONG value{};
-                    THROW_IF_FAILED(instance->ReadQWORD(propertyHandle, &value));
-                    currentValue = ctWmiMakeVariant(value);
-                    break;
-                }
+            case CIM_SINT64:
+            case CIM_UINT64:
+            {
+                ULONGLONG value{};
+                THROW_IF_FAILED(instance->ReadQWORD(propertyHandle, &value));
+                currentValue = ctWmiMakeVariant(value);
+                break;
+            }
 
-                case CIM_STRING:
+            case CIM_STRING:
+            {
+                constexpr long cimStringDefaultSize = 64;
+                std::wstring value(cimStringDefaultSize, L'\0');
+                long valueSize = cimStringDefaultSize * sizeof(WCHAR);
+                long returnedSize{};
+                auto hr = instance->ReadPropertyValue(propertyHandle, valueSize, &returnedSize, reinterpret_cast<BYTE*>(&value[0]));
+                if (WBEM_E_BUFFER_TOO_SMALL == hr)
                 {
-                    constexpr long cimStringDefaultSize = 64;
-                    std::wstring value(cimStringDefaultSize, L'\0');
-                    long valueSize = cimStringDefaultSize * sizeof(WCHAR);
-                    long returnedSize{};
-                    auto hr = instance->ReadPropertyValue(propertyHandle, valueSize, &returnedSize, reinterpret_cast<BYTE*>(&value[0]));
-                    if (WBEM_E_BUFFER_TOO_SMALL == hr)
-                    {
-                        valueSize = returnedSize;
-                        value.resize(valueSize / sizeof(WCHAR));
-                        hr = instance->ReadPropertyValue(propertyHandle, valueSize, &returnedSize, reinterpret_cast<BYTE*>(&value[0]));
-                    }
-                    THROW_IF_FAILED(hr);
-                    currentValue = ctWmiMakeVariant(value.c_str());
-                    break;
+                    valueSize = returnedSize;
+                    value.resize(valueSize / sizeof(WCHAR));
+                    hr = instance->ReadPropertyValue(propertyHandle, valueSize, &returnedSize, reinterpret_cast<BYTE*>(&value[0]));
                 }
+                THROW_IF_FAILED(hr);
+                currentValue = ctWmiMakeVariant(value.c_str());
+                break;
+            }
 
-                default:
-                    THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                        "ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
-                        counterName, static_cast<unsigned>(propertyType));
+            default:
+                THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+                    "ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
+                    counterName, static_cast<unsigned>(propertyType));
             }
 
             return currentValue;
@@ -473,73 +473,72 @@ namespace ctl
         class ctWmiPerformanceCounterData
         {
         private:
-            mutable wil::critical_section m_guardData{500};
+            mutable wil::critical_section m_guardData{ 500 };
             const ctWmiPerformanceCollectionType m_collectionType = ctWmiPerformanceCollectionType::Detailed;
             const std::wstring m_instanceName;
             const std::wstring m_counterName;
             std::vector<T> m_counterData;
-            ULONGLONG m_counterSum = 0;
+            uint64_t m_counterSum = 0;
 
             void add_data(const T& instanceData)
             {
                 const auto lock = m_guardData.lock();
                 switch (m_collectionType)
                 {
-                    case ctWmiPerformanceCollectionType::Detailed:
+                case ctWmiPerformanceCollectionType::Detailed:
+                    m_counterData.push_back(instanceData);
+                    break;
+
+                case ctWmiPerformanceCollectionType::MeanOnly:
+                    // vector is formatted as:
+                    // [0] == count
+                    // [1] == min
+                    // [2] == max
+                    // [3] == mean
+                    if (m_counterData.empty())
+                    {
+                        m_counterData.push_back(1);
                         m_counterData.push_back(instanceData);
-                        break;
-
-                    case ctWmiPerformanceCollectionType::MeanOnly:
-                        // vector is formatted as:
-                        // [0] == count
-                        // [1] == min
-                        // [2] == max
-                        // [3] == mean
-                        if (m_counterData.empty())
+                        m_counterData.push_back(instanceData);
+                        m_counterData.push_back(0);
+                    }
+                    else
+                    {
+                        ++m_counterData[0];
+                        if (instanceData < m_counterData[1])
                         {
-                            m_counterData.push_back(1);
-                            m_counterData.push_back(instanceData);
-                            m_counterData.push_back(instanceData);
-                            m_counterData.push_back(0);
+                            m_counterData[1] = instanceData;
                         }
-                        else
+                        if (instanceData > m_counterData[2])
                         {
-                            ++m_counterData[0];
-                            if (instanceData < m_counterData[1])
-                            {
-                                m_counterData[1] = instanceData;
-                            }
-                            if (instanceData > m_counterData[2])
-                            {
-                                m_counterData[2] = instanceData;
-                            }
-                        }
-
-                        m_counterSum += instanceData;
-                        break;
-
-                    case ctWmiPerformanceCollectionType::FirstLast:
-                        // the first data point write both min and max
-                        // [0] == count
-                        // [1] == first
-                        // [2] == last
-                        if (m_counterData.empty())
-                        {
-                            m_counterData.push_back(1);
-                            m_counterData.push_back(instanceData);
-                            m_counterData.push_back(instanceData);
-                        }
-                        else
-                        {
-                            ++m_counterData[0];
                             m_counterData[2] = instanceData;
                         }
-                        break;
+                    }
 
-                    default:
-                        FAIL_FAST_MSG(
-                            "Unknown ctWmiPerformanceCollectionType (%u)",
-                            static_cast<unsigned>(m_collectionType));
+                    m_counterSum += instanceData;
+                    break;
+
+                case ctWmiPerformanceCollectionType::FirstLast:
+                    // the first data point write both min and max
+                    // [0] == count
+                    // [1] == first
+                    // [2] == last
+                    if (m_counterData.empty())
+                    {
+                        m_counterData.push_back(1);
+                        m_counterData.push_back(instanceData);
+                        m_counterData.push_back(instanceData);
+                    }
+                    else
+                    {
+                        ++m_counterData[0];
+                        m_counterData[2] = instanceData;
+                    }
+                    break;
+
+                default:
+                    FAIL_FAST_MSG(
+                        "Unknown ctWmiPerformanceCollectionType (%d)", m_collectionType);
                 }
             }
 
@@ -683,7 +682,7 @@ namespace ctl
             Clear
         };
 
-        using ctWmiPerformanceCallback = std::function<void (CallbackAction)>;
+        using ctWmiPerformanceCallback = std::function<void(CallbackAction)>;
     } // unnamed namespace
 
 
@@ -863,9 +862,8 @@ namespace ctl
                 "ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
 
             const auto lock = m_guardCounterData.lock();
-            auto foundInstance = std::find_if(
-                std::begin(m_counterData),
-                std::end(m_counterData),
+            const auto foundInstance = std::ranges::find_if(
+                m_counterData,
                 [&](const auto& instance) { return instance->match(instanceName); });
             if (std::end(m_counterData) == foundInstance)
             {
@@ -910,7 +908,7 @@ namespace ctl
             {
                 return m_propertyValue == details::ReadCounterFromWbemObjectAccess(instance, m_counterName.c_str());
             }
-            bool operator!=(IWbemObjectAccess* instance) const
+            bool operator!=(_In_ IWbemObjectAccess* instance) const
             {
                 return !(*this == instance);
             }
@@ -944,7 +942,7 @@ namespace ctl
         wil::com_ptr<IWbemConfigureRefresher> m_configRefresher;
         std::vector<ctWmiPerformanceInstanceFilter> m_instanceFilter;
         // Must lock access to counter_data
-        mutable wil::critical_section m_guardCounterData{500};
+        mutable wil::critical_section m_guardCounterData{ 500 };
         std::vector<std::unique_ptr<details::ctWmiPerformanceCounterData<T>>> m_counterData;
         bool m_dataStopped = true;
 
@@ -964,32 +962,32 @@ namespace ctl
                 {
                     switch (updateData)
                     {
-                        case details::CallbackAction::Start:
-                            m_dataStopped = false;
-                            break;
+                    case details::CallbackAction::Start:
+                        m_dataStopped = false;
+                        break;
 
-                        case details::CallbackAction::Stop:
-                            m_dataStopped = true;
-                            break;
+                    case details::CallbackAction::Stop:
+                        m_dataStopped = true;
+                        break;
 
-                        case details::CallbackAction::Update:
-                            // only the derived class has appropriate the accessor class to update the data
-                            update_counter_data();
-                            break;
+                    case details::CallbackAction::Update:
+                        // only the derived class has appropriate the accessor class to update the data
+                        update_counter_data();
+                        break;
 
-                        case details::CallbackAction::Clear:
+                    case details::CallbackAction::Clear:
+                    {
+                        FAIL_FAST_IF_MSG(
+                            !m_dataStopped,
+                            "ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
+
+                        const auto lock = m_guardCounterData.lock();
+                        for (auto& counterData : m_counterData)
                         {
-                            FAIL_FAST_IF_MSG(
-                                !m_dataStopped,
-                                "ctWmiPerformanceCounter: must call stop_all_counters on the ctWmiPerformance class containing this counter");
-
-                            const auto lock = m_guardCounterData.lock();
-                            for (auto& counterData : m_counterData)
-                            {
-                                counterData->clear();
-                            }
-                            break;
+                            counterData->clear();
                         }
+                        break;
+                    }
                     }
                 }
                 CATCH_LOG()
@@ -1016,6 +1014,7 @@ namespace ctl
             bool fAddData = m_instanceFilter.empty();
             if (!fAddData)
             {
+//                fAddData = std::any_of(std::cbegin(m_instanceFilter), std::cend(m_instanceFilter), instance);
                 fAddData = std::end(m_instanceFilter) != std::find(
                     std::begin(m_instanceFilter),
                     std::end(m_instanceFilter),
@@ -1035,9 +1034,8 @@ namespace ctl
                 }
 
                 const auto lock = m_guardCounterData.lock();
-                auto trackedInstance = std::find_if(
-                    std::begin(m_counterData),
-                    std::end(m_counterData),
+                const auto trackedInstance = std::ranges::find_if(
+                    m_counterData,
                     [&](const auto& counterData) { return counterData->match(instanceName.bstrVal); });
 
                 // if this instance of this counter is new [new unique instance for this counter]
@@ -1171,7 +1169,7 @@ namespace ctl
             revertCallback.release();
         }
 
-        void start_all_counters(unsigned interval)
+        void start_all_counters(uint32_t interval)
         {
             if (!m_timer)
             {
@@ -1230,23 +1228,23 @@ namespace ctl
         wil::com_ptr<IWbemConfigureRefresher> m_configRefresher;
         // for each interval, callback each of the registered aggregators
         std::vector<details::ctWmiPerformanceCallback> m_callbacks;
+        uint32_t m_timerInterval{};
         // timer to fire to indicate when to Refresh the data
         // declare last to guarantee will be destroyed first
-        unsigned long m_timerInterval{};
         wil::unique_threadpool_timer m_timer;
 
         // must dynamically allocate this as the critical_section isn't movable
         // and the ctWmiPerformance objects must be movable
         struct LockedData
         {
-            wil::critical_section m_lock{500};
+            wil::critical_section m_lock{ 500 };
             bool m_countersStarted = false;
         };
         std::unique_ptr<LockedData> m_lockedData;
 
         static void NTAPI TimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER) noexcept
         {
-            auto* pThis = static_cast<ctWmiPerformance*>(pContext);
+            const auto* pThis = static_cast<ctWmiPerformance*>(pContext);
             try
             {
                 // must guarantee COM is initialized on this thread
@@ -1303,13 +1301,13 @@ namespace ctl
         const ctWmiEnumClassName m_className = ctWmiEnumClassName::Uninitialized;
         const wchar_t* m_providerName = nullptr;
 
-        const unsigned long m_ulongFieldNameCount = 0;
+        const uint32_t m_ulongFieldNameCount = 0;
         const wchar_t** m_ulongFieldNames = nullptr;
 
-        const unsigned long m_ulonglongFieldNameCount = 0;
+        const uint32_t m_ulonglongFieldNameCount = 0;
         const wchar_t** m_ulonglongFieldNames = nullptr;
 
-        const unsigned long m_stringFieldNameCount = 0;
+        const uint32_t m_stringFieldNameCount = 0;
         const wchar_t** m_stringFieldNames = nullptr;
 
         template <typename T> bool PropertyNameExists(_In_ PCWSTR name) const noexcept;
@@ -1318,7 +1316,7 @@ namespace ctl
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(_In_ PCWSTR name) const noexcept  // NOLINT(bugprone-exception-escape)
     {
-        for (unsigned counter = 0; counter < m_ulongFieldNameCount; ++counter)
+        for (auto counter = 0ul; counter < m_ulongFieldNameCount; ++counter)
         {
             if (ctString::ctOrdinalEqualsCaseInsensative(name, m_ulongFieldNames[counter]))
             {
@@ -1331,7 +1329,7 @@ namespace ctl
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(_In_ PCWSTR name) const noexcept  // NOLINT(bugprone-exception-escape)
     {
-        for (unsigned counter = 0; counter < m_ulonglongFieldNameCount; ++counter)
+        for (auto counter = 0ul; counter < m_ulonglongFieldNameCount; ++counter)
         {
             if (ctString::ctOrdinalEqualsCaseInsensative(name, m_ulonglongFieldNames[counter]))
             {
@@ -1344,7 +1342,7 @@ namespace ctl
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(_In_ PCWSTR name) const noexcept // NOLINT(bugprone-exception-escape)
     {
-        for (unsigned counter = 0; counter < m_stringFieldNameCount; ++counter)
+        for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
         {
             if (ctString::ctOrdinalEqualsCaseInsensative(name, m_stringFieldNames[counter]))
             {
@@ -1357,7 +1355,7 @@ namespace ctl
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<wil::unique_bstr>(_In_ PCWSTR name) const noexcept  // NOLINT(bugprone-exception-escape)
     {
-        for (unsigned counter = 0; counter < m_stringFieldNameCount; ++counter)
+        for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
         {
             if (ctString::ctOrdinalEqualsCaseInsensative(name, m_stringFieldNames[counter]))
             {

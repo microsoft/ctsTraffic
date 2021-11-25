@@ -46,14 +46,13 @@ BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata{};
-    const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
-    if (wsError != 0)
+    auto err = WSAStartup(WINSOCK_VERSION, &wsadata);
+    if (err != 0)
     {
-        wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", wsError);
-        return wsError;
+        wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", err);
+        return err;
     }
 
-    DWORD err = ERROR_SUCCESS;
     try
     {
         if (!ctsConfig::Startup(argc, argv))
@@ -61,12 +60,6 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
             ctsConfig::Shutdown();
             err = ERROR_INVALID_DATA;
         }
-    }
-    catch (const ctsSafeIntException& e)
-    {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid parameters : %ws", PrintSafeIntException(e)).c_str());
-        ctsConfig::Shutdown();
-        err = ERROR_INVALID_DATA;
     }
     catch (const invalid_argument& e)
     {
@@ -108,7 +101,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         // set the start timer as close as possible to the start of the engine
         ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::SnapQpcInMillis();
-        std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
+        const std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
         g_socketBroker = broker.get();
         broker->Start();
 
@@ -126,12 +119,6 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
             ctsConfig::PrintSummary(L"\n ** Time-limit of %lu reached **\n", ctsConfig::g_configSettings->TimeLimit);
         }
 #endif
-    }
-    catch (const ctsSafeIntException& e)
-    {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed when converting integers : %ws", PrintSafeIntException(e)).c_str());
-        ctsConfig::Shutdown();
-        return ERROR_INVALID_DATA;
     }
     catch (const wil::ResultException& e)
     {
@@ -211,10 +198,9 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         }
     }
     ctsConfig::PrintSummary(
-        L"  Total Time : %lld ms.\n",
-        static_cast<long long>(totalTimeRun));
+        L"  Total Time : %lld ms.\n", totalTimeRun);
 
-    long long errorCount =
+    int64_t errorCount =
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
     if (errorCount > MAXINT)

@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsIOPatternProtocolPolicy.hpp"
-#include "ctsIOPatternRateLimitPolicy.hpp"
 
 namespace ctsTraffic
 {
@@ -62,7 +61,7 @@ namespace ctsTraffic
         ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
         ///
         ctsTask InitiateIo() noexcept;
-        virtual ctsIoStatus CompleteIo(const ctsTask& task, unsigned long currentTransfer, unsigned long statusCode) noexcept = 0;
+        virtual ctsIoStatus CompleteIo(const ctsTask& task, uint32_t currentTransfer, uint32_t statusCode) noexcept = 0;
 
         ///
         /// Enabling callers to trigger writing statistics via ctsConfig
@@ -78,7 +77,7 @@ namespace ctsTraffic
         ///
         /// Exposing the last recorded error from the requested IO
         ///
-        [[nodiscard]] virtual unsigned long GetLastPatternError() const noexcept = 0;
+        [[nodiscard]] virtual uint32_t GetLastPatternError() const noexcept = 0;
     };
 
 
@@ -112,7 +111,7 @@ namespace ctsTraffic
             m_callback = std::move(callback);
         }
 
-        unsigned long GetLastPatternError() const noexcept final
+        uint32_t GetLastPatternError() const noexcept final
         {
             const auto autoLock = m_cs.lock();
             return m_protocolPolicy.get_last_error();

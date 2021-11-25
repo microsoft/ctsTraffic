@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
-#include "ctsSafeInt.hpp"
 
 namespace ctsTraffic
 {
@@ -28,7 +27,7 @@ namespace ctsTraffic
     template <typename Protocol>
     struct ctsIOPatternRateLimitPolicy
     {
-        void update_time_offset(ctsTask&, const ctsSignedLongLong& bufferSize) noexcept = delete;
+        void update_time_offset(ctsTask&, const int64_t& bufferSize) noexcept = delete;
     };
 
 
@@ -40,7 +39,7 @@ namespace ctsTraffic
     {
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
-        void update_time_offset(ctsTask&, const ctsSignedLongLong&) const noexcept
+        void update_time_offset(ctsTask&, const int64_t&) const noexcept
         {
             // no-op
         }
@@ -55,27 +54,23 @@ namespace ctsTraffic
     {
 
     private:
-        const ctsUnsignedLongLong m_bytesSendingPerQuantum;
-        const ctsUnsignedLongLong m_quantumPeriodMs;
-        ctsUnsignedLongLong m_bytesSentThisQuantum;
-        ctsUnsignedLongLong m_quantumStartTimeMs;
+        const uint64_t m_bytesSendingPerQuantum;
+        const int64_t m_quantumPeriodMs{ ctsConfig::g_configSettings->TcpBytesPerSecondPeriod };
+        uint64_t m_bytesSentThisQuantum{ 0 };
+        int64_t m_quantumStartTimeMs{ ctl::ctTimer::SnapQpcInMillis() };
 
     public:
         ctsIOPatternRateLimitPolicy() noexcept
-            : m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
-            m_quantumPeriodMs(ctsConfig::g_configSettings->TcpBytesPerSecondPeriod),
-            m_bytesSentThisQuantum(0ULL),
-            m_quantumStartTimeMs(ctl::ctTimer::SnapQpcInMillis())
+            : m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond()* ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL)
         {
 #ifdef CTSTRAFFIC_UNIT_TESTS
             PRINT_DEBUG_INFO(
-                L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %llu\n",
-                static_cast<unsigned long long>(this->m_bytesSendingPerQuantum),
-                static_cast<unsigned long long>(this->m_quantumPeriodMs));
+                L"\t\tctsIOPatternRateLimitPolicy: BytesSendingPerQuantum - %llu, QuantumPeriodMs - %lld\n",
+                m_bytesSendingPerQuantum, m_quantumPeriodMs);
 #endif
         }
 
-        void update_time_offset(ctsTask& task, const ctsUnsignedLongLong& bufferSize) noexcept
+        void update_time_offset(ctsTask& task, uint64_t bufferSize) noexcept
         {
             if (task.m_ioAction != ctsTaskAction::Send)
             {
@@ -85,27 +80,27 @@ namespace ctsTraffic
             task.m_timeOffsetMilliseconds = 0LL;
             const auto currentTimeMs(ctl::ctTimer::SnapQpcInMillis());
 
-            if (this->m_bytesSentThisQuantum < this->m_bytesSendingPerQuantum)
+            if (m_bytesSentThisQuantum < m_bytesSendingPerQuantum)
             {
-                if (currentTimeMs < this->m_quantumStartTimeMs + this->m_quantumPeriodMs)
+                if (currentTimeMs < m_quantumStartTimeMs + m_quantumPeriodMs)
                 {
-                    if (currentTimeMs > this->m_quantumStartTimeMs)
+                    if (currentTimeMs > m_quantumStartTimeMs)
                     {
                         // time is in the current quantum
-                        this->m_bytesSentThisQuantum += bufferSize;
+                        m_bytesSentThisQuantum += bufferSize;
                     }
                     else
                     {
                         // time is still in a prior quantum
                         task.m_timeOffsetMilliseconds = this->NewQuantumStartTime() - currentTimeMs;
-                        this->m_bytesSentThisQuantum += bufferSize;
+                        m_bytesSentThisQuantum += bufferSize;
                     }
                 }
                 else
                 {
                     // time is already in a new quantum - start over
-                    this->m_bytesSentThisQuantum = bufferSize;
-                    this->m_quantumStartTimeMs += (currentTimeMs - this->m_quantumStartTimeMs);
+                    m_bytesSentThisQuantum = bufferSize;
+                    m_quantumStartTimeMs += (currentTimeMs - m_quantumStartTimeMs);
                 }
             }
             else
@@ -116,31 +111,31 @@ namespace ctsTraffic
                 if (currentTimeMs < new_quantum_start_time_ms)
                 {
                     task.m_timeOffsetMilliseconds = new_quantum_start_time_ms - currentTimeMs;
-                    this->m_bytesSentThisQuantum = bufferSize;
-                    this->m_quantumStartTimeMs = new_quantum_start_time_ms;
+                    m_bytesSentThisQuantum = bufferSize;
+                    m_quantumStartTimeMs = new_quantum_start_time_ms;
                 }
                 else
                 {
-                    this->m_bytesSentThisQuantum = bufferSize;
-                    this->m_quantumStartTimeMs += (currentTimeMs - this->m_quantumStartTimeMs);
+                    m_bytesSentThisQuantum = bufferSize;
+                    m_quantumStartTimeMs += (currentTimeMs - m_quantumStartTimeMs);
                 }
             }
 #ifdef CTSTRAFFIC_UNIT_TESTS
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternRateLimitPolicy\n"
                 L"\tcurrent_time_ms: %lld\n"
-                L"\tquantum_start_time_ms: %llu\n"
+                L"\tquantum_start_time_ms: %lld\n"
                 L"\tbytes_sent_this_quantum: %llu\n",
                 currentTimeMs,
-                static_cast<long long>(this->m_quantumStartTimeMs),
-                static_cast<long long>(this->m_bytesSentThisQuantum));
+                m_quantumStartTimeMs,
+                m_bytesSentThisQuantum);
 #endif
         }
 
     private:
-        [[nodiscard]] long long NewQuantumStartTime() const
+        [[nodiscard]] int64_t NewQuantumStartTime() const
         {
-            return this->m_quantumStartTimeMs + this->m_bytesSentThisQuantum / this->m_bytesSendingPerQuantum * this->m_quantumPeriodMs;
+            return m_quantumStartTimeMs + static_cast<int64_t>(m_bytesSentThisQuantum / m_bytesSendingPerQuantum * m_quantumPeriodMs);
         }
     };
 }

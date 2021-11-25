@@ -31,16 +31,15 @@ namespace ctsTraffic
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctl::ctSockaddr& targetAddress) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
         }
 
         int gle = 0;
-        const ctl::ctSockaddr localAddr;
         const auto socketReference(sharedSocket->AcquireSocketLock());
-        const SOCKET socket = socketReference.GetSocket();
+        const auto socket = socketReference.GetSocket();
         if (socket == INVALID_SOCKET)
         {
             gle = WSAECONNABORTED;
@@ -62,15 +61,16 @@ namespace ctsTraffic
         // update the socket context if completed successfully - necessary with ConnectEx
         if (NO_ERROR == gle)
         {
-            const int err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
+            const auto err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
             FAIL_FAST_IF_MSG(
                 err != 0,
                 "setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
-                WSAGetLastError(), static_cast<long long>(socketReference.GetSocket()));
+                WSAGetLastError(), static_cast<int64_t>(socketReference.GetSocket()));
         }
 
         ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
 
+        const ctl::ctSockaddr localAddr;
         if (NO_ERROR == gle)
         {
             // store the local addr of the connection
@@ -91,17 +91,17 @@ namespace ctsTraffic
 
     void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
         }
 
-        int error = 0;
+        uint32_t error = 0;
         try
         {
             const auto socketReference(sharedSocket->AcquireSocketLock());
-            const SOCKET socket = socketReference.GetSocket();
+            const auto socket = socketReference.GetSocket();
             if (socket != INVALID_SOCKET)
             {
                 const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();

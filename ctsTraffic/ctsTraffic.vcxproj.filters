@@ -154,9 +154,6 @@
     <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="ctsSafeInt.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ctsIOPatternState.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

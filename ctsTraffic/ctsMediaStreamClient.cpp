@@ -71,7 +71,7 @@ namespace ctsTraffic
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -79,7 +79,7 @@ namespace ctsTraffic
 
         // hold a reference on the socket
         const auto lockedSocket = sharedSocket->AcquireSocketLock();
-        auto lockedPattern = lockedSocket.GetPattern();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern || lockedSocket.GetSocket() == INVALID_SOCKET)
         {
             return;
@@ -90,7 +90,7 @@ namespace ctsTraffic
         lockedPattern->RegisterCallback(
             [weakSocket](const ctsTask& task) noexcept {
                 // attempt to get a reference to the socket
-                auto lambdaSharedSocket(weakSocket.lock());
+                const auto lambdaSharedSocket(weakSocket.lock());
                 if (!lambdaSharedSocket)
                 {
                     return;
@@ -159,7 +159,7 @@ namespace ctsTraffic
     void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -173,7 +173,7 @@ namespace ctsTraffic
             return;
         }
 
-        const SOCKET socket = lockedSocket.GetSocket();
+        const auto socket = lockedSocket.GetSocket();
         const auto error = ctsConfig::SetPreConnectOptions(socket);
         ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
         if (error != NO_ERROR)
@@ -264,7 +264,7 @@ namespace ctsTraffic
                     // - or the IO failed
                     if (result.m_errorCode != 0)
                     {
-                        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsMediaStreamClient]\n", functionName, result.m_errorCode);
+                        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsMediaStreamClient]\n", functionName, result.m_errorCode);
                     }
 
                     const auto protocolStatus = lockedPattern->CompleteIo(
@@ -297,7 +297,7 @@ namespace ctsTraffic
                             break;
 
                         default:
-                            FAIL_FAST_MSG("ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %u\n", static_cast<unsigned>(protocolStatus));
+                            FAIL_FAST_MSG("ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
                     }
 
                     // decrement the IO count if failed and/or inlined-completed
@@ -361,7 +361,7 @@ namespace ctsTraffic
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctsTask& task) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -369,7 +369,7 @@ namespace ctsTraffic
 
         // hold a reference on the socket
         const auto lockedSocket = sharedSocket->AcquireSocketLock();
-        auto lockedPattern = lockedSocket.GetPattern();
+        const auto lockedPattern = lockedSocket.GetPattern();
         if (!lockedPattern)
         {
             sharedSocket->DecrementIo();
@@ -377,7 +377,7 @@ namespace ctsTraffic
             return;
         }
 
-        const SOCKET socket = lockedSocket.GetSocket();
+        const auto socket = lockedSocket.GetSocket();
 
         int gle = NO_ERROR;
         DWORD transferred = 0;
@@ -403,7 +403,7 @@ namespace ctsTraffic
         {
             // something truncated the datagram - don't treat it as a hard-error
             // pass the count to the protocol to track it at their layer
-            ctsConfig::PrintErrorInfo(L"MediaStream Client: %ws failed with WSAEMSGSIZE: received [%d bytes] - expected [%d bytes]",
+            ctsConfig::PrintErrorInfo(L"MediaStream Client: %ws failed with WSAEMSGSIZE: received [%u bytes] - expected [%u bytes]",
                 task.m_ioAction == ctsTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo", transferred, task.m_bufferLength);
             gle = NO_ERROR;
         }
@@ -454,8 +454,8 @@ namespace ctsTraffic
 
             default:
                 FAIL_FAST_MSG(
-                    "ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %u\n",
-                    static_cast<unsigned>(protocolStatus));
+                    "ctsMediaStreamClientIoCompletionCallback: unknown ctsSocket::IOStatus - %d\n",
+                    protocolStatus);
         }
 
         // always decrement *after* attempting new IO - the prior IO is now formally "done"
@@ -476,7 +476,7 @@ namespace ctsTraffic
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctl::ctSockaddr& targetAddress) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -485,7 +485,7 @@ namespace ctsTraffic
         int gle = NO_ERROR;
         // hold a reference on the socket
         const auto lockedSocket = sharedSocket->AcquireSocketLock();
-        const SOCKET socket = lockedSocket.GetSocket();
+        const auto socket = lockedSocket.GetSocket();
         if (socket == INVALID_SOCKET)
         {
             gle = WSAECONNABORTED;
