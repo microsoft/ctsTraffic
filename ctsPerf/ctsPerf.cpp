@@ -48,9 +48,9 @@ BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 constexpr PCWSTR c_usageStatement =
     L"ctsPerf.exe usage::\n"
     L" #### <time to run (in seconds)>  [default is 60 seconds]\n"
-	L" -Networking [will enable performance and reliability related Network counters]\n"
-	L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
-	L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
+    L" -Networking [will enable performance and reliability related Network counters]\n"
+    L" -Estats [will enable ESTATS tracking for all TCP connections]\n"
+    L" -MeanOnly  [will save memory by not storing every data point, only a sum and mean\n"
     L"\n"
     L" [optionally the specific interface description can be specified\n"
     L"  by default *all* interface counters are collected]\n"
@@ -129,8 +129,7 @@ bool g_meanOnly = false;
 int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
-    const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
-    if (wsError != 0)
+    if (const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata); wsError != 0)
     {
         ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
@@ -142,14 +141,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     {
         const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
-        return gle;
+        return static_cast<int>(gle);
     }
 
     if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE))
     {
         const auto gle = ::GetLastError();
         wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
-        return gle;
+        return static_cast<int>(gle);
     }
 
     auto trackNetworking = false;
@@ -181,7 +180,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 wprintf(c_usageStatement);
                 return 1;
             }
-
         }
         else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-pid:"))
         {
@@ -195,7 +193,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             if (pidString == L"0")
             {
                 processId = 0;
-
             }
             else
             {
@@ -207,17 +204,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                     return 1;
                 }
             }
-
         }
         else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-estats"))
         {
             trackEstats = true;
-
         }
         else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-Networking"))
         {
             trackNetworking = true;
-
         }
         else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-InterfaceDescription:"))
         {
@@ -226,12 +220,10 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             // strip off the "-InterfaceDescription:" preface to the string
             const auto endOfToken = ranges::find(trackInterfaceDescription, L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
-
         }
         else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-MeanOnly"))
         {
             g_meanOnly = true;
-
         }
         else
         {
@@ -263,6 +255,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     try
     {
+        // ReSharper disable once CppTooWideScopeInitStatement
         ctsPerf::ctsEstats estats;
         if (trackEstats)
         {
@@ -319,7 +312,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
         if (!trackProcess.empty())
         {
             performanceVector.emplace_back(InstantiatePerProcessByNameCounters(trackProcess));
-
         }
         else if (processId != c_uninitializedProcessId)
         {
@@ -383,6 +375,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentDpcTime;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_processorDpcsQueuedPerSecond;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentPrivilegedTime;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentUserTime;
+
 ctWmiPerformance InstantiateProcessorCounters()
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -404,174 +397,181 @@ ctWmiPerformance InstantiateProcessorCounters()
     performanceCounter.add_counter(g_processorPercentOfMax);
     wprintf(L".");
 
-	g_processorPercentDpcTime = ctCreatePerfCounter<ULONGLONG>(
+    g_processorPercentDpcTime = ctCreatePerfCounter<ULONGLONG>(
         *g_wmi,
-		ctWmiEnumClassName::Processor,
-		L"PercentDPCTime",
-		g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-	performanceCounter.add_counter(g_processorPercentDpcTime);
-	wprintf(L".");
+        ctWmiEnumClassName::Processor,
+        L"PercentDPCTime",
+        g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+    performanceCounter.add_counter(g_processorPercentDpcTime);
+    wprintf(L".");
 
-	g_processorDpcsQueuedPerSecond = ctCreatePerfCounter<ULONG>(
+    g_processorDpcsQueuedPerSecond = ctCreatePerfCounter<ULONG>(
         *g_wmi,
-		ctWmiEnumClassName::Processor,
-		L"DPCsQueuedPersec",
-		g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-	performanceCounter.add_counter(g_processorDpcsQueuedPerSecond);
-	wprintf(L".");
+        ctWmiEnumClassName::Processor,
+        L"DPCsQueuedPersec",
+        g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+    performanceCounter.add_counter(g_processorDpcsQueuedPerSecond);
+    wprintf(L".");
 
-	g_processorPercentPrivilegedTime = ctCreatePerfCounter<ULONGLONG>(
+    g_processorPercentPrivilegedTime = ctCreatePerfCounter<ULONGLONG>(
         *g_wmi,
-		ctWmiEnumClassName::Processor,
-		L"PercentPrivilegedTime",
-		g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-	performanceCounter.add_counter(g_processorPercentPrivilegedTime);
-	wprintf(L".");
+        ctWmiEnumClassName::Processor,
+        L"PercentPrivilegedTime",
+        g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+    performanceCounter.add_counter(g_processorPercentPrivilegedTime);
+    wprintf(L".");
 
-	g_processorPercentUserTime = ctCreatePerfCounter<ULONGLONG>(
+    g_processorPercentUserTime = ctCreatePerfCounter<ULONGLONG>(
         *g_wmi,
-		ctWmiEnumClassName::Processor,
-		L"PercentUserTime",
-		g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-	performanceCounter.add_counter(g_processorPercentUserTime);
-	wprintf(L".");
+        ctWmiEnumClassName::Processor,
+        L"PercentUserTime",
+        g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
+    performanceCounter.add_counter(g_processorPercentUserTime);
+    wprintf(L".");
 
     return performanceCounter;
 }
+
 void DeleteProcessorCounters() noexcept
 {
     g_processorTime.reset();
     g_processorPercentOfMax.reset();
-	g_processorPercentDpcTime.reset();
-	g_processorDpcsQueuedPerSecond.reset();
-	g_processorPercentPrivilegedTime.reset();
-	g_processorPercentUserTime.reset();
+    g_processorPercentDpcTime.reset();
+    g_processorDpcsQueuedPerSecond.reset();
+    g_processorPercentPrivilegedTime.reset();
+    g_processorPercentUserTime.reset();
 }
+
 void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 {
     ctWmiEnumerate enumProcessors(*g_wmi);
     enumProcessors.query(L"SELECT * FROM Win32_PerfFormattedData_Counters_ProcessorInformation");
-    if (enumProcessors.begin() == enumProcessors.end()) {
+    if (enumProcessors.begin() == enumProcessors.end())
+    {
         throw exception("Unable to find any processors to report on - querying Win32_PerfFormattedData_Counters_ProcessorInformation returned nothing");
     }
-	vector<ULONGLONG> ullData;
-	vector<ULONG> ulData;
+    vector<ULONGLONG> ullData;
+    vector<ULONG> ulData;
 
-	for (const auto& processor : enumProcessors) {
-		wstring name;
-		processor.get(L"Name", &name);
+    for (const auto& processor : enumProcessors)
+    {
+        wstring name;
+        processor.get(L"Name", &name);
 
-		// processor name strings look like "0,1" when there are more than one cores
-		// need to replace the comma so the csv will print correctly
-		writer.WriteRow(
-			wil::str_printf<std::wstring>(
-				L"Processor %ws",
-				ctString::ctReplaceAllCopy(name, L",", L" - ").c_str()));
+        // processor name strings look like "0,1" when there are more than one cores
+        // need to replace the comma so the csv will print correctly
+        writer.WriteRow(
+            wil::str_printf<std::wstring>(
+                L"Processor %ws",
+                ctString::ctReplaceAllCopy(name, L",", L" - ").c_str()));
 
         const auto processor_range = g_processorTime->reference_range(name.c_str());
-		vector<ULONGLONG> processorTimeVector(processor_range.first, processor_range.second);
+        vector processorTimeVector(processor_range.first, processor_range.second);
 
         const auto percent_range = g_processorPercentOfMax->reference_range(name.c_str());
-		vector<ULONG> processorPercentVector(percent_range.first, percent_range.second);
+        vector processorPercentVector(percent_range.first, percent_range.second);
 
         const auto percent_dpc_time_range = g_processorPercentDpcTime->reference_range(name.c_str());
         const auto dpcs_queued_per_second_range = g_processorDpcsQueuedPerSecond->reference_range(name.c_str());
         const auto processor_percent_privileged_time_range = g_processorPercentPrivilegedTime->reference_range(name.c_str());
         const auto processor_percent_user_time_range = g_processorPercentUserTime->reference_range(name.c_str());
 
-		if (g_meanOnly) {
-		    // ReSharper disable once CppUseAuto
-			vector<ULONGLONG> normalizedProcessorTime(processorTimeVector);
+        if (g_meanOnly)
+        {
+            // ReSharper disable once CppUseAuto
+            vector normalizedProcessorTime(processorTimeVector);
 
-			// convert to a percentage
-			auto calculatedProcessorTime = static_cast<double>(processorTimeVector[3]) / 100.0;
-			calculatedProcessorTime *= processorPercentVector[3] / 100.0;
-			normalizedProcessorTime[3] = static_cast<ULONGLONG>(calculatedProcessorTime * 100UL);
+            // convert to a percentage
+            auto calculatedProcessorTime = static_cast<double>(processorTimeVector[3]) / 100.0;
+            calculatedProcessorTime *= processorPercentVector[3] / 100.0;
+            normalizedProcessorTime[3] = static_cast<ULONGLONG>(calculatedProcessorTime * 100UL);
 
-			writer.WriteMean(
-				L"Processor",
-				L"Raw CPU Usage",
-				processorTimeVector);
+            writer.WriteMean(
+                L"Processor",
+                L"Raw CPU Usage",
+                processorTimeVector);
 
-			writer.WriteMean(
-				L"Processor",
-				L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
-				normalizedProcessorTime);
+            writer.WriteMean(
+                L"Processor",
+                L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
+                normalizedProcessorTime);
 
-			ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
-			writer.WriteMean(
-				L"Processor",
-				L"Percent DPC Time",
-				ullData);
+            ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
+            writer.WriteMean(
+                L"Processor",
+                L"Percent DPC Time",
+                ullData);
 
-			ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
-			writer.WriteMean(
-				L"Processor",
-				L"DPCs Queued Per Second",
-				ulData);
+            ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
+            writer.WriteMean(
+                L"Processor",
+                L"DPCs Queued Per Second",
+                ulData);
 
-			ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
-			writer.WriteMean(
-				L"Processor",
-				L"Percent Privileged Time",
-				ullData);
+            ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
+            writer.WriteMean(
+                L"Processor",
+                L"Percent Privileged Time",
+                ullData);
 
-			ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
-			writer.WriteMean(
-				L"Processor",
-				L"Percent User Time",
-				ullData);
-		}
-		else {
-			vector<ULONG> normalizedProcessorTime;
-			// produce the raw % as well as the 'normalized' % based off of the PercentofMaximumFrequency
-			auto percentageIterator(processorPercentVector.begin());
-			for (const auto& processorData : processorTimeVector) {
-				// convert to a percentage
-				auto calculatedProcessorTime = static_cast<double>(processorData) / 100.0;
-				calculatedProcessorTime *= *percentageIterator / 100.0;
+            ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
+            writer.WriteMean(
+                L"Processor",
+                L"Percent User Time",
+                ullData);
+        }
+        else
+        {
+            vector<ULONG> normalizedProcessorTime;
+            // produce the raw % as well as the 'normalized' % based off of the PercentofMaximumFrequency
+            auto percentageIterator(processorPercentVector.begin());
+            for (const auto& processorData : processorTimeVector)
+            {
+                // convert to a percentage
+                auto calculatedProcessorTime = static_cast<double>(processorData) / 100.0;
+                calculatedProcessorTime *= *percentageIterator / 100.0;
 
-				normalizedProcessorTime.push_back(static_cast<ULONG>(calculatedProcessorTime * 100UL));
-				++percentageIterator;
-			}
+                normalizedProcessorTime.push_back(static_cast<ULONG>(calculatedProcessorTime * 100UL));
+                ++percentageIterator;
+            }
 
-			writer.WriteDetails(
-				L"Processor",
-				L"Raw CPU Usage",
-				processorTimeVector);
+            writer.WriteDetails(
+                L"Processor",
+                L"Raw CPU Usage",
+                processorTimeVector);
 
-			writer.WriteDetails(
-				L"Processor",
-				L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
-				normalizedProcessorTime);
+            writer.WriteDetails(
+                L"Processor",
+                L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
+                normalizedProcessorTime);
 
-			ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
-			writer.WriteDetails(
-				L"Processor",
-				L"Percent DPC Time",
-				ullData);
+            ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
+            writer.WriteDetails(
+                L"Processor",
+                L"Percent DPC Time",
+                ullData);
 
-			ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
-			writer.WriteDetails(
-				L"Processor",
-				L"DPCs Queued Per Second",
-				ulData);
+            ulData.assign(dpcs_queued_per_second_range.first, dpcs_queued_per_second_range.second);
+            writer.WriteDetails(
+                L"Processor",
+                L"DPCs Queued Per Second",
+                ulData);
 
-			ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
-			writer.WriteDetails(
-				L"Processor",
-				L"Percent Privileged Time",
-				ullData);
+            ullData.assign(processor_percent_privileged_time_range.first, processor_percent_privileged_time_range.second);
+            writer.WriteDetails(
+                L"Processor",
+                L"Percent Privileged Time",
+                ullData);
 
-			ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
-			writer.WriteDetails(
-				L"Processor",
-				L"Percent User Time",
-				ullData);
-		}
-	}
+            ullData.assign(processor_percent_user_time_range.first, processor_percent_user_time_range.second);
+            writer.WriteDetails(
+                L"Processor",
+                L"Percent User Time",
+                ullData);
+        }
+    }
 
-	writer.WriteEmptyRow();
+    writer.WriteEmptyRow();
 }
 
 /****************************************************************************************************/
@@ -579,6 +579,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 /****************************************************************************************************/
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_pagedPoolBytes;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_nonPagedPoolBytes;
+
 ctWmiPerformance InstantiateMemoryCounters()
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -600,18 +601,21 @@ ctWmiPerformance InstantiateMemoryCounters()
 
     return performanceCounter;
 }
+
 void DeleteMemoryCounters() noexcept
 {
     g_pagedPoolBytes.reset();
     g_nonPagedPoolBytes.reset();
 }
+
 void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONGLONG> ullData;
     const auto paged_pool_range = g_pagedPoolBytes->reference_range();
     const auto non_paged_pool_range = g_nonPagedPoolBytes->reference_range();
 
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         ullData.assign(paged_pool_range.first, paged_pool_range.second);
         writer.WriteMean(
             L"Memory",
@@ -623,7 +627,9 @@ void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer)
             L"Memory",
             L"PoolNonpagedBytes",
             ullData);
-    } else {
+    }
+    else
+    {
         ullData.assign(paged_pool_range.first, paged_pool_range.second);
         writer.WriteDetails(
             L"Memory",
@@ -649,6 +655,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedDi
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedErrors;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsPerSecond;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterActiveRscConnections;
+
 ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInterfaceDescription)
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -658,7 +665,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"BytesTotalPersec",
         g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterTotalBytes->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterTotalBytes);
@@ -669,7 +677,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"OffloadedConnections",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterOffloadedConnections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterOffloadedConnections);
@@ -680,7 +689,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"PacketsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterPacketsOutboundDiscarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterPacketsOutboundDiscarded);
@@ -691,7 +701,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"PacketsOutboundErrors",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterPacketsOutboundErrors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterPacketsOutboundErrors);
@@ -702,7 +713,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"PacketsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterPacketsReceivedDiscarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterPacketsReceivedDiscarded);
@@ -713,7 +725,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"PacketsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterPacketsReceivedErrors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterPacketsReceivedErrors);
@@ -724,7 +737,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"PacketsPersec",
         g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterPacketsPerSecond->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterPacketsPerSecond);
@@ -735,7 +749,8 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
         ctWmiEnumClassName::NetworkAdapter,
         L"TCPActiveRSCConnections",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkAdapterActiveRscConnections->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkAdapterActiveRscConnections);
@@ -743,6 +758,7 @@ ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInte
 
     return performanceCounter;
 }
+
 void DeleteNetworkAdapterCounters() noexcept
 {
     g_networkAdapterTotalBytes.reset();
@@ -754,6 +770,7 @@ void DeleteNetworkAdapterCounters() noexcept
     g_networkAdapterPacketsPerSecond.reset();
     g_networkAdapterActiveRscConnections.reset();
 }
+
 void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONGLONG> ullData;
@@ -763,25 +780,30 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
     // - making a single query directly here to at least get the names
     ctWmiEnumerate enumAdapter(*g_wmi);
     enumAdapter.query(L"SELECT * FROM Win32_PerfFormattedData_Tcpip_NetworkAdapter");
-    if (enumAdapter.begin() == enumAdapter.end()) {
+    if (enumAdapter.begin() == enumAdapter.end())
+    {
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkAdapter returned nothing");
     }
 
-	writer.WriteRow(L"NetworkAdapter");
-    for (const auto& adapter : enumAdapter) {
+    writer.WriteRow(L"NetworkAdapter");
+    for (const auto& adapter : enumAdapter)
+    {
         wstring name;
         adapter.get(L"Name", &name);
 
         auto networkRange = g_networkAdapterPacketsPerSecond->reference_range(name.c_str());
         ullData.assign(networkRange.first, networkRange.second);
-        if (g_meanOnly) {
+        if (g_meanOnly)
+        {
             writer.WriteMean(
                 L"NetworkAdapter",
                 wil::str_printf<std::wstring>(
                     L"PacketsPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
-        } else {
+        }
+        else
+        {
             writer.WriteDetails(
                 L"NetworkAdapter",
                 wil::str_printf<std::wstring>(
@@ -791,14 +813,17 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
         }
         networkRange = g_networkAdapterTotalBytes->reference_range(name.c_str());
         ullData.assign(networkRange.first, networkRange.second);
-        if (g_meanOnly) {
+        if (g_meanOnly)
+        {
             writer.WriteMean(
                 L"NetworkAdapter",
                 wil::str_printf<std::wstring>(
                     L"BytesTotalPersec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
-        } else {
+        }
+        else
+        {
             writer.WriteDetails(
                 L"NetworkAdapter",
                 wil::str_printf<std::wstring>(
@@ -861,7 +886,7 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
                 name.c_str()).c_str(),
             ullData);
 
-		writer.WriteEmptyRow();
+        writer.WriteEmptyRow();
     }
 }
 
@@ -874,6 +899,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsOutbound
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedDiscarded;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedErrors;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedUnknown;
+
 ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackInterfaceDescription)
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -883,7 +909,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"BytesTotalPerSec",
         g_meanOnly ? ctWmiPerformanceCollectionType::MeanOnly : ctWmiPerformanceCollectionType::Detailed);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfaceTotalBytes->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfaceTotalBytes);
@@ -894,7 +921,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"PacketsOutboundDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfacePacketsOutboundDiscarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfacePacketsOutboundDiscarded);
@@ -905,7 +933,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"PacketsOutboundErrors",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfacePacketsOutboundErrors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfacePacketsOutboundErrors);
@@ -916,7 +945,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedDiscarded",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfacePacketsReceivedDiscarded->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfacePacketsReceivedDiscarded);
@@ -927,7 +957,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedErrors",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfacePacketsReceivedErrors->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfacePacketsReceivedErrors);
@@ -938,7 +969,8 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
         ctWmiEnumClassName::NetworkInterface,
         L"PacketsReceivedUnknown",
         ctWmiPerformanceCollectionType::FirstLast);
-    if (!trackInterfaceDescription.empty()) {
+    if (!trackInterfaceDescription.empty())
+    {
         g_networkInterfacePacketsReceivedUnknown->add_filter(L"Name", trackInterfaceDescription.c_str());
     }
     performanceCounter.add_counter(g_networkInterfacePacketsReceivedUnknown);
@@ -946,6 +978,7 @@ ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackIn
 
     return performanceCounter;
 }
+
 void DeleteNetworkInterfaceCounters() noexcept
 {
     g_networkInterfaceTotalBytes.reset();
@@ -955,6 +988,7 @@ void DeleteNetworkInterfaceCounters() noexcept
     g_networkInterfacePacketsReceivedErrors.reset();
     g_networkInterfacePacketsReceivedUnknown.reset();
 }
+
 void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONGLONG> ullData;
@@ -964,25 +998,30 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
     // - making a single query directly here to at least get the names
     ctWmiEnumerate enumAdapter(*g_wmi);
     enumAdapter.query(L"SELECT * FROM Win32_PerfFormattedData_Tcpip_NetworkInterface");
-    if (enumAdapter.begin() == enumAdapter.end()) {
+    if (enumAdapter.begin() == enumAdapter.end())
+    {
         throw exception("Unable to find an adapter to report on - querying Win32_PerfFormattedData_Tcpip_NetworkInterface returned nothing");
     }
 
-	writer.WriteRow(L"NetworkInterface");
-    for (const auto& adapter : enumAdapter) {
+    writer.WriteRow(L"NetworkInterface");
+    for (const auto& adapter : enumAdapter)
+    {
         wstring name;
         adapter.get(L"Name", &name);
 
         const auto byte_range = g_networkInterfaceTotalBytes->reference_range(name.c_str());
         ullData.assign(byte_range.first, byte_range.second);
-        if (g_meanOnly) {
+        if (g_meanOnly)
+        {
             writer.WriteMean(
                 L"NetworkInterface",
                 wil::str_printf<std::wstring>(
                     L"BytesTotalPerSec for interface %ws",
                     name.c_str()).c_str(),
                 ullData);
-        } else {
+        }
+        else
+        {
             writer.WriteDetails(
                 L"NetworkInterface",
                 wil::str_printf<std::wstring>(
@@ -1035,7 +1074,7 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
                 name.c_str()).c_str(),
             ullData);
 
-		writer.WriteEmptyRow();
+        writer.WriteEmptyRow();
     }
 }
 
@@ -1061,6 +1100,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedHeaderErrors;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedUnknownProtocol;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentReassemblyFailures;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentationFailures;
+
 ctWmiPerformance InstantiateIPCounters()
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -1195,6 +1235,7 @@ ctWmiPerformance InstantiateIPCounters()
 
     return performanceCounter;
 }
+
 void DeleteIPCounters() noexcept
 {
     g_tcpipIpv4OutboundDiscarded.reset();
@@ -1215,11 +1256,12 @@ void DeleteIPCounters() noexcept
     g_tcpipIpv6FragmentReassemblyFailures.reset();
     g_tcpipIpv6FragmentationFailures.reset();
 }
+
 void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
-	writer.WriteRow(L"TCPIP - IPv4");
+    writer.WriteRow(L"TCPIP - IPv4");
 
     auto networkLossRange = g_tcpipIpv4OutboundDiscarded->reference_range();
     ulData.assign(networkLossRange.first, networkLossRange.second);
@@ -1333,7 +1375,7 @@ void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer)
         L"FragmentationFailures",
         ulData);
 
-	writer.WriteEmptyRow();
+    writer.WriteEmptyRow();
 }
 
 
@@ -1349,6 +1391,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionsReset;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionsReset;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnections;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnectionsPerSec;
+
 ctWmiPerformance InstantiateTCPCounters()
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -1419,6 +1462,7 @@ ctWmiPerformance InstantiateTCPCounters()
 
     return performanceCounter;
 }
+
 void DeleteTCPCounters() noexcept
 {
     g_tcpipTcpv4ConnectionsEstablished.reset();
@@ -1430,19 +1474,23 @@ void DeleteTCPCounters() noexcept
     g_winsockBspRejectedConnections.reset();
     g_winsockBspRejectedConnectionsPerSec.reset();
 }
+
 void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
-	writer.WriteRow(L"TCPIP - TCPv4");
+    writer.WriteRow(L"TCPIP - TCPv4");
     auto networkRange = g_tcpipTcpv4ConnectionsEstablished->reference_range();
     ulData.assign(networkRange.first, networkRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - TCPv4",
             L"ConnectionsEstablished",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - TCPv4",
             L"ConnectionsEstablished",
@@ -1451,13 +1499,15 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 
     networkRange = g_tcpipTcpv6ConnectionsEstablished->reference_range();
     ulData.assign(networkRange.first, networkRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - TCPv6",
             L"ConnectionsEstablished",
             ulData);
     }
-    else {
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - TCPv6",
             L"ConnectionsEstablished",
@@ -1501,19 +1551,22 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 
     networkRange = g_winsockBspRejectedConnectionsPerSec->reference_range();
     ulData.assign(networkRange.first, networkRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"Winsock",
             L"RejectedConnectionsPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"Winsock",
             L"RejectedConnectionsPersec",
             ulData);
     }
 
-	writer.WriteEmptyRow();
+    writer.WriteEmptyRow();
 }
 
 
@@ -1529,6 +1582,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6ReceivedErrors;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6DatagramsPerSec;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagrams;
 shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagramsPerSecond;
+
 ctWmiPerformance InstantiateUDPCounters()
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -1599,6 +1653,7 @@ ctWmiPerformance InstantiateUDPCounters()
 
     return performanceCounter;
 }
+
 void DeleteUDPCounters() noexcept
 {
     g_tcpipUdpv4NoportPerSec.reset();
@@ -1610,20 +1665,24 @@ void DeleteUDPCounters() noexcept
     g_winsockBspDroppedDatagrams.reset();
     g_winsockBspDroppedDatagramsPerSecond.reset();
 }
+
 void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONG> ulData;
 
-	writer.WriteRow(L"TCPIP - UDPv4");
+    writer.WriteRow(L"TCPIP - UDPv4");
 
     auto udpRange = g_tcpipUdpv4NoportPerSec->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - UDPv4",
             L"DatagramsNoPortPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - UDPv4",
             L"DatagramsNoPortPersec",
@@ -1632,36 +1691,42 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 
     udpRange = g_tcpipUdpv4DatagramsPerSec->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - UDPv4",
             L"DatagramsPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - UDPv4",
             L"DatagramsPersec",
             ulData);
     }
 
-	udpRange = g_tcpipUdpv4ReceivedErrors->reference_range();
-	ulData.assign(udpRange.first, udpRange.second);
-	writer.WriteDifference(
-		L"TCPIP - UDPv4",
-		L"DatagramsReceivedErrors",
-		ulData);
-
-	writer.WriteEmptyRow();
-	writer.WriteRow(L"TCPIP - UDPv6");
-
-	udpRange = g_tcpipUdpv6NoportPerSec->reference_range();
+    udpRange = g_tcpipUdpv4ReceivedErrors->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
-    if (g_meanOnly) {
+    writer.WriteDifference(
+        L"TCPIP - UDPv4",
+        L"DatagramsReceivedErrors",
+        ulData);
+
+    writer.WriteEmptyRow();
+    writer.WriteRow(L"TCPIP - UDPv6");
+
+    udpRange = g_tcpipUdpv6NoportPerSec->reference_range();
+    ulData.assign(udpRange.first, udpRange.second);
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - UDPv6",
             L"DatagramsNoPortPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - UDPv6",
             L"DatagramsNoPortPersec",
@@ -1670,12 +1735,15 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 
     udpRange = g_tcpipUdpv6DatagramsPerSec->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"TCPIP - UDPv6",
             L"DatagramsPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"TCPIP - UDPv6",
             L"DatagramsPersec",
@@ -1689,8 +1757,8 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
         L"DatagramsReceivedErrors",
         ulData);
 
-	writer.WriteEmptyRow();
-	writer.WriteRow(L"Winsock Datagrams");
+    writer.WriteEmptyRow();
+    writer.WriteRow(L"Winsock Datagrams");
 
     udpRange = g_winsockBspDroppedDatagrams->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
@@ -1701,19 +1769,22 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 
     udpRange = g_winsockBspDroppedDatagramsPerSecond->reference_range();
     ulData.assign(udpRange.first, udpRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             L"Winsock",
             L"DroppedDatagramsPersec",
             ulData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             L"Winsock",
             L"DroppedDatagramsPersec",
             ulData);
     }
 
-	writer.WriteEmptyRow();
+    writer.WriteEmptyRow();
 }
 
 
@@ -1723,6 +1794,7 @@ shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessUserTime;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessPrivateBytes;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessVirtualBytes;
 shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessWorkingSet;
+
 ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackProcess)
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -1784,6 +1856,7 @@ ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackPr
 
     return performanceCounter;
 }
+
 ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
 {
     ctWmiPerformance performanceCounter(*g_wmi);
@@ -1845,6 +1918,7 @@ ctWmiPerformance InstantiatePerProcessByPIDCounters(const DWORD processId)
 
     return performanceCounter;
 }
+
 void DeletePerProcessCounters() noexcept
 {
     g_perProcessPrivilegedTime.reset();
@@ -1854,28 +1928,34 @@ void DeletePerProcessCounters() noexcept
     g_perProcessVirtualBytes.reset();
     g_perProcessWorkingSet.reset();
 }
+
 void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processId, ctsPerf::ctsWriteDetails& writer)
 {
     vector<ULONGLONG> ullData;
 
     wstring counterClassname;
-    if (!trackProcess.empty()) {
+    if (!trackProcess.empty())
+    {
         wstring fullname(trackProcess);
         fullname += L".exe";
         counterClassname = wil::str_printf<std::wstring>(L"Process (%ws)", fullname.c_str());
-
-    } else {
+    }
+    else
+    {
         counterClassname = wil::str_printf<std::wstring>(L"Process (pid %u)", processId);
     }
 
     auto perProcessRange = g_perProcessPrivilegedTime->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"PercentPrivilegedTime",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"PercentPrivilegedTime",
@@ -1884,12 +1964,15 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
 
     perProcessRange = g_perProcessProcessorTime->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"PercentProcessorTime",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"PercentProcessorTime",
@@ -1898,12 +1981,15 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
 
     perProcessRange = g_perProcessUserTime->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"PercentUserTime",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"PercentUserTime",
@@ -1912,12 +1998,15 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
 
     perProcessRange = g_perProcessPrivateBytes->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"PrivateBytes",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"PrivateBytes",
@@ -1926,12 +2015,15 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
 
     perProcessRange = g_perProcessVirtualBytes->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"VirtualBytes",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"VirtualBytes",
@@ -1940,12 +2032,15 @@ void ProcessPerProcessCounters(const wstring& trackProcess, const DWORD processI
 
     perProcessRange = g_perProcessWorkingSet->reference_range();
     ullData.assign(perProcessRange.first, perProcessRange.second);
-    if (g_meanOnly) {
+    if (g_meanOnly)
+    {
         writer.WriteMean(
             counterClassname.c_str(),
             L"WorkingSet",
             ullData);
-    } else {
+    }
+    else
+    {
         writer.WriteDetails(
             counterClassname.c_str(),
             L"WorkingSet",

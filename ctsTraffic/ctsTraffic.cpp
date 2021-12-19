@@ -101,7 +101,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         // set the start timer as close as possible to the start of the engine
         ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::SnapQpcInMillis();
-        const std::shared_ptr<ctsSocketBroker> broker(std::make_shared<ctsSocketBroker>());
+        const auto broker(std::make_shared<ctsSocketBroker>());
         g_socketBroker = broker.get();
         broker->Start();
 

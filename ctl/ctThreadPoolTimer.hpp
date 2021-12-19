@@ -27,9 +27,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctTimer.hpp"
 
 
-namespace ctl
-{
-    namespace Details
+namespace ctl { namespace Details
     {
         struct ctThreadpoolTimerCallbackInfo
         {
@@ -45,19 +43,19 @@ namespace ctl
 
             explicit ctThreadpoolTimerCallbackInfo(std::function<void()>&& callback, int64_t milliseconds, uint32_t period) noexcept :
                 Callback(std::move(callback)),
+                TimerExpiration(ctTimer::ConvertMillisToAbsoluteFiletime(ctTimer::SnapSystemTimeInMillis() + milliseconds)),
                 ReoccuringPeriod(period)
             {
-                using namespace ctTimer;
-                TimerExpiration = ConvertMillisToAbsoluteFiletime(SnapSystemTimeInMillis() + milliseconds);
             }
 
             // supporting only move semantics
-            ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
+            ctThreadpoolTimerCallbackInfo(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept :
+                Callback(std::move(callback_info.Callback)),
+                TimerExpiration(callback_info.TimerExpiration),
+                ReoccuringPeriod(callback_info.ReoccuringPeriod)
             {
-                Callback = std::move(callback_info.Callback);
-                TimerExpiration = callback_info.TimerExpiration;
-                ReoccuringPeriod = callback_info.ReoccuringPeriod;
             }
+
             ctThreadpoolTimerCallbackInfo& operator=(ctThreadpoolTimerCallbackInfo&& callback_info) noexcept
             {
                 Callback = std::move(callback_info.Callback);
@@ -95,7 +93,7 @@ namespace ctl
     class ctThreadpoolTimer
     {
     public:
-        explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON ptp_env = nullptr) noexcept :  // NOLINT(misc-misplaced-const)
+        explicit ctThreadpoolTimer(_In_opt_ const PTP_CALLBACK_ENVIRON ptp_env = nullptr) noexcept : // NOLINT(misc-misplaced-const)
             m_tpEnvironment(ptp_env)
         {
         }
@@ -150,15 +148,15 @@ namespace ctl
         //
         // Private members
         //
-        wil::critical_section m_timerLock{ 500 };
-        const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr;  // NOLINT(misc-misplaced-const)
+        wil::critical_section m_timerLock{500};
+        const PTP_CALLBACK_ENVIRON m_tpEnvironment = nullptr; // NOLINT(misc-misplaced-const)
         std::vector<PTP_TIMER> m_tpTimers;
         std::vector<Details::ctThreadpoolTimerCallbackInfo> m_callbackObjects;
         bool m_exiting = false;
 
         PTP_TIMER create_tp()
         {
-            const auto ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, m_tpEnvironment); // NOLINT(misc-misplaced-const)
+            auto* const ptp_timer = CreateThreadpoolTimer(ThreadPoolTimerCallback, this, m_tpEnvironment);
             if (!ptp_timer)
             {
                 THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolTimer");
@@ -194,7 +192,7 @@ namespace ctl
                 // ensure this is exception safe with a scope guard
                 auto removeCallbackObjectOnFailure = wil::scope_exit([&]() noexcept { m_callbackObjects.pop_back(); });
 
-                const auto temp_timer = this->create_tp();
+                auto* const temp_timer = this->create_tp();
                 // ensure the timer is closed (is exception safe) with a scope guard
                 auto deleteTemporaryTimerOnFailure = wil::scope_exit([&]() noexcept { CloseThreadpoolTimer(temp_timer); });
 
@@ -227,7 +225,7 @@ namespace ctl
             PTP_CALLBACK_INSTANCE,
             PVOID context,
             PTP_TIMER timer) noexcept
-            try
+        try
         {
             auto* this_ptr = static_cast<ctThreadpoolTimer*>(context);
 

@@ -23,9 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/resource.h>
 
 
-namespace ctl
-{
-    namespace Details
+namespace ctl { namespace Details
     {
         constexpr uint32_t c_functionPtrCount = 9;
         static LPFN_TRANSMITFILE g_transmitfile = nullptr; // WSAID_TRANSMITFILE
@@ -64,87 +62,96 @@ namespace ctl
             // control code and the size to fetch the extension function pointers
             for (auto fnLoop = 0ul; fnLoop < c_functionPtrCount; ++fnLoop)
             {
-                VOID* functionPtr{ nullptr };
-                DWORD controlCode{ SIO_GET_EXTENSION_FUNCTION_POINTER };
-                DWORD bytes{ sizeof(VOID*) };
+                VOID* functionPtr{nullptr};
+                DWORD controlCode{SIO_GET_EXTENSION_FUNCTION_POINTER};
+                DWORD bytes{sizeof(VOID*)};
                 // must declare GUID explicitly at a global scope as some commonly used test libraries
                 // - incorrectly pull it into their own namespace
                 GUID guid{};
 
                 switch (fnLoop)
                 {
-                case 0: {
-                    functionPtr = &g_transmitfile;
-                    constexpr GUID tmpGuid = WSAID_TRANSMITFILE;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 1: {
-                    functionPtr = &g_acceptex;
-                    constexpr GUID tmpGuid = WSAID_ACCEPTEX;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 2: {
-                    functionPtr = &g_getacceptexsockaddrs;
-                    constexpr GUID tmpGuid = WSAID_GETACCEPTEXSOCKADDRS;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 3: {
-                    functionPtr = &g_transmitpackets;
-                    constexpr GUID tmpGuid = WSAID_TRANSMITPACKETS;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 4: {
-                    functionPtr = &g_connectex;
-                    constexpr GUID tmpGuid = WSAID_CONNECTEX;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 5: {
-                    functionPtr = &g_disconnectex;
-                    constexpr GUID tmpGuid = WSAID_DISCONNECTEX;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 6: {
-                    functionPtr = &g_wsarecvmsg;
-                    constexpr GUID tmpGuid = WSAID_WSARECVMSG;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 7: {
-                    functionPtr = &g_wsasendmsg;
-                    constexpr GUID tmpGuid = WSAID_WSASENDMSG;
-                    memcpy(&guid, &tmpGuid, sizeof GUID);
-                    break;
-                }
-                case 8: {
-                    functionPtr = &g_rioextensionfunctiontable;
-                    constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
-                    ::memcpy(&guid, &tmpGuid, sizeof GUID);
-                    controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
-                    bytes = {sizeof g_rioextensionfunctiontable};
-                    ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
-                    g_rioextensionfunctiontable.cbSize = bytes;
-                    break;
-                }
-                default:
-                    FAIL_FAST_MSG("Unknown ctSocketExtension function number");
+                    case 0:
+                    {
+                        functionPtr = &g_transmitfile;
+                        constexpr GUID tmpGuid = WSAID_TRANSMITFILE;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 1:
+                    {
+                        functionPtr = &g_acceptex;
+                        constexpr GUID tmpGuid = WSAID_ACCEPTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 2:
+                    {
+                        functionPtr = &g_getacceptexsockaddrs;
+                        constexpr GUID tmpGuid = WSAID_GETACCEPTEXSOCKADDRS;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 3:
+                    {
+                        functionPtr = &g_transmitpackets;
+                        constexpr GUID tmpGuid = WSAID_TRANSMITPACKETS;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 4:
+                    {
+                        functionPtr = &g_connectex;
+                        constexpr GUID tmpGuid = WSAID_CONNECTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 5:
+                    {
+                        functionPtr = &g_disconnectex;
+                        constexpr GUID tmpGuid = WSAID_DISCONNECTEX;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 6:
+                    {
+                        functionPtr = &g_wsarecvmsg;
+                        constexpr GUID tmpGuid = WSAID_WSARECVMSG;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 7:
+                    {
+                        functionPtr = &g_wsasendmsg;
+                        constexpr GUID tmpGuid = WSAID_WSASENDMSG;
+                        memcpy(&guid, &tmpGuid, sizeof GUID);
+                        break;
+                    }
+                    case 8:
+                    {
+                        functionPtr = &g_rioextensionfunctiontable;
+                        constexpr GUID tmpGuid = WSAID_MULTIPLE_RIO;
+                        ::memcpy(&guid, &tmpGuid, sizeof GUID);
+                        controlCode = SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER;
+                        bytes = {sizeof g_rioextensionfunctiontable};
+                        ::ZeroMemory(&g_rioextensionfunctiontable, bytes);
+                        g_rioextensionfunctiontable.cbSize = bytes;
+                        break;
+                    }
+                    default:
+                        FAIL_FAST_MSG("Unknown ctSocketExtension function number");
                 }
 
                 if (0 != ::WSAIoctl(
-                    localSocket,
-                    controlCode,
-                    &guid,
-                    static_cast<DWORD>(sizeof guid),
-                    functionPtr,
-                    bytes,
-                    &bytes,
-                    nullptr, // lpOverlapped
-                    nullptr))  // lpCompletionRoutine
+                        localSocket,
+                        controlCode,
+                        &guid,
+                        static_cast<DWORD>(sizeof guid),
+                        functionPtr,
+                        bytes,
+                        &bytes,
+                        nullptr, // lpOverlapped
+                        nullptr))
                 {
                     if (WSAGetLastError() == WSAEOPNOTSUPP && 8 == fnLoop)
                     {
@@ -166,7 +173,7 @@ namespace ctl
             static INIT_ONCE socketExtensionInitOnce = INIT_ONCE_STATIC_INIT;
             FAIL_FAST_IF(!::InitOnceExecuteOnce(&socketExtensionInitOnce, SocketExtensionInitFn, nullptr, nullptr));
         }
-    }; // anonymous namespace
+    }
 
     //
     // Dynamic check if RIO is available on this operating system
@@ -187,7 +194,7 @@ namespace ctl
         _In_ DWORD nNumberOfBytesPerSend,
         _Inout_opt_ LPOVERLAPPED lpOverlapped,
         _In_opt_ LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers,
-        _In_  DWORD dwReserved) noexcept
+        _In_ DWORD dwReserved) noexcept
     {
         Details::InitSocketExtensions();
         return Details::g_transmitfile(
@@ -256,9 +263,9 @@ namespace ctl
         _In_ DWORD dwReceiveDataLength,
         _In_ DWORD dwLocalAddressLength,
         _In_ DWORD dwRemoteAddressLength,
-        _Outptr_result_bytebuffer_(*LocalSockaddrLength) struct sockaddr** localSockaddr,
+        _Outptr_result_bytebuffer_(*LocalSockaddrLength) sockaddr** localSockaddr,
         _Out_ LPINT LocalSockaddrLength,
-        _Outptr_result_bytebuffer_(*RemoteSockaddrLength) struct sockaddr** remoteSockaddr,
+        _Outptr_result_bytebuffer_(*RemoteSockaddrLength) sockaddr** remoteSockaddr,
         _Out_ LPINT RemoteSockaddrLength) noexcept
     {
         Details::InitSocketExtensions();
@@ -279,7 +286,7 @@ namespace ctl
     //
     inline BOOL ctConnectEx(
         _In_ SOCKET s,
-        _In_reads_bytes_(namelen) const struct sockaddr FAR* name,
+        _In_reads_bytes_(namelen) const sockaddr* name,
         _In_ int namelen,
         _In_reads_bytes_opt_(dwSendDataLength) PVOID lpSendBuffer,
         _In_ DWORD dwSendDataLength,
@@ -304,8 +311,8 @@ namespace ctl
     inline BOOL ctDisconnectEx(
         _In_ SOCKET s,
         _Inout_opt_ LPOVERLAPPED lpOverlapped,
-        _In_ DWORD  dwFlags,
-        _In_ DWORD  dwReserved) noexcept
+        _In_ DWORD dwFlags,
+        _In_ DWORD dwReserved) noexcept
     {
         Details::InitSocketExtensions();
         return Details::g_disconnectex(

@@ -24,59 +24,60 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    //
-    // ctsSimpleConnect makes *blocking* calls to connect
-    // - callers should be careful to ensure that this is really what they want
-    // - since it will not scale out well
-    //
-    // Its intended use is either for UDP sockets, or for very few concurrent connections
-    //
-    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+//
+// ctsSimpleConnect makes *blocking* calls to connect
+// - callers should be careful to ensure that this is really what they want
+// - since it will not scale out well
+//
+// Its intended use is either for UDP sockets, or for very few concurrent connections
+//
+void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+{
+    // attempt to get a reference to the socket
+    const auto sharedSocket(weakSocket.lock());
+    if (!sharedSocket)
     {
-        // attempt to get a reference to the socket
-        const auto sharedSocket(weakSocket.lock());
-        if (!sharedSocket)
-        {
-            return;
-        }
+        return;
+    }
 
-        int error = 0;
-        const auto socketReference(sharedSocket->AcquireSocketLock());
-        const auto socket = socketReference.GetSocket();
-        if (socket != INVALID_SOCKET)
-        {
-            const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
-            const ctl::ctSockaddr localAddr;
+    auto error = 0;
+    const auto socketReference(sharedSocket->AcquireSocketLock());
+    // ReSharper disable once CppTooWideScopeInitStatement
+    const auto socket = socketReference.GetSocket();
+    if (socket != INVALID_SOCKET)
+    {
+        const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
 
-            error = ctsConfig::SetPreConnectOptions(socket);
-            if (error != NO_ERROR)
-            {
-                ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
-            }
-            else
-            {
-                if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
-                {
-                    error = WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed("connect", error);
-                }
-                else
-                {
-                    // set the local address
-                    auto localAddrLen = localAddr.length();
-                    if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
-                    {
-                        sharedSocket->SetLocalSockaddr(localAddr);
-                    }
-                    ctsConfig::PrintNewConnection(localAddr, targetAddress);
-                }
-            }
+        error = ctsConfig::SetPreConnectOptions(socket);
+        if (error != NO_ERROR)
+        {
+            ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
         }
         else
         {
-            error = WSAECONNABORTED;
+            if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
+            {
+                error = WSAGetLastError();
+                ctsConfig::PrintErrorIfFailed("connect", error);
+            }
+            else
+            {
+                // set the local address
+                const ctl::ctSockaddr localAddr;
+                auto localAddrLen = localAddr.length();
+                if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
+                {
+                    sharedSocket->SetLocalSockaddr(localAddr);
+                }
+                ctsConfig::PrintNewConnection(localAddr, targetAddress);
+            }
         }
-
-        sharedSocket->CompleteState(error);
     }
+    else
+    {
+        error = WSAECONNABORTED;
+    }
+
+    sharedSocket->CompleteState(error);
+}
 }

@@ -30,33 +30,34 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    // ReSharper disable once CppInconsistentNaming
-    struct wsIOResult
+// ReSharper disable once CppInconsistentNaming
+struct wsIOResult
+{
+    uint32_t m_errorCode = 0;
+    DWORD m_bytesTransferred = 0;
+
+    wsIOResult() noexcept = default;
+
+    explicit wsIOResult(uint32_t error) noexcept :
+        m_errorCode(error)
     {
-        uint32_t m_errorCode = 0;
-        DWORD m_bytesTransferred = 0;
+    }
+};
 
-        wsIOResult() noexcept = default;
-        explicit wsIOResult(uint32_t error) noexcept
-        {
-            m_errorCode = error;
-        }
-    };
+// ReSharper disable once CppInconsistentNaming
+wsIOResult ctsWSARecvFrom(
+    const std::shared_ptr<ctsSocket>& sharedSocket,
+    SOCKET socket,
+    const ctsTask& task,
+    std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
-    // ReSharper disable once CppInconsistentNaming
-    wsIOResult ctsWSARecvFrom(
-        const std::shared_ptr<ctsSocket>& sharedSocket,
-        SOCKET socket,
-        const ctsTask& task,
-        std::function<void(OVERLAPPED*)>&& callback) noexcept;
+// ReSharper disable once CppInconsistentNaming
+wsIOResult ctsWSASendTo(
+    const std::shared_ptr<ctsSocket>& sharedSocket,
+    SOCKET socket,
+    const ctsTask& task,
+    std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
-    // ReSharper disable once CppInconsistentNaming
-    wsIOResult ctsWSASendTo(
-        const std::shared_ptr<ctsSocket>& sharedSocket,
-        SOCKET socket,
-        const ctsTask& task,
-        std::function<void(OVERLAPPED*)>&& callback) noexcept;
-
-    // Set LINGER options to force a RST when the socket is closed
-    wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept;
+// Set LINGER options to force a RST when the socket is closed
+wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept;
 }

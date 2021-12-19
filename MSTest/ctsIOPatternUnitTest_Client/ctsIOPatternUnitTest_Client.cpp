@@ -32,7 +32,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
     // Test writer must define specialization of ToString<const Q& q> types used in Assert
     template <>
-    std::wstring ToString<ctsTraffic::ctsTask>(const ctsTraffic::ctsTask& _task)
+    std::wstring ToString<ctsTraffic::ctsTask>(const ctsTraffic::ctsTask& task)
     {
         return wil::str_printf<std::wstring>(
             L"ctsIOTask:\n"
@@ -44,25 +44,25 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
             L"\trio_bufferid: %p\n"
             L"\ttime_offset_milliseconds: %lld\n"
             L"\tverify_io: %ws\n",
-            _task.m_buffer,
-            _task.m_bufferLength,
-            _task.m_bufferOffset,
-            _task.m_expectedPatternOffset,
-            ctsTraffic::ctsTask::PrintTaskAction(_task.m_ioAction),
-            _task.m_rioBufferid,
-            _task.m_timeOffsetMilliseconds,
-            _task.m_trackIo ? L"true" : L"false");
+            task.m_buffer,
+            task.m_bufferLength,
+            task.m_bufferOffset,
+            task.m_expectedPatternOffset,
+            ctsTraffic::ctsTask::PrintTaskAction(task.m_ioAction),
+            task.m_rioBufferid,
+            task.m_timeOffsetMilliseconds,
+            task.m_trackIo ? L"true" : L"false");
     }
     template <>
-    std::wstring ToString<ctsTraffic::ctsTaskAction>(const ctsTraffic::ctsTaskAction& _action)
+    std::wstring ToString<ctsTraffic::ctsTaskAction>(const ctsTraffic::ctsTaskAction& action)
     {
-        return ctsTraffic::ctsTask::PrintTaskAction(_action);
+        return ctsTraffic::ctsTask::PrintTaskAction(action);
     }
 
     template <>
-    std::wstring ToString<ctsTraffic::ctsIoStatus>(const ctsTraffic::ctsIoStatus& _status)
+    std::wstring ToString<ctsTraffic::ctsIoStatus>(const ctsTraffic::ctsIoStatus& status)
     {
-        switch (_status)
+        switch (status)
         {
         case ctsTraffic::ctsIoStatus::ContinueIo: return L"ContinueIo";
         case ctsTraffic::ctsIoStatus::CompletedIo: return L"CompletedIo";
@@ -77,11 +77,11 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 /// statics to return in the Fakes
 ///
 int64_t g_tcpBytesPerSecond = 0LL;
-uint32_t s_MaxBufferSize = 0UL;
-uint32_t s_BufferSize = 0UL;
+uint32_t g_MaxBufferSize = 0UL;
+uint32_t g_BufferSize = 0UL;
 uint64_t g_transferSize = 0ULL;
-bool s_IsListening = false;
-ctsTraffic::ctsConfig::MediaStreamSettings s_MediaStreamSettings;
+bool g_IsListening = false;
+ctsTraffic::ctsConfig::MediaStreamSettings g_MediaStreamSettings;
 const uint32_t g_TestRecvBufferLength = 1024;
 const uint32_t g_TestBufferLength = 4;
 const uint32_t g_TestErrorCode = 1;
@@ -117,13 +117,13 @@ namespace ctsTraffic::ctsConfig
 
     bool IsListening() noexcept
     {
-        return s_IsListening;
+        return g_IsListening;
     }
 
 
     const MediaStreamSettings& GetMediaStream() noexcept
     {
-        return s_MediaStreamSettings;
+        return g_MediaStreamSettings;
     }
 
     int64_t GetTcpBytesPerSecond() noexcept
@@ -132,15 +132,15 @@ namespace ctsTraffic::ctsConfig
     }
     uint32_t GetMaxBufferSize() noexcept
     {
-        return s_MaxBufferSize;
+        return g_MaxBufferSize;
     }
     uint32_t GetMinBufferSize() noexcept
     {
-        return s_BufferSize;
+        return g_BufferSize;
     }
     uint32_t GetBufferSize() noexcept
     {
-        return s_BufferSize;
+        return g_BufferSize;
     }
     uint64_t GetTransferSize() noexcept
     {
@@ -178,11 +178,11 @@ namespace ctsTraffic::ctsConfig
 ///   PullBytes
 ///
 /// Must define these statics for returning relevant values to ctsIOPattern
-///   ctsSignedLongLong s_TcpBytesPerSecond
-///   uint32_t s_MaxBufferSize
-///   uint32_t s_BufferSize
-///   uint64_t s_TransferSize
-///   bool s_IsListening
+///   ctsSignedLongLong g_TcpBytesPerSecond
+///   uint32_t g_MaxBufferSize
+///   uint32_t g_BufferSize
+///   uint64_t g_TransferSize
+///   bool g_IsListening
 ///
 
 using namespace ctsTraffic;
@@ -221,10 +221,10 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->TcpShutdown = (Graceful == _shutdown) ? ctsConfig::TcpShutdownType::GracefulShutdown : ctsConfig::TcpShutdownType::HardShutdown;
 
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = DefaultTransferSize;
-            s_IsListening = (Server == _role);
+            g_IsListening = (Server == _role);
         }
     public:
         TEST_CLASS_INITIALIZE(Setup)
@@ -249,7 +249,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Graceful);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -284,10 +284,10 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Graceful);
             ctsConfig::g_configSettings->PrePostSends = 2;
-            s_BufferSize = DefaultTransferSize;
+            g_BufferSize = DefaultTransferSize;
             g_transferSize = DefaultTransferSize * 2;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task1 = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task1.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task1.m_ioAction);
@@ -329,7 +329,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Hard);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -358,7 +358,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -381,7 +381,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -404,7 +404,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -422,10 +422,10 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
             ctsConfig::g_configSettings->PrePostSends = 2;
-            s_BufferSize = DefaultTransferSize;
+            g_BufferSize = DefaultTransferSize;
             g_transferSize = DefaultTransferSize * 2;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task1 = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task1.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task1.m_ioAction);
@@ -451,7 +451,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             const ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -463,7 +463,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Graceful);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -493,7 +493,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Hard);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -523,7 +523,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Graceful);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -553,7 +553,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Hard);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -583,7 +583,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client, Graceful);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -619,7 +619,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -655,7 +655,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -691,7 +691,7 @@ namespace ctsUnitTest
         {
             this->SetTestBaseClassDefaults(Client);
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
@@ -740,12 +740,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -787,12 +787,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -829,12 +829,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -876,12 +876,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -918,12 +918,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -965,12 +965,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1007,12 +1007,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 0;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             // ISB should indicate to keep 2 sends in flight
             test_pattern->SetIdealSendBacklog(g_TestRecvBufferLength * 2);
 
@@ -1068,12 +1068,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 0;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             // ISB should indicate to keep 2 sends in flight
             test_pattern->SetIdealSendBacklog(g_TestRecvBufferLength * 2);
 
@@ -1130,12 +1130,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 0;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             // ISB should indicate to keep 2 sends in flight
             test_pattern->SetIdealSendBacklog(static_cast<uint32_t>(g_transferSize));
 
@@ -1200,12 +1200,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 0;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> testPattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr testPattern(ctsIoPattern::MakeIoPattern());
             // ISB should indicate to keep 1 send in flight because buffer is larger than ISB
             testPattern->SetIdealSendBacklog(g_TestRecvBufferLength / 2);
 
@@ -1255,12 +1255,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 0;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
             // ISB should indicate to keep 2 sends in flight
             test_pattern->SetIdealSendBacklog(g_TestRecvBufferLength * 2 - 1);
 
@@ -1323,12 +1323,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1372,12 +1372,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1416,12 +1416,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength * 2;
-            s_BufferSize = g_TestRecvBufferLength * 2;
+            g_MaxBufferSize = g_TestRecvBufferLength * 2;
+            g_BufferSize = g_TestRecvBufferLength * 2;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1474,12 +1474,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength * 2;
-            s_BufferSize = g_TestRecvBufferLength * 2;
+            g_MaxBufferSize = g_TestRecvBufferLength * 2;
+            g_BufferSize = g_TestRecvBufferLength * 2;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1527,12 +1527,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1576,12 +1576,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1620,12 +1620,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength * 2;
-            s_BufferSize = g_TestRecvBufferLength * 2;
+            g_MaxBufferSize = g_TestRecvBufferLength * 2;
+            g_BufferSize = g_TestRecvBufferLength * 2;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1678,12 +1678,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength * 2;
-            s_BufferSize = g_TestRecvBufferLength * 2;
+            g_MaxBufferSize = g_TestRecvBufferLength * 2;
+            g_BufferSize = g_TestRecvBufferLength * 2;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1731,12 +1731,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);
@@ -1780,12 +1780,12 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->PrePostRecvs = 1;
             ctsConfig::g_configSettings->PrePostSends = 1;
             g_tcpBytesPerSecond = 0LL;
-            s_MaxBufferSize = g_TestRecvBufferLength;
-            s_BufferSize = g_TestRecvBufferLength;
+            g_MaxBufferSize = g_TestRecvBufferLength;
+            g_BufferSize = g_TestRecvBufferLength;
             g_transferSize = g_TestRecvBufferLength * 10;
-            s_IsListening = false;
+            g_IsListening = false;
 
-            const std::shared_ptr<ctsIoPattern> test_pattern(ctsIoPattern::MakeIoPattern());
+            const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
 
             ctsTask test_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsStatistics::ConnectionIdLength, test_task.m_bufferLength);

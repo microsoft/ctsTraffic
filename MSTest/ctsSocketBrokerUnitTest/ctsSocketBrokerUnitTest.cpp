@@ -22,35 +22,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/stl.h>
 #include <wil/resource.h>
-// ctl headers
-#include <ctString.hpp>
 // project headers
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"
 #include "ctsConfig.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
-
-namespace Microsoft::VisualStudio::CppUnitTestFramework
-{
-
-    template<> inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& state)
-    {
-        switch (state)
-        {
-        case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
-        case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
-        case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
-        case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
-        case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIO";
-        case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIO";
-        case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
-        case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
-        }
-        return wil::str_printf<std::wstring>(L"Unknown State (0x%x)", state);
-    }
-}
-
 
 ///
 /// Fakes
@@ -119,19 +96,19 @@ public:
     ~SocketStatePool() noexcept = default;
 
     /// Add/remove ctsSocketState objects
-    void add_object(const std::shared_ptr<ctsSocketState>& state_object)
+    void add_object(const std::shared_ptr<ctsSocketState>& stateObject)
     {
-        m_work.QueueAdd(state_object);
+        m_work.QueueAdd(stateObject);
     }
     void remove_deleted_objects() noexcept
     {
-        const auto hold_lock = m_lock.lock();
+        const auto holdLock = m_lock.lock();
 
-        std::erase_if(m_stateObjects, [&](const std::weak_ptr<ctsSocketState>& weak_ptr) { return weak_ptr.expired(); });
+        std::erase_if(m_stateObjects, [&](const std::weak_ptr<ctsSocketState>& weakPtr) { return weakPtr.expired(); });
     }
     void reset() noexcept
     {
-        const auto hold_lock = m_lock.lock();
+        const auto holdLock = m_lock.lock();
 
         m_stateObjects.clear();
     }
@@ -139,43 +116,43 @@ public:
     /// Interact with states of contained ctsSocketState objects
     void complete_state(DWORD error_code)
     {
-        const auto hold_lock = m_lock.lock();
+        const auto holdLock = m_lock.lock();
 
-        for (auto& socket_state : m_stateObjects)
+        for (auto& socketState : m_stateObjects)
         {
-            auto shared_state(socket_state.lock());
-            Assert::IsNotNull(shared_state.get());
-            if (shared_state)
+            auto sharedState(socketState.lock());
+            Assert::IsNotNull(sharedState.get());
+            if (sharedState)
             {
-                shared_state->CompleteState(error_code);
+                sharedState->CompleteState(error_code);
             }
         }
     }
     void validate_expected_count(size_t count)
     {
-        const auto hold_lock = m_lock.lock();
+        const auto holdLock = m_lock.lock();
 
         Assert::AreEqual(count, m_stateObjects.size());
     }
     void validate_expected_count(size_t count, ctsSocketState::InternalState state)
     {
-        const auto hold_lock = m_lock.lock();
+        const auto holdLock = m_lock.lock();
 
-        size_t matched_state = 0;
-        for (auto& socket_state : m_stateObjects)
+        size_t matchedState = 0;
+        for (auto& socketState : m_stateObjects)
         {
-            auto shared_state(socket_state.lock());
-            Assert::IsNotNull(shared_state.get());
-            if (shared_state)
+            auto sharedState(socketState.lock());
+            Assert::IsNotNull(sharedState.get());
+            if (sharedState)
             {
-                if (shared_state->GetCurrentState() == state)
+                if (sharedState->GetCurrentState() == state)
                 {
-                    ++matched_state;
+                    ++matchedState;
                 }
             }
         }
 
-        Assert::AreEqual(count, matched_state);
+        Assert::AreEqual(count, matchedState);
     }
 
     void wait_for_start(size_t count)
@@ -185,26 +162,26 @@ public:
         {
             // wait outside the lock
             Sleep(25);
-            const auto hold_lock = m_lock.lock();
+            const auto holdLock = m_lock.lock();
 
-            size_t matched_state = 0;
-            for (auto& socket_state : m_stateObjects)
+            size_t matchedState = 0;
+            for (auto& socketState : m_stateObjects)
             {
-                auto shared_state(socket_state.lock());
-                Assert::IsNotNull(shared_state.get());
-                if (shared_state->GetCurrentState() == ctsSocketState::InternalState::Creating)
+                auto sharedState(socketState.lock());
+                Assert::IsNotNull(sharedState.get());
+                if (sharedState->GetCurrentState() == ctsSocketState::InternalState::Creating)
                 {
-                    ++matched_state;
+                    ++matchedState;
                 }
             }
 
-            if (count == matched_state)
+            if (count == matchedState)
             {
                 matched = true;
                 break;
             }
 
-            Assert::IsTrue(matched_state < count);
+            Assert::IsTrue(matchedState < count);
         }
 
         Assert::IsTrue(matched);
@@ -215,13 +192,13 @@ public:
     SocketStatePool& operator=(const SocketStatePool&) = delete;
 
 private:
-    wil::critical_section m_lock{ ctsConfig::g_configSettings->c_CriticalSectionSpinlock };
+    wil::critical_section m_lock{ctsTraffic::ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };
     std::vector<std::weak_ptr<ctsSocketState>> m_stateObjects;
 
     struct AsyncAddObject
     {
         SocketStatePool& m_parent;
-        wil::critical_section m_workLock{ ctsConfig::g_configSettings->c_CriticalSectionSpinlock };
+        wil::critical_section m_workLock{ctsTraffic::ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };
         std::vector<std::shared_ptr<ctsSocketState>> m_stateObjectsToAdd;
         wil::shared_threadpool_work m_tpWork;
 
@@ -243,7 +220,7 @@ private:
 
             std::shared_ptr<ctsSocketState> objectToAdd;
             {
-                const auto hold_lock = pThis->m_workLock.lock();
+                const auto holdLock = pThis->m_workLock.lock();
                 if (!pThis->m_stateObjectsToAdd.empty())
                 {
                     objectToAdd = *pThis->m_stateObjectsToAdd.rbegin();
@@ -371,7 +348,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -404,7 +381,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -438,7 +415,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -471,7 +448,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -505,7 +482,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -538,7 +515,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -573,7 +550,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -602,7 +579,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -632,7 +609,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -661,7 +638,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -691,7 +668,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -724,7 +701,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -758,7 +735,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(1);
@@ -791,7 +768,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
             ctsSocketBroker::m_timerCallbackTimeoutMs = 100;
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
             // wait for all to be started as this is async
             g_socketPool->wait_for_start(100);
@@ -824,7 +801,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
@@ -873,7 +850,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
@@ -915,7 +892,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
@@ -956,7 +933,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 10 waiting\n");
@@ -1004,7 +981,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ConnectionLimit = 0;
             ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 1 creating\n");
@@ -1042,7 +1019,7 @@ namespace ctsUnitTest
             ctsConfig::g_configSettings->ServerExitLimit = 0;
             ctsConfig::g_configSettings->AcceptLimit = 0;
 
-            const std::shared_ptr<ctsSocketBroker> test_broker(std::make_shared<ctsSocketBroker>());
+            const std::shared_ptr test_broker(std::make_shared<ctsSocketBroker>());
             test_broker->Start();
 
             Logger::WriteMessage(L"1. Expecting 5 creating, 95 waiting\n");

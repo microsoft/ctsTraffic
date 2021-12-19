@@ -30,9 +30,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //   - it queues up IO to a central prioritized queue of work
 //     since all IO is triggered to occur at a future point, the queue is sorted by work that comes soonest
 
-namespace ctsTraffic
-{
-    namespace ctsMediaStreamServerImpl
+namespace ctsTraffic { namespace ctsMediaStreamServerImpl
     {
         void InitOnce();
 

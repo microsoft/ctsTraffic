@@ -26,42 +26,42 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    class ctsMediaStreamServerListeningSocket
-    {
-    private:
-        static constexpr size_t c_recvBufferSize = 1024;
+class ctsMediaStreamServerListeningSocket
+{
+private:
+    static constexpr size_t c_recvBufferSize = 1024;
 
-        std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
+    std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
 
-        mutable wil::critical_section m_listeningsocketLock{ ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock };
-        _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
+    mutable wil::critical_section m_listeningsocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+    _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
 
-        const ctl::ctSockaddr m_listeningAddr;
-        std::array<char, c_recvBufferSize> m_recvBuffer{};
-        DWORD m_recvFlags{};
-        ctl::ctSockaddr m_remoteAddr;
-        int m_remoteAddrLen{};
-        bool m_priorFailureWasConectionReset = false;
+    const ctl::ctSockaddr m_listeningAddr;
+    std::array<char, c_recvBufferSize> m_recvBuffer{};
+    DWORD m_recvFlags{};
+    ctl::ctSockaddr m_remoteAddr;
+    int m_remoteAddrLen{};
+    bool m_priorFailureWasConectionReset = false;
 
-        void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
+    void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
 
-    public:
-        ctsMediaStreamServerListeningSocket(
-            wil::unique_socket&& listeningSocket,
-            ctl::ctSockaddr listeningAddr);
+public:
+    ctsMediaStreamServerListeningSocket(
+        wil::unique_socket&& listeningSocket,
+        ctl::ctSockaddr listeningAddr);
 
-        ~ctsMediaStreamServerListeningSocket() noexcept;
+    ~ctsMediaStreamServerListeningSocket() noexcept;
 
-        SOCKET GetSocket() const noexcept;
+    SOCKET GetSocket() const noexcept;
 
-        ctl::ctSockaddr GetListeningAddress() const noexcept;
+    ctl::ctSockaddr GetListeningAddress() const noexcept;
 
-        void InitiateRecv() noexcept;
+    void InitiateRecv() noexcept;
 
-        // non-copyable
-        ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;
-        ctsMediaStreamServerListeningSocket& operator=(const ctsMediaStreamServerListeningSocket&) = delete;
-        ctsMediaStreamServerListeningSocket(ctsMediaStreamServerListeningSocket&&) = delete;
-        ctsMediaStreamServerListeningSocket& operator=(ctsMediaStreamServerListeningSocket&&) = delete;
-    };
+    // non-copyable
+    ctsMediaStreamServerListeningSocket(const ctsMediaStreamServerListeningSocket&) = delete;
+    ctsMediaStreamServerListeningSocket& operator=(const ctsMediaStreamServerListeningSocket&) = delete;
+    ctsMediaStreamServerListeningSocket(ctsMediaStreamServerListeningSocket&&) = delete;
+    ctsMediaStreamServerListeningSocket& operator=(ctsMediaStreamServerListeningSocket&&) = delete;
+};
 }

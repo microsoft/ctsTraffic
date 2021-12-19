@@ -25,139 +25,140 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-
-    static void ctsConnectExIoCompletionCallback(
-        OVERLAPPED* overlapped,
-        const std::weak_ptr<ctsSocket>& weakSocket,
-        const ctl::ctSockaddr& targetAddress) noexcept
+static void ctsConnectExIoCompletionCallback(
+    OVERLAPPED* overlapped,
+    const std::weak_ptr<ctsSocket>& weakSocket,
+    const ctl::ctSockaddr& targetAddress) noexcept
+{
+    const auto sharedSocket(weakSocket.lock());
+    if (!sharedSocket)
     {
-        const auto sharedSocket(weakSocket.lock());
-        if (!sharedSocket)
-        {
-            return;
-        }
+        return;
+    }
 
-        int gle = 0;
+    auto gle = 0;
+    const auto socketReference(sharedSocket->AcquireSocketLock());
+    const auto socket = socketReference.GetSocket();
+    if (socket == INVALID_SOCKET)
+    {
+        gle = WSAECONNABORTED;
+    }
+
+    if (NO_ERROR == gle)
+    {
+        // a null OVERLAPPED means this is called directly when completed inline
+        if (overlapped)
+        {
+            DWORD transferred;
+            DWORD flags;
+            if (!WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
+            {
+                gle = WSAGetLastError();
+            }
+        }
+    }
+    // update the socket context if completed successfully - necessary with ConnectEx
+    if (NO_ERROR == gle)
+    {
+        const auto err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
+        FAIL_FAST_IF_MSG(
+            err != 0,
+            "setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
+            WSAGetLastError(), static_cast<int64_t>(socketReference.GetSocket()));
+    }
+
+    ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
+
+    const ctl::ctSockaddr localAddr;
+    if (NO_ERROR == gle)
+    {
+        // store the local addr of the connection
+        int localAddrLen = localAddr.length();
+        if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
+        {
+            sharedSocket->SetLocalSockaddr(localAddr);
+        }
+    }
+
+    sharedSocket->CompleteState(gle);
+    // print results after completing state
+    if (NO_ERROR == gle)
+    {
+        ctsConfig::PrintNewConnection(localAddr, targetAddress);
+    }
+}
+
+void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+{
+    const auto sharedSocket(weakSocket.lock());
+    if (!sharedSocket)
+    {
+        return;
+    }
+
+    uint32_t error = 0;
+    try
+    {
         const auto socketReference(sharedSocket->AcquireSocketLock());
+        // ReSharper disable once CppTooWideScopeInitStatement
         const auto socket = socketReference.GetSocket();
-        if (socket == INVALID_SOCKET)
+        if (socket != INVALID_SOCKET)
         {
-            gle = WSAECONNABORTED;
-        }
+            const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
+            error = ctsConfig::SetPreConnectOptions(socket);
+            THROW_IF_WIN32_ERROR_MSG(error, "ctsConfig::SetPreConnectOptions");
 
-        if (NO_ERROR == gle)
-        {
-            // a null OVERLAPPED means this is called directly when completed inline
-            if (overlapped)
+            // get a new IO request from the socket's TP
+            const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
+
+            // ReSharper disable once CppTooWideScopeInitStatement
+            OVERLAPPED* pOverlapped = connectIocp->new_request(
+                [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
+
+            if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))
             {
-                DWORD transferred;
-                DWORD flags;
-                if (!WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
+                error = WSAGetLastError();
+                if (ERROR_IO_PENDING == error)
                 {
-                    gle = WSAGetLastError();
+                    // pended is not failure
+                    error = NO_ERROR;
                 }
-            }
-        }
-        // update the socket context if completed successfully - necessary with ConnectEx
-        if (NO_ERROR == gle)
-        {
-            const auto err = setsockopt(socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
-            FAIL_FAST_IF_MSG(
-                err != 0,
-                "setsockopt(SO_UPDATE_CONNECT_CONTEXT) failed [%d], connected socket [%lld]",
-                WSAGetLastError(), static_cast<int64_t>(socketReference.GetSocket()));
-        }
-
-        ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
-
-        const ctl::ctSockaddr localAddr;
-        if (NO_ERROR == gle)
-        {
-            // store the local addr of the connection
-            int localAddrLen = localAddr.length();
-            if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
-            {
-                sharedSocket->SetLocalSockaddr(localAddr);
-            }
-        }
-
-        sharedSocket->CompleteState(gle);
-        // print results after completing state
-        if (NO_ERROR == gle)
-        {
-            ctsConfig::PrintNewConnection(localAddr, targetAddress);
-        }
-    }
-
-    void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
-    {
-        const auto sharedSocket(weakSocket.lock());
-        if (!sharedSocket)
-        {
-            return;
-        }
-
-        uint32_t error = 0;
-        try
-        {
-            const auto socketReference(sharedSocket->AcquireSocketLock());
-            const auto socket = socketReference.GetSocket();
-            if (socket != INVALID_SOCKET)
-            {
-                const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
-                error = ctsConfig::SetPreConnectOptions(socket);
-                THROW_IF_WIN32_ERROR_MSG(error, "ctsConfig::SetPreConnectOptions");
-
-                // get a new IO request from the socket's TP
-                const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
-                OVERLAPPED* pOverlapped = connectIocp->new_request(
-                    [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
-
-                if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))
+                else
                 {
-                    error = WSAGetLastError();
-                    if (ERROR_IO_PENDING == error)
-                    {
-                        // pended is not failure
-                        error = NO_ERROR;
-                    }
-                    else
-                    {
-                        // must call cancel() on the IOCP TP if the IO call fails
-                        connectIocp->cancel_request(pOverlapped);
-                    }
-
-                }
-                else if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
-                {
-                    // if inline completions are enabled, the IOCP won't be queued the completion
+                    // must call cancel() on the IOCP TP if the IO call fails
                     connectIocp->cancel_request(pOverlapped);
-                    // directly invoke the callback to complete the IO
-                    // - with a nullptr OVERLAPPED to indicate it's already completed
-                    ctsConnectExIoCompletionCallback(nullptr, weakSocket, targetAddress);
-                }
-
-                ctsConfig::PrintErrorIfFailed("ConnectEx", error);
-                if (NO_ERROR == error)
-                {
-                    PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());
                 }
             }
-            else
+            else if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
             {
-                error = WSAECONNABORTED;
+                // if inline completions are enabled, the IOCP won't be queued the completion
+                connectIocp->cancel_request(pOverlapped);
+                // directly invoke the callback to complete the IO
+                // - with a nullptr OVERLAPPED to indicate it's already completed
+                ctsConnectExIoCompletionCallback(nullptr, weakSocket, targetAddress);
+            }
+
+            ctsConfig::PrintErrorIfFailed("ConnectEx", error);
+            if (NO_ERROR == error)
+            {
+                PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());
             }
         }
-        catch (...)
+        else
         {
-            error = ctsConfig::PrintThrownException();
-        }
-
-        // complete on failure
-        // - inline completions will have completed when the callback function was called directly
-        if (error != NO_ERROR)
-        {
-            sharedSocket->CompleteState(error);
+            error = WSAECONNABORTED;
         }
     }
+    catch (...)
+    {
+        error = ctsConfig::PrintThrownException();
+    }
+
+    // complete on failure
+    // - inline completions will have completed when the callback function was called directly
+    if (error != NO_ERROR)
+    {
+        sharedSocket->CompleteState(error);
+    }
+}
 }

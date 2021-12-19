@@ -33,13 +33,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctSockaddr.hpp>
 
-namespace ctsPerf
-{
-
-    namespace Details
+namespace ctsPerf { namespace Details
     {
         template <TCP_ESTATS_TYPE TcpType>
-        struct EstatsTypeConverter {};
+        struct EstatsTypeConverter
+        {
+        };
 
         template <>
         struct EstatsTypeConverter<TcpConnectionEstatsSynOpts>
@@ -49,7 +48,7 @@ namespace ctsPerf
             using read_only_dynamic_type = void*;
         };
 
-        template<>
+        template <>
         struct EstatsTypeConverter<TcpConnectionEstatsData>
         {
             using read_write_type = TCP_ESTATS_DATA_RW_v0;
@@ -57,7 +56,7 @@ namespace ctsPerf
             using read_only_dynamic_type = TCP_ESTATS_DATA_ROD_v0;
         };
 
-        template<>
+        template <>
         struct EstatsTypeConverter<TcpConnectionEstatsSndCong>
         {
             using read_write_type = TCP_ESTATS_SND_CONG_RW_v0;
@@ -114,27 +113,22 @@ namespace ctsPerf
         };
 
         template <TCP_ESTATS_TYPE TcpType>
-        void SetPerConnectionEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
+        void SetPerConnectionEstats(MIB_TCPROW* const tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
-            const auto err = ::SetPerTcpConnectionEStats(
-                tcpRow,
-                TcpType,
-                reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)),
-                0);
-            if (err != 0)
+            if (const auto err = ::SetPerTcpConnectionEStats(
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof*pRw, 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
         }
+
         template <TCP_ESTATS_TYPE TcpType>
-        void SetPerConnectionEstats(MIB_TCP6ROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
+        void SetPerConnectionEstats(MIB_TCP6ROW* const tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
-            const auto err = ::SetPerTcp6ConnectionEStats(
-                tcpRow,
-                TcpType,
-                reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)),
-                0);
-            if (err != 0)
+            if (const auto err = ::SetPerTcp6ConnectionEStats(
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof *pRw), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
@@ -147,19 +141,23 @@ namespace ctsPerf
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
+
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionStaticEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
+        ULONG GetPerConnectionStaticEstats(MIB_TCPROW* const tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
             auto error = ::GetPerTcpConnectionEStats(
                 tcpRow,
                 TcpType,
-                reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+                reinterpret_cast<PUCHAR>(&rw), 0,
+                static_cast<ULONG>(sizeof rw), // read-write information
+                reinterpret_cast<PUCHAR>(pRos), 0,
+                static_cast<ULONG>(sizeof*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -177,19 +175,24 @@ namespace ctsPerf
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+                reinterpret_cast<PUCHAR>(pRos), 0,
+                static_cast<ULONG>(sizeof*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
+
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionStaticEstats(MIB_TCP6ROW* tcpRow, typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
+        ULONG GetPerConnectionStaticEstats(MIB_TCP6ROW* tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_only_static_type* pRos) noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
             auto error = ::GetPerTcp6ConnectionEStats(
                 tcpRow,
                 TcpType,
-                reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof(*pRos)), // read-only static information
+                reinterpret_cast<PUCHAR>(&rw), 0,
+                static_cast<ULONG>(sizeof rw), // read-write information
+                reinterpret_cast<PUCHAR>(pRos), 0,
+                static_cast<ULONG>(sizeof*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -202,16 +205,20 @@ namespace ctsPerf
 
 
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionDynamicEstats(MIB_TCPROW* const tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
+        ULONG GetPerConnectionDynamicEstats(MIB_TCPROW* const tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod)
+        noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
             auto error = ::GetPerTcpConnectionEStats(
                 tcpRow,
                 TcpType,
-                reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+                reinterpret_cast<PUCHAR>(&rw), 0,
+                static_cast<ULONG>(sizeof rw), // read-write information
                 nullptr, 0, 0, // read-only static information
-                reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+                reinterpret_cast<PUCHAR>(pRod), 0,
+                static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
             if (error == ERROR_SUCCESS && !rw.EnableCollection)
@@ -220,17 +227,22 @@ namespace ctsPerf
             }
             return error;
         }
+
         template <TCP_ESTATS_TYPE TcpType>
-        ULONG GetPerConnectionDynamicEstats(MIB_TCP6ROW* tcpRow, typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod) noexcept
+        ULONG GetPerConnectionDynamicEstats(MIB_TCP6ROW* tcpRow,
+            typename EstatsTypeConverter<TcpType>::read_only_dynamic_type* pRod)
+        noexcept
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
             auto error = ::GetPerTcp6ConnectionEStats(
                 tcpRow,
                 TcpType,
-                reinterpret_cast<PUCHAR>(&rw), 0, static_cast<ULONG>(sizeof(rw)), // read-write information
+                reinterpret_cast<PUCHAR>(&rw), 0,
+                static_cast<ULONG>(sizeof rw), // read-write information
                 nullptr, 0, 0, // read-only static information
-                reinterpret_cast<PUCHAR>(pRod), 0, static_cast<ULONG>(sizeof(*pRod))); // read-only dynamic information
+                reinterpret_cast<PUCHAR>(pRod), 0,
+                static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
             if (error == ERROR_SUCCESS && !rw.EnableCollection)
@@ -284,6 +296,7 @@ namespace ctsPerf
             {
                 // always on
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow) noexcept
             {
@@ -324,6 +337,7 @@ namespace ctsPerf
                 rw.EnableCollection = TRUE;
                 SetPerConnectionEstats<TcpConnectionEstatsData>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow) noexcept
             {
@@ -372,6 +386,7 @@ namespace ctsPerf
                 rw.EnableCollection = TRUE;
                 SetPerConnectionEstats<TcpConnectionEstatsSndCong>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow)
             {
@@ -414,14 +429,14 @@ namespace ctsPerf
             [[nodiscard]] std::wstring PrintData() const
             {
                 return wil::str_printf<std::wstring>(
-                    L",%lu,%lu,%lu,%lu,%lu",
-                    m_bytesRetrans,
-                    m_dupAcksRcvd,
-                    m_sacksRcvd,
-                    m_congestionSignals,
-                    m_maxSegmentSize) +
-                    ctsWriteDetails::PrintMeanStdDev(m_retransmitTimer) +
-                    ctsWriteDetails::PrintMeanStdDev(m_roundTripTime);
+                           L",%lu,%lu,%lu,%lu,%lu",
+                           m_bytesRetrans,
+                           m_dupAcksRcvd,
+                           m_sacksRcvd,
+                           m_congestionSignals,
+                           m_maxSegmentSize) +
+                       ctsWriteDetails::PrintMeanStdDev(m_retransmitTimer) +
+                       ctsWriteDetails::PrintMeanStdDev(m_roundTripTime);
             }
 
             template <typename PTCPROW>
@@ -431,6 +446,7 @@ namespace ctsPerf
                 rw.EnableCollection = TRUE;
                 SetPerConnectionEstats<TcpConnectionEstatsPath>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow)
             {
@@ -463,7 +479,8 @@ namespace ctsPerf
         public:
             static PCWSTR PrintHeader() noexcept
             {
-                return L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev)";
+                return
+                    L"LocalRecvWin(min),LocalRecvWin(max),LocalRecvWin(calculated-min),LocalRecvWin(calculated-max),LocalRecvWin(calculated-mean),LocalRecvWin(calculated-stddev)";
             }
 
             [[nodiscard]] std::wstring PrintData() const
@@ -472,7 +489,7 @@ namespace ctsPerf
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", m_minReceiveWindow);
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", m_maxReceiveWindow);
 
-                ULONG calculatedMin = ULONG_MAX;
+                auto calculatedMin = ULONG_MAX;
                 ULONG calculatedMax = 0;
                 for (const auto& value : m_receiveWindow)
                 {
@@ -525,7 +542,8 @@ namespace ctsPerf
         public:
             static PCWSTR PrintHeader() noexcept
             {
-                return L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev)";
+                return
+                    L"RemoteRecvWin(min),RemoteRecvWin(max),RemoteRecvWin(calculated-min),RemoteRecvWin(calculated-max),RemoteRecvWin(calculated-mean),RemoteRecvWin(calculated-stddev)";
             }
 
             [[nodiscard]] std::wstring PrintData() const
@@ -534,7 +552,7 @@ namespace ctsPerf
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", m_minReceiveWindow);
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", m_maxReceiveWindow);
 
-                ULONG calculatedMin = ULONG_MAX;
+                auto calculatedMin = ULONG_MAX;
                 ULONG calculatedMax = 0;
                 for (const auto& value : m_receiveWindow)
                 {
@@ -563,6 +581,7 @@ namespace ctsPerf
                 rw.EnableCollection = TRUE;
                 SetPerConnectionEstats<TcpConnectionEstatsObsRec>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow)
             {
@@ -589,8 +608,8 @@ namespace ctsPerf
             {
                 return L"";
             }
-            // ReSharper disable once CppMemberFunctionMayBeStatic
-            [[nodiscard]] std::wstring PrintData() const
+
+            [[nodiscard]] static std::wstring PrintData()
             {
                 return L"";
             }
@@ -603,6 +622,7 @@ namespace ctsPerf
                 rw.EnableCollectionOutbound = TcpBoolOptEnabled;
                 SetPerConnectionEstats<TcpConnectionEstatsBandwidth>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow)
             {
@@ -622,8 +642,8 @@ namespace ctsPerf
             {
                 return L"";
             }
-            // ReSharper disable once CppMemberFunctionMayBeStatic
-            [[nodiscard]] std::wstring PrintData() const
+
+            [[nodiscard]] static std::wstring PrintData()
             {
                 return L"";
             }
@@ -635,6 +655,7 @@ namespace ctsPerf
                 rw.EnableCollection = TRUE;
                 SetPerConnectionEstats<TcpConnectionEstatsFineRtt>(tcpRow, &rw);
             }
+
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow)
             {
@@ -654,6 +675,7 @@ namespace ctsPerf
             {
                 return L"LocalAddress,RemoteAddress";
             }
+
             static PCWSTR PrintHeader() noexcept
             {
                 return EstatsDataTracking<TcpType>::PrintHeader();
@@ -665,7 +687,7 @@ namespace ctsPerf
             {
             }
 
-            explicit EstatsDataPoint(MIB_TCPROW const* pTcpRow) noexcept :
+            explicit EstatsDataPoint(const MIB_TCPROW* pTcpRow) noexcept :
                 m_localAddr(AF_INET),
                 m_remoteAddr(AF_INET)
             {
@@ -682,7 +704,7 @@ namespace ctsPerf
                     ctl::ByteOrder::NetworkOrder);
             }
 
-            explicit EstatsDataPoint(MIB_TCP6ROW const* pTcpRow) noexcept :
+            explicit EstatsDataPoint(const MIB_TCP6ROW* pTcpRow) noexcept :
                 m_localAddr(AF_INET6),
                 m_remoteAddr(AF_INET6)
             {
@@ -703,7 +725,7 @@ namespace ctsPerf
             EstatsDataPoint(EstatsDataPoint&&) = delete;
             EstatsDataPoint& operator=(EstatsDataPoint&&) = delete;
 
-            bool operator< (const EstatsDataPoint<TcpType>& rhs) const noexcept
+            bool operator<(const EstatsDataPoint<TcpType>& rhs) const noexcept
             {
                 if (m_localAddr < rhs.m_localAddr)
                 {
@@ -716,10 +738,11 @@ namespace ctsPerf
                 }
                 return false;
             }
+
             bool operator==(const EstatsDataPoint<TcpType>& rhs) const noexcept
             {
-                return (m_localAddr == rhs.m_localAddr) &&
-                    (m_remoteAddr == rhs.m_remoteAddr);
+                return m_localAddr == rhs.m_localAddr &&
+                       m_remoteAddr == rhs.m_remoteAddr;
             }
 
             std::wstring PrintAddresses() const
@@ -734,6 +757,7 @@ namespace ctsPerf
                     local_string,
                     remote_string);
             }
+
             std::wstring PrintData() const
             {
                 return m_data.PrintData();
@@ -756,6 +780,7 @@ namespace ctsPerf
             {
                 return m_localAddr;
             }
+
             ctl::ctSockaddr RemoteAddr() const noexcept
             {
                 return m_remoteAddr;
@@ -789,6 +814,7 @@ namespace ctsPerf
             m_timer.reset(CreateThreadpoolTimer(TimerCallback, this, nullptr));
             THROW_LAST_ERROR_IF(!m_timer);
         }
+
         ctsEstats(const ctsEstats&) = delete;
         ctsEstats& operator=(const ctsEstats&) = delete;
         ctsEstats(ctsEstats&&) = delete;
@@ -812,10 +838,10 @@ namespace ctsPerf
                         entry.LocalAddr(),
                         entry.RemoteAddr());
 
-                    const auto foundEntry = m_remoteReceiveWindowData.find(matchingData);
-                    if (foundEntry != m_remoteReceiveWindowData.end())
+                    if (const auto foundEntry = m_remoteReceiveWindowData.find(matchingData); foundEntry != m_remoteReceiveWindowData.end())
                     {
-                        m_receiveWindowWriter.WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
+                        m_receiveWindowWriter.
+                            WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
                     }
                 }
 
@@ -825,10 +851,10 @@ namespace ctsPerf
                         entry.LocalAddr(),
                         entry.RemoteAddr());
 
-                    const auto foundEntry = m_byteTrackingData.find(matchingData);
-                    if (foundEntry != m_byteTrackingData.end())
+                    if (const auto foundEntry = m_byteTrackingData.find(matchingData); foundEntry != m_byteTrackingData.end())
                     {
-                        m_senderCongestionWriter.WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
+                        m_senderCongestionWriter.
+                            WriteRow(entry.PrintAddresses() + entry.PrintData() + foundEntry->PrintData());
                     }
                 }
             }
@@ -904,7 +930,8 @@ namespace ctsPerf
         std::vector<char> m_tcpTable;
         ULONG m_tableCounter = 0;
         const DWORD OneSecondTimeoutMs = 1000;
-        FILETIME m_timerInterval = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * OneSecondTimeoutMs);
+        FILETIME m_timerInterval =
+            wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * OneSecondTimeoutMs);
 
         static void NTAPI TimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER) noexcept
         {
@@ -935,7 +962,7 @@ namespace ctsPerf
 
         bool UpdateEstats() noexcept try
         {
-            bool accessDenied = false;
+            auto accessDenied = false;
             ++m_tableCounter;
             try
             {
@@ -1056,6 +1083,7 @@ namespace ctsPerf
                 THROW_WIN32_MSG(error, "GetTcpTable");
             }
         }
+
         void RefreshIPv6Data()
         {
             m_tcpTable.resize(m_tcpTable.capacity());
@@ -1098,13 +1126,11 @@ namespace ctsPerf
             // walk the set of synOptsData. If an address wasn't found to have been updated
             // with the latest data, then we'll remove that tuple (local address + remote address)
             // from all the data sets and finish printing their rows
-            auto foundInstance = std::find_if(
-                std::begin(m_synOptsData),
-                std::end(m_synOptsData),
-                [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept
-            {
-                return dataPoint.LastestCounter() != m_tableCounter;
-            });
+            auto foundInstance = std::ranges::find_if(
+                m_synOptsData,
+                [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept {
+                    return dataPoint.LastestCounter() != m_tableCounter;
+                });
 
             while (foundInstance != std::end(m_synOptsData))
             {
@@ -1122,11 +1148,13 @@ namespace ctsPerf
 
                 const auto localReceiveWindowInstance = m_localReceiveWindowData.find(
                     Details::EstatsDataPoint<TcpConnectionEstatsRec>(localAddr, remoteAddr));
-                const auto fLocalReceiveWindowInstanceFound = localReceiveWindowInstance != m_localReceiveWindowData.end();
+                const auto fLocalReceiveWindowInstanceFound =
+                    localReceiveWindowInstance != m_localReceiveWindowData.end();
 
                 const auto remoteReceiveWindowInstance = m_remoteReceiveWindowData.find(
                     Details::EstatsDataPoint<TcpConnectionEstatsObsRec>(localAddr, remoteAddr));
-                const auto fRemoteReceiveWindowInstanceFound = remoteReceiveWindowInstance != m_remoteReceiveWindowData.end();
+                const auto fRemoteReceiveWindowInstanceFound =
+                    remoteReceiveWindowInstance != m_remoteReceiveWindowData.end();
 
                 const auto senderCongestionInstance = m_senderCongestionData.find(
                     Details::EstatsDataPoint<TcpConnectionEstatsSndCong>(localAddr, remoteAddr));
@@ -1174,13 +1202,11 @@ namespace ctsPerf
                 }
 
                 // update the while loop variable
-                foundInstance = std::find_if(
-                    std::begin(m_synOptsData),
-                    std::end(m_synOptsData),
-                    [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept
-                {
-                    return dataPoint.LastestCounter() != m_tableCounter;
-                });
+                foundInstance = std::ranges::find_if(
+                    m_synOptsData,
+                    [&](const Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>& dataPoint) noexcept {
+                        return dataPoint.LastestCounter() != m_tableCounter;
+                    });
             } // while loop
         }
     };

@@ -15,67 +15,55 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    using ctsIOPatternAllocationTypeStatic = struct ctsIOPatternAllocationTypeStatic_t;
-    using ctsIOPatternAllocationtypeDynamic = struct ctsIOPatternAllocationtypeDynamic_t;
+using ctsIOPatternAllocationTypeStatic = struct ctsIOPatternAllocationTypeStatic_t;
+using ctsIOPatternAllocationtypeDynamic = struct ctsIOPatternAllocationtypeDynamic_t;
 
-    using ctsIOPatternBufferTypeHeap = struct ctsIOPatternBufferTypeHeap_t;
-    using ctsIOPatternBufferTypeRegisteredIo = struct ctsIOPatternBufferTypeRegisteredIo_t;
-
-
-    template <typename AllocationType, typename BufferType>
-    class ctsIOPatternBufferPolicy
-    {
-    public:
-        char* get_buffer(size_t size) noexcept;
-        bool  verify_buffer(const char* buffer) noexcept;
-    };
+using ctsIOPatternBufferTypeHeap = struct ctsIOPatternBufferTypeHeap_t;
+using ctsIOPatternBufferTypeRegisteredIo = struct ctsIOPatternBufferTypeRegisteredIo_t;
 
 
-    //
-    // Static heap buffers
-    // - won't be verified
-    //
-    template<>
-    class ctsIOPatternBufferPolicy<
-        ctsIOPatternAllocationTypeStatic,
-        ctsIOPatternBufferTypeHeap>
-    {
+template <typename AllocationType, typename BufferType>
+class ctsIOPatternBufferPolicy
+{
+public:
+    char* get_buffer(size_t size) noexcept;
+    bool verify_buffer(const char* buffer) noexcept;
+};
 
-    };
 
-    //
-    // Static RIO buffers
-    // - won't be verified
-    //
-    template<>
-    class ctsIOPatternBufferPolicy<
-        ctsIOPatternAllocationTypeStatic,
-        ctsIOPatternBufferTypeRegisteredIo>
-    {
+//
+// Static heap buffers
+// - won't be verified
+//
+template <>
+class ctsIOPatternBufferPolicy<ctsIOPatternAllocationTypeStatic, ctsIOPatternBufferTypeHeap>
+{
+};
 
-    };
+//
+// Static RIO buffers
+// - won't be verified
+//
+template <>
+class ctsIOPatternBufferPolicy<ctsIOPatternAllocationTypeStatic, ctsIOPatternBufferTypeRegisteredIo>
+{
+};
 
-    //
-    // Dynamic heap buffers
-    // - won't be verified
-    //
-    template<>
-    class ctsIOPatternBufferPolicy<
-        ctsIOPatternAllocationtypeDynamic,
-        ctsIOPatternBufferTypeHeap>
-    {
+//
+// Dynamic heap buffers
+// - won't be verified
+//
+template <>
+class ctsIOPatternBufferPolicy<ctsIOPatternAllocationtypeDynamic, ctsIOPatternBufferTypeHeap>
+{
+};
 
-    };
-
-    //
-    // Static RIO buffers
-    // - won't be verified
-    //
-    template<>
-    class ctsIOPatternBufferPolicy<
-        ctsIOPatternAllocationtypeDynamic,
-        ctsIOPatternBufferTypeRegisteredIo>
-    {
-
-    };
+//
+// Static RIO buffers
+// - won't be verified
+//
+template <>
+class ctsIOPatternBufferPolicy<ctsIOPatternAllocationtypeDynamic, ctsIOPatternBufferTypeRegisteredIo>
+{
+};
 }

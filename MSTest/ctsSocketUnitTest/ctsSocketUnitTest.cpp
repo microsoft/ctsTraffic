@@ -168,7 +168,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             // set the socket
             test->SetSocket(socket_value);
@@ -183,7 +183,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             // set the socket
             test->SetSocket(socket_value);
@@ -198,7 +198,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             test->SetSocket(socket_value);
             {
@@ -218,7 +218,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             test->SetSocket(socket_value);
             {
@@ -243,7 +243,7 @@ namespace ctsUnitTest
             const auto socket_value(this->create_socket());
 
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             // when the socket is INVALID_SOCKET, should return a nullptr
             const auto tp1(test->GetIocpThreadpool());
@@ -258,7 +258,7 @@ namespace ctsUnitTest
         TEST_METHOD(LocalAddrs)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
             test_address.SetPort(55555);
@@ -271,7 +271,7 @@ namespace ctsUnitTest
         TEST_METHOD(TargetAddrs)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
             test_address.SetPort(55555);
@@ -284,7 +284,7 @@ namespace ctsUnitTest
         TEST_METHOD(IOCounters)
         {
             shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr<ctsSocket> test(make_shared<ctsSocket>(default_socket_state_object));
+            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
 
             Logger::WriteMessage(L"Incrementing to 1\n");
             Assert::AreEqual(1, test->IncrementIo());
@@ -306,7 +306,7 @@ namespace ctsUnitTest
         }
 
     private:
-        SOCKET create_socket() const
+        [[nodiscard]] SOCKET create_socket() const
         {
             // create a valid UDP socket
             const SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));

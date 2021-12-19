@@ -22,58 +22,65 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    // The ctsIOTask struct instructs the caller on what action to perform
-    // - and provides it the buffer it should use to send/recv data
-    enum class ctsTaskAction
+// The ctsIOTask struct instructs the caller on what action to perform
+// - and provides it the buffer it should use to send/recv data
+enum class ctsTaskAction
+{
+    None,
+    Send,
+    Recv,
+    GracefulShutdown,
+    HardShutdown,
+    Abort,
+    FatalAbort
+};
+
+struct ctsTask
+{
+    int64_t m_timeOffsetMilliseconds = 0LL;
+    RIO_BUFFERID m_rioBufferid = RIO_INVALID_BUFFERID;
+
+    _Field_size_full_(m_bufferLength) char* m_buffer = nullptr;
+    uint32_t m_bufferLength = 0UL;
+    uint32_t m_bufferOffset = 0UL;
+    uint32_t m_expectedPatternOffset = 0UL;
+    ctsTaskAction m_ioAction = ctsTaskAction::None;
+
+    // (internal) flag identifying the type of buffer
+    enum class BufferType
     {
-        None,
-        Send,
-        Recv,
-        GracefulShutdown,
-        HardShutdown,
-        Abort,
-        FatalAbort
-    };
+        Null,
+        TcpConnectionId,
+        UdpConnectionId,
+        CompletionMessage,
+        Static,
+        Dynamic
+    } m_bufferType = BufferType::Null;
 
-    struct ctsTask
+    // (internal) flag if this IO request is tracked and verified
+    bool m_trackIo = false;
+
+    static PCWSTR PrintTaskAction(const ctsTaskAction& action) noexcept
     {
-        int64_t m_timeOffsetMilliseconds = 0LL;
-        RIO_BUFFERID m_rioBufferid = RIO_INVALID_BUFFERID;
-
-        _Field_size_full_(m_bufferLength) char* m_buffer = nullptr;
-        uint32_t m_bufferLength = 0UL;
-        uint32_t m_bufferOffset = 0UL;
-        uint32_t m_expectedPatternOffset = 0UL;
-        ctsTaskAction m_ioAction = ctsTaskAction::None;
-
-        // (internal) flag identifying the type of buffer
-        enum class BufferType
+        switch (action)
         {
-            Null,
-            TcpConnectionId,
-            UdpConnectionId,
-            CompletionMessage,
-            Static,
-            Dynamic
-        } m_bufferType = BufferType::Null;
-        // (internal) flag if this IO request is tracked and verified
-        bool m_trackIo = false;
-
-        static PCWSTR PrintTaskAction(const ctsTaskAction& action) noexcept
-        {
-            switch (action)
-            {
-                case ctsTaskAction::None: return L"None";
-                case ctsTaskAction::Send: return L"Send";
-                case ctsTaskAction::Recv: return L"Recv";
-                case ctsTaskAction::GracefulShutdown: return L"GracefulShutdown";
-                case ctsTaskAction::HardShutdown: return L"HardShutdown";
-                case ctsTaskAction::Abort: return L"Abort";
-                case ctsTaskAction::FatalAbort: return L"FatalAbort";
-            }
-
-            return L"Unknown IOAction";
+            case ctsTaskAction::None:
+                return L"None";
+            case ctsTaskAction::Send:
+                return L"Send";
+            case ctsTaskAction::Recv:
+                return L"Recv";
+            case ctsTaskAction::GracefulShutdown:
+                return L"GracefulShutdown";
+            case ctsTaskAction::HardShutdown:
+                return L"HardShutdown";
+            case ctsTaskAction::Abort:
+                return L"Abort";
+            case ctsTaskAction::FatalAbort:
+                return L"FatalAbort";
         }
-    };
 
+        return L"Unknown IOAction";
+    }
+};
 } // namespace

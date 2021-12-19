@@ -22,9 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctMemoryGuard.hpp>
 #include <wil/resource.h>
 
-namespace ctsTraffic
-{
-    namespace ctsStatistics
+namespace ctsTraffic { namespace ctsStatistics
     {
         constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
@@ -86,11 +84,13 @@ namespace ctsTraffic
 
     public:
         ctsStatsTracking() noexcept = default;
+
         explicit ctsStatsTracking(int64_t initial_value) noexcept :
             m_currentValue(initial_value),
             m_previousValue(initial_value)
         {
         }
+
         ~ctsStatsTracking() noexcept = default;
 
         ctsStatsTracking(const ctsStatsTracking& in) noexcept :
@@ -98,11 +98,13 @@ namespace ctsTraffic
             m_previousValue(ctl::ctMemoryGuardRead(&in.m_previousValue))
         {
         }
+
         ctsStatsTracking(ctsStatsTracking&& in) noexcept :
             m_currentValue(ctl::ctMemoryGuardRead(&in.m_currentValue)),
             m_previousValue(ctl::ctMemoryGuardRead(&in.m_previousValue))
         {
         }
+
         // not allowing assignment operator - must be explicit
         ctsStatsTracking& operator=(const ctsStatsTracking&) = delete;
         ctsStatsTracking& operator=(ctsStatsTracking&&) = delete;
@@ -111,6 +113,7 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardRead(&m_currentValue);
         }
+
         //
         // Safely writes to the current value, returning the *prior* value
         //
@@ -118,10 +121,12 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardWrite(&m_currentValue, new_value);
         }
+
         int64_t SetConditionally(int64_t new_value, int64_t if_equals) noexcept
         {
             return ctl::ctMemoryGuardWriteConditionally(&m_currentValue, new_value, if_equals);
         }
+
         //
         // Adds 1 to the current value, returning the new value
         //
@@ -129,6 +134,7 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardIncrement(&m_currentValue);
         }
+
         //
         // Subtracts 1 from the current value, returning the new value
         //
@@ -136,6 +142,7 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardDecrement(&m_currentValue);
         }
+
         //
         // Adds the [in] value to the current value, returning the original value
         //
@@ -143,6 +150,7 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardAdd(&m_currentValue, value);
         }
+
         //
         // Subtracts the [in] value from the current value, returning the original value
         //
@@ -150,6 +158,7 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardSubtract(&m_currentValue, value);
         }
+
         //
         // Get / Sets a new value to the 'previous' value, returning the prior 'previous' value
         //
@@ -157,10 +166,12 @@ namespace ctsTraffic
         {
             return ctl::ctMemoryGuardRead(&m_previousValue);
         }
+
         int64_t SetPriorValue(int64_t new_value) noexcept
         {
             return ctl::ctMemoryGuardWrite(&m_previousValue, new_value);
         }
+
         //
         // Updates the previous value with the current value
         // - returning the difference (current_value - previous_value)
@@ -171,6 +182,7 @@ namespace ctsTraffic
             const auto capturePriorValue = ctl::ctMemoryGuardWrite(&m_previousValue, captureCurrentValue);
             return captureCurrentValue - capturePriorValue;
         }
+
         //
         // Returns the difference (current_value - previous_value)
         // - without modifying either value
@@ -197,6 +209,7 @@ namespace ctsTraffic
             m_startTime(start_time)
         {
         }
+
         ~ctsConnectionStatistics() noexcept = default;
         ctsConnectionStatistics(const ctsConnectionStatistics&) = default;
         ctsConnectionStatistics(ctsConnectionStatistics&&) = default;
@@ -216,8 +229,8 @@ namespace ctsTraffic
         {
             const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
             const int64_t priorTimeRead = clear_settings ?
-                m_startTime.SetPriorValue(currentTime) :
-                m_startTime.GetPriorValue();
+                                          m_startTime.SetPriorValue(currentTime) :
+                                          m_startTime.GetPriorValue();
 
             ctsConnectionStatistics returnStats(priorTimeRead);
             returnStats.m_endTime.SetValue(currentTime);
@@ -248,6 +261,7 @@ namespace ctsTraffic
         {
             m_connectionIdentifier[0] = '\0';
         }
+
         ~ctsUdpStatistics() noexcept = default;
 
         ctsUdpStatistics(const ctsUdpStatistics&) noexcept = default;
@@ -268,8 +282,8 @@ namespace ctsTraffic
         {
             const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
             const int64_t priorTimeRead = clear_settings ?
-                m_startTime.SetPriorValue(currentTime) :
-                m_startTime.GetPriorValue();
+                                          m_startTime.SetPriorValue(currentTime) :
+                                          m_startTime.GetPriorValue();
 
             ctsUdpStatistics returnStats(priorTimeRead);
             returnStats.m_endTime.SetValue(currentTime);
@@ -281,7 +295,6 @@ namespace ctsTraffic
                 returnStats.m_droppedFrames.SetValue(m_droppedFrames.SnapValueDifference());
                 returnStats.m_duplicateFrames.SetValue(m_duplicateFrames.SnapValueDifference());
                 returnStats.m_errorFrames.SetValue(m_errorFrames.SnapValueDifference());
-
             }
             else
             {
@@ -308,11 +321,12 @@ namespace ctsTraffic
         explicit ctsTcpStatistics(int64_t current_time = 0LL) noexcept :
             m_startTime(current_time)
         {
-            static const char* nullGuidString = "00000000-0000-0000-0000-000000000000";
+            static const auto* nullGuidString = "00000000-0000-0000-0000-000000000000";
             strcpy_s(
                 m_connectionIdentifier,
                 nullGuidString);
         }
+
         ~ctsTcpStatistics() noexcept = default;
 
         ctsTcpStatistics(const ctsTcpStatistics&) noexcept = default;
@@ -334,8 +348,8 @@ namespace ctsTraffic
         {
             const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
             const int64_t priorTimeRead = clear_settings ?
-                m_startTime.SetPriorValue(currentTime) :
-                m_startTime.GetPriorValue();
+                                          m_startTime.SetPriorValue(currentTime) :
+                                          m_startTime.GetPriorValue();
 
             ctsTcpStatistics returnStats(priorTimeRead);
             returnStats.m_endTime.SetValue(currentTime);
@@ -344,7 +358,6 @@ namespace ctsTraffic
             {
                 returnStats.m_bytesSent.SetValue(m_bytesSent.SnapValueDifference());
                 returnStats.m_bytesRecv.SetValue(m_bytesRecv.SnapValueDifference());
-
             }
             else
             {
