@@ -570,7 +570,7 @@ namespace ctsTraffic { namespace Rioiocp
         ~RioSocketContext() noexcept
         {
             // release all the space in the CQ for this RQ
-            Rioiocp::ReleaseRoomInCompletionQueue(static_cast<ULONG>(m_requestQueueSendSize + m_requestQueueRecvSize));
+            Rioiocp::ReleaseRoomInCompletionQueue(m_requestQueueSendSize + m_requestQueueRecvSize);
 
             if (m_rioRemoteAddress.BufferId != RIO_INVALID_BUFFERID)
             {
@@ -627,7 +627,7 @@ namespace ctsTraffic { namespace Rioiocp
             // - will return this error unless the protocol wants more IO 
             // - if the protocol wants more IO even though this failed, 
             //   will return the error from the next IO
-            DWORD error;
+            DWORD error{};
             switch (const auto protocolStatus = lockedPattern->CompleteIo(*pTask, transferred, status))
             {
                 case ctsIoStatus::ContinueIo:

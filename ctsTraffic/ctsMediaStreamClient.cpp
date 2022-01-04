@@ -225,7 +225,8 @@ IoImplStatus ctsMediaStreamClientIoImpl(const std::shared_ptr<ctsSocket>& shared
 
     switch (task.m_ioAction)
     {
-        case ctsTaskAction::Send: // fall-through
+        case ctsTaskAction::Send:
+            [[fallthrough]];
         case ctsTaskAction::Recv:
         {
             // add-ref the IO about to start

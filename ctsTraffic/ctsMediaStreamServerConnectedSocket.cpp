@@ -141,11 +141,16 @@ VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(PTP_
                 // done until the next send completes
                 break;
 
-            case ctsTaskAction::Recv: // fall-through
-            case ctsTaskAction::GracefulShutdown: // fall-through
-            case ctsTaskAction::HardShutdown: // fall-through
-            case ctsTaskAction::Abort: // fall-through
-            case ctsTaskAction::FatalAbort: // fall-through
+            case ctsTaskAction::Recv:
+                [[fallthrough]];
+            case ctsTaskAction::GracefulShutdown:
+                [[fallthrough]];
+            case ctsTaskAction::HardShutdown:
+                [[fallthrough]];
+            case ctsTaskAction::Abort:
+                [[fallthrough]];
+            case ctsTaskAction::FatalAbort:
+                [[fallthrough]];
             default: // NOLINT(clang-diagnostic-covered-switch-default)
                 FAIL_FAST_MSG(
                     "Unexpected task action returned from initiate_io - %d (dt %p ctsTraffic::ctsIOTask)",

@@ -150,7 +150,8 @@ namespace Detail
             case CSTR_EQUAL:
                 return true;
 
-            case CSTR_LESS_THAN: // fall-through
+            case CSTR_LESS_THAN:
+                [[fallthrough]];
             case CSTR_GREATER_THAN:
                 return false;
 
@@ -182,7 +183,8 @@ namespace Detail
             case CSTR_EQUAL:
                 return true;
 
-            case CSTR_LESS_THAN: // fall-through
+            case CSTR_LESS_THAN:
+                [[fallthrough]];
             case CSTR_GREATER_THAN:
                 return false;
 

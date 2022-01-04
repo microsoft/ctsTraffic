@@ -54,8 +54,8 @@ namespace details
 
         std::vector<LONG> m_listeningSocketsRefcount{};
 
-        _Guarded_by_(accepting_cs) std::vector<SOCKET> m_listeningSockets{};
-        _Guarded_by_(accepting_cs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
+        _Guarded_by_(m_acceptingCs) std::vector<SOCKET> m_listeningSockets{};
+        _Guarded_by_(m_acceptingCs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
 
     public:
         ctsSimpleAcceptImpl()

@@ -91,7 +91,8 @@ void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                 socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags);
                 break;
 
-            case ctsConfig::ProtocolType::NoProtocolSet: // fall-through
+            case ctsConfig::ProtocolType::NoProtocolSet:
+                [[fallthrough]];
             default: // NOLINT(clang-diagnostic-covered-switch-default)
                 ctsConfig::PrintErrorInfo(
                     L"Unknown socket protocol (%u)",

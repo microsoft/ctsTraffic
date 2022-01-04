@@ -915,6 +915,56 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
         g_configSettings->PullBytes = c_defaultPullBytes;
     }
 
+    // ReSharper disable once CppTooWideScopeInitStatement
+    const auto foundBurstCount = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+        const auto* const value = ParseArgument(parameter, L"-burstcount");
+        return value != nullptr;
+    });
+    if (foundBurstCount != end(args))
+    {
+        if (g_configSettings->Protocol != ProtocolType::TCP)
+        {
+            throw invalid_argument("-BurstCount requires -Protocol:TCP");
+        }
+
+        g_configSettings->BurstCount = ConvertToIntegral<uint32_t>(ParseArgument(*foundBurstCount, L"-burstcount"));
+        if (g_configSettings->BurstCount == 0ul)
+        {
+            throw invalid_argument("-BurstCount requires a non-zero value");
+        }
+        // always remove the arg from our vector
+        args.erase(foundBurstCount);
+    }
+
+    // ReSharper disable once CppTooWideScopeInitStatement
+    const auto foundBurstDelay = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+        const auto* const value = ParseArgument(parameter, L"-burstdelay");
+        return value != nullptr;
+    });
+    if (foundBurstDelay != end(args))
+    {
+        if (g_configSettings->Protocol != ProtocolType::TCP)
+        {
+            throw invalid_argument("-BurstDelay requires -Protocol:TCP");
+        }
+
+        g_configSettings->BurstDelay = ConvertToIntegral<uint32_t>(ParseArgument(*foundBurstDelay, L"-burstdelay"));
+        if (g_configSettings->BurstDelay == 0ul)
+        {
+            throw invalid_argument("-BurstDelay requires a non-zero value");
+        }
+        // always remove the arg from our vector
+        args.erase(foundBurstDelay);
+    }
+
+    // ReSharper disable CppRedundantParentheses
+    if ((g_configSettings->BurstCount.has_value() && !g_configSettings->BurstDelay.has_value()) ||
+        (!g_configSettings->BurstCount.has_value() && g_configSettings->BurstDelay.has_value()))
+    {
+        throw invalid_argument("-BurstCount and -BurstDelay must both be set if either are set");
+    }
+    // ReSharper restore CppRedundantParentheses
+
     //
     // Options for the UDP protocol
     //
@@ -2284,12 +2334,12 @@ void PrintUsage(PrintUsageOption option)
                 L"\t  note : pushbytes are the bytes sent from the client and received on the server\n"
                 L"-BurstCount:####\n"
                 L"   - optional parameter\n"
-                L"   - applies to all TCP IO Patterns\n"
+                L"   - applies to any TCP IO Pattern\n"
                 L"   - the number of sends() to send -buffer:#### in a tight loop before triggering a delay\n"
                 L"\t  note : this is a required field when using BurstDelay\n"
                 L"-BurstDelay:####\n"
                 L"   - optional parameter\n"
-                L"   - applies to all TCP IO Patterns\n"
+                L"   - applies to any TCP IO Pattern\n"
                 L"   - the number of milliseconds to delay after completing -BurstCount sends\n"
                 L"\t  note : this is a required field when using BurstCount\n"
                 L"-RateLimit:#####\n"
@@ -2725,6 +2775,12 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
 
     ParseForRatelimit(args);
     ParseForTimelimit(args);
+
+    if (g_rateLimitLow > 0LL && g_configSettings->BurstDelay.has_value())
+    {
+        throw invalid_argument("-RateLimit and -Burstdelay cannot be used concurrently");
+    }
+
     // ReSharper disable once CppTooWideScopeInitStatement
     const auto ratePerPeriod = g_rateLimitLow * g_configSettings->TcpBytesPerSecondPeriod / 1000LL;
     if (g_configSettings->Protocol == ProtocolType::TCP && g_rateLimitLow > 0 && ratePerPeriod < 1)
@@ -4077,11 +4133,11 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         constexpr int optlen{sizeof optval};
 
         if (::setsockopt(
-            socket,
-            SOL_SOCKET, // level
-            SO_KEEPALIVE, // optname
-            reinterpret_cast<const char*>(&optval),
-            optlen) != 0)
+                socket,
+                SOL_SOCKET, // level
+                SO_KEEPALIVE, // optname
+                reinterpret_cast<const char*>(&optval),
+                optlen) != 0)
         {
             const auto gle = WSAGetLastError();
             PrintErrorIfFailed("setsockopt(SO_KEEPALIVE)", gle);
@@ -4093,11 +4149,11 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     {
         const auto recvBuff = g_configSettings->RecvBufValue;
         if (::setsockopt(
-            socket,
-            SOL_SOCKET,
-            SO_RCVBUF,
-            reinterpret_cast<const char*>(&recvBuff),
-            static_cast<int>(sizeof recvBuff)) != 0)
+                socket,
+                SOL_SOCKET,
+                SO_RCVBUF,
+                reinterpret_cast<const char*>(&recvBuff),
+                static_cast<int>(sizeof recvBuff)) != 0)
         {
             const auto gle = WSAGetLastError();
             PrintErrorIfFailed("setsockopt(SO_RCVBUF)", gle);
@@ -4109,11 +4165,11 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     {
         const auto sendBuff = g_configSettings->SendBufValue;
         if (::setsockopt(
-            socket,
-            SOL_SOCKET,
-            SO_SNDBUF,
-            reinterpret_cast<const char*>(&sendBuff),
-            static_cast<int>(sizeof sendBuff)) != 0)
+                socket,
+                SOL_SOCKET,
+                SO_SNDBUF,
+                reinterpret_cast<const char*>(&sendBuff),
+                static_cast<int>(sizeof sendBuff)) != 0)
         {
             const auto gle = WSAGetLastError();
             PrintErrorIfFailed("setsockopt(SO_SNDBUF)", gle);
@@ -4195,7 +4251,8 @@ void PrintSettings()
             settingString.append(L"UDP");
             break;
 
-        case ProtocolType::NoProtocolSet: // fall-through
+        case ProtocolType::NoProtocolSet:
+            [[fallthrough]];
         default:
             FAIL_FAST_MSG("Unexpected Settings Protocol");
     }
@@ -4272,7 +4329,8 @@ void PrintSettings()
             settingString.append(L"MediaStream <UDP controlled stream from server to client>\n");
             break;
 
-        case IoPatternType::NoIoSet: // fall-through
+        case IoPatternType::NoIoSet:
+            [[fallthrough]];
         default:
             FAIL_FAST_MSG("Unexpected Settings IoPattern");
     }

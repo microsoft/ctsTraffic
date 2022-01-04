@@ -52,7 +52,7 @@ static uint32_t g_maxNumberOfRioSendBuffers = 0;
 BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID*) noexcept // NOLINT(bugprone-exception-escape)
 {
     // first create the buffer pattern
-    for (auto fillSlot = 0ul; fillSlot < c_bufferPatternSize; ++fillSlot)
+    for (size_t fillSlot = 0; fillSlot < c_bufferPatternSize; ++fillSlot)
     {
         *reinterpret_cast<unsigned short*>(&g_bufferPattern[fillSlot * 2]) = static_cast<unsigned short>(fillSlot);
     }
@@ -218,7 +218,9 @@ void ctsIoPattern::CreateSendBuffers()
 ctsIoPattern::ctsIoPattern(uint32_t recvCount) :
     // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
     m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
-    m_quantumStartTimeMs(ctTimer::SnapQpcInMillis())
+    m_quantumStartTimeMs(ctTimer::SnapQpcInMillis()),
+    m_burstCount(ctsConfig::g_configSettings->BurstCount),
+    m_burstDelay(ctsConfig::g_configSettings->BurstDelay)
 {
     FAIL_FAST_IF_MSG(
         ctsConfig::g_configSettings->UseSharedBuffer && ctsConfig::g_configSettings->ShouldVerifyBuffers,
@@ -407,11 +409,14 @@ ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, uint32_t curre
         case ctsTaskAction::GracefulShutdown:
             // Fall-through to be processed like send or recv IO
             PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown\n");
+            [[fallthrough]];
         case ctsTaskAction::HardShutdown:
             // Fall-through to be processed like send or recv IO
             PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown\n");
+            [[fallthrough]];
         case ctsTaskAction::Recv:
-        // Fall-through to Send - where the IO will be processed
+            // Fall-through to Send - where the IO will be processed
+            [[fallthrough]];
         case ctsTaskAction::Send:
         {
             auto verifyIo = true;
@@ -584,6 +589,7 @@ ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) 
         //
         // check to see if the send needs to be deferred into the future
         //
+        returnTask.m_timeOffsetMilliseconds = 0LL;
         if (m_bytesSendingPerQuantum > 0)
         {
             const auto currentTimeMs(ctTimer::SnapQpcInMillis());
@@ -616,8 +622,6 @@ ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) 
                         m_bytesSendingThisQuantum -= bytesToAdjust;
                     }
                 }
-                // update the return task for when to schedule the send
-                returnTask.m_timeOffsetMilliseconds = 0LL;
             }
             else
             {
@@ -644,14 +648,29 @@ ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) 
                 }
                 // then add in any quantum we need to skip
                 returnTask.m_timeOffsetMilliseconds += msForQuantumsToSkip;
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to RateLimit (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
 
                 // finally, adjust quantum_start_time_ms to the next quantum which IO will complete
                 m_quantumStartTimeMs += msForQuantumsToSkip + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
             }
         }
-        else
+        else if (m_burstCount.has_value())
         {
-            returnTask.m_timeOffsetMilliseconds = 0LL;
+            if (m_burstCount.value() == 0)
+            {
+                m_burstCount = ctsConfig::g_configSettings->BurstCount;
+            }
+
+            m_burstCount = m_burstCount.value() - 1;
+            if (m_burstCount.value() == 0)
+            {
+                returnTask.m_timeOffsetMilliseconds = m_burstDelay.value();
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to BurstDelay (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
+            }
+            else
+            {
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : not delaying the next send due to BurstDelay\n");
+            }
         }
 
         returnTask.m_ioAction = ctsTaskAction::Send;
@@ -1104,10 +1123,15 @@ ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& t
             break;
 
         case ctsTaskAction::None:
+            [[fallthrough]];
         case ctsTaskAction::GracefulShutdown:
+            [[fallthrough]];
         case ctsTaskAction::HardShutdown:
+            [[fallthrough]];
         case ctsTaskAction::Abort:
+            [[fallthrough]];
         case ctsTaskAction::FatalAbort:
+            [[fallthrough]];
         default: ; // NOLINT(clang-diagnostic-covered-switch-default)
         // fall through to return NoError
     }
@@ -1153,7 +1177,7 @@ ctsTask ctsIoPatternMediaStreamServer::GetNextTaskFromPattern() noexcept
         case ServerState::IdSent:
             m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
             m_state = ServerState::IoStarted;
-        // fall-through
+            [[fallthrough]];
         case ServerState::IoStarted:
             if (m_currentFrameRequested < m_frameSizeBytes)
             {

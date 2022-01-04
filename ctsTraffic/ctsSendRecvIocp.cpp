@@ -169,11 +169,11 @@ static ctsSendRecvStatus ctsSendRecvProcessTask(SOCKET socket, const std::shared
                     ctsSendRecvCompletionCallback(pCallbackOverlapped, weak_reference, nextIo);
                 });
 
-            WSABUF wsabuffer;
+            WSABUF wsabuffer{};
             wsabuffer.buf = nextIo.m_buffer + nextIo.m_bufferOffset;
             wsabuffer.len = nextIo.m_bufferLength;
 
-            PCSTR functionName;
+            PCSTR functionName{};
             if (ctsTaskAction::Send == nextIo.m_ioAction)
             {
                 functionName = "WSASend";

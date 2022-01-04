@@ -480,7 +480,8 @@ inline ctsIoPatternType ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient
             m_pendedState = true;
             return ctsIoPatternType::RequestFin;
 
-        case InternalPatternState::CompletedTransfer: // fall-through
+        case InternalPatternState::CompletedTransfer:
+            [[fallthrough]];
         case InternalPatternState::ErrorIoFailed:
             return ctsIoPatternType::NoIo;
 
@@ -504,7 +505,8 @@ inline ctsIoPatternType ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer
             m_pendedState = true;
             return ctsIoPatternType::RequestFin;
 
-        case InternalPatternState::CompletedTransfer: // fall-through
+        case InternalPatternState::CompletedTransfer:
+            [[fallthrough]];
         case InternalPatternState::ErrorIoFailed:
             return ctsIoPatternType::NoIo;
 

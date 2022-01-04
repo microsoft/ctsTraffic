@@ -30,6 +30,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // - with the below exceptions : these do not include any cts* headers
 //   -- ctsStatistics.hpp
 //
+#include <optional>
+
 #include "ctsStatistics.hpp"
 
 namespace ctsTraffic
@@ -379,6 +381,9 @@ namespace ctsConfig
 
         uint32_t PushBytes = 0;
         uint32_t PullBytes = 0;
+
+        std::optional<uint32_t> BurstCount;
+        std::optional<uint32_t> BurstDelay;
 
         uint32_t OutgoingIfIndex = 0;
 

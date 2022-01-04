@@ -214,6 +214,9 @@ private:
     uint32_t m_sendPatternOffset = 0;
     uint32_t m_recvPatternOffset = 0;
 
+    std::optional<uint32_t> m_burstCount;
+    std::optional<uint32_t> m_burstDelay;
+
     // recv buffers to return to the caller
     // - tracking sending buffers separate from receiving buffers
     //   since sending buffers will have a test pattern written to it (thus send buffers can be static)
@@ -407,7 +410,9 @@ protected:
                 UpdateLastError(NO_ERROR);
                 break;
 
-            case ctsIoPatternError::NoError: // fall-through - don't modify the current error value
+            case ctsIoPatternError::NoError:
+                // fall-through - don't modify the current error value
+                [[fallthrough]];
             case ctsIoPatternError::ErrorIoFailed:
                 break;
         }
