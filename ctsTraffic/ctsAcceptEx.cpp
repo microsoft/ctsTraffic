@@ -104,7 +104,7 @@ namespace details
             wil::unique_socket tempsocket(
                 ctsConfig::CreateSocket(m_sockaddr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags));
 
-            const auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), m_sockaddr);
+            auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), m_sockaddr);
             if (error != 0)
             {
                 THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
@@ -112,11 +112,15 @@ namespace details
 
             if (SOCKET_ERROR == bind(tempsocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
             {
-                THROW_WIN32_MSG(error, "bind (ctsAcceptEx)");
+                error = WSAGetLastError();
+                char addrBuffer[ctl::SockAddrMaxStringLength]{};
+                m_sockaddr.WriteCompleteAddress(addrBuffer);
+                THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
             }
 
             if (SOCKET_ERROR == listen(tempsocket.get(), ctsConfig::GetListenBacklog()))
             {
+                error = WSAGetLastError();
                 THROW_WIN32_MSG(error, "listen (ctsAcceptEx)");
             }
 
@@ -219,27 +223,31 @@ namespace details
             // listen to each address
             for (const auto& addr : g_configSettings->ListenAddresses)
             {
-                // Make the structures for the listener and its accept sockets
-                auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
-                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
-                //
-                // Add PendedAcceptRequests pended acceptex objects per listener
-                //
-                for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
+                try
                 {
-                    auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
-                    listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
-                    // post AcceptEx on this socket
-                    acceptSocketInfo->InitatiateAcceptEx();
-                }
+                    // Make the structures for the listener and its accept sockets
+                    auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                    //
+                    // Add PendedAcceptRequests pended acceptex objects per listener
+                    //
+                    for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
+                    {
+                        auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
+                        listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
+                        // post AcceptEx on this socket
+                        acceptSocketInfo->InitatiateAcceptEx();
+                    }
 
-                // all successful - save this listen socket
-                tempListeners.push_back(listenSocketInfo);
+                    // all successful - save this listen socket
+                    tempListeners.push_back(listenSocketInfo);
+                }
+                CATCH_LOG()
             }
 
             if (tempListeners.empty())
             {
-                throw std::exception("ctsAcceptEx invoked with no listening addresses specified");
+                throw std::exception("ctsAcceptEx invoked with no listening sockets successfully created");
             }
 
             // everything succeeded - safely save the listen queue

@@ -148,14 +148,18 @@ namespace ctsMediaStreamServerImpl
             {
                 wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
 
-                if (const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr); error != NO_ERROR)
+                auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+                if (error != NO_ERROR)
                 {
                     THROW_WIN32_MSG(error, "SetPreBindOptions (ctsMediaStreamServer)");
                 }
 
                 if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
                 {
-                    THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsMediaStreamServer)");
+                    error = WSAGetLastError();
+                    char addrBuffer[ctl::SockAddrMaxStringLength]{};
+                    addr.WriteAddress(addrBuffer);
+                    THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
                 }
 
                 // capture the socket value before moved into the vector

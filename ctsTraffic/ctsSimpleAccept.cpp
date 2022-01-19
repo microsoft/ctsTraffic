@@ -78,16 +78,16 @@ namespace details
                 SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
                 auto closeSocketOnError = wil::scope_exit([&]() noexcept { closesocket(listening); });
 
-                auto gle = ctsConfig::SetPreBindOptions(listening, addr);
-                if (gle != NO_ERROR)
+                auto error = ctsConfig::SetPreBindOptions(listening, addr);
+                if (error != NO_ERROR)
                 {
-                    THROW_WIN32_MSG(gle, "SetPreBindOptions (ctsSimpleAccept)");
+                    THROW_WIN32_MSG(error, "SetPreBindOptions (ctsSimpleAccept)");
                 }
 
-                gle = ctsConfig::SetPreConnectOptions(listening);
-                if (gle != NO_ERROR)
+                error = ctsConfig::SetPreConnectOptions(listening);
+                if (error != NO_ERROR)
                 {
-                    THROW_WIN32_MSG(gle, "SetPreConnectOptions (ctsSimpleAccept)");
+                    THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                 }
 
                 if (SOCKET_ERROR == bind(listening, addr.sockaddr(), addr.length()))
