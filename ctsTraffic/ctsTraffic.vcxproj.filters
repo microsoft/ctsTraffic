@@ -229,6 +229,9 @@
     <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
+    <ClInclude Include="..\ctl\ctThreadpoolQueue.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd">

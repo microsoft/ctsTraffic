@@ -190,8 +190,7 @@ void ctsSocket::SetIoPattern()
     }
 }
 
-void ctsSocket::InitiateIsbNotification() noexcept
-try
+void ctsSocket::InitiateIsbNotification() noexcept try
 {
     const auto sharedThis = shared_from_this();
     const auto lockedSocket(sharedThis->AcquireSocketLock());

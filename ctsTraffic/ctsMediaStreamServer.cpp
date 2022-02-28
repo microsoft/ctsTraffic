@@ -37,22 +37,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
 // Called to 'accept' incoming connections
-void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+void ctsMediaStreamServerListener(const std::weak_ptr<ctsSocket>& weakSocket) noexcept try
 {
-    try
+    ctsMediaStreamServerImpl::InitOnce();
+    // ctsMediaStreamServerImpl will complete the ctsSocket object
+    // when a client request comes in to be 'accepted'
+    ctsMediaStreamServerImpl::AcceptSocket(weakSocket);
+}
+catch (...)
+{
+    const auto error = ctsConfig::PrintThrownException();
+    if (const auto sharedSocket = weakSocket.lock())
     {
-        ctsMediaStreamServerImpl::InitOnce();
-        // ctsMediaStreamServerImpl will complete the ctsSocket object
-        // when a client request comes in to be 'accepted'
-        ctsMediaStreamServerImpl::AcceptSocket(weakSocket);
-    }
-    catch (...)
-    {
-        const auto error = ctsConfig::PrintThrownException();
-        if (const auto sharedSocket = weakSocket.lock())
-        {
-            sharedSocket->CompleteState(error);
-        }
+        sharedSocket->CompleteState(error);
     }
 }
 
@@ -104,8 +101,7 @@ void ctsMediaStreamServerIo(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 }
 
 // Called to remove that socket from the tracked vector of connected sockets
-void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
-try
+void ctsMediaStreamServerClose(const std::weak_ptr<ctsSocket>& weakSocket) noexcept try
 {
     ctsMediaStreamServerImpl::InitOnce();
 
@@ -139,56 +135,54 @@ namespace ctsMediaStreamServerImpl
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_initImpl = INIT_ONCE_STATIC_INIT;
 
-    static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID*)
+    static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID*) noexcept try
     {
-        try
+        // 'listen' to each address
+        for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
         {
-            // 'listen' to each address
-            for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
+            wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
+
+            auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+            if (error != NO_ERROR)
             {
-                wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
-
-                auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
-                if (error != NO_ERROR)
-                {
-                    THROW_WIN32_MSG(error, "SetPreBindOptions (ctsMediaStreamServer)");
-                }
-
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
-                {
-                    error = WSAGetLastError();
-                    char addrBuffer[ctl::SockAddrMaxStringLength]{};
-                    addr.WriteAddress(addrBuffer);
-                    THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
-                }
-
-                // capture the socket value before moved into the vector
-                const SOCKET listeningSocketToPrint(listening.get());
-                g_listeningSockets.emplace_back(
-                    std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
-                PRINT_DEBUG_INFO(
-                    L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
-                    addr.WriteCompleteAddress().c_str(),
-                    listeningSocketToPrint);
+                THROW_WIN32_MSG(error, "SetPreBindOptions (ctsMediaStreamServer)");
             }
 
-            if (g_listeningSockets.empty())
+            if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
             {
-                throw std::exception("ctsMediaStreamServer invoked with no listening addresses specified");
+                error = WSAGetLastError();
+                char addrBuffer[ctl::SockAddrMaxStringLength]{};
+                addr.WriteAddress(addrBuffer);
+                THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
             }
 
-            // initiate the recv's in the 'listening' sockets
-            for (const auto& listener : g_listeningSockets)
-            {
-                listener->InitiateRecv();
-            }
+            // capture the socket value before moved into the vector
+            const SOCKET listeningSocketToPrint(listening.get());
+            g_listeningSockets.emplace_back(
+                std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
+            PRINT_DEBUG_INFO(
+                L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
+                addr.WriteCompleteAddress().c_str(),
+                listeningSocketToPrint);
         }
-        catch (...)
+
+        if (g_listeningSockets.empty())
         {
-            ctsConfig::PrintThrownException();
-            return FALSE;
+            throw std::exception("ctsMediaStreamServer invoked with no listening addresses specified");
         }
+
+        // initiate the recv's in the 'listening' sockets
+        for (const auto& listener : g_listeningSockets)
+        {
+            listener->InitiateRecv();
+        }
+
         return TRUE;
+    }
+    catch (...)
+    {
+        ctsConfig::PrintThrownException();
+        return FALSE;
     }
 
     void InitOnce()

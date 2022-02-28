@@ -71,6 +71,8 @@ ctsSocketBroker::ctsSocketBroker()
 
 ctsSocketBroker::~ctsSocketBroker() noexcept
 {
+    m_doneEvent.SetEvent();
+
     // first, turn off the timer to stop creating/tearing down the socket pool
     m_wakeupTimer.stop_all_timers();
 

@@ -26,18 +26,19 @@ using namespace std;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
+// Test writer must define specialization of ToString<const Q& q> types used in Assert
 
-    // Test writer must define specialization of ToString<const Q& q> types used in Assert
+template <>
+inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
+{
+    return wil::str_printf<std::wstring>(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
+}
 
-    template<> inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl::ctThreadIocp>& _tp)
-    {
-        return wil::str_printf<std::wstring>(L"ctl::ctThreadIocp -> 0x%p", _tp.get());
-    }
-
-    template<> inline std::wstring ToString<ctl::ctSockaddr >(const ctl::ctSockaddr& _addr)
-    {
-        return _addr.WriteCompleteAddress();
-    }
+template <>
+inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _addr)
+{
+    return _addr.WriteCompleteAddress();
+}
 }
 
 
@@ -46,97 +47,105 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 ///
 namespace ctsTraffic
 {
-    shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
+shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
+{
+    Logger::WriteMessage(L"ctsIOPattern::MakeIOPattern\n");
+    return nullptr;
+}
+
+[[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+{
+    return {};
+}
+
+void ctsSocketState::CompleteState(DWORD) noexcept
+{
+    Logger::WriteMessage(L"ctsSocketState::complete_state\n");
+}
+
+wsIOResult ctsSetLingertoResetSocket(SOCKET) noexcept
+{
+    return wsIOResult();
+}
+
+namespace ctsConfig
+{
+    ctsConfigSettings* g_configSettings;
+
+    void PrintDebug(PCWSTR _text, ...) noexcept
     {
-        Logger::WriteMessage(L"ctsIOPattern::MakeIOPattern\n");
-        return nullptr;
+        va_list args;
+        va_start(args, _text);
+        std::wstring outputString;
+        wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+        Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
+
+        va_end(args);
     }
 
-    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
     {
-        return {};
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
     }
 
-    void ctsSocketState::CompleteState(DWORD) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
     {
-        Logger::WriteMessage(L"ctsSocketState::complete_state\n");
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    wsIOResult ctsSetLingertoResetSocket(SOCKET) noexcept
+    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
     {
-        return wsIOResult();
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }
 
-    namespace ctsConfig
+    void PrintConnectionResults(uint32_t) noexcept
     {
-        ctsConfigSettings* g_configSettings;
+        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+    }
 
-        void PrintDebug(PCWSTR _text, ...) noexcept
-        {
-            va_list args;
-            va_start(args, _text);
-            std::wstring outputString;
-            wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
+    void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
+    {
+        Logger::WriteMessage(
+            wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+    }
 
-            va_end(args);
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+    DWORD PrintThrownException() noexcept
+    {
+        try
         {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
+            throw;
         }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
-        }
-        void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
-        }
-        void PrintConnectionResults(uint32_t) noexcept
-        {
-            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
-        }
-        void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
+        catch (const wil::ResultException& e)
         {
             Logger::WriteMessage(
-                wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                    e.what()).c_str());
+            return Win32FromHresult(e.GetErrorCode());
         }
-        DWORD PrintThrownException() noexcept
+        catch (const std::exception& e)
         {
-            try
-            {
-                throw;
-            }
-            catch (const wil::ResultException& e)
-            {
-                Logger::WriteMessage(
-                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                        e.what()).c_str());
-                return Win32FromHresult(e.GetErrorCode());
-            }
-            catch (const std::exception& e)
-            {
-                Logger::WriteMessage(
-                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                        e.what()).c_str());
-                return WSAENOBUFS;
-            }
-            catch (...)
-            {
-                FAIL_FAST();
-            }
+            Logger::WriteMessage(
+                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                    e.what()).c_str());
+            return WSAENOBUFS;
         }
-        bool ShutdownCalled() noexcept
+        catch (...)
         {
-            return false;
-        }
-        uint32_t ConsoleVerbosity() noexcept
-        {
-            return 0;
+            FAIL_FAST();
         }
     }
-}
+
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
+
+    uint32_t ConsoleVerbosity() noexcept
+    {
+        return 0;
+    }
+}}
+
 ///
 /// End of Fakes
 ///
@@ -146,175 +155,176 @@ using namespace ctsTraffic;
 
 namespace ctsUnitTest
 {
-    TEST_CLASS(ctsSocketUnitTest)
+TEST_CLASS(ctsSocketUnitTest)
+{
+public:
+    TEST_CLASS_INITIALIZE(Setup)
     {
-    public:
-        TEST_CLASS_INITIALIZE(Setup)
+        WSADATA wsa;
+        const int startup = WSAStartup(WINSOCK_VERSION, &wsa);
+        Assert::AreEqual(0, startup);
+
+        ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+    }
+
+    TEST_CLASS_CLEANUP(Cleanup)
+    {
+        delete ctsConfig::g_configSettings;
+        WSACleanup();
+    }
+
+    TEST_METHOD(SocketGuardReturnsSocket)
+    {
+        const auto socket_value(this->create_socket());
+
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
+
+        // set the socket
+        test->SetSocket(socket_value);
+
+        // get the socket under lock
+        const auto socket_guard(test->AcquireSocketLock());
+        Assert::AreEqual(socket_value, socket_guard.GetSocket());
+    }
+
+    TEST_METHOD(SocketGuardIsMovable)
+    {
+        const auto socket_value(this->create_socket());
+
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
+
+        // set the socket
+        test->SetSocket(socket_value);
+
+        // validate the object guard
+        const auto socket_guard(test->AcquireSocketLock());
+        Assert::AreEqual(socket_value, socket_guard.GetSocket());
+    }
+
+    TEST_METHOD(CloseSocket)
+    {
+        const auto socket_value(this->create_socket());
+
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
+
+        test->SetSocket(socket_value);
         {
-            WSADATA wsa;
-            const int startup = ::WSAStartup(WINSOCK_VERSION, &wsa);
-            Assert::AreEqual(0, startup);
-
-            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
-        }
-        TEST_CLASS_CLEANUP(Cleanup)
-        {
-            delete ctsConfig::g_configSettings;
-            ::WSACleanup();
-        }
-
-        TEST_METHOD(SocketGuardReturnsSocket)
-        {
-            const auto socket_value(this->create_socket());
-
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
-
-            // set the socket
-            test->SetSocket(socket_value);
-
-            // get the socket under lock
             const auto socket_guard(test->AcquireSocketLock());
             Assert::AreEqual(socket_value, socket_guard.GetSocket());
         }
 
-        TEST_METHOD(SocketGuardIsMovable)
+        test->CloseSocket();
         {
-            const auto socket_value(this->create_socket());
+            const auto socket_guard(test->AcquireSocketLock());
+            Assert::AreEqual(INVALID_SOCKET, socket_guard.GetSocket());
+        }
+    }
 
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+    TEST_METHOD(DtorClosesSocket)
+    {
+        const auto socket_value(this->create_socket());
 
-            // set the socket
-            test->SetSocket(socket_value);
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-            // validate the object guard
+        test->SetSocket(socket_value);
+        {
             const auto socket_guard(test->AcquireSocketLock());
             Assert::AreEqual(socket_value, socket_guard.GetSocket());
         }
 
-        TEST_METHOD(CloseSocket)
-        {
-            const auto socket_value(this->create_socket());
+        test.reset();
 
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+        // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
+        // - trying to use it should fail with an invalid socket error
+        ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+        local_addr.SetPort(55555);
+        const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
+        const auto gle = WSAGetLastError();
+        Assert::AreEqual(SOCKET_ERROR, error);
+        Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);
+    }
 
-            test->SetSocket(socket_value);
-            {
-                const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(socket_value, socket_guard.GetSocket());
-            }
+    TEST_METHOD(ThreadPool)
+    {
+        const auto socket_value(this->create_socket());
 
-            test->CloseSocket();
-            {
-                const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(INVALID_SOCKET, socket_guard.GetSocket());
-            }
-        }
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        TEST_METHOD(DtorClosesSocket)
-        {
-            const auto socket_value(this->create_socket());
+        // when the socket is INVALID_SOCKET, should return a nullptr
+        const auto tp1(test->GetIocpThreadpool());
+        Assert::AreEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp1);
 
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+        // once given a real socket, should return a valid TP handle
+        test->SetSocket(socket_value);
+        const auto tp2(test->GetIocpThreadpool());
+        Assert::AreNotEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp2);
+    }
 
-            test->SetSocket(socket_value);
-            {
-                const auto socket_guard(test->AcquireSocketLock());
-                Assert::AreEqual(socket_value, socket_guard.GetSocket());
-            }
+    TEST_METHOD(LocalAddrs)
+    {
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-            test.reset();
+        ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+        test_address.SetPort(55555);
 
-            // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
-            // - trying to use it should fail with an invalid socket error
-            ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-            local_addr.SetPort(55555);
-            const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
-            const auto gle = ::WSAGetLastError();
-            Assert::AreEqual(SOCKET_ERROR, error);
-            Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);
-        }
+        test->SetLocalSockaddr(test_address);
+        Assert::AreEqual(test_address, test->GetLocalSockaddr());
+        Assert::AreNotEqual(test->GetRemoteSockaddr(), test->GetLocalSockaddr());
+    }
 
-        TEST_METHOD(ThreadPool)
-        {
-            const auto socket_value(this->create_socket());
+    TEST_METHOD(TargetAddrs)
+    {
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+        ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
+        test_address.SetPort(55555);
 
-            // when the socket is INVALID_SOCKET, should return a nullptr
-            const auto tp1(test->GetIocpThreadpool());
-            Assert::AreEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp1);
+        test->SetLocalSockaddr(test_address);
+        Assert::AreEqual(test_address, test->GetLocalSockaddr());
+        Assert::AreNotEqual(test->GetRemoteSockaddr(), test->GetLocalSockaddr());
+    }
 
-            // once given a real socket, should return a valid TP handle
-            test->SetSocket(socket_value);
-            const auto tp2(test->GetIocpThreadpool());
-            Assert::AreNotEqual(shared_ptr<ctl::ctThreadIocp>(nullptr), tp2);
-        }
+    TEST_METHOD(IOCounters)
+    {
+        shared_ptr<ctsSocketState> default_socket_state_object;
+        const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        TEST_METHOD(LocalAddrs)
-        {
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+        Logger::WriteMessage(L"Incrementing to 1\n");
+        Assert::AreEqual(1, test->IncrementIo());
+        Assert::AreEqual(1, test->GetPendedIoCount());
 
-            ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-            test_address.SetPort(55555);
+        Logger::WriteMessage(L"Incrementing to 2\n");
+        Assert::AreEqual(2, test->IncrementIo());
+        Assert::AreEqual(2, test->GetPendedIoCount());
 
-            test->SetLocalSockaddr(test_address);
-            Assert::AreEqual(test_address, test->GetLocalSockaddr());
-            Assert::AreNotEqual(test->GetRemoteSockaddr(), test->GetLocalSockaddr());
-        }
+        Logger::WriteMessage(L"Decrementing to 1\n");
+        Assert::AreEqual(1, test->DecrementIo());
+        Assert::AreEqual(1, test->GetPendedIoCount());
 
-        TEST_METHOD(TargetAddrs)
-        {
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
+        Logger::WriteMessage(L"Decrementing to 0\n");
+        Assert::AreEqual(0, test->DecrementIo());
+        Assert::AreEqual(0, test->GetPendedIoCount());
 
-            ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-            test_address.SetPort(55555);
+        // todo: not sure how to validate going below 0 invokes fail-fast
+    }
 
-            test->SetLocalSockaddr(test_address);
-            Assert::AreEqual(test_address, test->GetLocalSockaddr());
-            Assert::AreNotEqual(test->GetRemoteSockaddr(), test->GetLocalSockaddr());
-        }
+private:
+    [[nodiscard]] SOCKET create_socket() const
+    {
+        // create a valid UDP socket
+        const SOCKET socket_value(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+        const auto gle = WSAGetLastError();
+        Logger::WriteMessage(wil::str_printf<std::wstring>(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
+        Assert::AreNotEqual(INVALID_SOCKET, socket_value);
 
-        TEST_METHOD(IOCounters)
-        {
-            shared_ptr<ctsSocketState> default_socket_state_object;
-            const shared_ptr test(make_shared<ctsSocket>(default_socket_state_object));
-
-            Logger::WriteMessage(L"Incrementing to 1\n");
-            Assert::AreEqual(1, test->IncrementIo());
-            Assert::AreEqual(1, test->GetPendedIoCount());
-
-            Logger::WriteMessage(L"Incrementing to 2\n");
-            Assert::AreEqual(2, test->IncrementIo());
-            Assert::AreEqual(2, test->GetPendedIoCount());
-
-            Logger::WriteMessage(L"Decrementing to 1\n");
-            Assert::AreEqual(1, test->DecrementIo());
-            Assert::AreEqual(1, test->GetPendedIoCount());
-
-            Logger::WriteMessage(L"Decrementing to 0\n");
-            Assert::AreEqual(0, test->DecrementIo());
-            Assert::AreEqual(0, test->GetPendedIoCount());
-
-            // todo: not sure how to validate going below 0 invokes fail-fast
-        }
-
-    private:
-        [[nodiscard]] SOCKET create_socket() const
-        {
-            // create a valid UDP socket
-            const SOCKET socket_value(::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
-            const auto gle = ::WSAGetLastError();
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"Created SOCKET value 0x%x (gle %d)\n", socket_value, gle).c_str());
-            Assert::AreNotEqual(INVALID_SOCKET, socket_value);
-
-            return socket_value;
-        }
-    };
+        return socket_value;
+    }
+};
 }

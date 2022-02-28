@@ -276,26 +276,26 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
-        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 0));
 
         // send server completion
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
         Assert::AreEqual(g_TestBufferLength, test_task.m_bufferLength);
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         // wait for the FIN from the client
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(test_task, 0, 0));
     }
 
@@ -322,10 +322,10 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
-        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 1));
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 1));
         Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
     }
 
@@ -340,26 +340,26 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
-        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 0));
 
         // send server completion
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
         Assert::AreEqual(g_TestBufferLength, test_task.m_bufferLength);
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         // recv FIN from client
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, 0, 1));
         Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
     }
@@ -375,26 +375,26 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
-        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 0));
 
         // send server completion
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
         Assert::AreEqual(g_TestBufferLength, test_task.m_bufferLength);
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         // recv FIN from client
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, 1, 0));
         Assert::AreEqual(static_cast<uint32_t>(c_statusErrorTooMuchDataTransferred), test_pattern->GetLastPatternError());
     }
@@ -410,26 +410,26 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
-        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 0));
 
         // send server completion
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
         Assert::AreEqual(g_TestBufferLength, test_task.m_bufferLength);
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         // recv FIN from client
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, 1, 0));
         Assert::AreEqual(static_cast<uint32_t>(c_statusErrorTooMuchDataTransferred), test_pattern->GetLastPatternError());
     }
@@ -445,12 +445,12 @@ public:
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, ctsStatistics::ConnectionIdLength, 0));
 
         test_task = test_pattern->InitiateIo();
-        Assert::AreEqual(ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, test_task.m_bufferLength);
+        Assert::AreEqual(DefaultTransferSize, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
         // not returning the correct bytes
         ::ZeroMemory(test_task.m_buffer, test_task.m_bufferLength);
-        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, ctsUnitTest::ctsIOPatternUnitTest_Server::DefaultTransferSize, 0));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(test_task, DefaultTransferSize, 0));
         Assert::AreEqual(static_cast<uint32_t>(c_statusErrorDataDidNotMatchBitPattern), test_pattern->GetLastPatternError());
     }
 
@@ -488,13 +488,13 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
             // "recv" the correct bytes
-            ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+            memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
             Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, g_TestRecvBufferLength, 0));
         }
 
@@ -507,13 +507,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -548,13 +548,13 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength * 2, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
             // "recv" the correct bytes
-            ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+            memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
             Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, g_TestRecvBufferLength, 0));
         }
 
@@ -562,13 +562,13 @@ public:
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+        Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTask>(test_task).c_str()).c_str());
 
         ctsTask empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 1024, 0));
 
         // send server completion
@@ -580,13 +580,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -621,13 +621,13 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
             // "recv" the correct bytes
-            ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+            memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
             Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, g_TestRecvBufferLength, 0));
         }
 
@@ -640,13 +640,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -681,13 +681,13 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength * 2, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
             // "recv" the correct bytes
-            ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+            memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
             Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, g_TestRecvBufferLength, 0));
         }
 
@@ -695,13 +695,13 @@ public:
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+        Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", 10, ToString<ctsTask>(test_task).c_str()).c_str());
 
         ctsTask empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         // "recv" the correct bytes
-        ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+        memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 1024, 0));
 
         // send server completion
@@ -713,13 +713,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -754,13 +754,13 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
             // "recv" the correct bytes
-            ::memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
+            memcpy(test_task.m_buffer, ctsIoPattern::AccessSharedBuffer() + test_task.m_expectedPatternOffset, test_task.m_bufferLength);
             Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, g_TestRecvBufferLength, 0));
         }
 
@@ -773,13 +773,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -822,7 +822,7 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -839,13 +839,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -880,7 +880,7 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -897,13 +897,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -938,7 +938,7 @@ public:
             test_task = test_pattern->InitiateIo();
             Assert::AreEqual(g_TestRecvBufferLength, test_task.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::Send, test_task.m_ioAction);
-            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTraffic::ctsTask>(test_task).c_str()).c_str());
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task).c_str()).c_str());
 
             ctsTask empty_task = test_pattern->InitiateIo();
             Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
@@ -955,13 +955,13 @@ public:
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);
 
         char completion[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
-        ::memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
+        memcpy_s(completion, 4, test_task.m_buffer + test_task.m_bufferOffset, 4);
         Assert::IsTrue(g_doneString == completion);
         Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(test_task, 4, 0));
 
         test_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, test_task.m_ioAction);
-        Logger::WriteMessage(ToString<ctsTraffic::ctsTask>(test_task).c_str());
+        Logger::WriteMessage(ToString<ctsTask>(test_task).c_str());
 
         empty_task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::None, empty_task.m_ioAction);

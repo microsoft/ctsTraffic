@@ -41,7 +41,7 @@ const ctWmiService* g_wmi = nullptr;
 BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 {
     // regardless of the break type, signal to exit
-    ::SetEvent(g_break);
+    SetEvent(g_break);
     return TRUE;
 }
 
@@ -129,9 +129,9 @@ bool g_meanOnly = false;
 int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
     WSADATA wsadata;
-    if (const auto wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata); wsError != 0)
+    if (const auto wsError = WSAStartup(WINSOCK_VERSION, &wsadata); wsError != 0)
     {
-        ::wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
+        wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
     }
 
@@ -139,14 +139,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
     g_break = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (g_break == nullptr)
     {
-        const auto gle = ::GetLastError();
+        const auto gle = GetLastError();
         wprintf(L"Out of resources -- cannot initialize (CreateEvent) (%u)\n", gle);
         return static_cast<int>(gle);
     }
 
-    if (!::SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE))
+    if (!SetConsoleCtrlHandler(BreakHandlerRoutine, TRUE))
     {
-        const auto gle = ::GetLastError();
+        const auto gle = GetLastError();
         wprintf(L"Out of resources -- cannot initialize (SetConsoleCtrlHandler) (%u)\n", gle);
         return static_cast<int>(gle);
     }
@@ -196,7 +196,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             }
             else
             {
-                processId = ::wcstoul(pidString.c_str(), nullptr, 10);
+                processId = wcstoul(pidString.c_str(), nullptr, 10);
                 if (processId == 0 || processId == ULONG_MAX)
                 {
                     wprintf(L"Incorrect option: %ws\n", argv[argCount - 1]);
@@ -324,7 +324,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             perfObject.start_all_counters(1000);
         }
 
-        ::WaitForSingleObject(g_break, timeToRunMs);
+        WaitForSingleObject(g_break, timeToRunMs);
 
         wprintf(L"Stopping counters ....\n\n");
         for (auto& perfObject : performanceVector)

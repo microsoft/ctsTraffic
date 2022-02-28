@@ -366,13 +366,13 @@ inline std::wstring ctFormatMessage(DWORD messageId)
         FORMAT_MESSAGE_MAX_WIDTH_MASK;
 
     if (FormatMessageW(
-        formatMsgFlags,
-        nullptr, // just search the system
-        messageId,
-        0, // allow for proper MUI language fallback
-        stringBuffer,
-        cchBuffer,
-        nullptr) == 0)
+            formatMsgFlags,
+            nullptr, // just search the system
+            messageId,
+            0, // allow for proper MUI language fallback
+            stringBuffer,
+            cchBuffer,
+            nullptr) == 0)
     {
         return {};
     }

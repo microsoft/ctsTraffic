@@ -249,19 +249,15 @@ namespace details
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
 
-    static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
+    static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*) noexcept try
     {
-        try
-        {
-            g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
-        }
-        catch (...)
-        {
-            *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
-            return FALSE;
-        }
-
+        g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
         return TRUE;
+    }
+    catch (...)
+    {
+        *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
+        return FALSE;
     }
 }
 

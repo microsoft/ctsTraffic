@@ -447,23 +447,18 @@ namespace details
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_acceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
 
-    static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*)
+    static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*) noexcept try
     {
-        try
-        {
-            g_acceptExImpl.Start();
-        }
-        catch (...)
-        {
-            *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
-            return FALSE;
-        }
-
+        g_acceptExImpl.Start();
         return TRUE;
     }
+    catch (...)
+    {
+        *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
+        return FALSE;
+    }
 
-    static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept
-    try
+    static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept try
     {
         ctsAcceptedConnection acceptedSocket = acceptInfo->GetAcceptedSocket();
 
@@ -546,7 +541,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     DWORD error = 0;
     if (!InitOnceExecuteOnce(&details::g_acceptExImplInitOnce, details::ctsAcceptExImplInitFn, &error, nullptr))
     {
-        if (const auto sharedSocket=  weakSocket.lock())
+        if (const auto sharedSocket = weakSocket.lock())
         {
             sharedSocket->CompleteState(error);
         }

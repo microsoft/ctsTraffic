@@ -217,10 +217,10 @@ void ctsIoPattern::CreateSendBuffers()
 
 ctsIoPattern::ctsIoPattern(uint32_t recvCount) :
     // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
-    m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
-    m_quantumStartTimeMs(ctTimer::SnapQpcInMillis()),
     m_burstCount(ctsConfig::g_configSettings->BurstCount),
-    m_burstDelay(ctsConfig::g_configSettings->BurstDelay)
+    m_burstDelay(ctsConfig::g_configSettings->BurstDelay),
+    m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
+    m_quantumStartTimeMs(ctTimer::SnapQpcInMillis())
 {
     FAIL_FAST_IF_MSG(
         ctsConfig::g_configSettings->UseSharedBuffer && ctsConfig::g_configSettings->ShouldVerifyBuffers,

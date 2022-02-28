@@ -86,9 +86,9 @@ void ctsWriteDetails::WriteRow(const std::wstring& text) const noexcept
 {
     const auto length{static_cast<DWORD>((text.length() * sizeof(WCHAR)))};
     DWORD written{};
-    if (!::WriteFile(m_fileHandle.get(), text.c_str(), length, &written, nullptr))
+    if (!WriteFile(m_fileHandle.get(), text.c_str(), length, &written, nullptr))
     {
-        const auto gle = ::GetLastError();
+        const auto gle = GetLastError();
         wprintf(L"\t[ctsWriteDetails::write_row] WriteFile failed (%u)\n", gle);
     }
 
@@ -100,8 +100,7 @@ void ctsWriteDetails::WriteEmptyRow() const noexcept
     EndRow();
 }
 
-void ctsWriteDetails::StartRow(PCWSTR className, PCWSTR counterName) const noexcept
-try
+void ctsWriteDetails::StartRow(PCWSTR className, PCWSTR counterName) const noexcept try
 {
     auto formattedString(wil::str_printf<std::wstring>(
         L"%ws (%ws)", className, counterName));
@@ -110,9 +109,9 @@ try
 
     const auto length{static_cast<DWORD>((formattedString.length() * sizeof(WCHAR)))};
     DWORD written{};
-    if (!::WriteFile(m_fileHandle.get(), formattedString.c_str(), length, &written, nullptr))
+    if (!WriteFile(m_fileHandle.get(), formattedString.c_str(), length, &written, nullptr))
     {
-        const auto gle = ::GetLastError();
+        const auto gle = GetLastError();
         wprintf(L"\t[ctsWriteDetails::start_row] WriteFile failed (%u)\n", gle);
     }
 }
@@ -123,9 +122,9 @@ void ctsWriteDetails::EndRow() const noexcept
     constexpr WCHAR endOfLine[2]{L'\r', L'\n'};
     constexpr DWORD endOfLineLength{sizeof endOfLine};
     DWORD written{};
-    if (!::WriteFile(m_fileHandle.get(), endOfLine, endOfLineLength, &written, nullptr))
+    if (!WriteFile(m_fileHandle.get(), endOfLine, endOfLineLength, &written, nullptr))
     {
-        const auto gle = ::GetLastError();
+        const auto gle = GetLastError();
         wprintf(L"\t[ctsWriteDetails::end_row] WriteFile failed (%u)\n", gle);
     }
 }

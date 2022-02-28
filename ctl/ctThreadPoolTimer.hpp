@@ -224,8 +224,7 @@ namespace ctl { namespace Details
         static void CALLBACK ThreadPoolTimerCallback(
             PTP_CALLBACK_INSTANCE,
             PVOID context,
-            PTP_TIMER timer) noexcept
-        try
+            PTP_TIMER timer) noexcept try
         {
             auto* this_ptr = static_cast<ctThreadpoolTimer*>(context);
 

@@ -904,7 +904,7 @@ namespace ctsTraffic { namespace Rioiocp
         // - in the case something fails
         // - we must pass these as raw ptrs to RIO, so can't use std containers
         //
-        int32_t ioCount = 0;
+        auto ioCount = 0ul;
         DWORD error = 0;
         RioSocketContext* socketContext = nullptr;
         try

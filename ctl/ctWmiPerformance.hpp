@@ -1302,8 +1302,10 @@ private:
 enum class ctWmiEnumClassType
 {
     Uninitialized,
-    Static, // created with ctMakeStaticPerfCounter
-    Instance // created with ctMakeInstancePerfCounter
+    // created with ctMakeStaticPerfCounter
+    Static,
+    // created with ctMakeInstancePerfCounter
+    Instance
 };
 
 enum class ctWmiEnumClassName

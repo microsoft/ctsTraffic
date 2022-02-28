@@ -24,127 +24,126 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
+enum class ctsIoStatus
+{
+    ContinueIo,
+    CompletedIo,
+    FailedIo
+};
 
-    enum class ctsIoStatus
+class ctsIoPattern
+{
+public:
+    virtual ~ctsIoPattern() = default;
+
+    ctsIoPattern(const ctsIoPattern&) = delete;
+    ctsIoPattern& operator=(const ctsIoPattern&) = delete;
+    ctsIoPattern(ctsIoPattern&&) = delete;
+    ctsIoPattern& operator=(ctsIoPattern&&) = delete;
+
+    ///
+    /// none of these *_io functions can throw
+    /// failures are critical and will RaiseException to be debugged
+    /// - the task given by initiate_io should be returned through complete_io
+    ///   (or a copy of that task)
+    ///
+    /// Callers access initiate_io() to retrieve a ctsIOTask object for the next IO operation
+    /// - they are expected to retain that ctsIOTask object until the IO operation completes
+    /// - at which time they pass it back to complete_io()
+    ///
+    /// initiate_io() can be called repeatedly by the caller if they want overlapping IO calls
+    /// - without forced to wait for complete_io() for the next IO request
+    ///
+    /// complete_io() should be called for every returned initiate_io with the following:
+    ///   _task : the ctsIOTask that was provided from initiate_io (or a complete copy)
+    ///   _bytes_transferred : the number of bytes successfully transferred from the task
+    ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
+    ///
+    ctsTask InitiateIo() noexcept;
+    virtual ctsIoStatus CompleteIo(const ctsTask& task, uint32_t currentTransfer, uint32_t statusCode) noexcept = 0;
+
+    ///
+    /// Enabling callers to trigger writing statistics via ctsConfig
+    ///
+    virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
+
+    ///
+    /// Some derived IO types require callbacks to the IO functions
+    /// - to request tasks outside the typical initiate_io / complete_io pattern
+    ///
+    virtual void RegisterCallback(std::function<void(const ctsTask&)> callback) = 0;
+
+    ///
+    /// Exposing the last recorded error from the requested IO
+    ///
+    [[nodiscard]] virtual uint32_t GetLastPatternError() const noexcept = 0;
+};
+
+
+template <typename Stats,
+    typename ProtocolPolicy,
+    typename RateLimitPolicy>
+class ctsIoPatternT : public ctsIoPattern
+{
+public:
+    ctsIoPatternT() = default;
+    ~ctsIoPatternT() override = default;
+
+    void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept final
     {
-        ContinueIo,
-        CompletedIo,
-        FailedIo
-    };
+        // before printing the final results, make sure the timers are stopped
+        if (0 == GetLastPatternError() && 0 == m_stats.current_bytes())
+        {
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transfered zero bytes\n");
+            m_protocolPolicy.update_protocol_error(ctsIoPatternError::TooFewBytes);
+        }
+        ctsConfig::PrintConnectionResults(
+            localAddr,
+            remoteAddr,
+            GetLastPatternError(),
+            m_stats);
+    }
 
-    class ctsIoPattern
+    void RegisterCallback(std::function<void(const ctsTask&)> callback) final
     {
-    public:
-        virtual ~ctsIoPattern() = default;
+        const auto takeLock = m_cs.lock();
+        m_callback = std::move(callback);
+    }
 
-        ctsIoPattern(const ctsIoPattern&) = delete;
-        ctsIoPattern& operator=(const ctsIoPattern&) = delete;
-        ctsIoPattern(ctsIoPattern&&) = delete;
-        ctsIoPattern& operator=(ctsIoPattern&&) = delete;
-
-        ///
-        /// none of these *_io functions can throw
-        /// failures are critical and will RaiseException to be debugged
-        /// - the task given by initiate_io should be returned through complete_io
-        ///   (or a copy of that task)
-        ///
-        /// Callers access initiate_io() to retrieve a ctsIOTask object for the next IO operation
-        /// - they are expected to retain that ctsIOTask object until the IO operation completes
-        /// - at which time they pass it back to complete_io()
-        ///
-        /// initiate_io() can be called repeatedly by the caller if they want overlapping IO calls
-        /// - without forced to wait for complete_io() for the next IO request
-        ///
-        /// complete_io() should be called for every returned initiate_io with the following:
-        ///   _task : the ctsIOTask that was provided from initiate_io (or a complete copy)
-        ///   _bytes_transferred : the number of bytes successfully transferred from the task
-        ///   _status_code: the return code from the prior IO operation [assumes a Win32 error code]
-        ///
-        ctsTask InitiateIo() noexcept;
-        virtual ctsIoStatus CompleteIo(const ctsTask& task, uint32_t currentTransfer, uint32_t statusCode) noexcept = 0;
-
-        ///
-        /// Enabling callers to trigger writing statistics via ctsConfig
-        ///
-        virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
-
-        ///
-        /// Some derived IO types require callbacks to the IO functions
-        /// - to request tasks outside the typical initiate_io / complete_io pattern
-        ///
-        virtual void RegisterCallback(std::function<void(const ctsTask&)> callback) = 0;
-
-        ///
-        /// Exposing the last recorded error from the requested IO
-        ///
-        [[nodiscard]] virtual uint32_t GetLastPatternError() const noexcept = 0;
-    };
-
-
-    template <typename Stats,
-        typename ProtocolPolicy,
-        typename RateLimitPolicy>
-        class ctsIoPatternT : public ctsIoPattern
+    uint32_t GetLastPatternError() const noexcept final
     {
-    public:
-        ctsIoPatternT() = default;
-        ~ctsIoPatternT() override = default;
+        const auto autoLock = m_cs.lock();
+        return m_protocolPolicy.get_last_error();
+    }
 
-        void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept final
-        {
-            // before printing the final results, make sure the timers are stopped
-            if (0 == GetLastPatternError() && 0 == m_stats.current_bytes())
-            {
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transfered zero bytes\n");
-                m_protocolPolicy.update_protocol_error(ctsIoPatternError::TooFewBytes);
-            }
-            ctsConfig::PrintConnectionResults(
-                localAddr,
-                remoteAddr,
-                GetLastPatternError(),
-                m_stats);
-        }
+    /// no copy c'tor or copy assignment
+    ctsIoPatternT(const ctsIoPatternT&) = delete;
+    ctsIoPatternT& operator=(const ctsIoPatternT&) = delete;
+    ctsIoPatternT(ctsIoPatternT&&) = delete;
+    ctsIoPatternT& operator=(ctsIoPatternT&&) = delete;
 
-        void RegisterCallback(std::function<void(const ctsTask&)> callback) final
-        {
-            const auto takeLock = m_cs.lock();
-            m_callback = std::move(callback);
-        }
+private:
+    mutable wil::critical_section m_cs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+    // optional callback for protocols which need to communicate OOB to the IO function
+    std::function<void(const ctsTask&)> m_callback = nullptr;
 
-        uint32_t GetLastPatternError() const noexcept final
-        {
-            const auto autoLock = m_cs.lock();
-            return m_protocolPolicy.get_last_error();
-        }
+    Stats m_stats;
+    ctsIoPatternProtocolPolicy<ProtocolPolicy> m_protocolPolicy;
+    ctsIoPatternRateLimitPolicy<RateLimitPolicy> m_ratelimitPolicy;
 
-        /// no copy c'tor or copy assignment
-        ctsIoPatternT(const ctsIoPatternT&) = delete;
-        ctsIoPatternT& operator= (const ctsIoPatternT&) = delete;
-        ctsIoPatternT(ctsIoPatternT&&) = delete;
-        ctsIoPatternT& operator= (ctsIoPatternT&&) = delete;
+    ///
+    /// void start_stats() noexcept
+    /// - has been replaced with ctsStatistics::Start(this->stats)
+    ///
 
-    private:
-        mutable wil::critical_section m_cs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-        // optional callback for protocols which need to communicate OOB to the IO function
-        std::function<void(const ctsTask&)> m_callback = nullptr;
+    ///
+    /// void end_stats() noexcept
+    /// - has been replaced with ctsStatistics::End(this->stats)
+    ///
 
-        Stats m_stats;
-        ctsIoPatternProtocolPolicy<ProtocolPolicy> m_protocolPolicy;
-        ctsIoPatternRateLimitPolicy<RateLimitPolicy> m_ratelimitPolicy;
-
-        ///
-        /// void start_stats() noexcept
-        /// - has been replaced with ctsStatistics::Start(this->stats)
-        ///
-
-        ///
-        /// void end_stats() noexcept
-        /// - has been replaced with ctsStatistics::End(this->stats)
-        ///
-
-        ///
-        /// char* connection_id() noexcept
-        /// - has been replaced with stats.connection_identifier;
-        ///
-    };
+    ///
+    /// char* connection_id() noexcept
+    /// - has been replaced with stats.connection_identifier;
+    ///
+};
 }

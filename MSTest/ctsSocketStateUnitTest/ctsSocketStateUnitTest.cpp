@@ -216,7 +216,7 @@ public:
     TEST_CLASS_INITIALIZE(Setup)
     {
         WSADATA wsadata;
-        const int wsError = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+        const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
         Assert::AreEqual(0, wsError);
 
         ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
@@ -228,7 +228,7 @@ public:
     TEST_CLASS_CLEANUP(Cleanup)
     {
         delete ctsConfig::g_configSettings;
-        ::WSACleanup();
+        WSACleanup();
     }
 
     TEST_METHOD(AllIOSucceed)
@@ -241,7 +241,7 @@ public:
 
         do
         {
-            ::Sleep(100);
+            Sleep(100);
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
@@ -258,7 +258,7 @@ public:
 
         do
         {
-            ::Sleep(100);
+            Sleep(100);
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
@@ -275,7 +275,7 @@ public:
 
         do
         {
-            ::Sleep(100);
+            Sleep(100);
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
@@ -292,7 +292,7 @@ public:
 
         do
         {
-            ::Sleep(100);
+            Sleep(100);
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 

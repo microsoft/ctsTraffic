@@ -116,7 +116,7 @@ namespace ctsPerf { namespace Details
         void SetPerConnectionEstats(MIB_TCPROW* const tcpRow,
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
-            if (const auto err = ::SetPerTcpConnectionEStats(
+            if (const auto err = SetPerTcpConnectionEStats(
                 tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof*pRw, 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
@@ -127,7 +127,7 @@ namespace ctsPerf { namespace Details
         void SetPerConnectionEstats(MIB_TCP6ROW* const tcpRow,
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
-            if (const auto err = ::SetPerTcp6ConnectionEStats(
+            if (const auto err = SetPerTcp6ConnectionEStats(
                 tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof *pRw), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
@@ -137,7 +137,7 @@ namespace ctsPerf { namespace Details
         // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
         inline ULONG GetPerConnectionStaticEstats(MIB_TCPROW* const tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
         {
-            return ::GetPerTcpConnectionEStats(
+            return GetPerTcpConnectionEStats(
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
@@ -151,7 +151,7 @@ namespace ctsPerf { namespace Details
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
-            auto error = ::GetPerTcpConnectionEStats(
+            auto error = GetPerTcpConnectionEStats(
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
@@ -171,7 +171,7 @@ namespace ctsPerf { namespace Details
         // TcpConnectionEstatsSynOpts is unique in that there isn't a RW type to query for
         inline ULONG GetPerConnectionStaticEstats(MIB_TCP6ROW* const tcpRow, TCP_ESTATS_SYN_OPTS_ROS_v0* pRos) noexcept
         {
-            return ::GetPerTcp6ConnectionEStats(
+            return GetPerTcp6ConnectionEStats(
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
@@ -186,7 +186,7 @@ namespace ctsPerf { namespace Details
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw;
 
-            auto error = ::GetPerTcp6ConnectionEStats(
+            auto error = GetPerTcp6ConnectionEStats(
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
@@ -211,7 +211,7 @@ namespace ctsPerf { namespace Details
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
-            auto error = ::GetPerTcpConnectionEStats(
+            auto error = GetPerTcpConnectionEStats(
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
@@ -235,7 +235,7 @@ namespace ctsPerf { namespace Details
         {
             typename EstatsTypeConverter<TcpType>::read_write_type rw{};
 
-            auto error = ::GetPerTcp6ConnectionEStats(
+            auto error = GetPerTcp6ConnectionEStats(
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
@@ -1066,14 +1066,14 @@ namespace ctsPerf { namespace Details
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
             ZeroMemory(&m_tcpTable[0], table_size);
 
-            ULONG error = ::GetTcpTable(
+            ULONG error = GetTcpTable(
                 reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
-                error = ::GetTcpTable(
+                error = GetTcpTable(
                     reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
                     &table_size,
                     FALSE); // no need to sort them
@@ -1090,14 +1090,14 @@ namespace ctsPerf { namespace Details
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
             ZeroMemory(&m_tcpTable[0], table_size);
 
-            ULONG error = ::GetTcp6Table(
+            ULONG error = GetTcp6Table(
                 reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
-                error = ::GetTcp6Table(
+                error = GetTcp6Table(
                     reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
                     &table_size,
                     FALSE); // no need to sort them

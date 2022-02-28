@@ -114,7 +114,7 @@ public:
     }
 
     explicit ctThreadIocp(SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
-        ptp_io(CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env))  // NOLINT(performance-no-int-to-ptr)
+        ptp_io(CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env)) // NOLINT(performance-no-int-to-ptr)
     {
         if (!ptp_io)
         {
@@ -214,7 +214,7 @@ private:
         PVOID _overlapped,
         ULONG /*_ioresult*/,
         ULONG_PTR /*_numberofbytestransferred*/,
-        PTP_IO /*_io*/)
+        PTP_IO /*_io*/) noexcept
     {
         // this code may look really odd 
         // the Win32 TP APIs eat stack overflow exceptions and reuses the thread for the next TP request

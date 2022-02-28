@@ -3099,26 +3099,23 @@ DWORD PrintThrownException() noexcept
     }
 }
 
-void PrintException(DWORD why, _In_ PCWSTR what, _In_ PCWSTR where) noexcept
+void PrintException(DWORD why, _In_ PCWSTR what, _In_ PCWSTR where) noexcept try
 {
-    try
-    {
-        const auto translation = ctString::ctFormatMessage(why);
-        const auto formattedString = wil::str_printf<std::wstring>(
-            L"[exception] %ws%ws%ws%ws [%u / 0x%x - %ws]",
-            what ? L" " : L"",
-            what ? what : L"",
-            where ? L" at " : L"",
-            where ? where : L"",
-            why,
-            why,
-            !translation.empty() ? translation.c_str() : L"unknown error");
-        PrintErrorInfo(formattedString.c_str());
-    }
-    catch (...)
-    {
-        PrintErrorInfo(L"[exception] out of memory");
-    }
+    const auto translation = ctString::ctFormatMessage(why);
+    const auto formattedString = wil::str_printf<std::wstring>(
+        L"[exception] %ws%ws%ws%ws [%u / 0x%x - %ws]",
+        what ? L" " : L"",
+        what ? what : L"",
+        where ? L" at " : L"",
+        where ? where : L"",
+        why,
+        why,
+        !translation.empty() ? translation.c_str() : L"unknown error");
+    PrintErrorInfo(formattedString.c_str());
+}
+catch (...)
+{
+    PrintErrorInfo(L"[exception] out of memory");
 }
 
 // Always print to console if override
@@ -4002,7 +3999,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         {
             // Interface index is in network byte order for IPPROTO_IP.
             const DWORD optionValue = htonl(g_configSettings->OutgoingIfIndex);
-            if (::setsockopt(
+            if (setsockopt(
                     socket,
                     IPPROTO_IP, // level
                     IP_UNICAST_IF, // optname
@@ -4017,7 +4014,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         else
         {
             // Interface index is in host byte order for IPPROTO_IPV6.
-            if (::setsockopt(
+            if (setsockopt(
                     socket,
                     IPPROTO_IPV6, // level
                     IPV6_UNICAST_IF, // optname
@@ -4051,7 +4048,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
 #ifndef SO_REUSE_UNICASTPORT
 #define SO_REUSE_UNICASTPORT (SO_PORT_SCALABILITY + 1)
 #endif
-            if (::setsockopt(
+            if (setsockopt(
                     socket,
                     SOL_SOCKET, // level
                     SO_REUSE_UNICASTPORT, // optname
@@ -4069,7 +4066,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
             // ReSharper disable once CppTooWideScopeInitStatement
             constexpr int optlen{sizeof optval};
 
-            if (::setsockopt(
+            if (setsockopt(
                     socket,
                     SOL_SOCKET, // level
                     SO_PORT_SCALABILITY, // optname
@@ -4088,7 +4085,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         DWORD inValue{1};
         DWORD bytesReturned{};
 
-        if (::WSAIoctl(
+        if (WSAIoctl(
                 socket,
                 SIO_LOOPBACK_FAST_PATH,
                 &inValue, sizeof inValue,
@@ -4111,15 +4108,14 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         keepaliveValues.keepaliveinterval = 1000; // continue to default to 1 second
 
         DWORD bytesReturned{};
-        if (::WSAIoctl(
+        if (WSAIoctl(
                 socket,
                 SIO_KEEPALIVE_VALS, // control code
                 &keepaliveValues, sizeof keepaliveValues, // in params
                 nullptr, 0, // out params
                 &bytesReturned,
                 nullptr,
-                nullptr
-            ) != 0)
+                nullptr) != 0)
         {
             const auto gle = WSAGetLastError();
             PrintErrorIfFailed("WSAIoctl(SIO_KEEPALIVE_VALS)", gle);
@@ -4132,7 +4128,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         // ReSharper disable once CppTooWideScopeInitStatement
         constexpr int optlen{sizeof optval};
 
-        if (::setsockopt(
+        if (setsockopt(
                 socket,
                 SOL_SOCKET, // level
                 SO_KEEPALIVE, // optname
@@ -4148,7 +4144,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     if (g_configSettings->Options & SetRecvBuf)
     {
         const auto recvBuff = g_configSettings->RecvBufValue;
-        if (::setsockopt(
+        if (setsockopt(
                 socket,
                 SOL_SOCKET,
                 SO_RCVBUF,
@@ -4164,7 +4160,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     if (g_configSettings->Options & SetSendBuf)
     {
         const auto sendBuff = g_configSettings->SendBufValue;
-        if (::setsockopt(
+        if (setsockopt(
                 socket,
                 SOL_SOCKET,
                 SO_SNDBUF,
@@ -4180,7 +4176,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     if (g_configSettings->Options & NonBlockingIo)
     {
         u_long enableNonBlocking = 1;
-        if (::ioctlsocket(socket, FIONBIO, &enableNonBlocking) != 0)
+        if (ioctlsocket(socket, FIONBIO, &enableNonBlocking) != 0)
         {
             const auto gle = WSAGetLastError();
             PrintErrorIfFailed("ioctlsocket(FIONBIO)", gle);
@@ -4192,7 +4188,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     {
         DWORD bytesReturned{};
         // ReSharper disable once CppTooWideScopeInitStatement
-        const auto error = ::WSAIoctl(
+        const auto error = WSAIoctl(
             socket,
             SIO_ENABLE_CIRCULAR_QUEUEING,
             nullptr, 0, // in buffer
@@ -4210,7 +4206,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
 
     if (g_configSettings->Options & HandleInlineIocp)
     {
-        if (!::SetFileCompletionNotificationModes(reinterpret_cast<HANDLE>(socket), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)) // NOLINT(performance-no-int-to-ptr)
+        if (!SetFileCompletionNotificationModes(reinterpret_cast<HANDLE>(socket), FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)) // NOLINT(performance-no-int-to-ptr)
         {
             const auto gle = GetLastError();
             PrintErrorIfFailed("SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)", gle);

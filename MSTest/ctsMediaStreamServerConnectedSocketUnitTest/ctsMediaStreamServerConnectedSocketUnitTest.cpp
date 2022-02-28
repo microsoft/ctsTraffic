@@ -113,7 +113,7 @@ namespace ctsConfig
     }
 }
 
-HANDLE g_RemovedSocketEvent = NULL;
+HANDLE g_RemovedSocketEvent = nullptr;
 std::atomic<uint32_t> g_IOCount = 0;
 std::atomic<uint32_t> g_IOPended = 0;
 uint32_t g_IOStatusCode = ERROR_SUCCESS;
@@ -244,12 +244,12 @@ void ctsSocket::SetSocket(SOCKET _s) noexcept
 
 void ctsSocket::CompleteState(DWORD) noexcept
 {
-    ::SetEvent(g_RemovedSocketEvent);
+    SetEvent(g_RemovedSocketEvent);
 }
 
 ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
 {
-    return ctsSocket::SocketReference({}, m_socket.get(), m_pattern);
+    return SocketReference({}, m_socket.get(), m_pattern);
 }
 
 // one callout fake to ctsMediaStreamServerImpl
@@ -272,10 +272,10 @@ public:
     TEST_CLASS_INITIALIZE(Setup)
     {
         WSADATA wsadata;
-        const auto startup = ::WSAStartup(WINSOCK_VERSION, &wsadata);
+        const auto startup = WSAStartup(WINSOCK_VERSION, &wsadata);
         Assert::AreEqual(0, startup);
 
-        g_RemovedSocketEvent = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        g_RemovedSocketEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         Assert::IsNotNull(g_RemovedSocketEvent);
 
         ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
@@ -285,8 +285,8 @@ public:
 
     TEST_CLASS_CLEANUP(Cleanup)
     {
-        ::CloseHandle(g_RemovedSocketEvent);
-        ::WSACleanup();
+        CloseHandle(g_RemovedSocketEvent);
+        WSACleanup();
         delete ctsConfig::g_configSettings;
     }
 
@@ -297,7 +297,7 @@ public:
         g_IOStatusCode = ERROR_SUCCESS;
         g_TaskAction = ctsTaskAction::None;
         g_IOTimeOffset = 0;
-        ::ResetEvent(g_RemovedSocketEvent);
+        ResetEvent(g_RemovedSocketEvent);
 
         const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
@@ -331,7 +331,7 @@ public:
         g_IOPended = 1;
         test_connected_socket.ScheduleTask(test_task);
         // not 'done' yet, just stopped sending for the time-being
-        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), ::WaitForSingleObject(g_RemovedSocketEvent, 0));
+        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
         const uint32_t ExpectedCallbacks = 1;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
@@ -343,7 +343,7 @@ public:
         g_IOStatusCode = ERROR_SUCCESS;
         g_TaskAction = ctsTaskAction::None;
         g_IOTimeOffset = 0;
-        ::ResetEvent(g_RemovedSocketEvent);
+        ResetEvent(g_RemovedSocketEvent);
 
         const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
@@ -377,7 +377,7 @@ public:
         g_IOPended = 1;
         test_connected_socket.ScheduleTask(test_task);
         // not 'done' yet, just stopped sending for the time-being
-        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), ::WaitForSingleObject(g_RemovedSocketEvent, 0));
+        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
         const uint32_t ExpectedCallbacks = 10;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
@@ -389,7 +389,7 @@ public:
         g_IOStatusCode = ERROR_SUCCESS;
         g_TaskAction = ctsTaskAction::None;
         g_IOTimeOffset = 100; // 100ms apart
-        ::ResetEvent(g_RemovedSocketEvent);
+        ResetEvent(g_RemovedSocketEvent);
 
         const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
@@ -427,7 +427,7 @@ public:
         g_IOPended = 1;
         test_connected_socket.ScheduleTask(test_task);
         // should complete within 1 second (a few ms after 900ms)
-        Assert::AreEqual(WAIT_OBJECT_0, ::WaitForSingleObject(g_RemovedSocketEvent, 1250));
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 1250));
         const uint32_t ExpectedCallbacks = 10;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
@@ -439,7 +439,7 @@ public:
         g_IOStatus = ctsIoStatus::FailedIo;
         g_IOStatusCode = ERROR_SUCCESS;
         g_TaskAction = ctsTaskAction::None;
-        ::ResetEvent(g_RemovedSocketEvent);
+        ResetEvent(g_RemovedSocketEvent);
 
         const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
@@ -473,7 +473,7 @@ public:
         g_IOPended = 1;
         test_connected_socket.ScheduleTask(test_task);
         // 'done' since it failed
-        Assert::AreEqual(WAIT_OBJECT_0, ::WaitForSingleObject(g_RemovedSocketEvent, 0));
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 0));
         const uint32_t ExpectedCallbacks = 1;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
@@ -486,7 +486,7 @@ public:
         g_IOStatusCode = ERROR_SUCCESS;
         g_TaskAction = ctsTaskAction::None;
         g_IOTimeOffset = 100; // 100ms apart
-        ::ResetEvent(g_RemovedSocketEvent);
+        ResetEvent(g_RemovedSocketEvent);
 
         const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
@@ -524,7 +524,7 @@ public:
         g_IOPended = 1;
         test_connected_socket.ScheduleTask(test_task);
         // should complete within 500ms - failing after 5 IO
-        Assert::AreEqual(WAIT_OBJECT_0, ::WaitForSingleObject(g_RemovedSocketEvent, 500));
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 500));
         const uint32_t ExpectedCallbacks = 5;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
