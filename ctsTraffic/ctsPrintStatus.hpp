@@ -219,13 +219,13 @@ protected:
             converted);
     }
 
-    void TerminateString(uint32_t offset) noexcept
+    constexpr void TerminateString(uint32_t offset) noexcept
     {
         m_outputBuffer[offset] = L'\n';
         m_outputBuffer[offset + 1] = L'\0';
     }
 
-    void TerminateFileString(uint32_t offset) noexcept
+    constexpr void TerminateFileString(uint32_t offset) noexcept
     {
         m_outputBuffer[offset] = L'\r';
         m_outputBuffer[offset + 1] = L'\n';

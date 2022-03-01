@@ -79,7 +79,6 @@ namespace ctsConfig
     enum class StatusFormatting
     {
         NoFormattingSet,
-        WttLog,
         ClearText,
         Csv,
         ConsoleOutput
@@ -203,7 +202,7 @@ namespace ctsConfig
     // Override will always print to console regardless of settings (important if can't even start)
     void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
 
-    inline DWORD Win32FromHresult(HRESULT hr) noexcept
+    constexpr DWORD Win32FromHresult(HRESULT hr) noexcept
     {
         if (HRESULT_SEVERITY(hr) == SEVERITY_ERROR && HRESULT_FACILITY(hr) == FACILITY_WIN32)
         {
@@ -221,6 +220,11 @@ namespace ctsConfig
     void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, uint32_t error, const ctsTcpStatistics& stats) noexcept;
     void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, uint32_t error, const ctsUdpStatistics& stats) noexcept;
     void PrintConnectionResults(uint32_t error) noexcept;
+    void PrintTcpDetails(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket, const ctsTcpStatistics& stats) noexcept;
+    constexpr void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsUdpStatistics&) noexcept
+    {
+        // must implement ctsUdpStatistics as a no-op for the caller's template to compile
+    }
 
     // Get* functions
     int64_t GetTcpBytesPerSecond() noexcept;

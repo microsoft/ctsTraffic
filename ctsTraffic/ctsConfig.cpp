@@ -44,6 +44,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsTCPFunctions.h"
 #include "ctsMediaStreamClient.h"
 #include "ctsMediaStreamServer.h"
+#include "ctsWinsockLayer.h"
 
 using namespace std;
 using namespace ctl;
@@ -118,6 +119,7 @@ static shared_ptr<ctsLogger> g_connectionLogger;
 static shared_ptr<ctsLogger> g_statusLogger;
 static shared_ptr<ctsLogger> g_errorLogger;
 static shared_ptr<ctsLogger> g_jitterLogger;
+static shared_ptr<ctsLogger> g_tcpInfoLogger;
 
 static bool g_breakOnError = false;
 static bool g_shutdownCalled = false;
@@ -1725,6 +1727,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
     wstring errorFilename;
     wstring statusFilename;
     wstring jitterFilename;
+    wstring tcpInfoFilename;
 
     // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundConnectionFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
@@ -1772,6 +1775,18 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         jitterFilename = ParseArgument(*foundJitterFilename, L"-JitterFilename");
         // always remove the arg from our vector
         args.erase(foundJitterFilename);
+    }
+
+    // ReSharper disable once CppTooWideScopeInitStatement
+    const auto foundTcpInfoFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+        const auto* const value = ParseArgument(parameter, L"-TcpInfoFilename");
+        return value != nullptr;
+    });
+    if (foundTcpInfoFilename != end(args))
+    {
+        tcpInfoFilename = ParseArgument(*foundTcpInfoFilename, L"-TcpInfoFilename");
+        // always remove the arg from our vector
+        args.erase(foundTcpInfoFilename);
     }
 
     // since CSV files each have their own header, we cannot allow the same CSV filename to be used
@@ -1855,6 +1870,25 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         else
         {
             throw invalid_argument("Jitter can only be logged using a csv format");
+        }
+    }
+
+    if (!tcpInfoFilename.empty())
+    {
+        if (ctString::ctOrdinalEndsWithCaseInsensative(tcpInfoFilename, L".csv"))
+        {
+            if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, tcpInfoFilename) ||
+                ctString::ctOrdinalEqualsCaseInsensative(errorFilename, tcpInfoFilename) ||
+                ctString::ctOrdinalEqualsCaseInsensative(statusFilename, tcpInfoFilename) ||
+                ctString::ctOrdinalEqualsCaseInsensative(jitterFilename, tcpInfoFilename))
+            {
+                throw invalid_argument("The same csv filename cannot be used for different loggers");
+            }
+            g_tcpInfoLogger = make_shared<ctsTextLogger>(tcpInfoFilename.c_str(), StatusFormatting::Csv);
+        }
+        else
+        {
+            throw invalid_argument("TCP Info can only be logged using a csv format");
         }
     }
 }
@@ -2420,6 +2454,10 @@ void PrintUsage(PrintUsageOption option)
                 L"                             - qpf is the result of QueryPerformanceFrequency\n"
                 L"                             the algorithm to apply to this data can be found on this site under 'Performance Metrics'\n"
                 L"                             http://msdn.microsoft.com/en-us/library/windows/hardware/dn247504.aspx \n"
+                L"  - TCP_INFO information   : for TCP-patterns only, the TcpInfo logging captures information from TCP_INFO_* structs\n"
+                L"                             -TcpInfoFilename specifies the file written with this data\n"
+                L"                             this information is captured at the end of each TCP connection and written to csv\n"
+                L"                             note this is only available on Windows 10 RS2 and later\n"
                 L"\n"
                 L"The format in which the above data is logged is based off of the file extension of the filename specified above\n"
                 L"  - There are 2 possible file types:\n"
@@ -2442,21 +2480,15 @@ void PrintUsage(PrintUsageOption option)
                 L"\t   - 5 : connection information + error information + status updates\n"
                 // L"\t   - 6 : above + debug output\n" // Not exposing debug information to users
                 L"-ConnectionFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
+                L"\t - <default> == not written to a log file\n"
                 L"-ErrorFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
+                L"\t - <default> == not written to a log file\n"
                 L"-StatusFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
+                L"\t - <default> == not written to a log file\n"
                 L"-JitterFilename:<filename with/without path>\n"
-                L"\t - <default> == (not written to a log file)\n"
-                L"\t   note : the same filename can be specified for the different logging options\n"
-                L"\t          in which case the same file will receive all the specified details\n"
+                L"\t - <default> == not written to a log file\n"
+                L"-TcpInfoFilename:<filename with/without path>\n"
+                L"\t - <default> == not written to a log file\n"
                 L"-StatusUpdate:####\n"
                 L"\t - the millisecond frequency which real-time status updates are written\n"
                 L"\t   <default> == 5000 (milliseconds)\n"
@@ -2987,6 +3019,11 @@ void PrintLegend() noexcept
     if (g_jitterLogger && g_jitterLogger->IsCsvFormat())
     {
         g_jitterLogger->LogMessage(L"SequenceNumber,SenderQpc,SenderQpf,ReceiverQpc,ReceiverQpf,RelativeInFlightTimeMs,PrevToCurrentInFlightTimeJitter\r\n");
+    }
+
+    if (g_tcpInfoLogger && g_tcpInfoLogger->IsCsvFormat())
+    {
+        g_tcpInfoLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,ConnectionId,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,BytesReordered,BytesRetransmitted,SynRetransmitted,DupAcksIn,MinRttUs,RttUs,Mss,TimeoutEpisodes,FastRetransmit,SndLimBytesCwnd,SndLimBytesRwin,SndLimBytesSnd\r\n");
     }
 }
 
@@ -3780,6 +3817,88 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
     {
         PrintConnectionResults(localAddr, remoteAddr, error, ctsUdpStatistics());
     }
+}
+
+void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, SOCKET socket, const ctsTcpStatistics& stats) noexcept try
+{
+    if (g_tcpInfoLogger)
+    {
+        static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
+        const int64_t totalTime = stats.m_endTime.GetValue() - stats.m_startTime.GetValue();
+        auto textString = wil::str_printf<std::wstring>(
+            tcpSuccessfulResultTextFormat,
+            GetStatusTimeStamp(),
+            localAddr.WriteCompleteAddress().c_str(),
+            remoteAddr.WriteCompleteAddress().c_str(),
+            stats.m_connectionIdentifier,
+            stats.m_bytesSent.GetValue(),
+            totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
+            stats.m_bytesRecv.GetValue(),
+            totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
+            totalTime);
+
+        DWORD bytesReturned;
+        TCP_INFO_v1 tcpInfo1{};
+        DWORD tcpInfoVersion = 1;
+        if (WSAIoctl(
+                socket,
+                SIO_TCP_INFO,
+                &tcpInfoVersion, sizeof tcpInfoVersion,
+                &tcpInfo1, sizeof tcpInfo1,
+                &bytesReturned,
+                nullptr,
+                nullptr) == 0)
+        {
+            // the OS supports TCP_INFO_v1 - write those details
+            static const auto* tcpInfoVersion1TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu\r\n";
+            textString += wil::str_printf<std::wstring>(
+                tcpInfoVersion1TextFormat,
+                tcpInfo1.BytesReordered,
+                tcpInfo1.BytesRetrans,
+                tcpInfo1.SynRetrans,
+                tcpInfo1.DupAcksIn,
+                tcpInfo1.MinRttUs,
+                tcpInfo1.RttUs,
+                tcpInfo1.Mss,
+                tcpInfo1.TimeoutEpisodes,
+                tcpInfo1.FastRetrans,
+                tcpInfo1.SndLimBytesCwnd,
+                tcpInfo1.SndLimBytesRwin,
+                tcpInfo1.SndLimBytesSnd);
+            g_tcpInfoLogger->LogMessage(textString.c_str());
+            return;
+        }
+
+        TCP_INFO_v0 tcpInfo0{};
+        tcpInfoVersion = 0;
+        if (WSAIoctl(
+                socket,
+                SIO_TCP_INFO,
+                &tcpInfoVersion, sizeof tcpInfoVersion,
+                &tcpInfo0, sizeof tcpInfo0,
+                &bytesReturned,
+                nullptr,
+                nullptr) == 0)
+        {
+            // the OS supports TCP_INFO_v0 - write those details
+            static const auto* tcpInfoVersion0TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu";
+            textString += wil::str_printf<std::wstring>(
+                tcpInfoVersion0TextFormat,
+                tcpInfo0.BytesReordered,
+                tcpInfo0.BytesRetrans,
+                tcpInfo0.SynRetrans,
+                tcpInfo0.DupAcksIn,
+                tcpInfo0.MinRttUs,
+                tcpInfo0.RttUs,
+                tcpInfo0.Mss,
+                tcpInfo0.TimeoutEpisodes,
+                tcpInfo0.FastRetrans);
+            g_tcpInfoLogger->LogMessage(textString.c_str());
+        }
+    }
+}
+catch (...)
+{
 }
 
 void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept

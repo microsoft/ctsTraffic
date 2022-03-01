@@ -95,6 +95,7 @@ public:
     /// Exposing statistics members publicly to ctsSocket
     ///
     virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
+    virtual void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept = 0;
 
     //
     // These are public functions exposed to ctsSocket and the derived types
@@ -448,7 +449,7 @@ class ctsIoPatternStatistics : public ctsIoPattern
 {
 public:
     explicit ctsIoPatternStatistics(uint32_t recvCount) :
-        ctsIoPattern(recvCount)
+        ctsIoPattern{recvCount}
     {
         // servers need to generate a unique connection ID
         if (ctsConfig::IsListening())
@@ -487,6 +488,11 @@ public:
             remoteAddr,
             GetLastPatternError(),
             m_statistics);
+    }
+
+    void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept override
+    {
+        ctsConfig::PrintTcpDetails(localAddr, remoteAddr, socket, m_statistics);
     }
 
     // the caller must guarantee calls to Start and End are serialized

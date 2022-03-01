@@ -94,6 +94,13 @@ int ctsSocket::CloseSocket(uint32_t errorCode) noexcept
             const wsIOResult result = ctsSetLingertoResetSocket(m_socket.get());
             error = static_cast<int>(result.m_errorCode);
         }
+
+        if (m_pattern)
+        {
+            // if the user asked for TCP details, capture them before we close the socket
+            m_pattern->PrintTcpInfo(m_localSockaddr, m_targetSockaddr, m_socket.get());
+        }
+
         m_socket.reset();
     }
     return error;

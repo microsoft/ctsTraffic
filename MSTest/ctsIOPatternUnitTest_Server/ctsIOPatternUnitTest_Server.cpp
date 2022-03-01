@@ -124,6 +124,10 @@ void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
+void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsTcpStatistics&) noexcept
+{
+}
+
 bool IsListening() noexcept
 {
     return g_IsListening;

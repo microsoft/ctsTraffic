@@ -216,6 +216,12 @@ public:
         Assert::IsFalse(true);
         return nullptr;
     }
+
+    void PrintTcpInfo(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET) noexcept override
+    {
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::PrintTcpInfo\n");
+    }
+
 };
 
 // ctsSocketState fakes

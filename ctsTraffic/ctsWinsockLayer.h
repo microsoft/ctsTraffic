@@ -18,9 +18,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 // os headers
 #include <Windows.h>
+#include <mstcpip.h>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
+
+// ReSharper disable CppInconsistentNaming
 
 //
 // These functions encapsulate making Winsock API calls
@@ -28,9 +31,103 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //   but also simplifying the logic behind the code to make reasoning over the code more straight forward
 //
 
+// this is only defined in Windows 10 RS2 and later
+#ifndef SIO_TCP_INFO
+#define SIO_TCP_INFO _WSAIORW(IOC_VENDOR,39)
+#endif
+
 namespace ctsTraffic
 {
-// ReSharper disable once CppInconsistentNaming
+// this is only defined in the public header for Windows 10 RS2 and later
+enum TCPSTATE
+{
+    TCPSTATE_CLOSED,
+    TCPSTATE_LISTEN,
+    TCPSTATE_SYN_SENT,
+    TCPSTATE_SYN_RCVD,
+    TCPSTATE_ESTABLISHED,
+    TCPSTATE_FIN_WAIT_1,
+    TCPSTATE_FIN_WAIT_2,
+    TCPSTATE_CLOSE_WAIT,
+    TCPSTATE_CLOSING,
+    TCPSTATE_LAST_ACK,
+    TCPSTATE_TIME_WAIT,
+    TCPSTATE_MAX
+};
+
+// this is only defined in the public header for Windows 10 RS2 and later
+struct TCP_INFO_v0
+{
+    TCPSTATE State;
+    ULONG Mss;
+    ULONG64 ConnectionTimeMs;
+    BOOLEAN TimestampsEnabled;
+    ULONG RttUs;
+    ULONG MinRttUs;
+    ULONG BytesInFlight;
+    ULONG Cwnd;
+    ULONG SndWnd;
+    ULONG RcvWnd;
+    ULONG RcvBuf;
+    ULONG64 BytesOut;
+    ULONG64 BytesIn;
+    ULONG BytesReordered;
+    ULONG BytesRetrans;
+    ULONG FastRetrans;
+    ULONG DupAcksIn;
+    ULONG TimeoutEpisodes;
+    UCHAR SynRetrans;
+};
+
+// this is only defined in the public header for Windows 10 RS5 and later
+struct TCP_INFO_v1
+{
+    TCPSTATE State;
+    ULONG Mss;
+    ULONG64 ConnectionTimeMs;
+    BOOLEAN TimestampsEnabled;
+    ULONG RttUs;
+    ULONG MinRttUs;
+    ULONG BytesInFlight;
+    ULONG Cwnd;
+    ULONG SndWnd;
+    ULONG RcvWnd;
+    ULONG RcvBuf;
+    ULONG64 BytesOut;
+    ULONG64 BytesIn;
+    ULONG BytesReordered;
+    ULONG BytesRetrans;
+    ULONG FastRetrans;
+    ULONG DupAcksIn;
+    ULONG TimeoutEpisodes;
+    UCHAR SynRetrans;
+
+    //
+    // Info about the limiting factor in send throughput.
+    //
+    // States:
+    // -Rwin: peer's receive window.
+    // -Cwnd: congestion window.
+    // -Snd: app not writing enough data to its socket.
+    //
+    // Per-state statistics:
+    // -Trans: number of transitions into the state.
+    // -Time: time spent in the state in milliseconds.
+    // -Bytes: number of bytes sent while in the state.
+    //
+    // These fields match those in TCP_ESTATS_SND_CONG_ROD.
+    //
+    ULONG SndLimTransRwin;
+    ULONG SndLimTimeRwin;
+    ULONG64 SndLimBytesRwin;
+    ULONG SndLimTransCwnd;
+    ULONG SndLimTimeCwnd;
+    ULONG64 SndLimBytesCwnd;
+    ULONG SndLimTransSnd;
+    ULONG SndLimTimeSnd;
+    ULONG64 SndLimBytesSnd;
+};
+
 struct wsIOResult
 {
     uint32_t m_errorCode = 0;
@@ -44,14 +141,12 @@ struct wsIOResult
     }
 };
 
-// ReSharper disable once CppInconsistentNaming
 wsIOResult ctsWSARecvFrom(
     const std::shared_ptr<ctsSocket>& sharedSocket,
     SOCKET socket,
     const ctsTask& task,
     std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
-// ReSharper disable once CppInconsistentNaming
 wsIOResult ctsWSASendTo(
     const std::shared_ptr<ctsSocket>& sharedSocket,
     SOCKET socket,
