@@ -51,8 +51,8 @@ CALL :TESTCASES duplex rioiocp
 goto :eof
 
 :TESTCASES
-set ServerOptions= -listen:* -buffer:101 -ServerExitLimit:%CONNECTIONS%
-set ClientOptions= -target:localhost -buffer:100 -connections:%CONNECTIONS% -iterations:1
+set ServerOptions= -listen:* -buffer:101 -ServerExitLimit:%CONNECTIONS% -ConnectionFilename:server_connections.csv -ErrorFilename:server_errors.log -StatusFilename:server_status.csv -TcpInfoFilename:server_tcpinfo.csv
+set ClientOptions= -target:localhost -buffer:100 -connections:%CONNECTIONS% -iterations:1 -ConnectionFilename:client_connections.log -ErrorFilename:client_errors.log -StatusFilename:client_status.log -TcpInfoFilename:client_tcpinfo.csv
 
 REM **********************************************************************************************
 REM Test : verify:connection and a single pended send
