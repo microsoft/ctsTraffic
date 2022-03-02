@@ -492,6 +492,8 @@ public:
 
     void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept override
     {
+        // guarantee stats are ended
+        EndStatistics();
         ctsConfig::PrintTcpDetails(localAddr, remoteAddr, socket, m_statistics);
     }
 

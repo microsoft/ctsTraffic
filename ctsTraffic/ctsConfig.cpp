@@ -3023,7 +3023,7 @@ void PrintLegend() noexcept
 
     if (g_tcpInfoLogger && g_tcpInfoLogger->IsCsvFormat())
     {
-        g_tcpInfoLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,ConnectionId,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,BytesReordered,BytesRetransmitted,SynRetransmitted,DupAcksIn,MinRttUs,RttUs,Mss,TimeoutEpisodes,FastRetransmit,SndLimBytesCwnd,SndLimBytesRwin,SndLimBytesSnd\r\n");
+        g_tcpInfoLogger->LogMessage(L"TimeSlice,LocalAddress,RemoteAddress,ConnectionId,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,BytesReordered,BytesRetransmitted,SynRetransmitted,DupAcksIn,MinRttUs,Mss,TimeoutEpisodes,FastRetransmit,SndLimBytesCwnd,SndLimBytesRwin,SndLimBytesSnd\r\n");
     }
 }
 
@@ -3824,7 +3824,7 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
     if (g_tcpInfoLogger)
     {
         static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
-        const int64_t totalTime = stats.m_endTime.GetValue() - stats.m_startTime.GetValue();
+        const int64_t totalTime{stats.m_endTime.GetValue() - stats.m_startTime.GetValue()};
         auto textString = wil::str_printf<std::wstring>(
             tcpSuccessfulResultTextFormat,
             GetStatusTimeStamp(),
@@ -3850,7 +3850,7 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
                 nullptr) == 0)
         {
             // the OS supports TCP_INFO_v1 - write those details
-            static const auto* tcpInfoVersion1TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu\r\n";
+            static const auto* tcpInfoVersion1TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu\r\n";
             textString += wil::str_printf<std::wstring>(
                 tcpInfoVersion1TextFormat,
                 tcpInfo1.BytesReordered,
@@ -3858,7 +3858,6 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
                 tcpInfo1.SynRetrans,
                 tcpInfo1.DupAcksIn,
                 tcpInfo1.MinRttUs,
-                tcpInfo1.RttUs,
                 tcpInfo1.Mss,
                 tcpInfo1.TimeoutEpisodes,
                 tcpInfo1.FastRetrans,
@@ -3881,7 +3880,7 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
                 nullptr) == 0)
         {
             // the OS supports TCP_INFO_v0 - write those details
-            static const auto* tcpInfoVersion0TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu";
+            static const auto* tcpInfoVersion0TextFormat = L"%lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu";
             textString += wil::str_printf<std::wstring>(
                 tcpInfoVersion0TextFormat,
                 tcpInfo0.BytesReordered,
@@ -3889,7 +3888,6 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
                 tcpInfo0.SynRetrans,
                 tcpInfo0.DupAcksIn,
                 tcpInfo0.MinRttUs,
-                tcpInfo0.RttUs,
                 tcpInfo0.Mss,
                 tcpInfo0.TimeoutEpisodes,
                 tcpInfo0.FastRetrans);
