@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -35,7 +36,7 @@ class ctWmiEnumerate
 {
 public:
     // A forward iterator class type to enable forward-traversing instances of the queried WMI provider
-    // ReSharper disable once CppInconsistentNaming
+    // 
     class iterator
     {
     public:
@@ -91,15 +92,10 @@ public:
 
         // iterator_traits
         // - allows <algorithm> functions to be used
-        // ReSharper disable once CppInconsistentNaming
         using iterator_category = std::forward_iterator_tag;
-        // ReSharper disable once CppInconsistentNaming
         using value_type = ctWmiInstance;
-        // ReSharper disable once CppInconsistentNaming
         using difference_type = int;
-        // ReSharper disable once CppInconsistentNaming
         using pointer = ctWmiInstance*;
-        // ReSharper disable once CppInconsistentNaming
         using reference = ctWmiInstance&;
 
     private:
@@ -120,7 +116,7 @@ public:
 
     // Allows for executing a WMI query against the WMI service for an enumeration of WMI objects.
     // Assumes the query of of the WQL query language.
-    void query(PCWSTR query)
+    void query(_In_ PCWSTR query)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),
@@ -130,7 +126,7 @@ public:
             m_wbemEnumerator.put()));
     }
 
-    void query(PCWSTR query, const wil::com_ptr<IWbemContext>& context)
+    void query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),

@@ -40,7 +40,7 @@ ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
     m_ioFunctor(std::move(ioFunctor)),
     m_sendingSocket(sendingSocket),
     m_remoteAddr(std::move(remoteAddr)),
-    m_connectTime(ctTimer::SnapQpcInMillis())
+    m_connectTime(ctTimer::snap_qpc_as_msec())
 {
     m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
     THROW_LAST_ERROR_IF(!m_taskTimer);
@@ -66,7 +66,7 @@ void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noex
         }
         else
         {
-            FILETIME ftDueTime(ctTimer::ConvertMillisToRelativeFiletime(task.m_timeOffsetMilliseconds));
+            FILETIME ftDueTime(ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds));
             // assign the next task *and* schedule the timer while in *this object lock
             m_nextTask = task;
             SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);
@@ -171,14 +171,14 @@ VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(PTP_
 
         ctsConfig::PrintErrorInfo(
             L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-            thisPtr->m_remoteAddr.WriteCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
         thisPtr->CompleteState(returnedStatus);
     }
     else if (ctsIoStatus::CompletedIo == status)
     {
         PRINT_DEBUG_INFO(
             L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-            thisPtr->m_remoteAddr.WriteCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
         thisPtr->CompleteState(sendResults.m_errorCode);
     }
     _Analysis_assume_lock_released_(thisPtr->m_objectGuard);

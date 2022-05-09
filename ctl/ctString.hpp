@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -19,6 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+#include <wil/win32_helpers.h>
 #include <wil/resource.h>
 
 
@@ -38,8 +40,8 @@ namespace ctl::ctString
 {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// ctConvertToString
-/// ctConvertToWstring
+/// convert_to_string
+/// convert_to_wstring
 ///
 /// Converts between std::string and std::wstring using win32 conversion functions
 ///
@@ -49,7 +51,7 @@ namespace ctl::ctString
 /// Can throw std::bad_alloc
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-inline std::string ctConvertToString(const std::wstring& wstr)
+inline std::string convert_to_string(const std::wstring& wstr)
 {
     if (wstr.length() == 0)
     {
@@ -70,12 +72,11 @@ inline std::string ctConvertToString(const std::wstring& wstr)
     }
 
     // We needed room for it earlier, but the \0 cannot be embedded in the returned std::string
-    --len;
-    buf.resize(len);
+    buf.resize(len - 1);
     return buf;
 }
 
-inline std::wstring ctConvertToWstring(const std::string& str)
+inline std::wstring convert_to_wstring(const std::string& str)
 {
     if (str.length() == 0)
     {
@@ -96,16 +97,15 @@ inline std::wstring ctConvertToWstring(const std::string& str)
     }
 
     // We needed room for it earlier, but the \0 cannot be embedded in the returned std::string
-    --len;
-    buf.resize(len);
+    buf.resize(len - 1);
     return buf;
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// ctOrdinalEquals
-/// ctOrdinalEqualsCaseInsensative
+/// ordinal_equals
+/// iordinal_equals
 ///
 /// Performs Ordinal comparisons of 2 strings, returning a bool if they compare equally.
 /// *Note the 'i' version is a case-insensative comparison
@@ -120,10 +120,10 @@ inline std::wstring ctConvertToWstring(const std::string& str)
 /// Examples:
 ///
 ///    wchar_t hello[] = L"Hello";
-///    if (ctOrdinalEquals(hello, L"Hello)) { printf(L"Correct!"); }
+///    if (ordinal_equals(hello, L"Hello)) { printf(L"Correct!"); }
 ///
 ///    std::wstring wshello (L"hello");
-///    if (ctOrdinalEqualsCaseInsensative(hello, wshello)) { printf(L"Correct!"); }
+///    if (iordinal_equals(hello, wshello)) { printf(L"Correct!"); }
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -195,21 +195,21 @@ namespace Detail
         }
     }
 #else
-    inline bool OrdinalEquals(
+        inline bool OrdinalEquals(
             _In_reads_z_(lhs_size) const char* lhs,
             size_t lhs_size,
             _In_reads_z_(rhs_size) const char* rhs,
             size_t rhs_size,
             BOOL case_insensitive)
-    {
-        UNREFERENCED_PARAMETER(_lhs);
-        UNREFERENCED_PARAMETER(_lhs_size);
-        UNREFERENCED_PARAMETER(_rhs);
-        UNREFERENCED_PARAMETER(_rhs_size);
-        UNREFERENCED_PARAMETER(_case_insensitive);
+        {
+            UNREFERENCED_PARAMETER(_lhs);
+            UNREFERENCED_PARAMETER(_lhs_size);
+            UNREFERENCED_PARAMETER(_rhs);
+            UNREFERENCED_PARAMETER(_rhs_size);
+            UNREFERENCED_PARAMETER(_case_insensitive);
 
-        FAIL_FAST_MSG("ctString: cannot compare char* strings in modern apps: CompareStringA is not supported");
-    }
+            FAIL_FAST_MSG("ctString: cannot compare char* strings in modern apps: CompareStringA is not supported");
+        }
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
 #pragma endregion
 
@@ -255,7 +255,7 @@ namespace Detail
 }
 
 template <typename LeftStringT, typename RightStringT>
-bool ctOrdinalEquals(LeftStringT lhs, RightStringT rhs)
+bool ordinal_equals(LeftStringT lhs, RightStringT rhs)
 {
 #pragma prefast(suppress:26018, "OACR doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
     return Detail::OrdinalEquals(
@@ -267,7 +267,7 @@ bool ctOrdinalEquals(LeftStringT lhs, RightStringT rhs)
 }
 
 template <typename LeftStringT, typename RightStringT>
-bool ctOrdinalEqualsCaseInsensative(LeftStringT lhs, RightStringT rhs)
+bool iordinal_equals(LeftStringT lhs, RightStringT rhs)
 {
 #pragma prefast(suppress:26018, "OACR doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
     return Detail::OrdinalEquals(
@@ -281,10 +281,10 @@ bool ctOrdinalEqualsCaseInsensative(LeftStringT lhs, RightStringT rhs)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// ctOridinalStartsWith
-/// ctOrdinalStartsWithCaseInsensative
-/// ctOrdinalEndsWith
-/// ctOrdinalEndsWithCaseInsensative
+/// starts_with
+/// istarts_with
+/// ends_with
+/// iends_with
 ///
 /// Searches the relevant portion of the input string for the search string, returning bool
 ///
@@ -297,63 +297,63 @@ bool ctOrdinalEqualsCaseInsensative(LeftStringT lhs, RightStringT rhs)
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-inline bool ctOridinalStartsWith(const std::wstring& haystack, const std::wstring& needle)
+inline bool starts_with(const std::wstring& haystack, const std::wstring& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEquals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
+        ordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 }
 
-inline bool ctOrdinalStartsWithCaseInsensative(const std::wstring& haystack, const std::wstring& needle)
+inline bool istarts_with(const std::wstring& haystack, const std::wstring& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEqualsCaseInsensative(haystack.substr(0, needle.size()).c_str(), needle.c_str());
+        iordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 }
 
-inline bool ctOrdinalEndsWith(const std::wstring& haystack, const std::wstring& needle)
+inline bool ends_with(const std::wstring& haystack, const std::wstring& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEquals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
+        ordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 }
 
-inline bool ctOrdinalEndsWithCaseInsensative(const std::wstring& haystack, const std::wstring& needle)
+inline bool iends_with(const std::wstring& haystack, const std::wstring& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEqualsCaseInsensative(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
+        iordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 }
 
-inline bool ctOridinalStartsWith(const std::string& haystack, const std::string& needle)
+inline bool starts_with(const std::string& haystack, const std::string& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEquals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
+        ordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 }
 
-inline bool ctOrdinalStartsWithCaseInsensative(const std::string& haystack, const std::string& needle)
+inline bool istarts_with(const std::string& haystack, const std::string& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEqualsCaseInsensative(haystack.substr(0, needle.size()).c_str(), needle.c_str());
+        iordinal_equals(haystack.substr(0, needle.size()).c_str(), needle.c_str());
 }
 
-inline bool ctOrdinalEndsWith(const std::string& haystack, const std::string& needle)
+inline bool ends_with(const std::string& haystack, const std::string& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEquals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
+        ordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 }
 
-inline bool ctOrdinalEndsWithCaseInsensative(const std::string& haystack, const std::string& needle)
+inline bool iends_with(const std::string& haystack, const std::string& needle)
 {
     return
         haystack.size() >= needle.size() &&
-        ctOrdinalEqualsCaseInsensative(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
+        iordinal_equals(haystack.c_str() + (haystack.size() - needle.size()), needle.c_str());
 }
 
-inline std::wstring ctFormatMessage(DWORD messageId)
+inline std::wstring format_message(DWORD messageId)
 {
     constexpr DWORD cchBuffer = 1024;
     WCHAR stringBuffer[cchBuffer]{};
@@ -422,7 +422,7 @@ inline std::wstring ctFormatMessage(DWORD messageId)
 /// Can throw a std::exception under low-resources
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-inline void ctReplaceAll(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString) // NOLINT(google-runtime-references)
+inline void replace_all(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString) // NOLINT(google-runtime-references)
 {
     const auto searchSize = searchString.size();
     const auto replacementSize = replacementString.size();
@@ -435,13 +435,13 @@ inline void ctReplaceAll(std::wstring& originalString, const std::wstring& searc
 }
 
 inline
-std::wstring ctReplaceAllCopy(std::wstring originalString, const std::wstring& searchString, const std::wstring& replacementString)
+std::wstring replace_all_copy(std::wstring originalString, const std::wstring& searchString, const std::wstring& replacementString)
 {
-    ctReplaceAll(originalString, searchString, replacementString);
+    replace_all(originalString, searchString, replacementString);
     return originalString;
 }
 
-inline void ctReplaceAll(std::string& originalString, const std::string& searchString, const std::string& replacementString) // NOLINT(google-runtime-references)
+inline void replace_all(std::string& originalString, const std::string& searchString, const std::string& replacementString) // NOLINT(google-runtime-references)
 {
     const auto searchSize = searchString.size();
     const auto replacementSize = replacementString.size();
@@ -453,9 +453,88 @@ inline void ctReplaceAll(std::string& originalString, const std::string& searchS
     }
 }
 
-inline std::string ctReplaceAllCopy(std::string originalString, const std::string& searchString, const std::string& replacementString)
+inline std::string replace_all_copy(std::string originalString, const std::string& searchString, const std::string& replacementString)
 {
-    ctReplaceAll(originalString, searchString, replacementString);
+    replace_all(originalString, searchString, replacementString);
     return originalString;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// escape_wmi_query
+/// escape_wmi_query_copy
+///
+/// Escapes characters that are 'special' in the context of a WMI WQL query which could
+///  inadvertently affect the result of the query.
+///
+/// - escape_wmi_query takes an original string as an std::wstring reference.
+///   Meaning an implicit std::wstring object cannot be created.
+///
+/// - escape_wmi_query_copy takes an original string by value into std::wstring.
+///   Meaning an implicit std::wstring object *can* be created.
+///   Additionally, R-value references can be passed through it via std::move semantics.
+///   A new std::wstring is returned with the escaped string.
+///
+/// Can throw a std::exception under low-resources
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+inline void escape_wmi_query(std::wstring& unescapedString)
+{
+    if (unescapedString.size() > 1)
+    {
+        // greater than one as we need begin *and* end quotes before trimming
+        if (*unescapedString.begin() == L'\'' && *unescapedString.rbegin() == L'\'' ||
+            *unescapedString.begin() == L'"' && *unescapedString.rbegin() == L'"')
+        {
+            // trim off single quotes or double before replacing
+            unescapedString.erase(unescapedString.begin());
+            unescapedString.pop_back();
+        }
+    }
+    replace_all(unescapedString, L"\\", L"\\\\");
+    replace_all(unescapedString, L"'", L"\\'");
+    unescapedString.insert(unescapedString.begin(), L'\'');
+    unescapedString.push_back(L'\'');
+}
+
+inline std::wstring escape_wmi_query_copy(std::wstring unescapedString)
+{
+    escape_wmi_query(unescapedString);
+    return unescapedString;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// format_string
+/// format_string_va
+///
+/// Creates a formatted string for the caller - growing the buffer for _vsnwprintf_s
+/// Returns a std::wstring with the resulting formatted string
+///
+/// Will continue to grow the formatted string up to MAXINT32 characters to avoid truncation
+///  to ensure the entire formatted string is captured
+///
+/// Can throw a std::exception under low-resources
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+inline
+std::wstring __cdecl format_string_va(_In_ _Printf_format_string_ PCWSTR pszFormat, va_list args)
+{
+    std::wstring formattedString;
+    THROW_IF_FAILED(wil::details::str_vprintf_nothrow<std::wstring>(formattedString, pszFormat, args));
+    return formattedString;
+}
+
+inline
+std::wstring __cdecl format_string(_In_ _Printf_format_string_ PCWSTR pszFormat, ...)
+{
+    std::wstring formattedString;
+    va_list args;
+    va_start(args, pszFormat);
+    const auto hr = wil::details::str_vprintf_nothrow<std::wstring>(formattedString, pszFormat, args);
+    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+    va_end(args);
+    THROW_IF_FAILED(hr);
+    return formattedString;
 }
 } // namespace ctl::ctString

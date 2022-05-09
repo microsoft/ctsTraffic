@@ -197,7 +197,7 @@ void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noe
     if (NO_ERROR == response.m_errorCode)
     {
         // set the local and remote addresses on the socket object
-        const ctl::ctSockaddr localAddr;
+        ctl::ctSockaddr localAddr;
         auto localAddrLen = localAddr.length();
         if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
         {
@@ -209,7 +209,7 @@ void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noe
 
         PRINT_DEBUG_INFO(
             L"\t\tctsMediaStreamClient sent its START message to %ws\n",
-            targetAddress.WriteCompleteAddress().c_str());
+            targetAddress.writeCompleteAddress().c_str());
     }
 
     // complete only on failure or successfully completed inline (otherwise will complete in the IOCP callback)
@@ -502,7 +502,7 @@ void ctsMediaStreamClientConnectionCompletionCallback(
     if (NO_ERROR == gle)
     {
         // set the local and remote addr's
-        const ctl::ctSockaddr localAddr;
+        ctl::ctSockaddr localAddr;
         int localAddrLen = localAddr.length();
         if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
         {

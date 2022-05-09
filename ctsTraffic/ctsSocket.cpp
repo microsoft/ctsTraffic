@@ -18,7 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <wil/win32_helpers.h>
 // ctl headers
-#include <ctThreadPoolTimer.hpp>
 #include <ctMemoryGuard.hpp>
 // project headers
 #include "ctsConfig.h"

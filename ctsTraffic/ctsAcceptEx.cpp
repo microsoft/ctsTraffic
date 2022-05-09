@@ -113,8 +113,8 @@ namespace details
             if (SOCKET_ERROR == bind(tempsocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
             {
                 error = WSAGetLastError();
-                char addrBuffer[ctl::SockAddrMaxStringLength]{};
-                m_sockaddr.WriteCompleteAddress(addrBuffer);
+                char addrBuffer[ctl::ctSockaddr::FixedStringLength]{};
+                m_sockaddr.writeCompleteAddress(addrBuffer);
                 THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
             }
 
@@ -227,7 +227,7 @@ namespace details
                 {
                     // Make the structures for the listener and its accept sockets
                     auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
-                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended acceptex objects per listener
                     //
@@ -437,8 +437,8 @@ namespace details
         // transfer ownership of the SOCKET to the caller
         returnDetails.m_acceptSocket = std::move(m_acceptSocket);
         returnDetails.m_lastError = 0;
-        returnDetails.m_localAddr.set(localAddr);
-        returnDetails.m_remoteAddr.set(remoteAddr);
+        returnDetails.m_localAddr.setSockaddr(localAddr);
+        returnDetails.m_remoteAddr.setSockaddr(remoteAddr);
 
         return returnDetails;
     }
@@ -484,7 +484,7 @@ namespace details
                 if (0 == acceptedSocket.m_lastError)
                 {
                     // set the local addr
-                    const ctl::ctSockaddr localAddr;
+                    ctl::ctSockaddr localAddr;
                     int localAddrLen = localAddr.length();
                     if (0 == getsockname(acceptedSocket.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
                     {
@@ -596,7 +596,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)
     {
         // set the local addr
-        const ctl::ctSockaddr localAddr;
+        ctl::ctSockaddr localAddr;
         auto localAddrLen = localAddr.length();
         if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
         {

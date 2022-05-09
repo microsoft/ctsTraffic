@@ -38,24 +38,18 @@ namespace ctl
 class ctWmiInstance
 {
 public:
-    ////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Constructors:
-    /// - requires a IWbemServices object already connected to WMI
-    ///   
-    /// - one c'tor creates an empty instance (if set later)
-    /// - one c'tor takes the WMI class name to instantiate a new instance
-    /// - one c'tor takes an existing IWbemClassObject instance
-    ///
-    /// Default d'tor, copy c'tor, and copy assignment operator
-    ///
-    ////////////////////////////////////////////////////////////////////////////////
+    // Constructors:
+    // - requires a IWbemServices object already connected to WMI
+    //   
+    // - one c'tor creates an empty instance (if set later)
+    // - one c'tor takes the WMI class name to instantiate a new instance
+    // - one c'tor takes an existing IWbemClassObject instance
     explicit ctWmiInstance(ctWmiService service) noexcept :
         m_wbemServices(std::move(service))
     {
     }
 
-    ctWmiInstance(ctWmiService service, PCWSTR className) :
+    ctWmiInstance(ctWmiService service, _In_ PCWSTR className) :
         m_wbemServices(std::move(service))
     {
         // get the object from the WMI service

@@ -109,7 +109,7 @@ void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint
 {
 }
 
-void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
@@ -121,7 +121,7 @@ void PrintJitterUpdate(const JitterFrameEntry&, const JitterFrameEntry&) noexcep
 {
 }
 
-void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
@@ -167,7 +167,7 @@ uint64_t GetTransferSize() noexcept
 
 float GetStatusTimeStamp() noexcept
 {
-    return static_cast<float>((ctl::ctTimer::SnapQpcInMillis() - g_configSettings->StartTimeMilliseconds) / 1000.0);
+    return static_cast<float>((ctl::ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds) / 1000.0);
 }
 
 bool ShutdownCalled() noexcept

@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 // cpp headers
 #include <cstring>
@@ -65,14 +66,14 @@ namespace ctsTraffic { namespace ctsStatistics
             //   versus taking a QPC hit on every IO request
             if (0LL == statisticsObject.start_time.get())
             {
-                statisticsObject.m_startTime.set_conditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
+                statisticsObject.m_startTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
             }
         }
 
         template <typename T>
         void End(_In_ T& statisticsObject) noexcept
         {
-            statisticsObject.m_endTime.set_conditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
+            statisticsObject.m_endTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
         }
     }
 
@@ -227,7 +228,7 @@ namespace ctsTraffic { namespace ctsStatistics
         //
         ctsConnectionStatistics SnapView(bool clear_settings) noexcept
         {
-            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
                                           m_startTime.SetPriorValue(currentTime) :
                                           m_startTime.GetPriorValue();
@@ -280,7 +281,7 @@ namespace ctsTraffic { namespace ctsStatistics
         //
         ctsUdpStatistics SnapView(bool clear_settings) noexcept
         {
-            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
                                           m_startTime.SetPriorValue(currentTime) :
                                           m_startTime.GetPriorValue();
@@ -346,7 +347,7 @@ namespace ctsTraffic { namespace ctsStatistics
         //
         ctsTcpStatistics SnapView(bool clear_settings) noexcept
         {
-            const int64_t currentTime = ctl::ctTimer::SnapQpcInMillis();
+            const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
                                           m_startTime.SetPriorValue(currentTime) :
                                           m_startTime.GetPriorValue();

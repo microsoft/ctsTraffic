@@ -145,9 +145,6 @@
     <ClInclude Include="..\ctl\ctThreadIocp.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctTimer.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -243,5 +240,10 @@
     <Text Include="..\TestScripts\streaming.txt">
       <Filter>TestScripts</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="ctsTraffic.exe.manifest">
+      <Filter>Resource Files</Filter>
+    </Manifest>
   </ItemGroup>
 </Project>

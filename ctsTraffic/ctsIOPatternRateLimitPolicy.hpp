@@ -54,7 +54,7 @@ private:
     const uint64_t m_bytesSendingPerQuantum;
     const int64_t m_quantumPeriodMs{ctsConfig::g_configSettings->TcpBytesPerSecondPeriod};
     uint64_t m_bytesSentThisQuantum{0};
-    int64_t m_quantumStartTimeMs{ctl::ctTimer::SnapQpcInMillis()};
+    int64_t m_quantumStartTimeMs{ctl::ctTimer::snap_qpc_as_msec()};
 
 public:
     ctsIOPatternRateLimitPolicy() noexcept :
@@ -75,7 +75,7 @@ public:
         }
 
         task.m_timeOffsetMilliseconds = 0LL;
-        const auto currentTimeMs(ctl::ctTimer::SnapQpcInMillis());
+        const auto currentTimeMs(ctl::ctTimer::snap_qpc_as_msec());
 
         if (m_bytesSentThisQuantum < m_bytesSendingPerQuantum)
         {

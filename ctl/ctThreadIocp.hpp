@@ -12,7 +12,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 // ReSharper disable CppInconsistentNaming
-// ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #pragma once
 
 // cpp headers
@@ -52,7 +51,7 @@ struct ctThreadIocpCallbackInfo
     explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback) noexcept :
         callback(std::move(_callback))
     {
-        ::ZeroMemory(&ov, sizeof ov);
+        ZeroMemory(&ov, sizeof ov);
     }
 
     ~ctThreadIocpCallbackInfo() noexcept = default;
@@ -105,46 +104,27 @@ public:
     // - wil::ResultException (from the ThreadPool APIs)
     //
     explicit ctThreadIocp(HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
-        ptp_io(CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env))
+        m_tpIo(CreateThreadpoolIo(_handle, IoCompletionCallback, nullptr, _ptp_env))
     {
-        if (!ptp_io)
-        {
-            THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolIo");
-        }
+        THROW_LAST_ERROR_IF_NULL(m_tpIo);
     }
 
     explicit ctThreadIocp(SOCKET _socket, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
-        ptp_io(CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env)) // NOLINT(performance-no-int-to-ptr)
+        m_tpIo(CreateThreadpoolIo(reinterpret_cast<HANDLE>(_socket), IoCompletionCallback, nullptr, _ptp_env)) // NOLINT(performance-no-int-to-ptr)
     {
-        if (!ptp_io)
-        {
-            THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolIo");
-        }
+        THROW_LAST_ERROR_IF_NULL(m_tpIo);
     }
 
-    ~ctThreadIocp()
-    {
-        // could have been moved out of
-        if (ptp_io)
-        {
-            // wait for all callbacks
-            WaitForThreadpoolIoCallbacks(ptp_io, FALSE);
-            CloseThreadpoolIo(ptp_io);
-        }
-    }
+    ~ctThreadIocp() noexcept = default;
 
     ctThreadIocp(ctThreadIocp&& rhs) noexcept :
-        ptp_io(rhs.ptp_io)
+        m_tpIo(std::move(rhs.m_tpIo))
     {
-        // null out the moved-from object's TP ptr since this object now has ownership
-        rhs.ptp_io = nullptr;
     }
 
     ctThreadIocp& operator=(ctThreadIocp&& rhs) noexcept
     {
-        ptp_io = rhs.ptp_io;
-        // null out the moved-from object's TP ptr since this object now has ownership
-        rhs.ptp_io = nullptr;
+        m_tpIo = std::move(rhs.m_tpIo);
         return *this;
     }
 
@@ -177,8 +157,8 @@ public:
 
         // once creating a new request succeeds, start the IO
         // - all below calls are no-fail calls
-        StartThreadpoolIo(ptp_io);
-        ::ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
+        StartThreadpoolIo(m_tpIo.get());
+        ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
         return &new_callback->ov;
     }
 
@@ -192,7 +172,7 @@ public:
     //
     void cancel_request(const OVERLAPPED* pOverlapped) const noexcept
     {
-        CancelThreadpoolIo(ptp_io);
+        CancelThreadpoolIo(m_tpIo.get());
         const auto* const old_request = reinterpret_cast<const ctThreadIocpCallbackInfo*>(pOverlapped);
         delete old_request;
     }
@@ -206,7 +186,7 @@ public:
     ctThreadIocp& operator=(const ctThreadIocp&) = delete;
 
 private:
-    PTP_IO ptp_io = nullptr;
+    wil::unique_threadpool_io m_tpIo{};
 
     static void CALLBACK IoCompletionCallback(
         PTP_CALLBACK_INSTANCE /*_instance*/,
@@ -233,9 +213,12 @@ private:
         {
             __try
             {
-                RaiseFailFastException(exr->ExceptionRecord, exr->ContextRecord, 0);
+                RaiseException(
+                    exr->ExceptionRecord->ExceptionCode,
+                    EXCEPTION_NONCONTINUABLE,
+                    exr->ExceptionRecord->NumberParameters,
+                    exr->ExceptionRecord->ExceptionInformation);
             }
-#pragma warning(suppress: 6320) // not hiding exceptions: RaiseFailFastException is fatal - this creates a break to help debugging in some scenarios
             __except (EXCEPTION_EXECUTE_HANDLER)
             {
                 __debugbreak();

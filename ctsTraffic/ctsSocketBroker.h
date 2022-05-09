@@ -20,8 +20,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 // wil headers
 #include <wil/resource.h>
-// ctl headers
-#include <ctThreadPoolTimer.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
@@ -67,9 +65,9 @@ private:
     // vector of currently active sockets
     // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
     // - and thus there must be at least one refcount on that object to call shared_from_this()
-    std::vector<std::shared_ptr<ctsSocketState>> m_socketPool;
+    std::vector<std::shared_ptr<ctsSocketState>> m_socketPool{};
     // timer to initiate the savenge routine TimerCallback()
-    ctl::ctThreadpoolTimer m_wakeupTimer;
+    wil::unique_threadpool_timer m_wakeupTimer;
     // keep a burn-down count as connections are made to know when to be 'done'
     ULONGLONG m_totalConnectionsRemaining = 0ULL;
     // track what's pended and what's active

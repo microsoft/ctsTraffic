@@ -404,7 +404,7 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            std::vector<ULONG> m_conjestionWindows;
+            std::vector<ULONG> m_conjestionWindows{};
 
             SIZE_T m_bytesSentInReceiverLimited = 0;
             SIZE_T m_bytesSentInSenderLimited = 0;
@@ -464,8 +464,8 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            std::vector<ULONG> m_retransmitTimer;
-            std::vector<ULONG> m_roundTripTime;
+            std::vector<ULONG> m_retransmitTimer{};
+            std::vector<ULONG> m_roundTripTime{};
             ULONG m_bytesRetrans = 0;
             ULONG m_dupAcksRcvd = 0;
             ULONG m_sacksRcvd = 0;
@@ -531,7 +531,7 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            std::vector<ULONG> m_receiveWindow;
+            std::vector<ULONG> m_receiveWindow{};
             ULONG m_minReceiveWindow = 0;
             ULONG m_maxReceiveWindow = 0;
         };
@@ -595,7 +595,7 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            std::vector<ULONG> m_receiveWindow;
+            std::vector<ULONG> m_receiveWindow{};
             ULONG m_minReceiveWindow = 0;
             ULONG m_maxReceiveWindow = 0;
         };
@@ -691,15 +691,15 @@ namespace ctsPerf { namespace Details
                 m_localAddr(AF_INET),
                 m_remoteAddr(AF_INET)
             {
-                m_localAddr.SetAddress(
+                m_localAddr.setAddress(
                     reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwLocalAddr)));
-                m_localAddr.SetPort(
+                m_localAddr.setPort(
                     static_cast<unsigned short>(pTcpRow->dwLocalPort),
                     ctl::ByteOrder::NetworkOrder);
 
-                m_remoteAddr.SetAddress(
+                m_remoteAddr.setAddress(
                     reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwRemoteAddr)));
-                m_remoteAddr.SetPort(
+                m_remoteAddr.setPort(
                     static_cast<unsigned short>(pTcpRow->dwRemotePort),
                     ctl::ByteOrder::NetworkOrder);
             }
@@ -708,13 +708,13 @@ namespace ctsPerf { namespace Details
                 m_localAddr(AF_INET6),
                 m_remoteAddr(AF_INET6)
             {
-                m_localAddr.SetAddress(&pTcpRow->LocalAddr);
-                m_localAddr.SetPort(
+                m_localAddr.setAddress(&pTcpRow->LocalAddr);
+                m_localAddr.setPort(
                     static_cast<unsigned short>(pTcpRow->dwLocalPort),
                     ctl::ByteOrder::NetworkOrder);
 
-                m_remoteAddr.SetAddress(&pTcpRow->RemoteAddr);
-                m_remoteAddr.SetPort(
+                m_remoteAddr.setAddress(&pTcpRow->RemoteAddr);
+                m_remoteAddr.setPort(
                     static_cast<unsigned short>(pTcpRow->dwRemotePort),
                     ctl::ByteOrder::NetworkOrder);
             }
@@ -747,10 +747,10 @@ namespace ctsPerf { namespace Details
 
             std::wstring PrintAddresses() const
             {
-                WCHAR local_string[ctl::SockAddrMaxStringLength];
-                m_localAddr.WriteCompleteAddress(local_string);
-                WCHAR remote_string[ctl::SockAddrMaxStringLength];
-                m_remoteAddr.WriteCompleteAddress(remote_string);
+                WCHAR local_string[ctl::ctSockaddr::FixedStringLength];
+                m_localAddr.writeCompleteAddress(local_string);
+                WCHAR remote_string[ctl::ctSockaddr::FixedStringLength];
+                m_remoteAddr.writeCompleteAddress(remote_string);
 
                 return wil::str_printf<std::wstring>(
                     L"%ws,%ws",
@@ -914,12 +914,12 @@ namespace ctsPerf { namespace Details
         wil::critical_section m_timerLock{500};
         bool m_timersStopping = false;
 
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>> m_synOptsData;
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsData>> m_byteTrackingData;
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsPath>> m_pathInfoData;
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsRec>> m_localReceiveWindowData;
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsObsRec>> m_remoteReceiveWindowData;
-        std::set<Details::EstatsDataPoint<TcpConnectionEstatsSndCong>> m_senderCongestionData;
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsSynOpts>> m_synOptsData{};
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsData>> m_byteTrackingData{};
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsPath>> m_pathInfoData{};
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsRec>> m_localReceiveWindowData{};
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsObsRec>> m_remoteReceiveWindowData{};
+        std::set<Details::EstatsDataPoint<TcpConnectionEstatsSndCong>> m_senderCongestionData{};
 
         ctsWriteDetails m_pathInfoWriter;
         ctsWriteDetails m_receiveWindowWriter;
@@ -927,7 +927,7 @@ namespace ctsPerf { namespace Details
 
         // since updates are always serialized on a timer, just reuse the same buffer
         const ULONG c_StartingTableSize = 4096;
-        std::vector<char> m_tcpTable;
+        std::vector<char> m_tcpTable{};
         ULONG m_tableCounter = 0;
         const DWORD OneSecondTimeoutMs = 1000;
         FILETIME m_timerInterval =

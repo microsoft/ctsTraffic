@@ -35,7 +35,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
 template <>
 inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
 {
-    return _value.WriteCompleteAddress();
+    return _value.writeCompleteAddress();
 }
 }
 
@@ -65,7 +65,7 @@ namespace ctsConfig
     {
     }
 
-    void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
 
@@ -73,7 +73,7 @@ namespace ctsConfig
     {
     }
 
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+    void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
     {
     }
 
@@ -124,7 +124,7 @@ ctsIoStatus g_IOStatus = ctsIoStatus::ContinueIo;
 ctsIoPattern::ctsIoPattern(uint32_t) :
     // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
     m_bytesSendingPerQuantum(ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
-    m_quantumStartTimeMs(ctl::ctTimer::SnapQpcInMillis())
+    m_quantumStartTimeMs(ctl::ctTimer::snap_qpc_as_msec())
 {
     Logger::WriteMessage(L"ctsIOPattern::ctsIOPattern\n");
 }

@@ -52,13 +52,11 @@ namespace ctl { namespace Details
             auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
 
             // check to see if need to create a temp socket
-            const auto localSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-            if (INVALID_SOCKET == localSocket)
+            wil::unique_socket localSocket{socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)};
+            if (INVALID_SOCKET == localSocket.get())
             {
                 return FALSE;
             }
-            auto closesocketOnExit = wil::scope_exit([&]() noexcept { closesocket(localSocket); });
-
             // control code and the size to fetch the extension function pointers
             for (auto fnLoop = 0ul; fnLoop < c_functionPtrCount; ++fnLoop)
             {
@@ -143,7 +141,7 @@ namespace ctl { namespace Details
                 }
 
                 if (0 != WSAIoctl(
-                        localSocket,
+                        localSocket.get(),
                         controlCode,
                         &guid,
                         static_cast<DWORD>(sizeof guid),

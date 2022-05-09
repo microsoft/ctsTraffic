@@ -84,7 +84,7 @@ namespace ctsPerf { namespace Details
     class ctsWriteDetails
     {
     private:
-        void StartRow(PCWSTR className, PCWSTR counterName) const noexcept;
+        void StartRow(_In_ PCWSTR className, _In_ PCWSTR counterName) const noexcept;
         void EndRow() const noexcept;
 
         std::wstring m_fileName;
@@ -94,7 +94,7 @@ namespace ctsPerf { namespace Details
         template <typename T>
         static std::wstring PrintMeanStdDev(const std::vector<T>& data)
         {
-            auto stdTuple = ctl::SampledStandardDeviation(data.begin(), data.end());
+            auto stdTuple = ctl::ctSampledStandardDeviation(data.begin(), data.end());
             return Details::Write(std::get<0>(stdTuple), std::get<1>(stdTuple)); // Mean,StdDev
         }
 
@@ -109,7 +109,7 @@ namespace ctsPerf { namespace Details
             // sort the data for IQR calculations
             sort(data.begin(), data.end());
 
-            auto stdTuple = ctl::SampledStandardDeviation(data.begin(), data.end());
+            auto stdTuple = ctl::ctSampledStandardDeviation(data.begin(), data.end());
             auto interquartileTuple = ctl::ctInterquartileRange(data.begin(), data.end());
 
             auto formattedData = Details::Write(static_cast<DWORD>(data.size())); // SampleCount
@@ -119,7 +119,7 @@ namespace ctsPerf { namespace Details
             return formattedData;
         }
 
-        explicit ctsWriteDetails(PCWSTR file_name) :
+        explicit ctsWriteDetails(_In_ PCWSTR file_name) :
             m_fileName(file_name)
         {
         }
@@ -142,7 +142,7 @@ namespace ctsPerf { namespace Details
         // The vector *will* be sorted before being returned (this is why it's non-const).
         //
         template <typename T>
-        void WriteDetails(PCWSTR className, PCWSTR counterName, std::vector<T>& data)
+        void WriteDetails(_In_ PCWSTR className, _In_ PCWSTR counterName, std::vector<T>& data)
         {
             if (data.empty())
             {
@@ -160,7 +160,7 @@ namespace ctsPerf { namespace Details
         }
 
         template <typename T>
-        void WriteDifference(PCWSTR className, PCWSTR counterName, const std::vector<T>& data)
+        void WriteDifference(_In_ PCWSTR className, _In_ PCWSTR counterName, const std::vector<T>& data)
         {
             if (data.size() < 3)
             {
@@ -180,7 +180,7 @@ namespace ctsPerf { namespace Details
         }
 
         template <typename T>
-        void WriteMean(PCWSTR className, PCWSTR counterName, const std::vector<T>& data)
+        void WriteMean(_In_ PCWSTR className, _In_ PCWSTR counterName, const std::vector<T>& data)
         {
             if (data.size() < 4)
             {

@@ -183,8 +183,12 @@ namespace ctsConfig
 
     void PrintJitterUpdate(const JitterFrameEntry& currentFrame, const JitterFrameEntry& previousFrame) noexcept;
 
+    void __cdecl PrintSummary(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept;
     void PrintStatusUpdate() noexcept;
-    void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
+    void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept;
+    void PrintErrorIfFailed(_In_ PCSTR what, uint32_t why) noexcept;
+    // Override will always print to console regardless of settings (important if can't even start)
+    void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
 
     // Putting PrintDebugInfo as a macro to avoid running any code for debug printing if not necessary
 #define PRINT_DEBUG_INFO(fmt, ...)                                            \
@@ -197,10 +201,6 @@ namespace ctsConfig
             }                                                                 \
         }                                                                     \
         while ((void)0, 0)
-    void PrintErrorIfFailed(PCSTR what, uint32_t why) noexcept;
-    void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept;
-    // Override will always print to console regardless of settings (important if can't even start)
-    void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
 
     constexpr DWORD Win32FromHresult(HRESULT hr) noexcept
     {
@@ -221,6 +221,7 @@ namespace ctsConfig
     void PrintConnectionResults(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, uint32_t error, const ctsUdpStatistics& stats) noexcept;
     void PrintConnectionResults(uint32_t error) noexcept;
     void PrintTcpDetails(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket, const ctsTcpStatistics& stats) noexcept;
+
     constexpr void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsUdpStatistics&) noexcept
     {
         // must implement ctsUdpStatistics as a no-op for the caller's template to compile
@@ -328,7 +329,7 @@ namespace ctsConfig
     {
         // dynamically initialize status details with current qpc
         ctsConfigSettings() noexcept :
-            ConnectionStatusDetails(ctl::ctTimer::SnapQpcInMillis())
+            ConnectionStatusDetails(ctl::ctTimer::snap_qpc_as_msec())
         {
         }
 
@@ -353,8 +354,7 @@ namespace ctsConfig
         IoPatternType IoPattern = IoPatternType::NoIoSet;
         OptionType Options = NoOptionSet;
 
-        DWORD SocketFlags = 0;
-        WORD Port = 0;
+        uint32_t SocketFlags = 0;
 
         uint64_t Iterations = 0;
         uint64_t ServerExitLimit = 0;
@@ -377,6 +377,7 @@ namespace ctsConfig
         int64_t StartTimeMilliseconds = 0;
 
         uint32_t TimeLimit = 0;
+        uint32_t PauseAtEnd = 0;
         uint32_t PrePostRecvs = 0;
         uint32_t PrePostSends = 0;
         uint32_t RecvBufValue = 0;
@@ -393,11 +394,12 @@ namespace ctsConfig
 
         uint16_t LocalPortLow = 0;
         uint16_t LocalPortHigh = 0;
+        uint16_t Port = 0;
 
         bool UseSharedBuffer = false;
         bool ShouldVerifyBuffers = false;
 
-        static constexpr DWORD c_CriticalSectionSpinlock = 500ul;
+        static constexpr DWORD c_CriticalSectionSpinlock = 100ul;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////

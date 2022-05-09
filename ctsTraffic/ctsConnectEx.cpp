@@ -69,7 +69,7 @@ static void ctsConnectExIoCompletionCallback(
 
     ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
 
-    const ctl::ctSockaddr localAddr;
+    ctl::ctSockaddr localAddr;
     if (NO_ERROR == gle)
     {
         // store the local addr of the connection
@@ -141,7 +141,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             ctsConfig::PrintErrorIfFailed("ConnectEx", error);
             if (NO_ERROR == error)
             {
-                PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.WriteCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
             }
         }
         else

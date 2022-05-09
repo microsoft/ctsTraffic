@@ -12,6 +12,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 // ReSharper disable StringLiteralTypo
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -34,8 +35,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 /// Concepts for this class:
@@ -79,7 +78,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 /// - exposes match() taking a string to check if it matches the instance it contains
 /// - exposes add() taking both types of Access objects + a ULONGLONG time parameter to retrieve the data and add it to the internal map
 ///
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace ctl
@@ -462,12 +460,12 @@ namespace details
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
-    /// Stucture to track the performance data for each property desired for the instance being tracked
+    /// Structure to track the performance data for each property desired for the instance being tracked
     ///
     /// typename T : the data type of the counter to be stored
     ///
     /// Note: callers *MUST* guarantee connections with the WMI service stay connected
-    ///       for the lifetime of this object [e.g. guarnated ctWmiService is instanitated]
+    ///       for the lifetime of this object [e.g. guaranteed ctWmiService is instantiated]
     /// Note: callers *MUST* guarantee that COM is CoInitialized on this thread before calling
     /// Note: the ctWmiPerformance class *will* retain WMI service instance
     ///       it's recommended to guarantee it stays alive
@@ -602,7 +600,7 @@ namespace details
             {
                 return true;
             }
-            return ctString::ctOrdinalEqualsCaseInsensative(instanceName, m_instanceName);
+            return ctString::iordinal_equals(instanceName, m_instanceName);
         }
 
         void add(_In_ IWbemObjectAccess* instance)
@@ -718,7 +716,6 @@ class ctWmiPerformanceCounter
 {
 public:
     // iterates across *time-slices* captured over from ctWmiPerformance
-    // ReSharper disable once CppInconsistentNaming
     class iterator
     {
     private:
@@ -727,15 +724,10 @@ public:
 
     public:
         // iterator_traits - allows <algorithm> functions to be used
-        // ReSharper disable once CppInconsistentNaming
         using iterator_category = std::forward_iterator_tag;
-        // ReSharper disable once CppInconsistentNaming
         using value_type = T;
-        // ReSharper disable once CppInconsistentNaming
         using difference_type = size_t;
-        // ReSharper disable once CppInconsistentNaming
         using pointer = T*;
-        // ReSharper disable once CppInconsistentNaming
         using reference = T&;
 
         explicit iterator(typename std::vector<T>::const_iterator&& instance) noexcept :
@@ -1034,11 +1026,7 @@ protected:
         bool fAddData = m_instanceFilter.empty();
         if (!fAddData)
         {
-            //                fAddData = std::any_of(std::cbegin(m_instanceFilter), std::cend(m_instanceFilter), instance);
-            fAddData = std::end(m_instanceFilter) != std::find(
-                           std::begin(m_instanceFilter),
-                           std::end(m_instanceFilter),
-                           instance);
+            fAddData = std::any_of(std::cbegin(m_instanceFilter), std::cend(m_instanceFilter), [&](const auto& filter) { return filter == instance; });
         }
 
         // add the counter data for this instance if:
@@ -1350,7 +1338,7 @@ inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(_In_ PC
 {
     for (auto counter = 0ul; counter < m_ulongFieldNameCount; ++counter)
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(name, m_ulongFieldNames[counter]))
+        if (ctString::iordinal_equals(name, m_ulongFieldNames[counter]))
         {
             return true;
         }
@@ -1364,7 +1352,7 @@ inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(_In
 {
     for (auto counter = 0ul; counter < m_ulonglongFieldNameCount; ++counter)
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(name, m_ulonglongFieldNames[counter]))
+        if (ctString::iordinal_equals(name, m_ulonglongFieldNames[counter]))
         {
             return true;
         }
@@ -1378,7 +1366,7 @@ inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(
 {
     for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(name, m_stringFieldNames[counter]))
+        if (ctString::iordinal_equals(name, m_stringFieldNames[counter]))
         {
             return true;
         }
@@ -1392,7 +1380,7 @@ inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<wil::unique_bs
 {
     for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(name, m_stringFieldNames[counter]))
+        if (ctString::iordinal_equals(name, m_stringFieldNames[counter]))
         {
             return true;
         }
@@ -1846,6 +1834,14 @@ std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(
 }
 
 template <typename T>
+std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeInstancePerfCounter(
+    _In_ PCWSTR className, _In_ PCWSTR counterName, ctWmiPerformanceCollectionType collectionType = ctWmiPerformanceCollectionType::Detailed)
+{
+    const ctWmiService wmi(L"root\\cimv2");
+    return ctMakeInstancePerfCounter<T>(wmi, className, counterName, collectionType);
+}
+
+template <typename T>
 std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(
     ctWmiService wmi, ctWmiEnumClassName className, _In_ PCWSTR counterName, ctWmiPerformanceCollectionType collectionType = ctWmiPerformanceCollectionType::Detailed)
 {
@@ -1878,4 +1874,12 @@ std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(
     FAIL_FAST_IF(foundProperty->m_classType != ctWmiEnumClassType::Instance);
     return ctMakeInstancePerfCounter<T>(wmi, foundProperty->m_providerName, counterName, collectionType);
 }
-} // ctl namespace
+
+template <typename T>
+std::shared_ptr<ctWmiPerformanceCounter<T>> ctCreatePerfCounter(
+    ctWmiEnumClassName className, _In_ PCWSTR counterName, ctWmiPerformanceCollectionType collectionType = ctWmiPerformanceCollectionType::Detailed)
+{
+    const ctWmiService wmi(L"root\\cimv2");
+    return ctCreatePerfCounter<T>(wmi, className, counterName, collectionType);
+}
+} // namespace ctl

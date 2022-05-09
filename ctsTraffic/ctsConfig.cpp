@@ -213,12 +213,12 @@ static const wchar_t* ParseArgument(_In_z_ const wchar_t* inputArgument, _In_z_ 
     const wchar_t* paramDelimeter = find(inputArgument, paramEnd, L':');
     if (!(paramEnd > paramDelimeter + 1))
     {
-        throw invalid_argument(ctString::ctConvertToString(inputArgument));
+        throw invalid_argument(ctString::convert_to_string(inputArgument));
     }
     // temporarily null-terminate it at the delimiter to do a string compare
     *const_cast<wchar_t*>(paramDelimeter) = L'\0';
     const wchar_t* returnValue = nullptr;
-    if (ctString::ctOrdinalEqualsCaseInsensative(expectedParam, inputArgument))
+    if (ctString::iordinal_equals(expectedParam, inputArgument))
     {
         returnValue = paramDelimeter + 1;
     }
@@ -234,10 +234,10 @@ static const wchar_t* ParseArgument(_In_z_ const wchar_t* inputArgument, _In_z_ 
 /// - the type of that numeric value being the template type specified
 ///
 /// e.g.
-/// long a = ConvertToIntegral<long>(L"-1");
-/// long b = ConvertToIntegral<uint32_t>(L"0xa");
-/// long a = ConvertToIntegral<int64_t>(L"0x123456789abcdef");
-/// long a = ConvertToIntegral<uint64_t>(L"999999999999999999");
+/// auto a = ConvertToIntegral<long>(L"-1");
+/// auto b = ConvertToIntegral<uint32_t>(L"0xa");
+/// auto a = ConvertToIntegral<int64_t>(L"0x123456789abcdef");
+/// auto a = ConvertToIntegral<uint64_t>(L"999999999999999999");
 /// 
 /// NOTE:
 /// - will *only* assume a string starting with "0x" to be converted as hexadecimal
@@ -249,97 +249,7 @@ static const wchar_t* ParseArgument(_In_z_ const wchar_t* inputArgument, _In_z_ 
 ///       // test == 0xffffffffffffffff
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T>
-T ConvertToIntegral(const wstring&)
-{
-    // ReSharper disable once CppStaticAssertFailure
-    static_assert(false, "Only supports the below specializations");
-    return {};
-}
-
-// LONG and ULONG
-template <>
-long ConvertToIntegral<long>(const wstring& inputString)
-{
-    auto returnValue = 0l;
-    size_t firstUnconvertedOffset = 0;
-    if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
-    {
-        returnValue = stol(inputString, &firstUnconvertedOffset, 16);
-    }
-    else
-    {
-        returnValue = stol(inputString, &firstUnconvertedOffset, 10);
-    }
-
-    if (firstUnconvertedOffset != inputString.length())
-    {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
-    }
-    return returnValue;
-}
-
-template <>
-unsigned long ConvertToIntegral<unsigned long>(const wstring& inputString)
-{
-    auto returnValue = 0ul;
-    size_t firstUnconvertedOffset = 0;
-    if (inputString.find(L'x') != wstring::npos || inputString.find(L'X') != wstring::npos)
-    {
-        returnValue = stoul(inputString, &firstUnconvertedOffset, 16);
-    }
-    else
-    {
-        returnValue = stoul(inputString, &firstUnconvertedOffset, 10);
-    }
-
-    if (firstUnconvertedOffset != inputString.length())
-    {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
-    }
-    return returnValue;
-}
-
-// INT and UINT
-template <>
-int ConvertToIntegral<int>(const wstring& inputString)
-{
-    return ConvertToIntegral<long>(inputString);
-}
-
-template <>
-unsigned int ConvertToIntegral<unsigned int>(const wstring& inputString)
-{
-    return ConvertToIntegral<unsigned long>(inputString);
-}
-
-// SHORT and USHORT
-template <>
-short ConvertToIntegral<short>(const wstring& inputString)
-{
-    const long returnValue = ConvertToIntegral<long>(inputString);
-    if (returnValue > MAXSHORT || returnValue < MINSHORT)
-    {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
-    }
-    return static_cast<short>(returnValue);
-}
-
-template <>
-unsigned short ConvertToIntegral<unsigned short>(const wstring& inputString)
-{
-    const uint32_t returnValue = ConvertToIntegral<uint32_t>(inputString);
-    // MAXWORD == MAXUSHORT
-    if (returnValue > MAXWORD)
-    {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
-    }
-    return static_cast<unsigned short>(returnValue);
-}
-
-// LONGLONG and ULONGLONG
-template <>
-int64_t ConvertToIntegral<int64_t>(const wstring& inputString)
+int64_t ConvertToIntegralSigned(const wstring& inputString)
 {
     auto returnValue = 0ll;
     size_t firstUnconvertedOffset = 0;
@@ -354,13 +264,12 @@ int64_t ConvertToIntegral<int64_t>(const wstring& inputString)
 
     if (firstUnconvertedOffset != inputString.length())
     {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
+        throw invalid_argument(ctString::convert_to_string(inputString));
     }
     return returnValue;
 }
 
-template <>
-uint64_t ConvertToIntegral<uint64_t>(const wstring& inputString)
+uint64_t ConvertToIntegralUnsigned(const wstring& inputString)
 {
     auto returnValue = 0ull;
     size_t firstUnconvertedOffset = 0;
@@ -375,9 +284,68 @@ uint64_t ConvertToIntegral<uint64_t>(const wstring& inputString)
 
     if (firstUnconvertedOffset != inputString.length())
     {
-        throw invalid_argument(ctString::ctConvertToString(inputString));
+        throw invalid_argument(ctString::convert_to_string(inputString));
     }
     return returnValue;
+}
+
+template <typename T>
+T ConvertToIntegral(const wstring& inputString);
+
+template <>
+int16_t ConvertToIntegral<int16_t>(const wstring& inputString)
+{
+    const auto returnValue = ConvertToIntegralSigned(inputString);
+    if (returnValue > INT16_MAX || returnValue < INT16_MIN)
+    {
+        throw invalid_argument(ctString::convert_to_string(inputString));
+    }
+    return static_cast<int16_t>(returnValue);
+}
+
+template <>
+uint16_t ConvertToIntegral<uint16_t>(const wstring& inputString)
+{
+    const auto returnValue = ConvertToIntegralUnsigned(inputString);
+    if (returnValue > UINT16_MAX)
+    {
+        throw invalid_argument(ctString::convert_to_string(inputString));
+    }
+    return static_cast<uint16_t>(returnValue);
+}
+
+template <>
+int32_t ConvertToIntegral<int32_t>(const wstring& inputString)
+{
+    const auto returnValue = ConvertToIntegralSigned(inputString);
+    if (returnValue < INT32_MIN || returnValue > INT32_MAX)
+    {
+        throw invalid_argument(ctString::convert_to_string(inputString));
+    }
+    return static_cast<int32_t>(returnValue);
+}
+
+template <>
+uint32_t ConvertToIntegral<uint32_t>(const wstring& inputString)
+{
+    const auto returnValue = ConvertToIntegralUnsigned(inputString);
+    if (returnValue > UINT32_MAX)
+    {
+        throw invalid_argument(ctString::convert_to_string(inputString));
+    }
+    return static_cast<uint32_t>(returnValue);
+}
+
+template <>
+int64_t ConvertToIntegral<int64_t>(const wstring& inputString)
+{
+    return ConvertToIntegralSigned(inputString);
+}
+
+template <>
+uint64_t ConvertToIntegral<uint64_t>(const wstring& inputString)
+{
+    return ConvertToIntegralUnsigned(inputString);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -421,12 +389,12 @@ static void ParseForConnect(vector<const wchar_t*>& args)
 
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArg, L"-conn");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"ConnectEx", value))
+        if (ctString::iordinal_equals(L"ConnectEx", value))
         {
             g_configSettings->ConnectFunction = ctsConnectEx;
             g_connectFunctionName = L"ConnectEx";
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"connect", value))
+        else if (ctString::iordinal_equals(L"connect", value))
         {
             g_configSettings->ConnectFunction = ctsSimpleConnect;
             g_connectFunctionName = L"connect";
@@ -486,12 +454,12 @@ static void ParseForAccept(vector<const wchar_t*>& args)
 
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-acc");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"accept", value))
+        if (ctString::iordinal_equals(L"accept", value))
         {
             g_configSettings->AcceptFunction = ctsSimpleAccept;
             g_acceptFunctionName = L"accept";
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"AcceptEx", value))
+        else if (ctString::iordinal_equals(L"AcceptEx", value))
         {
             g_configSettings->AcceptFunction = ctsAcceptEx;
             g_acceptFunctionName = L"AcceptEx";
@@ -548,18 +516,18 @@ static void ParseForIoFunction(vector<const wchar_t*>& args)
 
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-io");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"iocp", value))
+        if (ctString::iordinal_equals(L"iocp", value))
         {
             g_configSettings->IoFunction = ctsSendRecvIocp;
             g_configSettings->Options |= HandleInlineIocp;
             g_ioFunctionName = L"Iocp (WSASend/WSARecv using IOCP)";
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"readwritefile", value))
+        else if (ctString::iordinal_equals(L"readwritefile", value))
         {
             g_configSettings->IoFunction = ctsReadWriteIocp;
             g_ioFunctionName = L"ReadWriteFile (ReadFile/WriteFile using IOCP)";
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"rioiocp", value))
+        else if (ctString::iordinal_equals(L"rioiocp", value))
         {
             g_configSettings->IoFunction = ctsRioIocp;
             WI_SetFlag(g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO);
@@ -623,11 +591,11 @@ static void ParseForInlineCompletions(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-inlinecompletions");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
+        if (ctString::iordinal_equals(L"on", value))
         {
             g_configSettings->Options |= HandleInlineIocp;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"off", value))
+        else if (ctString::iordinal_equals(L"off", value))
         {
             g_configSettings->Options &= ~HandleInlineIocp;
         }
@@ -659,11 +627,11 @@ static void ParseForMsgWaitAll(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-msgwaitall");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"on", value))
+        if (ctString::iordinal_equals(L"on", value))
         {
             g_configSettings->Options |= MsgWaitAll;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"off", value))
+        else if (ctString::iordinal_equals(L"off", value))
         {
             g_configSettings->Options &= ~MsgWaitAll;
         }
@@ -699,11 +667,11 @@ static void ParseForProtocol(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-Protocol");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"tcp", value))
+        if (ctString::iordinal_equals(L"tcp", value))
         {
             g_configSettings->Protocol = ProtocolType::TCP;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"udp", value))
+        else if (ctString::iordinal_equals(L"udp", value))
         {
             g_configSettings->Protocol = ProtocolType::UDP;
         }
@@ -743,7 +711,7 @@ static void ParseForOptions(vector<const wchar_t*>& args)
         {
             // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundArgument, L"-Options");
-            if (ctString::ctOrdinalEqualsCaseInsensative(L"keepalive", value))
+            if (ctString::iordinal_equals(L"keepalive", value))
             {
                 if (ProtocolType::TCP == g_configSettings->Protocol)
                 {
@@ -754,7 +722,7 @@ static void ParseForOptions(vector<const wchar_t*>& args)
                     throw invalid_argument("-Options (keepalive only allowed with TCP sockets)");
                 }
             }
-            else if (ctString::ctOrdinalEqualsCaseInsensative(L"tcpfastpath", value))
+            else if (ctString::iordinal_equals(L"tcpfastpath", value))
             {
                 if (ProtocolType::TCP == g_configSettings->Protocol)
                 {
@@ -838,19 +806,19 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
 
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-pattern");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"push", value))
+        if (ctString::iordinal_equals(L"push", value))
         {
             g_configSettings->IoPattern = IoPatternType::Push;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"pull", value))
+        else if (ctString::iordinal_equals(L"pull", value))
         {
             g_configSettings->IoPattern = IoPatternType::Pull;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"pushpull", value))
+        else if (ctString::iordinal_equals(L"pushpull", value))
         {
             g_configSettings->IoPattern = IoPatternType::PushPull;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"flood", value) || ctString::ctOrdinalEqualsCaseInsensative(L"duplex", value))
+        else if (ctString::iordinal_equals(L"flood", value) || ctString::iordinal_equals(L"duplex", value))
         {
             // the old name for this was 'flood'
             g_configSettings->IoPattern = IoPatternType::Duplex;
@@ -1092,12 +1060,12 @@ static void ParseForAddress(vector<const wchar_t*>& args)
         {
             // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundListen, L"-listen");
-            if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
+            if (ctString::iordinal_equals(L"*", value))
             {
                 // add both v4 and v6
                 ctSockaddr listenAddr(AF_INET, ctSockaddr::AddressType::Any);
                 g_configSettings->ListenAddresses.push_back(listenAddr);
-                listenAddr.set(AF_INET6, ctSockaddr::AddressType::Any);
+                listenAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
                 g_configSettings->ListenAddresses.push_back(listenAddr);
             }
             else
@@ -1159,12 +1127,12 @@ static void ParseForAddress(vector<const wchar_t*>& args)
             // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundBind, L"-bind");
             // check for a comma-delimited list of IP Addresses
-            if (ctString::ctOrdinalEqualsCaseInsensative(L"*", value))
+            if (ctString::iordinal_equals(L"*", value))
             {
                 // add both v4 and v6
                 ctSockaddr bindAddr(AF_INET, ctSockaddr::AddressType::Any);
                 g_configSettings->BindAddresses.push_back(bindAddr);
-                bindAddr.set(AF_INET6, ctSockaddr::AddressType::Any);
+                bindAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
                 g_configSettings->BindAddresses.push_back(bindAddr);
             }
             else
@@ -1202,7 +1170,7 @@ static void ParseForAddress(vector<const wchar_t*>& args)
     {
         ctSockaddr defaultAddr(AF_INET, ctSockaddr::AddressType::Any);
         g_configSettings->BindAddresses.push_back(defaultAddr);
-        defaultAddr.set(AF_INET6, ctSockaddr::AddressType::Any);
+        defaultAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
         g_configSettings->BindAddresses.push_back(defaultAddr);
     }
 
@@ -1296,7 +1264,7 @@ static void ParseForPort(vector<const wchar_t*>& args)
     });
     if (foundArgument != end(args))
     {
-        g_configSettings->Port = ConvertToIntegral<WORD>(ParseArgument(*foundArgument, L"-Port"));
+        g_configSettings->Port = ConvertToIntegral<uint16_t>(ParseArgument(*foundArgument, L"-Port"));
         if (0 == g_configSettings->Port)
         {
             throw invalid_argument("-Port");
@@ -1356,7 +1324,7 @@ static void ParseForServerExitLimit(vector<const wchar_t*>& args)
         {
             throw invalid_argument("-ServerExitLimit is only supported when running as a client");
         }
-        g_configSettings->ServerExitLimit = ConvertToIntegral<ULONGLONG>(ParseArgument(*foundArgument, L"-ServerExitLimit"));
+        g_configSettings->ServerExitLimit = ConvertToIntegral<uint64_t>(ParseArgument(*foundArgument, L"-ServerExitLimit"));
         if (0 == g_configSettings->ServerExitLimit)
         {
             // zero indicates no exit
@@ -1549,7 +1517,7 @@ static void ParseForLocalport(vector<const wchar_t*>& args)
         {
             // single value are written to localport_low with localport_high left at zero
             g_configSettings->LocalPortHigh = 0;
-            g_configSettings->LocalPortLow = ConvertToIntegral<unsigned short>(value);
+            g_configSettings->LocalPortLow = ConvertToIntegral<uint16_t>(value);
         }
         if (0 == g_configSettings->LocalPortLow)
         {
@@ -1671,7 +1639,7 @@ static void ParseForIterations(vector<const wchar_t*>& args)
         {
             throw invalid_argument("-Iterations is only supported when running as a client");
         }
-        g_configSettings->Iterations = ConvertToIntegral<ULONGLONG>(ParseArgument(*foundArgument, L"-Iterations"));
+        g_configSettings->Iterations = ConvertToIntegral<uint64_t>(ParseArgument(*foundArgument, L"-Iterations"));
         if (0 == g_configSettings->Iterations)
         {
             g_configSettings->Iterations = MAXULONGLONG;
@@ -1794,7 +1762,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 
     if (!connectionFilename.empty())
     {
-        if (ctString::ctOrdinalEndsWithCaseInsensative(connectionFilename, L".csv"))
+        if (ctString::iends_with(connectionFilename, L".csv"))
         {
             g_connectionLogger = make_shared<ctsTextLogger>(connectionFilename.c_str(), StatusFormatting::Csv);
         }
@@ -1806,7 +1774,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 
     if (!errorFilename.empty())
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, errorFilename))
+        if (ctString::iordinal_equals(connectionFilename, errorFilename))
         {
             if (g_connectionLogger->IsCsvFormat())
             {
@@ -1816,7 +1784,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         }
         else
         {
-            if (ctString::ctOrdinalEndsWithCaseInsensative(errorFilename, L".csv"))
+            if (ctString::iends_with(errorFilename, L".csv"))
             {
                 throw invalid_argument("The error logfile cannot be of csv format");
             }
@@ -1826,7 +1794,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 
     if (!statusFilename.empty())
     {
-        if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, statusFilename))
+        if (ctString::iordinal_equals(connectionFilename, statusFilename))
         {
             if (g_connectionLogger->IsCsvFormat())
             {
@@ -1834,7 +1802,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
             }
             g_statusLogger = g_connectionLogger;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(errorFilename, statusFilename))
+        else if (ctString::iordinal_equals(errorFilename, statusFilename))
         {
             if (g_errorLogger->IsCsvFormat())
             {
@@ -1844,7 +1812,7 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         }
         else
         {
-            if (ctString::ctOrdinalEndsWithCaseInsensative(statusFilename, L".csv"))
+            if (ctString::iends_with(statusFilename, L".csv"))
             {
                 g_statusLogger = make_shared<ctsTextLogger>(statusFilename.c_str(), StatusFormatting::Csv);
             }
@@ -1857,11 +1825,11 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 
     if (!jitterFilename.empty())
     {
-        if (ctString::ctOrdinalEndsWithCaseInsensative(jitterFilename, L".csv"))
+        if (ctString::iends_with(jitterFilename, L".csv"))
         {
-            if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, jitterFilename) ||
-                ctString::ctOrdinalEqualsCaseInsensative(errorFilename, jitterFilename) ||
-                ctString::ctOrdinalEqualsCaseInsensative(statusFilename, jitterFilename))
+            if (ctString::iordinal_equals(connectionFilename, jitterFilename) ||
+                ctString::iordinal_equals(errorFilename, jitterFilename) ||
+                ctString::iordinal_equals(statusFilename, jitterFilename))
             {
                 throw invalid_argument("The same csv filename cannot be used for different loggers");
             }
@@ -1875,12 +1843,12 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 
     if (!tcpInfoFilename.empty())
     {
-        if (ctString::ctOrdinalEndsWithCaseInsensative(tcpInfoFilename, L".csv"))
+        if (ctString::iends_with(tcpInfoFilename, L".csv"))
         {
-            if (ctString::ctOrdinalEqualsCaseInsensative(connectionFilename, tcpInfoFilename) ||
-                ctString::ctOrdinalEqualsCaseInsensative(errorFilename, tcpInfoFilename) ||
-                ctString::ctOrdinalEqualsCaseInsensative(statusFilename, tcpInfoFilename) ||
-                ctString::ctOrdinalEqualsCaseInsensative(jitterFilename, tcpInfoFilename))
+            if (ctString::iordinal_equals(connectionFilename, tcpInfoFilename) ||
+                ctString::iordinal_equals(errorFilename, tcpInfoFilename) ||
+                ctString::iordinal_equals(statusFilename, tcpInfoFilename) ||
+                ctString::iordinal_equals(jitterFilename, tcpInfoFilename))
             {
                 throw invalid_argument("The same csv filename cannot be used for different loggers");
             }
@@ -1911,11 +1879,11 @@ static void ParseForError(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-OnError");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"log", value))
+        if (ctString::iordinal_equals(L"log", value))
         {
             g_breakOnError = false;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"break", value))
+        else if (ctString::iordinal_equals(L"break", value))
         {
             g_breakOnError = true;
         }
@@ -2056,7 +2024,7 @@ static void ParseForCompartment(vector<const wchar_t*>& args)
         g_netAdapterAddresses = new ctNetAdapterAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_COMPARTMENTS);
         const auto foundInterface = ranges::find_if(*g_netAdapterAddresses,
             [&value](const IP_ADAPTER_ADDRESSES& adapterAddress) {
-                return ctString::ctOrdinalEqualsCaseInsensative(value, adapterAddress.FriendlyName);
+                return ctString::iordinal_equals(value, adapterAddress.FriendlyName);
             });
         THROW_HR_IF_MSG(
             HRESULT_FROM_WIN32(ERROR_NOT_FOUND),
@@ -2091,11 +2059,11 @@ static void ParseForThreadpool(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-threadpool");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"default", value))
+        if (ctString::iordinal_equals(L"default", value))
         {
             setRunsLong = false;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"runslong", value))
+        else if (ctString::iordinal_equals(L"runslong", value))
         {
             setRunsLong = true;
         }
@@ -2148,12 +2116,12 @@ static void ParseForShouldVerifyBuffers(vector<const wchar_t*>& args)
     {
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-verify");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"always", value) || ctString::ctOrdinalEqualsCaseInsensative(L"data", value))
+        if (ctString::iordinal_equals(L"always", value) || ctString::iordinal_equals(L"data", value))
         {
             g_configSettings->ShouldVerifyBuffers = true;
             g_configSettings->UseSharedBuffer = false;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"never", value) || ctString::ctOrdinalEqualsCaseInsensative(L"connection", value))
+        else if (ctString::iordinal_equals(L"never", value) || ctString::iordinal_equals(L"connection", value))
         {
             g_configSettings->ShouldVerifyBuffers = false;
             g_configSettings->UseSharedBuffer = true;
@@ -2195,11 +2163,11 @@ static void ParseForShutdown(vector<const wchar_t*>& args)
 
         // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-shutdown");
-        if (ctString::ctOrdinalEqualsCaseInsensative(L"graceful", value))
+        if (ctString::iordinal_equals(L"graceful", value))
         {
             g_configSettings->TcpShutdown = TcpShutdownType::GracefulShutdown;
         }
-        else if (ctString::ctOrdinalEqualsCaseInsensative(L"rude", value))
+        else if (ctString::iordinal_equals(L"rude", value))
         {
             g_configSettings->TcpShutdown = TcpShutdownType::HardShutdown;
         }
@@ -2217,24 +2185,40 @@ static void ParseForShutdown(vector<const wchar_t*>& args)
 /// Parses for the optional maximum time to run
 ///
 /// -TimeLimit:##
+/// -PauseAtEnd:##
 ///
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForTimelimit(vector<const wchar_t*>& args)
 {
     // ReSharper disable once CppTooWideScopeInitStatement
-    const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+    const auto foundTimeLimitArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-timelimit");
         return value != nullptr;
     });
-    if (foundArgument != end(args))
+    if (foundTimeLimitArgument != end(args))
     {
-        g_configSettings->TimeLimit = ConvertToIntegral<uint32_t>(ParseArgument(*foundArgument, L"-timelimit"));
-        if (0 == g_configSettings->Port)
+        g_configSettings->TimeLimit = ConvertToIntegral<uint32_t>(ParseArgument(*foundTimeLimitArgument, L"-timelimit"));
+        if (0 == g_configSettings->TimeLimit)
         {
             throw invalid_argument("-timelimit");
         }
         // always remove the arg from our vector
-        args.erase(foundArgument);
+        args.erase(foundTimeLimitArgument);
+    }
+
+    const auto foundPauseAtEndArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+        const auto* const value = ParseArgument(parameter, L"-pauseatend");
+        return value != nullptr;
+    });
+    if (foundPauseAtEndArgument != end(args))
+    {
+        g_configSettings->PauseAtEnd = ConvertToIntegral<uint32_t>(ParseArgument(*foundPauseAtEndArgument, L"-pauseatend"));
+        if (0 == g_configSettings->PauseAtEnd)
+        {
+            throw invalid_argument("-pauseatend");
+        }
+        // always remove the arg from our vector
+        args.erase(foundPauseAtEndArgument);
     }
 }
 
@@ -2574,6 +2558,10 @@ void PrintUsage(PrintUsageOption option)
                 L"\t            : ctsTraffic servers have this enabled by default\n"
                 L"\t- tcpfastpath : a new option for Windows 8, only for TCP sockets over loopback\n"
                 L"\t              : the firewall must be disabled for the option to take effect\n"
+                L"-PauseAtEnd:####\n"
+                L"   - specifies the number of milliseconds to pause before finally exiting the process after all work is done\n"
+                L"     this is useful for automation when one needs the process to not exit immediately\n"
+                L"\t- <default> == None (will exit once all work is done)\n"
                 L"-PrePostRecvs:#####\n"
                 L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
                 L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
@@ -2658,28 +2646,28 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundHelp = ranges::find_if(args,
         [](const wchar_t* arg) -> bool {
-            return ctString::ctOrdinalStartsWithCaseInsensative(arg, L"-Help") ||
-                   ctString::ctOrdinalEqualsCaseInsensative(arg, L"-?");
+            return ctString::istarts_with(arg, L"-Help") ||
+                   ctString::iordinal_equals(arg, L"-?");
         });
     if (foundHelp != end(args))
     {
         const auto* helpString = *foundHelp;
-        if (ctString::ctOrdinalEqualsCaseInsensative(helpString, L"-Help:Advanced"))
+        if (ctString::iordinal_equals(helpString, L"-Help:Advanced"))
         {
             PrintUsage(PrintUsageOption::Advanced);
             return false;
         }
-        if (ctString::ctOrdinalEqualsCaseInsensative(helpString, L"-Help:Tcp"))
+        if (ctString::iordinal_equals(helpString, L"-Help:Tcp"))
         {
             PrintUsage(PrintUsageOption::Tcp);
             return false;
         }
-        if (ctString::ctOrdinalEqualsCaseInsensative(helpString, L"-Help:Udp"))
+        if (ctString::iordinal_equals(helpString, L"-Help:Udp"))
         {
             PrintUsage(PrintUsageOption::Udp);
             return false;
         }
-        if (ctString::ctOrdinalEqualsCaseInsensative(helpString, L"-Help:Logging"))
+        if (ctString::iordinal_equals(helpString, L"-Help:Logging"))
         {
             PrintUsage(PrintUsageOption::Logging);
             return false;
@@ -2732,14 +2720,14 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     {
         if (addr.port() == 0x0000)
         {
-            addr.SetPort(g_configSettings->Port);
+            addr.setPort(g_configSettings->Port);
         }
     }
     for (auto& addr : g_configSettings->TargetAddresses)
     {
         if (addr.port() == 0x0000)
         {
-            addr.SetPort(g_configSettings->Port);
+            addr.setPort(g_configSettings->Port);
         }
     }
 
@@ -2919,7 +2907,7 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
         }
         errorString.append(L"\n");
         PrintErrorInfoOverride(errorString.c_str());
-        throw invalid_argument(ctString::ctConvertToString(errorString).c_str());
+        throw invalid_argument(ctString::convert_to_string(errorString).c_str());
     }
 
     if (ProtocolType::UDP == g_configSettings->Protocol)
@@ -3041,8 +3029,8 @@ void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept
                 L"[%.3f] %hs",
                 GetStatusTimeStamp(),
                 exceptionText));
-
         fwprintf(stderr, L"%ws\n", formattedString.c_str());
+
         if (g_errorLogger)
         {
             g_errorLogger->LogError(
@@ -3086,7 +3074,7 @@ void PrintException(const std::exception& e) noexcept
     ctsConfigInitOnce();
     try
     {
-        PrintErrorInfo(ctString::ctConvertToWstring(e.what()).c_str());
+        PrintErrorInfo(ctString::convert_to_wstring(e.what()).c_str());
     }
     catch (...)
     {
@@ -3106,10 +3094,7 @@ void PrintException(const std::exception& e) noexcept
             case 4: // connection info + error info
             case 5: // connection info + error info + status updates
             case 6: // above + debug info
-                wprintf(
-                    L"[%.3f] Exception thrown: %hs\n",
-                    GetStatusTimeStamp(),
-                    e.what());
+                fwprintf(stderr, L"[%.3f] Exception thrown: %hs\n", GetStatusTimeStamp(), e.what());
         }
     }
 }
@@ -3138,7 +3123,7 @@ DWORD PrintThrownException() noexcept
 
 void PrintException(DWORD why, _In_ PCWSTR what, _In_ PCWSTR where) noexcept try
 {
-    const auto translation = ctString::ctFormatMessage(why);
+    const auto translation = ctString::format_message(why);
     const auto formattedString = wil::str_printf<std::wstring>(
         L"[exception] %ws%ws%ws%ws [%u / 0x%x - %ws]",
         what ? L" " : L"",
@@ -3162,10 +3147,11 @@ void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept try
 
     if (g_breakOnError)
     {
-        FAIL_FAST_MSG(ctString::ctConvertToString(text).c_str());
+        FAIL_FAST_MSG(ctString::convert_to_string(text).c_str());
     }
 
-    wprintf_s(L"%ws\n", text);
+    fwprintf(stderr, L"%ws\n", text);
+
     if (g_errorLogger)
     {
         g_errorLogger->LogError(
@@ -3220,7 +3206,7 @@ void PrintErrorIfFailed(_In_ PCSTR what, uint32_t why) noexcept try
                 GetStatusTimeStamp(),
                 what,
                 why,
-                ctString::ctFormatMessage(why).c_str());
+                ctString::format_message(why).c_str());
         }
 
         if (writeToConsole)
@@ -3266,7 +3252,7 @@ void PrintStatusUpdate() noexcept
                 // capture the timeslices
                 const auto lPrevioutimeslice = g_previousPrintTimeslice;
                 // ReSharper disable once CppTooWideScopeInitStatement
-                const auto lCurrentTimeslice = ctTimer::SnapQpcInMillis() - g_configSettings->StartTimeMilliseconds;
+                const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
                 if (lCurrentTimeslice > lPrevioutimeslice)
                 {
@@ -3363,6 +3349,10 @@ void PrintNewConnection(const ctSockaddr& localAddr, const ctSockaddr& remoteAdd
         }
     }
 
+    WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+    localAddr.writeCompleteAddress(wsaLocalAddress);
+    WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+    remoteAddr.writeCompleteAddress(wsaRemoteAddress);
     if (writeToConsole)
     {
         wprintf_s(
@@ -3370,8 +3360,8 @@ void PrintNewConnection(const ctSockaddr& localAddr, const ctSockaddr& remoteAdd
             L"[%.3f] TCP connection established [%ws - %ws]\n" :
             L"[%.3f] UDP connection established [%ws - %ws]\n",
             GetStatusTimeStamp(),
-            localAddr.WriteCompleteAddress().c_str(),
-            remoteAddr.WriteCompleteAddress().c_str());
+            wsaLocalAddress,
+            wsaRemoteAddress);
     }
 
     if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
@@ -3382,8 +3372,8 @@ void PrintNewConnection(const ctSockaddr& localAddr, const ctSockaddr& remoteAdd
                 L"[%.3f] TCP connection established [%ws - %ws]\r\n" :
                 L"[%.3f] UDP connection established [%ws - %ws]\r\n",
                 GetStatusTimeStamp(),
-                localAddr.WriteCompleteAddress().c_str(),
-                remoteAddr.WriteCompleteAddress().c_str()).c_str());
+                wsaLocalAddress,
+                wsaRemoteAddress).c_str());
     }
 }
 catch (...)
@@ -3448,9 +3438,9 @@ void PrintConnectionResults(uint32_t error) noexcept try
             errorString = wil::str_printf<std::wstring>(
                 L"%lu: %ws",
                 error,
-                ctString::ctFormatMessage(error).c_str());
+                ctString::format_message(error).c_str());
             // remove any commas from the formatted string - since that will mess up csv files
-            ctString::ctReplaceAll(errorString, L",", L" ");
+            ctString::replace_all(errorString, L",", L" ");
         }
     }
 
@@ -3461,8 +3451,8 @@ void PrintConnectionResults(uint32_t error) noexcept try
         csvString = wil::str_printf<std::wstring>(
             tcpResultCsvFormat,
             currentTime,
-            ctSockaddr().WriteCompleteAddress().c_str(),
-            ctSockaddr().WriteCompleteAddress().c_str(),
+            ctSockaddr().writeCompleteAddress().c_str(),
+            ctSockaddr().writeCompleteAddress().c_str(),
             0LL,
             0LL,
             0LL,
@@ -3480,8 +3470,8 @@ void PrintConnectionResults(uint32_t error) noexcept try
             tcpNetworkFailureResultTextFormat,
             currentTime,
             errorString.c_str(),
-            ctSockaddr().WriteCompleteAddress().c_str(),
-            ctSockaddr().WriteCompleteAddress().c_str(),
+            ctSockaddr().writeCompleteAddress().c_str(),
+            ctSockaddr().writeCompleteAddress().c_str(),
             L"",
             0LL,
             0LL,
@@ -3493,7 +3483,7 @@ void PrintConnectionResults(uint32_t error) noexcept try
     if (writeToConsole)
     {
         // text strings always go to the console
-        wprintf(L"%ws\n", textString.c_str());
+        fwprintf(stdout, L"%ws\n", textString.c_str());
     }
 
     if (g_connectionLogger)
@@ -3574,21 +3564,26 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
             errorString = wil::str_printf<std::wstring>(
                 L"%lu: %ws",
                 error,
-                ctString::ctFormatMessage(error).c_str());
+                ctString::format_message(error).c_str());
             // remove any commas from the formatted string - since that will mess up csv files
-            ctString::ctReplaceAll(errorString, L",", L" ");
+            ctString::replace_all(errorString, L",", L" ");
         }
     }
 
     if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
     {
+        WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+        localAddr.writeCompleteAddress(wsaLocalAddress);
+        WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+        remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+
         // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
         static const auto* tcpResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
         csvString = wil::str_printf<std::wstring>(
             tcpResultCsvFormat,
             currentTime,
-            localAddr.WriteCompleteAddress().c_str(),
-            remoteAddr.WriteCompleteAddress().c_str(),
+            wsaLocalAddress,
+            wsaRemoteAddress,
             stats.m_bytesSent.GetValue(),
             totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
             stats.m_bytesRecv.GetValue(),
@@ -3603,14 +3598,19 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
     // - and/or in the case the g_ConnectionLogger isn't writing to csv
     if (writeToConsole || g_connectionLogger && !g_connectionLogger->IsCsvFormat())
     {
+        WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+        localAddr.writeCompleteAddress(wsaLocalAddress);
+        WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+        remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+
         if (0 == error)
         {
             static const auto* tcpSuccessfulResultTextFormat = L"[%.3f] TCP connection succeeded : [%ws - %ws] [%hs]: SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
             textString = wil::str_printf<std::wstring>(
                 tcpSuccessfulResultTextFormat,
                 currentTime,
-                localAddr.WriteCompleteAddress().c_str(),
-                remoteAddr.WriteCompleteAddress().c_str(),
+                wsaLocalAddress,
+                wsaRemoteAddress,
                 stats.m_connectionIdentifier,
                 stats.m_bytesSent.GetValue(),
                 totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
@@ -3626,8 +3626,8 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
                 ErrorType::ProtocolError == errorType ? tcpProtocolFailureResultTextFormat : tcpNetworkFailureResultTextFormat,
                 currentTime,
                 ErrorType::ProtocolError == errorType ? ctsIoPattern::BuildProtocolErrorString(error) : errorString.c_str(),
-                localAddr.WriteCompleteAddress().c_str(),
-                remoteAddr.WriteCompleteAddress().c_str(),
+                wsaLocalAddress,
+                wsaRemoteAddress,
                 stats.m_connectionIdentifier,
                 stats.m_bytesSent.GetValue(),
                 totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
@@ -3640,7 +3640,7 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
     if (writeToConsole)
     {
         // text strings always go to the console
-        wprintf(L"%ws\n", textString.c_str());
+        fwprintf(stdout, L"%ws\n", textString.c_str());
     }
 
     if (g_connectionLogger)
@@ -3719,21 +3719,26 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
             errorString = wil::str_printf<std::wstring>(
                 L"%lu: %ws",
                 error,
-                ctString::ctFormatMessage(error).c_str());
+                ctString::format_message(error).c_str());
             // remove any commas from the formatted string - since that will mess up csv files
-            ctString::ctReplaceAll(errorString, L",", L" ");
+            ctString::replace_all(errorString, L",", L" ");
         }
     }
 
     if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
     {
+        WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+        localAddr.writeCompleteAddress(wsaLocalAddress);
+        WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+        remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+
         // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
         static const auto* udpResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
         csvString = wil::str_printf<std::wstring>(
             udpResultCsvFormat,
             currentTime,
-            localAddr.WriteCompleteAddress().c_str(),
-            remoteAddr.WriteCompleteAddress().c_str(),
+            wsaLocalAddress,
+            wsaRemoteAddress,
             bitsPerSecond,
             stats.m_successfulFrames.GetValue(),
             stats.m_droppedFrames.GetValue(),
@@ -3748,14 +3753,19 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
     // - and/or in the case the g_ConnectionLogger isn't writing to csv
     if (writeToConsole || g_connectionLogger && !g_connectionLogger->IsCsvFormat())
     {
+        WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+        localAddr.writeCompleteAddress(wsaLocalAddress);
+        WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+        remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+
         if (0 == error)
         {
             static const auto* udpSuccessfulResultTextFormat = L"[%.3f] UDP connection succeeded : [%ws - %ws] [%hs] : BitsPerSecond [%llu]  Completed [%llu]  Dropped [%llu]  Repeated [%llu]  Errors [%llu]";
             textString = wil::str_printf<std::wstring>(
                 udpSuccessfulResultTextFormat,
                 currentTime,
-                localAddr.WriteCompleteAddress().c_str(),
-                remoteAddr.WriteCompleteAddress().c_str(),
+                wsaLocalAddress,
+                wsaRemoteAddress,
                 stats.m_connectionIdentifier,
                 bitsPerSecond,
                 stats.m_successfulFrames.GetValue(),
@@ -3773,8 +3783,8 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
                 ErrorType::ProtocolError == errorType ?
                 ctsIoPattern::BuildProtocolErrorString(error) :
                 errorString.c_str(),
-                localAddr.WriteCompleteAddress().c_str(),
-                remoteAddr.WriteCompleteAddress().c_str(),
+                wsaLocalAddress,
+                wsaRemoteAddress,
                 stats.m_connectionIdentifier,
                 bitsPerSecond,
                 stats.m_successfulFrames.GetValue(),
@@ -3787,7 +3797,7 @@ void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remot
     if (writeToConsole)
     {
         // text strings always go to the console
-        wprintf(L"%ws\n", textString.c_str());
+        fwprintf(stdout, L"%ws\n", textString.c_str());
     }
 
     if (g_connectionLogger)
@@ -3823,13 +3833,18 @@ void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, 
 {
     if (g_tcpInfoLogger)
     {
+        WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
+        localAddr.writeCompleteAddress(wsaLocalAddress);
+        WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
+        remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+
         static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
         const int64_t totalTime{stats.m_endTime.GetValue() - stats.m_startTime.GetValue()};
         auto textString = wil::str_printf<std::wstring>(
             tcpSuccessfulResultTextFormat,
             GetStatusTimeStamp(),
-            localAddr.WriteCompleteAddress().c_str(),
-            remoteAddr.WriteCompleteAddress().c_str(),
+            wsaLocalAddress,
+            wsaRemoteAddress,
             stats.m_connectionIdentifier,
             stats.m_bytesSent.GetValue(),
             totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
@@ -3899,37 +3914,19 @@ catch (...)
 {
 }
 
-void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept
+void __cdecl PrintSummary(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept
 {
     ctsConfigInitOnce();
 
-    // write even after shutdown so can print the final summaries
-    auto writeToConsole = false;
-    // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
-    switch (g_consoleVerbosity) // NOLINT(hicpp-multiway-paths-covered)
-    {
-        // case 0: // nothing
-        case 1: // status updates
-        case 2: // error info
-        case 3: // connection info
-        case 4: // connection info + error info
-        case 5: // connection info + error info + status updates
-        case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
-    }
+    // always write the summary, regardless of consoleVerbosity
 
     va_list argptr;
     va_start(argptr, text);
     try
     {
         wstring formattedString;
-        if (writeToConsole)
-        {
-            wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-            wprintf(L"%ws", formattedString.c_str());
-        }
+        wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
+        fwprintf(stdout, L"%ws", formattedString.c_str());
 
         if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
         {
@@ -3938,8 +3935,7 @@ void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexce
                 wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
             }
             g_connectionLogger->LogMessage(
-                ctString::ctReplaceAllCopy(
-                    formattedString, L"\n", L"\r\n").c_str());
+                ctString::replace_all_copy(formattedString, L"\n", L"\r\n").c_str());
         }
     }
     catch (...)
@@ -3948,7 +3944,7 @@ void __cdecl PrintSummary(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexce
     va_end(argptr);
 }
 
-void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept
+void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept
 {
     ctsConfigInitOnce();
 
@@ -3959,7 +3955,7 @@ void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept
 
     if (g_breakOnError)
     {
-        FAIL_FAST_MSG(ctString::ctConvertToString(text).c_str());
+        FAIL_FAST_MSG(ctString::convert_to_string(text).c_str());
     }
 
     auto writeToConsole = false;
@@ -3977,10 +3973,6 @@ void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept
             break;
     }
 
-    if (g_errorLogger)
-    {
-    }
-
     va_list argptr;
     va_start(argptr, text);
     try
@@ -3989,10 +3981,10 @@ void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR text, ...) noexcept
         if (writeToConsole)
         {
             wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-            wprintf(L"%ws\n", formattedString.c_str());
+            fwprintf(stdout, L"%ws\n", formattedString.c_str());
         }
 
-        if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
+        if (g_errorLogger && !g_errorLogger->IsCsvFormat())
         {
             if (formattedString.empty())
             {
@@ -4094,7 +4086,7 @@ bool IsListening() noexcept
 
 float GetStatusTimeStamp() noexcept
 {
-    return static_cast<float>(ctTimer::SnapQpcInMillis() - g_configSettings->StartTimeMilliseconds) / 1000.0f;
+    return static_cast<float>(ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds) / 1000.0f;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4177,7 +4169,7 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
                 return gle;
             }
         }
-        else if (!localAddress.IsAddressAny() && localAddress.port() == 0)
+        else if (!localAddress.isAddressAny() && localAddress.port() == 0)
         {
             constexpr DWORD optval{1}; // BOOL
             // ReSharper disable once CppTooWideScopeInitStatement
@@ -4554,10 +4546,10 @@ void PrintSettings()
     if (!g_configSettings->ListenAddresses.empty())
     {
         settingString.append(L"\tAccepting connections on addresses:\n");
-        WCHAR wsaddress[SockAddrMaxStringLength]{};
+        WCHAR wsaddress[ctSockaddr::FixedStringLength]{};
         for (const auto& addr : g_configSettings->ListenAddresses)
         {
-            if (addr.WriteCompleteAddress(wsaddress))
+            if (addr.writeCompleteAddress(wsaddress))
             {
                 settingString.append(L"\t\t");
                 settingString.append(wsaddress);
@@ -4575,10 +4567,10 @@ void PrintSettings()
         }
 
         settingString.append(L"\tConnecting out to addresses:\n");
-        WCHAR wsaddress[SockAddrMaxStringLength]{};
+        WCHAR wsaddress[ctSockaddr::FixedStringLength]{};
         for (const auto& addr : g_configSettings->TargetAddresses)
         {
-            if (addr.WriteCompleteAddress(wsaddress))
+            if (addr.writeCompleteAddress(wsaddress))
             {
                 settingString.append(L"\t\t");
                 settingString.append(wsaddress);
@@ -4589,7 +4581,7 @@ void PrintSettings()
         settingString.append(L"\tBinding to local addresses for outgoing connections:\n");
         for (const auto& addr : g_configSettings->BindAddresses)
         {
-            if (addr.WriteCompleteAddress(wsaddress))
+            if (addr.writeCompleteAddress(wsaddress))
             {
                 settingString.append(L"\t\t");
                 settingString.append(wsaddress);
@@ -4695,8 +4687,7 @@ void PrintSettings()
     if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
     {
         g_connectionLogger->LogMessage(
-            ctString::ctReplaceAllCopy(
-                settingString, L"\n", L"\r\n").c_str());
+            ctString::replace_all_copy(settingString, L"\n", L"\r\n").c_str());
     }
 }
 

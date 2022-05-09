@@ -235,7 +235,7 @@ public:
     /// - the sequence number to tag in every send request
     ///
     ctsMediaStreamSendRequests(int64_t bytesToSend, int64_t sequenceNumber, const char* sendBuffer) noexcept :
-        m_qpf(ctl::ctTimer::SnapQpf()),
+        m_qpf(ctl::ctTimer::snap_qpf()),
         m_bytesToSend(bytesToSend),
         m_sequenceNumber(sequenceNumber)
     {

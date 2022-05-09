@@ -33,23 +33,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// class ctWmiProperties
-///
-/// Exposes enumerating properties of a WMI Provider through an iterator interface.
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// class ctWmiProperties
+//
+// Exposes enumerating properties of a WMI Provider through an iterator interface.
 class ctWmiProperties
 {
 private:
     ctWmiService m_wbemServices;
-    wil::com_ptr<IWbemClassObject> m_wbemClass;
+    wil::com_ptr<IWbemClassObject> m_wbemClass{};
 
 public:
-    // ReSharper disable once CppInconsistentNaming
     class iterator;
 
     ctWmiProperties(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) noexcept :
@@ -58,7 +51,7 @@ public:
     {
     }
 
-    ctWmiProperties(ctWmiService service, PCWSTR className) :
+    ctWmiProperties(ctWmiService service, _In_ PCWSTR className) :
         m_wbemServices(std::move(service))
     {
         THROW_IF_FAILED(m_wbemServices->GetObjectW(
@@ -69,7 +62,7 @@ public:
             nullptr));
     }
 
-    ctWmiProperties(ctWmiService service, BSTR className) :
+    ctWmiProperties(ctWmiService service, _In_ BSTR className) :
         m_wbemServices(std::move(service))
     {
         THROW_IF_FAILED(m_wbemServices->GetObjectW(
@@ -91,13 +84,13 @@ public:
     }
 
     // A forward iterator to enable forward-traversing instances of the queried WMI provider
-    // ReSharper disable once CppInconsistentNaming
+    
     class iterator
     {
-        const uint32_t m_endIteratorIndex = ULONG_MAX;
+        constexpr uint32_t m_endIteratorIndex = ULONG_MAX;
 
-        wil::com_ptr<IWbemClassObject> m_wbemClassObject;
-        wil::shared_bstr m_propertyName;
+        wil::com_ptr<IWbemClassObject> m_wbemClassObject{};
+        wil::shared_bstr m_propertyName{};
         CIMTYPE m_propertyType = 0;
         uint32_t m_index = m_endIteratorIndex;
 
@@ -105,7 +98,7 @@ public:
         // Iterator requires the caller's IWbemServices interface and class name
         iterator() noexcept = default;
 
-        iterator(wil::com_ptr<IWbemClassObject> classObject, const bool nonSystemPropertiesOnly) :
+        iterator(wil::com_ptr<IWbemClassObject> classObject, bool nonSystemPropertiesOnly) :
             m_wbemClassObject(std::move(classObject)), m_index(0)
         {
             THROW_IF_FAILED(m_wbemClassObject->BeginEnumeration(nonSystemPropertiesOnly ? WBEM_FLAG_NONSYSTEM_ONLY : 0));
@@ -200,15 +193,10 @@ public:
         }
 
         // iterator_traits (allows <algorithm> functions to be used)
-        // ReSharper disable once CppInconsistentNaming
         using iterator_category = std::forward_iterator_tag;
-        // ReSharper disable once CppInconsistentNaming
         using value_type = wil::shared_bstr;
-        // ReSharper disable once CppInconsistentNaming
         using difference_type = int;
-        // ReSharper disable once CppInconsistentNaming
         using pointer = wil::shared_bstr*;
-        // ReSharper disable once CppInconsistentNaming
         using reference = wil::shared_bstr&;
 
     private:
@@ -221,14 +209,12 @@ public:
 
             CIMTYPE nextCimtype;
             wil::shared_bstr nextName;
-            // ReSharper disable once CppTooWideScope
-            const auto hr = THROW_IF_FAILED(m_wbemClassObject->Next(
+            switch (THROW_IF_FAILED(m_wbemClassObject->Next(
                 0,
                 nextName.addressof(),
                 nullptr,
                 &nextCimtype,
-                nullptr));
-            switch (hr)
+                nullptr)))
             {
                 case WBEM_S_NO_ERROR:
                 {

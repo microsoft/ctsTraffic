@@ -19,8 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 // os headers
 #include <Windows.h>
-// ctl headers
-#include <ctThreadPoolTimer.hpp>
 // wil headers
 #include <wil/stl.h>
 #include <wil/resource.h>
@@ -100,25 +98,32 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         ctsConfig::PrintLegend();
 
         // set the start timer as close as possible to the start of the engine
-        ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::SnapQpcInMillis();
+        ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
         const auto broker(std::make_shared<ctsSocketBroker>());
         g_socketBroker = broker.get();
         broker->Start();
 
-        ctThreadpoolTimer statusTimer;
-        statusTimer.schedule_reoccuring(ctsConfig::PrintStatusUpdate, 0LL, ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds);
+        wil::unique_threadpool_timer statusTimer;
+        if (ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds > 0)
+        {
+            statusTimer.reset(CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID, PTP_TIMER) { ctsConfig::PrintStatusUpdate(); }, nullptr, nullptr));
+            THROW_LAST_ERROR_IF(!statusTimer);
+            FILETIME zeroFiletime{};
+            SetThreadpoolTimer(statusTimer.get(), &zeroFiletime, ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds, 0);
+        }
 
-// define this is testing the shutdown path to force a clean shutdown while running
-// #define DEBUGGING_CTSTRAFFIC
-
-#ifdef  DEBUGGING_CTSTRAFFIC
-        getchar();
-#else
         if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
         {
-            ctsConfig::PrintSummary(L"\n ** Time-limit of %lu reached **\n", ctsConfig::g_configSettings->TimeLimit);
+            ctsConfig::PrintSummary(L"\n  Time-limit of %lu reached\n", ctsConfig::g_configSettings->TimeLimit);
         }
-#endif
+
+        if (ctsConfig::g_configSettings->PauseAtEnd > 0)
+        {
+        // stop all status updates being printed to the console and pause before destroying the broker object
+            statusTimer.reset();
+            ctsConfig::PrintSummary(L"\n  Pausing-At-End for %lu milliseconds\n", ctsConfig::g_configSettings->PauseAtEnd);
+            Sleep(ctsConfig::g_configSettings->PauseAtEnd);
+        }
     }
     catch (const wil::ResultException& e)
     {
@@ -139,7 +144,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         return ERROR_CANCELLED;
     }
 
-    const auto totalTimeRun = ctTimer::SnapQpcInMillis() - ctsConfig::g_configSettings->StartTimeMilliseconds;
+    const auto totalTimeRun = ctTimer::snap_qpc_as_msec() - ctsConfig::g_configSettings->StartTimeMilliseconds;
 
     // write out the final status update
     ctsConfig::PrintStatusUpdate();

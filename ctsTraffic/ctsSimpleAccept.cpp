@@ -75,36 +75,35 @@ namespace details
             // listen to each address
             for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
             {
-                SOCKET listening = ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
-                auto closeSocketOnError = wil::scope_exit([&]() noexcept { closesocket(listening); });
+                wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags)};
 
-                auto error = ctsConfig::SetPreBindOptions(listening, addr);
+                auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                 if (error != NO_ERROR)
                 {
                     THROW_WIN32_MSG(error, "SetPreBindOptions (ctsSimpleAccept)");
                 }
 
-                error = ctsConfig::SetPreConnectOptions(listening);
+                error = ctsConfig::SetPreConnectOptions(listening.get());
                 if (error != NO_ERROR)
                 {
                     THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                 }
 
-                if (SOCKET_ERROR == bind(listening, addr.sockaddr(), addr.length()))
+                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
                 {
                     THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
                 }
 
-                if (SOCKET_ERROR == listen(listening, ctsConfig::GetListenBacklog()))
+                if (SOCKET_ERROR == listen(listening.get(), ctsConfig::GetListenBacklog()))
                 {
                     THROW_WIN32_MSG(WSAGetLastError(), "listen (ctsSimpleAccept)");
                 }
 
-                m_listeningSockets.push_back(listening);
-                // socket is now being tracked in listening_sockets, dismiss the scope guard
-                closeSocketOnError.release();
+                m_listeningSockets.push_back(listening.get());
+                // socket is now being tracked in listening_sockets, release ownership
+                listening.release();
 
-                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.WriteCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
             }
 
             if (m_listeningSockets.empty())
@@ -195,7 +194,7 @@ namespace details
 
             // increment the listening socket before calling accept on the blocking socket
             ::InterlockedIncrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
-            const ctl::ctSockaddr remoteAddr;
+            ctl::ctSockaddr remoteAddr;
             auto remoteAddrLen = remoteAddr.length();
             const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
             auto gle = WSAGetLastError();
@@ -213,7 +212,7 @@ namespace details
             acceptSocket->SetSocket(newSocket);
             acceptSocket->SetRemoteSockaddr(remoteAddr);
 
-            const ctl::ctSockaddr localAddr;
+            ctl::ctSockaddr localAddr;
             auto localAddrLen = localAddr.length();
             if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
             {

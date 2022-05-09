@@ -63,7 +63,7 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             else
             {
                 // set the local address
-                const ctl::ctSockaddr localAddr;
+                ctl::ctSockaddr localAddr;
                 auto localAddrLen = localAddr.length();
                 if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
                 {

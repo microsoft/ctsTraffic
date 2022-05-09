@@ -29,7 +29,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // since WMI has limitations on what VARIANT types it accepts
 namespace ctl
 {
-inline bool IsVariantEmptyOrNull(const VARIANT* variant) noexcept
+inline bool IsVariantEmptyOrNull(_In_ const VARIANT* variant) noexcept
 {
     return V_VT(variant) == VT_EMPTY || V_VT(variant) == VT_NULL;
 }
@@ -42,7 +42,7 @@ inline wil::unique_variant ctWmiMakeVariant(const bool value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, bool* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ bool* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -61,7 +61,7 @@ inline wil::unique_variant ctWmiMakeVariant(const char value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, char* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ char* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -80,7 +80,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned char* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned char* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -99,7 +99,7 @@ inline wil::unique_variant ctWmiMakeVariant(const short value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, short* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ short* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -118,7 +118,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned short* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned short* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -137,7 +137,7 @@ inline wil::unique_variant ctWmiMakeVariant(const long value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, long* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -156,7 +156,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned long* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -175,7 +175,7 @@ inline wil::unique_variant ctWmiMakeVariant(const int value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, int* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ int* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -194,7 +194,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, unsigned int* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned int* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -213,7 +213,7 @@ inline wil::unique_variant ctWmiMakeVariant(const float value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, float* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ float* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -232,7 +232,7 @@ inline wil::unique_variant ctWmiMakeVariant(const double value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, double* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ double* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -253,7 +253,7 @@ inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, SYSTEMTIME* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ SYSTEMTIME* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -264,7 +264,7 @@ inline bool ctWmiReadFromVariant(const VARIANT* variant, SYSTEMTIME* value)
     return true;
 }
 
-inline wil::unique_variant ctWmiMakeVariant(const BSTR value) // NOLINT(misc-misplaced-const)
+inline wil::unique_variant ctWmiMakeVariant(_In_ const BSTR value) // NOLINT(misc-misplaced-const)
 {
     wil::unique_variant localVariant;
     V_VT(localVariant.addressof()) = VT_BSTR;
@@ -273,7 +273,7 @@ inline wil::unique_variant ctWmiMakeVariant(const BSTR value) // NOLINT(misc-mis
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, BSTR* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ BSTR* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -285,7 +285,7 @@ inline bool ctWmiReadFromVariant(const VARIANT* variant, BSTR* value)
     return true;
 }
 
-inline wil::unique_variant ctWmiMakeVariant(const PCWSTR value)
+inline wil::unique_variant ctWmiMakeVariant(_In_ PCWSTR value)
 {
     wil::unique_variant localVariant;
     V_VT(localVariant.addressof()) = VT_BSTR;
@@ -294,7 +294,7 @@ inline wil::unique_variant ctWmiMakeVariant(const PCWSTR value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, std::wstring* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::wstring* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -315,7 +315,7 @@ inline wil::unique_variant ctWmiMakeVariant(const UINT64 value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ UINT64* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ UINT64* value)
 {
     *value = 0;
     if (IsVariantEmptyOrNull(variant))
@@ -328,7 +328,7 @@ inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ UINT64* value)
 }
 
 // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
-inline wil::unique_variant ctWmiMakeVariant(const INT64 value)
+inline wil::unique_variant ctWmiMakeVariant(_In_ const INT64 value)
 {
     wil::unique_variant localVariant;
     V_VT(localVariant.addressof()) = VT_BSTR;
@@ -337,7 +337,7 @@ inline wil::unique_variant ctWmiMakeVariant(const INT64 value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, _Out_ INT64* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ INT64* value)
 {
     *value = 0;
     if (IsVariantEmptyOrNull(variant))
@@ -361,7 +361,7 @@ wil::unique_variant ctWmiMakeVariant(const wil::com_ptr<T>& value) noexcept
 }
 
 template <typename T>
-bool ctWmiReadFromVariant(const VARIANT* variant, wil::com_ptr<T>* value)
+bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ wil::com_ptr<T>* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -373,7 +373,7 @@ bool ctWmiReadFromVariant(const VARIANT* variant, wil::com_ptr<T>* value)
 }
 
 template <typename T>
-bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<wil::com_ptr<T>>* value)
+bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<wil::com_ptr<T>>* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -422,7 +422,7 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<std::wstring>& dat
     return variant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<std::wstring>* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<std::wstring>* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -468,7 +468,7 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<uint32_t>& data)
     return variant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<uint32_t>* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<uint32_t>* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {
@@ -516,7 +516,7 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& d
     return variant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned short>* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<unsigned short>* value)
 {
     // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
     if (IsVariantEmptyOrNull(variant))
@@ -564,7 +564,7 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned char>& da
     return variant;
 }
 
-inline bool ctWmiReadFromVariant(const VARIANT* variant, std::vector<unsigned char>* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<unsigned char>* value)
 {
     if (IsVariantEmptyOrNull(variant))
     {

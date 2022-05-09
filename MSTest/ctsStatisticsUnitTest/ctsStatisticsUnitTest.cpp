@@ -46,7 +46,7 @@ void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint
 {
 }
 
-void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
@@ -54,7 +54,7 @@ void PrintException(const std::exception&) noexcept
 {
 }
 
-void PrintErrorInfo(_In_z_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 

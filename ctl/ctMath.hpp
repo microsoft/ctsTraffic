@@ -27,7 +27,7 @@ namespace ctl
 ///   get<1> : the standard deviation
 ///
 template <typename BidirectionalIterator>
-std::tuple<double, double> SampledStandardDeviation(const BidirectionalIterator& begin, const BidirectionalIterator& end)
+std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterator& begin, const BidirectionalIterator& end)
 {
     const auto size = end - begin;
     if (size == 0)

@@ -220,7 +220,7 @@ ctsIoPattern::ctsIoPattern(uint32_t recvCount) :
     m_burstCount{ctsConfig::g_configSettings->BurstCount},
     m_burstDelay{ctsConfig::g_configSettings->BurstDelay},
     m_bytesSendingPerQuantum{ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL},
-    m_quantumStartTimeMs{ctTimer::SnapQpcInMillis()}
+    m_quantumStartTimeMs{ctTimer::snap_qpc_as_msec()}
 {
     FAIL_FAST_IF_MSG(
         ctsConfig::g_configSettings->UseSharedBuffer && ctsConfig::g_configSettings->ShouldVerifyBuffers,
@@ -592,7 +592,7 @@ ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) 
         returnTask.m_timeOffsetMilliseconds = 0LL;
         if (m_bytesSendingPerQuantum > 0)
         {
-            const auto currentTimeMs(ctTimer::SnapQpcInMillis());
+            const auto currentTimeMs(ctTimer::snap_qpc_as_msec());
             if (m_bytesSendingThisQuantum < m_bytesSendingPerQuantum)
             {
                 // adjust bytes_sending_this_quantum
@@ -1175,7 +1175,7 @@ ctsTask ctsIoPatternMediaStreamServer::GetNextTaskFromPattern() noexcept
             break;
 
         case ServerState::IdSent:
-            m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
+            m_baseTimeMilliseconds = ctTimer::snap_qpc_as_msec();
             m_state = ServerState::IoStarted;
             [[fallthrough]];
         case ServerState::IoStarted:
@@ -1188,7 +1188,7 @@ ctsTask ctsIoPatternMediaStreamServer::GetNextTaskFromPattern() noexcept
                 returnTask.m_timeOffsetMilliseconds =
                     m_baseTimeMilliseconds
                     + (m_currentFrame * 1000LL / m_frameRateFps)
-                    - ctTimer::SnapQpcInMillis();
+                    - ctTimer::snap_qpc_as_msec();
                 // ReSharper restore CppRedundantParentheses
 
                 m_currentFrameRequested += returnTask.m_bufferLength;

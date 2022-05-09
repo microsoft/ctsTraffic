@@ -119,7 +119,7 @@ ctsTask ctsIoPatternMediaStreamClient::GetNextTaskFromPattern() noexcept
     if (0 == m_baseTimeMilliseconds)
     {
         // initiate the timers the first time the object is used
-        m_baseTimeMilliseconds = ctTimer::SnapQpcInMillis();
+        m_baseTimeMilliseconds = ctTimer::snap_qpc_as_msec();
         SetNextStartTimer();
         std::ignore = SetNextTimer(true);
     }
@@ -234,7 +234,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
                 foundSlot->m_senderQpc = bufferedQpc;
                 foundSlot->m_senderQpf = bufferedQpf;
                 foundSlot->m_receiverQpc = qpc.QuadPart;
-                foundSlot->m_receiverQpf = ctTimer::SnapQpf();
+                foundSlot->m_receiverQpf = ctTimer::snap_qpf();
                 foundSlot->m_bytesReceived += completedBytes;
 
                 PRINT_DEBUG_INFO(
@@ -343,13 +343,13 @@ bool ctsIoPatternMediaStreamClient::SetNextTimer(bool initialTimer) const noexce
         // - we'll also render a frame at the same time if the initial buffer is full
         timerOffset += static_cast<int64_t>(static_cast<double>(m_timerWheelOffsetFrames) * m_frameRateMsPerFrame);
         // subtract out the current time to get the delta # of milliseconds
-        timerOffset -= ctTimer::SnapQpcInMillis();
+        timerOffset -= ctTimer::snap_qpc_as_msec();
         // only set the timer if we have time to wait
         if (initialTimer || timerOffset > 2)
         {
             // convert to filetime from milliseconds
             // - make a 'relative' for SetThreadpoolTimer
-            FILETIME relativeFileTime(ctTimer::ConvertMillisToRelativeFiletime(timerOffset));
+            FILETIME relativeFileTime(ctTimer::convert_ms_to_relative_filetime(timerOffset));
             // TP Timer APIs work off of the UTC time
             SetThreadpoolTimer(m_rendererTimer, &relativeFileTime, 0, 0);
             timerScheduled = true;
@@ -366,7 +366,7 @@ void ctsIoPatternMediaStreamClient::SetNextStartTimer() const noexcept
     {
         // convert to filetime from milliseconds
         // - make a 'relative' for SetThreadpoolTimer
-        FILETIME relativeFileTime(ctTimer::ConvertMillisToRelativeFiletime(static_cast<int64_t>(m_frameRateMsPerFrame) + 500LL));
+        FILETIME relativeFileTime(ctTimer::convert_ms_to_relative_filetime(static_cast<int64_t>(m_frameRateMsPerFrame) + 500LL));
         // TP Timer APIs work off of the UTC time
         SetThreadpoolTimer(m_startTimer, &relativeFileTime, 0, 0);
     }

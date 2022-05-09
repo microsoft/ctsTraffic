@@ -100,12 +100,12 @@ void ctsWriteDetails::WriteEmptyRow() const noexcept
     EndRow();
 }
 
-void ctsWriteDetails::StartRow(PCWSTR className, PCWSTR counterName) const noexcept try
+void ctsWriteDetails::StartRow(_In_ PCWSTR className, _In_ PCWSTR counterName) const noexcept try
 {
     auto formattedString(wil::str_printf<std::wstring>(
         L"%ws (%ws)", className, counterName));
     // since writing to csv, can't embed a comma in the data
-    ctl::ctString::ctReplaceAll(formattedString, L",", L"-");
+    ctl::ctString::replace_all(formattedString, L",", L"-");
 
     const auto length{static_cast<DWORD>((formattedString.length() * sizeof(WCHAR)))};
     DWORD written{};

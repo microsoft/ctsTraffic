@@ -94,7 +94,7 @@ protected:
     virtual PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept = 0;
     virtual PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept = 0;
 
-    void LeftJustifyOutput(uint32_t leftJustifiedOffset, uint32_t maxLength, PCWSTR value) noexcept
+    void LeftJustifyOutput(uint32_t leftJustifiedOffset, uint32_t maxLength, _In_ PCWSTR value) noexcept
     {
         FAIL_FAST_IF_MSG(
             0 == leftJustifiedOffset,
@@ -319,7 +319,7 @@ protected:
         return converted;
     }
 
-    uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, PCWSTR value, bool addComma = true) noexcept
+    uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, _In_ PCWSTR value, bool addComma = true) noexcept
     {
         const auto converted = _snwprintf_s(
             m_outputBuffer + offset,

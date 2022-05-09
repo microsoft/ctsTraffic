@@ -151,8 +151,8 @@ namespace ctsMediaStreamServerImpl
             if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
             {
                 error = WSAGetLastError();
-                char addrBuffer[ctl::SockAddrMaxStringLength]{};
-                addr.WriteAddress(addrBuffer);
+                char addrBuffer[ctl::ctSockaddr::FixedStringLength]{};
+                addr.writeAddress(addrBuffer);
                 THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
             }
 
@@ -162,7 +162,7 @@ namespace ctsMediaStreamServerImpl
                 std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
-                addr.WriteCompleteAddress().c_str(),
+                addr.writeCompleteAddress().c_str(),
                 listeningSocketToPrint);
         }
 
@@ -219,7 +219,7 @@ namespace ctsMediaStreamServerImpl
             {
                 ctsConfig::PrintErrorInfo(
                     L"ctsMediaStreamServer - failed to find the socket with remote address %ws in our connected socket list to continue sending datagrams",
-                    sharedSocket->GetRemoteSockaddr().WriteCompleteAddress().c_str());
+                    sharedSocket->GetRemoteSockaddr().writeCompleteAddress().c_str());
                 THROW_WIN32_MSG(ERROR_INVALID_DATA, "ctsSocket was not found in the connected sockets to continue sending datagrams");
             }
 
@@ -260,7 +260,7 @@ namespace ctsMediaStreamServerImpl
                 {
                     ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                     PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
-                        waitingEndpoint->second.WriteCompleteAddress().c_str());
+                        waitingEndpoint->second.writeCompleteAddress().c_str());
                     // return early if this was a duplicate request: this can happen if there is latency or drops
                     // between the client and server as they attempt to negotiating starting a new stream
                     return;
@@ -274,7 +274,7 @@ namespace ctsMediaStreamServerImpl
                         ConnectedSocketIo));
 
                 PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws added to connected_sockets",
-                    waitingEndpoint->second.WriteCompleteAddress().c_str());
+                    waitingEndpoint->second.writeCompleteAddress().c_str());
 
                 // now complete the ctsSocket 'Create' request
                 const auto foundSocket = std::ranges::find_if(
@@ -334,7 +334,7 @@ namespace ctsMediaStreamServerImpl
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
             PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
-                targetAddr.WriteCompleteAddress().c_str());
+                targetAddr.writeCompleteAddress().c_str());
             // return early if this was a duplicate request: this can happen if there is latency or drops
             // between the client and server as they attempt to negotiating starting a new stream
             return;
@@ -349,7 +349,7 @@ namespace ctsMediaStreamServerImpl
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
             PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
-                targetAddr.WriteCompleteAddress().c_str());
+                targetAddr.writeCompleteAddress().c_str());
             // return early if this was a duplicate request: this can happen if there is latency or drops
             // between the client and server as they attempt to negotiating starting a new stream
             return;
@@ -367,7 +367,7 @@ namespace ctsMediaStreamServerImpl
                     std::make_shared<ctsMediaStreamServerConnectedSocket>(weakInstance, socket, targetAddr, ConnectedSocketIo));
 
                 PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to connected_sockets",
-                    targetAddr.WriteCompleteAddress().c_str());
+                    targetAddr.writeCompleteAddress().c_str());
 
                 // verify is successfully added to connected_sockets before popping off accepting_sockets
                 addToAwaiting = false;
@@ -387,7 +387,7 @@ namespace ctsMediaStreamServerImpl
         if (addToAwaiting)
         {
             PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to awaiting_endpoints",
-                targetAddr.WriteCompleteAddress().c_str());
+                targetAddr.writeCompleteAddress().c_str());
 
             // only queue it if we aren't already waiting on this address
             g_awaitingEndpoints.emplace_back(socket, targetAddr);
@@ -432,7 +432,7 @@ namespace ctsMediaStreamServerImpl
                 ctsConfig::PrintErrorInfo(
                     L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
                     socket,
-                    remoteAddr.WriteCompleteAddress().c_str(),
+                    remoteAddr.writeCompleteAddress().c_str(),
                     error);
                 return wsIOResult(error);
             }
@@ -481,7 +481,7 @@ namespace ctsMediaStreamServerImpl
                             L"WSASendTo(%Iu, seq %lld, %ws) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
                             socket,
                             sequenceNumber,
-                            remoteAddr.WriteCompleteAddress().c_str(),
+                            remoteAddr.writeCompleteAddress().c_str(),
                             bytesRequested);
                     }
                     else
@@ -490,7 +490,7 @@ namespace ctsMediaStreamServerImpl
                             L"WSASendTo(%Iu, seq %lld, %ws) failed [%d]",
                             socket,
                             sequenceNumber,
-                            remoteAddr.WriteCompleteAddress().c_str(),
+                            remoteAddr.writeCompleteAddress().c_str(),
                             error);
                     }
                     return wsIOResult(error);

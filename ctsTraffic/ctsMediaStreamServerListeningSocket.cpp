@@ -81,7 +81,7 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
                 ::ZeroMemory(m_recvBuffer.data(), m_recvBuffer.size());
 
                 m_recvFlags = 0;
-                m_remoteAddr.set(m_remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
+                m_remoteAddr.reset(m_remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
                 m_remoteAddrLen = m_remoteAddr.length();
                 OVERLAPPED* pOverlapped = m_threadIocp->new_request(
                     [this](OVERLAPPED* pCallbackOverlapped) noexcept {
@@ -207,7 +207,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                     case MediaStreamAction::START:
                         PRINT_DEBUG_INFO(
                             L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                            m_remoteAddr.WriteCompleteAddress().c_str());
+                            m_remoteAddr.writeCompleteAddress().c_str());
 #ifndef TESTING_IGNORE_START
                     // Cannot be holding the object_guard when calling into any pimpl-> methods
                         pimplOperation = [this] {

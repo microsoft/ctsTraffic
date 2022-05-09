@@ -161,7 +161,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     for (DWORD argCount = argc; argCount > 1; --argCount)
     {
-        if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-process:"))
+        if (ctString::istarts_with(argv[argCount - 1], L"-process:"))
         {
             trackProcess = argv[argCount - 1];
 
@@ -170,7 +170,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             trackProcess.erase(trackProcess.begin(), endOfToken + 1);
 
             // the performance counter does not look at the extension, so remove .exe if it's there
-            if (ctString::ctOrdinalEndsWithCaseInsensative(trackProcess, L".exe"))
+            if (ctString::iends_with(trackProcess, L".exe"))
             {
                 trackProcess.erase(trackProcess.end() - 4, trackProcess.end());
             }
@@ -181,7 +181,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 return 1;
             }
         }
-        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-pid:"))
+        else if (ctString::istarts_with(argv[argCount - 1], L"-pid:"))
         {
             wstring pidString(argv[argCount - 1]);
 
@@ -205,15 +205,15 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
                 }
             }
         }
-        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-estats"))
+        else if (ctString::istarts_with(argv[argCount - 1], L"-estats"))
         {
             trackEstats = true;
         }
-        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-Networking"))
+        else if (ctString::istarts_with(argv[argCount - 1], L"-Networking"))
         {
             trackNetworking = true;
         }
-        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-InterfaceDescription:"))
+        else if (ctString::istarts_with(argv[argCount - 1], L"-InterfaceDescription:"))
         {
             trackInterfaceDescription = argv[argCount - 1];
 
@@ -221,7 +221,7 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
             const auto endOfToken = ranges::find(trackInterfaceDescription, L':');
             trackInterfaceDescription.erase(trackInterfaceDescription.begin(), endOfToken + 1);
         }
-        else if (ctString::ctOrdinalStartsWithCaseInsensative(argv[argCount - 1], L"-MeanOnly"))
+        else if (ctString::istarts_with(argv[argCount - 1], L"-MeanOnly"))
         {
             g_meanOnly = true;
         }
@@ -463,7 +463,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
         writer.WriteRow(
             wil::str_printf<std::wstring>(
                 L"Processor %ws",
-                ctString::ctReplaceAllCopy(name, L",", L" - ").c_str()));
+                ctString::replace_all_copy(name, L",", L" - ").c_str()));
 
         const auto processor_range = g_processorTime->reference_range(name.c_str());
         vector processorTimeVector(processor_range.first, processor_range.second);

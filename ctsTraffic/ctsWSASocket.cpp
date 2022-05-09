@@ -57,7 +57,7 @@ void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     const auto bindSize = ctsConfig::g_configSettings->BindAddresses.size();
     auto socketCounter = ctl::ctMemoryGuardIncrement(&g_bindCounter);
     ctl::ctSockaddr localAddr(ctsConfig::g_configSettings->BindAddresses[socketCounter % bindSize]);
-    localAddr.SetPort(nextPort);
+    localAddr.setPort(nextPort);
 
     ctl::ctSockaddr targetAddr;
     if (!ctsConfig::g_configSettings->TargetAddresses.empty())

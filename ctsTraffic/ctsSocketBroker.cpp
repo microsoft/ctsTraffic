@@ -21,8 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/stl.h>
 #include <wil/resource.h>
-// ctl headers
-#include <ctThreadPoolTimer.hpp>
+#include <wil/win32_helpers.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
@@ -74,7 +73,7 @@ ctsSocketBroker::~ctsSocketBroker() noexcept
     m_doneEvent.SetEvent();
 
     // first, turn off the timer to stop creating/tearing down the socket pool
-    m_wakeupTimer.stop_all_timers();
+    m_wakeupTimer.reset();
 
     // now delete all children, guaranteeing they stop processing
     // - must do this explicitly before deleting the CS
@@ -110,10 +109,18 @@ void ctsSocketBroker::Start()
     }
 
     // intiate the threadpool timer
-    m_wakeupTimer.schedule_reoccuring(
-        [this]() noexcept { TimerCallback(this); },
-        0LL,
-        m_timerCallbackTimeoutMs);
+    m_wakeupTimer.reset(
+        CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER ptimer) {
+            auto* const pThis = static_cast<ctsSocketBroker*>(context);
+            pThis->TimerCallback(pThis);
+
+            FILETIME scheduledFiletime{wil::filetime::from_int64(wil::filetime::convert_msec_to_100ns(pThis->m_timerCallbackTimeoutMs))};
+            SetThreadpoolTimer(ptimer, &scheduledFiletime, 0, pThis->m_timerCallbackTimeoutMs / 100);
+        }, this, nullptr));
+    THROW_LAST_ERROR_IF(!m_wakeupTimer);
+
+    FILETIME scheduledFiletime{wil::filetime::from_int64(wil::filetime::convert_msec_to_100ns(m_timerCallbackTimeoutMs))};
+    SetThreadpoolTimer(m_wakeupTimer.get(), &scheduledFiletime, m_timerCallbackTimeoutMs, 0);
 }
 
 //

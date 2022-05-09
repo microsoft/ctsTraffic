@@ -106,7 +106,7 @@ if '%Role%' == 'server' (
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -PrePostRecvs:3 -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -127,7 +127,7 @@ if '%Role%' == 'server' (
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:%CONNECTIONS% -iterations:1 -pattern:%1 -io:%2 -Buffer:[32768,98304] -transfer:%NORMAL_TRANSFER%
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:%CONNECTIONS% -iterations:1 -pattern:%1 -io:%2 -Buffer:[32768,98304] -transfer:%NORMAL_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -148,7 +148,7 @@ if '%Role%' == 'server' (
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:1
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:1
 )
 
 IF ERRORLEVEL 1 (
@@ -169,7 +169,7 @@ if '%Role%' == 'server' (
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -msgwaitall:on -io:%2 -transfer:%VERY_LARGE_TRANSFER%
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -msgwaitall:on -io:%2 -transfer:%VERY_LARGE_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (
@@ -190,7 +190,7 @@ if '%Role%' == 'server' (
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -verify:connection -msgwaitall:off -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe -target:localhost -connections:1 -iterations:1 -pattern:%1 -io:%2 -verify:connection -msgwaitall:off -PrePostRecvs:3 -transfer:%VERY_LARGE_TRANSFER%
 )
 
 IF ERRORLEVEL 1 (

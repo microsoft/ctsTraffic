@@ -35,7 +35,7 @@ int64_t g_TcpBytesPerSecond = 0LL;
 ///
 namespace ctl::ctTimer
 {
-int64_t ctSnapQpcInMillis() noexcept
+int64_t ctsnap_qpc_as_msec() noexcept
 {
     return g_QpcTime;
 }
@@ -59,7 +59,7 @@ void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint
 {
 }
 
-void PrintDebug(_In_z_ _Printf_format_string_ PCWSTR _text, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept
 {
     va_list va_args;
     va_start(va_args, _text);

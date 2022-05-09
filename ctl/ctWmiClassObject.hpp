@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -32,15 +33,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// class ctWmiClassObject
-///
-/// Exposes enumerating properties of a WMI Provider through an property_iterator interface.
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// class ctWmiClassObject
+// Exposes enumerating properties of a WMI Provider through an property_iterator interface.
 class ctWmiClassObject
 {
 private:
@@ -51,9 +45,9 @@ public:
     //
     // forward declare iterator classes
     //
-    // ReSharper disable once CppInconsistentNaming
+    // 
     class property_iterator;
-    // ReSharper disable once CppInconsistentNaming
+    // 
     class method_iterator;
 
     ctWmiClassObject(ctWmiService wbemServices, wil::com_ptr<IWbemClassObject> wbemClass) noexcept :
@@ -62,7 +56,7 @@ public:
     {
     }
 
-    ctWmiClassObject(ctWmiService wbemServices, PCWSTR className) :
+    ctWmiClassObject(ctWmiService wbemServices, _In_ PCWSTR className) :
         m_wbemServices(std::move(wbemServices))
     {
         THROW_IF_FAILED(m_wbemServices->GetObject(
@@ -112,7 +106,6 @@ public:
     /// }
 
     // A forward property_iterator class type to enable forward-traversing instances of the queried WMI provider
-    // ReSharper disable once CppInconsistentNaming
     class property_iterator
     {
     private:
@@ -236,21 +229,12 @@ public:
             return *this;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// property_iterator_traits
-        /// - allows <algorithm> functions to be used
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
-        // ReSharper disable once CppInconsistentNaming
+        // property_iterator_traits
+        // - allows <algorithm> functions to be used
         using iterator_category = std::forward_iterator_tag;
-        // ReSharper disable once CppInconsistentNaming
         using value_type = wil::shared_bstr;
-        // ReSharper disable once CppInconsistentNaming
         using difference_type = int;
-        // ReSharper disable once CppInconsistentNaming
         using pointer = BSTR;
-        // ReSharper disable once CppInconsistentNaming
         using reference = wil::shared_bstr&;
 
     private:

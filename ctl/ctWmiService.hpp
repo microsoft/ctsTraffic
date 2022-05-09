@@ -34,7 +34,7 @@ public:
     // CoInitializeSecurity is not called by the ctWmi* classes. This security
     //   policy should be defined by the code consuming these libraries, as these
     //   libraries cannot assume the security context to apply to the process.
-    explicit ctWmiService(PCWSTR path)
+    explicit ctWmiService(_In_ PCWSTR path)
     {
         m_wbemLocator = wil::CoCreateInstance<WbemLocator, IWbemLocator>();
 
@@ -96,7 +96,7 @@ public:
         return m_wbemServices.get();
     }
 
-    void delete_path(PCWSTR objPath, const wil::com_ptr<IWbemContext>& context) const
+    void delete_path(_In_ PCWSTR objPath, const wil::com_ptr<IWbemContext>& context) const
     {
         wil::com_ptr<IWbemCallResult> result;
         THROW_IF_FAILED(m_wbemServices->DeleteInstance(
@@ -113,14 +113,14 @@ public:
     // Deletes the WMI object based off the object path specified in the input
     // The object path takes the form of:
     //    MyClass.MyProperty1='33',MyProperty2='value'
-    void delete_path(PCWSTR objPath) const
+    void delete_path(_In_ PCWSTR objPath) const
     {
         const wil::com_ptr<IWbemContext> nullcontext;
         delete_path(objPath, nullcontext.get());
     }
 
 private:
-    wil::com_ptr<IWbemLocator> m_wbemLocator;
-    wil::com_ptr<IWbemServices> m_wbemServices;
+    wil::com_ptr<IWbemLocator> m_wbemLocator{};
+    wil::com_ptr<IWbemServices> m_wbemServices{};
 };
 } // namespace ctl

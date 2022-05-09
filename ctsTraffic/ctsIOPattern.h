@@ -502,7 +502,7 @@ public:
     {
         if (!m_started)
         {
-            m_statistics.m_startTime.SetConditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
+            m_statistics.m_startTime.SetConditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
             m_started = true;
         }
     }
@@ -510,7 +510,7 @@ public:
     // if the m_endTime was previously zero, will also update historic stats
     void EndStatistics() noexcept override
     {
-        m_statistics.m_endTime.SetConditionally(ctl::ctTimer::SnapQpcInMillis(), 0LL);
+        m_statistics.m_endTime.SetConditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
     }
 
     // Access the ConnectionId stored in the Stats object

@@ -37,7 +37,7 @@ inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl
 template <>
 inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _addr)
 {
-    return _addr.WriteCompleteAddress();
+    return _addr.writeCompleteAddress();
 }
 }
 
@@ -241,7 +241,7 @@ public:
         // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
         // - trying to use it should fail with an invalid socket error
         ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        local_addr.SetPort(55555);
+        local_addr.setPort(55555);
         const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
         const auto gle = WSAGetLastError();
         Assert::AreEqual(SOCKET_ERROR, error);
@@ -271,7 +271,7 @@ public:
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
         ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        test_address.SetPort(55555);
+        test_address.setPort(55555);
 
         test->SetLocalSockaddr(test_address);
         Assert::AreEqual(test_address, test->GetLocalSockaddr());
@@ -284,7 +284,7 @@ public:
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
         ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        test_address.SetPort(55555);
+        test_address.setPort(55555);
 
         test->SetLocalSockaddr(test_address);
         Assert::AreEqual(test_address, test->GetLocalSockaddr());

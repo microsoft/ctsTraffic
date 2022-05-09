@@ -137,7 +137,7 @@ public:
         using reference = IP_ADAPTER_ADDRESSES&;
 
     private:
-        std::shared_ptr<std::vector<BYTE>> m_buffer;
+        std::shared_ptr<std::vector<BYTE>> m_buffer{};
         PIP_ADAPTER_ADDRESSES m_current = nullptr;
     };
 
@@ -213,7 +213,7 @@ private:
     ///
     /// private members
     ///
-    std::shared_ptr<std::vector<BYTE>> m_buffer;
+    std::shared_ptr<std::vector<BYTE>> m_buffer{};
 };
 
 /// functor ctNetAdapterMatchingAddrPredicate
