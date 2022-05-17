@@ -547,7 +547,6 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>::CompletedTaskPe
 template <>
 inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::CompletedTaskPerProtocol(const ctsTask& completedTask, uint32_t completedTransferredBytes) noexcept
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto alreadyTransferred = m_confirmedBytes + m_inflightBytes;
     //
     // TCP has a full state machine
@@ -651,7 +650,6 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
 template <>
 inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::CompletedTaskPerProtocol(const ctsTask&, uint32_t completedTransferredBytes) noexcept
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto alreadyTransferred = m_confirmedBytes + m_inflightBytes;
     //
     // TCP has a full state machine

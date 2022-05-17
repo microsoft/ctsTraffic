@@ -22,6 +22,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl
 {
 // forward-declare classes that can instantiate a ctThreadpoolQueueWaitableResult object
+enum class ctThreadpoolGrowthPolicy
+{
+    Growable,
+    Flat
+};
+
+template <ctThreadpoolGrowthPolicy GrowthPolicy>
 class ctThreadpoolQueue;
 
 namespace details
@@ -34,15 +41,17 @@ namespace details
 class ctThreadpoolQueueWaitableResultInterface
 {
 public:
+    ctThreadpoolQueueWaitableResultInterface() = default;
     virtual ~ctThreadpoolQueueWaitableResultInterface() = default;
 
-    ctThreadpoolQueueWaitableResultInterface(ctThreadpoolQueueWaitableResultInterface&&) noexcept = default;
-    ctThreadpoolQueueWaitableResultInterface& operator=(ctThreadpoolQueueWaitableResultInterface&&) noexcept = default;
+    ctThreadpoolQueueWaitableResultInterface(ctThreadpoolQueueWaitableResultInterface&&) noexcept = delete;
+    ctThreadpoolQueueWaitableResultInterface& operator=(ctThreadpoolQueueWaitableResultInterface&&) noexcept = delete;
     ctThreadpoolQueueWaitableResultInterface(const ctThreadpoolQueueWaitableResultInterface&) = delete;
     ctThreadpoolQueueWaitableResultInterface& operator=(const ctThreadpoolQueueWaitableResultInterface&) = delete;
 
 private:
     // limit who can run() and abort()
+    template <ctThreadpoolGrowthPolicy GrowthPolicy>
     friend class ctThreadpoolQueue;
 
     virtual void run() noexcept = 0;
@@ -62,9 +71,6 @@ public:
 
     ~ctThreadpoolQueueWaitableResult() override = default;
 
-    ctThreadpoolQueueWaitableResult(ctThreadpoolQueueWaitableResult&&) noexcept = default;
-    ctThreadpoolQueueWaitableResult& operator=(ctThreadpoolQueueWaitableResult&&) noexcept = default;
-
     // returns ERROR_SUCCESS if the callback ran to completion
     // returns ERROR_TIMEOUT if this wait timed out
     // - this can be called multiple times if needing to probe
@@ -78,7 +84,7 @@ public:
             // since the caller is allowed to try to wait() again later
             return ERROR_TIMEOUT;
         }
-        const auto lock = m_lock.lock_shared();
+        const auto lock = m_lock.lock();
         return m_internalError;
     }
 
@@ -103,16 +109,19 @@ public:
     // non-copyable
     ctThreadpoolQueueWaitableResult(const ctThreadpoolQueueWaitableResult&) = delete;
     ctThreadpoolQueueWaitableResult& operator=(const ctThreadpoolQueueWaitableResult&) = delete;
+    ctThreadpoolQueueWaitableResult(ctThreadpoolQueueWaitableResult&&) noexcept = delete;
+    ctThreadpoolQueueWaitableResult& operator=(ctThreadpoolQueueWaitableResult&&) noexcept = delete;
 
 private:
     // limit who can run() and abort()
+    template <ctThreadpoolGrowthPolicy GrowthPolicy>
     friend class ctThreadpoolQueue;
 
     void run() noexcept override
     {
         // we are now running in the TP callback
         {
-            const auto lock = m_lock.lock_exclusive();
+            const auto lock = m_lock.lock();
             if (m_runStatus != RunStatus::NotYetRun)
             {
                 // return early - the caller has already canceled this
@@ -128,12 +137,12 @@ private:
         }
         catch (...)
         {
-            HRESULT hr = wil::ResultFromCaughtException();
+            const HRESULT hr = wil::ResultFromCaughtException();
             // HRESULT_TO_WIN32
             error = HRESULT_FACILITY(hr) == FACILITY_WIN32 ? HRESULT_CODE(hr) : hr;
         }
 
-        const auto lock = m_lock.lock_exclusive();
+        const auto lock = m_lock.lock();
         WI_ASSERT(m_runStatus == RunStatus::Running);
         m_runStatus = RunStatus::RanToCompletion;
         m_internalError = error;
@@ -142,7 +151,7 @@ private:
 
     void abort() noexcept override
     {
-        const auto lock = m_lock.lock_exclusive();
+        const auto lock = m_lock.lock();
         // only override the error if we know we haven't started running their functor
         if (m_runStatus == RunStatus::NotYetRun)
         {
@@ -154,7 +163,7 @@ private:
 
     std::function<TReturn()> m_function;
     wil::unique_event m_completionSignal{wil::EventOptions::ManualReset};
-    mutable wil::srwlock m_lock;
+    mutable wil::critical_section m_lock{200};
     TReturn m_result{};
     DWORD m_internalError = NO_ERROR;
 
@@ -168,17 +177,12 @@ private:
 };
 
 
+template <ctThreadpoolGrowthPolicy GrowthPolicy>
 class ctThreadpoolQueue
 {
 public:
-    enum class QueueGrowthPolicy
-    {
-        Growable,
-        Flat
-    };
-
-    explicit ctThreadpoolQueue(QueueGrowthPolicy growthPolicy = QueueGrowthPolicy::Growable) :
-        m_tpEnvironment(0, 1), m_growthPolicy(growthPolicy)
+    explicit ctThreadpoolQueue() :
+        m_tpEnvironment(0, 1)
     {
         // create a single-threaded threadpool
         m_tpHandle = m_tpEnvironment.create_tp(WorkCallback, this);
@@ -190,19 +194,18 @@ public:
         FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
         std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult;
+        auto shouldSubmit = false;
+
         // scope to the queue lock
         {
-            const auto queueLock = m_lock.lock_exclusive();
-            if (CanSubmit())
-            {
-                returnResult = std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor));
-                m_workItems.emplace_back(returnResult);
-            }
+            const auto queueLock = m_lock.lock();
+            shouldSubmit = ShouldSubmitThreadpoolWork();
+            returnResult = std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor));
+            m_workItems.emplace_back(returnResult);
         }
 
-        if (returnResult)
+        if (shouldSubmit)
         {
-            // always maintain a 1:1 ratio for calls to SubmitWorkWithResults() and ::SubmitThreadpoolWork
             SubmitThreadpoolWork(m_tpHandle.get());
         }
         return returnResult;
@@ -214,40 +217,35 @@ public:
     }
 
     template <typename FunctorType>
-    bool submit(FunctorType&& functor) noexcept try
+    void submit(FunctorType&& functor) noexcept try
     {
         FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
-        auto submit = false;
+        auto shouldSubmit = false;
+
         // scope to the queue lock
         {
-            const auto queueLock = m_lock.lock_exclusive();
-            if (CanSubmit())
-            {
-                m_workItems.emplace_back(std::forward<SimpleFunctionT>(functor));
-                submit = true;
-            }
+            const auto queueLock = m_lock.lock();
+            shouldSubmit = ShouldSubmitThreadpoolWork();
+            m_workItems.emplace_back(std::forward<SimpleFunctionT>(functor));
         }
 
-        if (submit)
+        if (shouldSubmit)
         {
-            // always maintain a 1:1 ratio for calls to SubmitWork() and ::SubmitThreadpoolWork
             SubmitThreadpoolWork(m_tpHandle.get());
         }
-        return true;
     }
-    catch (...)
-    {
-        LOG_CAUGHT_EXCEPTION();
-        return false;
-    }
+    CATCH_LOG()
 
     // functors must return type HRESULT
     template <typename FunctorType>
     HRESULT submit_and_wait(FunctorType&& functor) noexcept try
     {
         // this is not applicable for flat queues
-        FAIL_FAST_IF(m_growthPolicy == QueueGrowthPolicy::Flat);
+        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)
+        {
+            FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
+        }
 
         HRESULT hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
         if (const auto waitableResult = submit_with_results<HRESULT>(std::forward<FunctorType>(functor)))
@@ -269,7 +267,7 @@ public:
         {
             // immediately release anyone waiting for these workitems not yet run
             {
-                const auto queueLock = m_lock.lock_exclusive();
+                const auto queueLock = m_lock.lock();
 
                 for (const auto& work : m_workItems)
                 {
@@ -341,21 +339,27 @@ private:
     // the lock must be destroyed *after* the TP object (thus must be declared first)
     // since the lock is used in the TP callback
     // the lock is mutable to allow us to acquire the lock in const methods
-    mutable wil::srwlock m_lock;
+    mutable wil::critical_section m_lock{200};
     TpEnvironment m_tpEnvironment;
     wil::unique_threadpool_work m_tpHandle;
     std::deque<FunctionVariantT> m_workItems;
     mutable LONG64 m_threadpoolThreadId{0}; // useful for callers to assert they are running within the queue
-    const QueueGrowthPolicy m_growthPolicy;
 
-    constexpr bool CanSubmit() const noexcept
+    bool ShouldSubmitThreadpoolWork() noexcept
     {
-        if (m_growthPolicy == QueueGrowthPolicy::Growable)
+        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)
+        {
+            // return true to call SubmitThreadpoolWork if it's empty
+            // else we already called SubmitThreadpoolWork for existing the item in the queue (that we're about to erase)
+            const auto returnValue = m_workItems.empty();
+            m_workItems.clear();
+            return returnValue;
+        }
+
+        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Growable)
         {
             return true;
         }
-
-        return m_workItems.empty();
     }
 
     static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, void* context, PTP_WORK) noexcept try
@@ -364,7 +368,7 @@ private:
 
         FunctionVariantT work;
         {
-            const auto queueLock = pThis->m_lock.lock_exclusive();
+            const auto queueLock = pThis->m_lock.lock();
 
             if (pThis->m_workItems.empty())
             {

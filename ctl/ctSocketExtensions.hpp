@@ -52,7 +52,7 @@ namespace ctl { namespace Details
             auto wsaCleanupOnExit = wil::scope_exit([&]() noexcept { WSACleanup(); });
 
             // check to see if need to create a temp socket
-            wil::unique_socket localSocket{socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)};
+            const wil::unique_socket localSocket{socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)};
             if (INVALID_SOCKET == localSocket.get())
             {
                 return FALSE;
@@ -144,11 +144,11 @@ namespace ctl { namespace Details
                         localSocket.get(),
                         controlCode,
                         &guid,
-                        static_cast<DWORD>(sizeof guid),
+                        DWORD{sizeof guid},
                         functionPtr,
                         bytes,
                         &bytes,
-                        nullptr, // lpOverlapped
+                        nullptr,
                         nullptr))
                 {
                     if (WSAGetLastError() == WSAEOPNOTSUPP && 8 == fnLoop)

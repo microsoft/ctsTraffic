@@ -45,9 +45,7 @@ public:
     //
     // forward declare iterator classes
     //
-    // 
     class property_iterator;
-    // 
     class method_iterator;
 
     ctWmiClassObject(ctWmiService wbemServices, wil::com_ptr<IWbemClassObject> wbemClass) noexcept :
@@ -216,7 +214,7 @@ public:
         }
 
         // increment by integer
-        property_iterator& operator+=(DWORD inc)
+        property_iterator& operator+=(uint32_t inc)
         {
             for (auto loop = 0ul; loop < inc; ++loop)
             {
@@ -247,14 +245,12 @@ public:
 
             CIMTYPE nextCimtype{};
             wil::shared_bstr nextName;
-            // ReSharper disable once CppTooWideScope
-            const auto hr = m_wbemClassObj->Next(
+            switch (const auto hr = m_wbemClassObj->Next(
                 0,
                 nextName.put(),
                 nullptr,
                 &nextCimtype,
-                nullptr);
-            switch (hr)
+                nullptr))
             {
                 case WBEM_S_NO_ERROR:
                 {
@@ -265,7 +261,6 @@ public:
                     swap(m_propertyType, nextCimtype);
                     break;
                 }
-
                 case WBEM_S_NO_MORE_DATA:
                 {
                     // at the end...

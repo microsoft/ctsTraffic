@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -19,15 +20,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
+// wil headers
+#include <wil/resource.h>
 // ctl headers
 #include <ctTimer.hpp>
 // local headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -57,7 +57,6 @@ constexpr uint32_t c_udpDatagramStartStringLength = 5;
 
 enum class MediaStreamAction : char
 {
-    // ReSharper disable once CppInconsistentNaming
     START
 };
 
@@ -76,7 +75,6 @@ public:
     ///
     /// compose iteration across buffers to be sent per instantiated request
     ///
-    // ReSharper disable once CppInconsistentNaming
     class iterator
     {
     public:
@@ -86,15 +84,10 @@ public:
         /// - allows <algorithm> functions to be used
         ///
         ////////////////////////////////////////////////////////////////////////////////
-        // ReSharper disable once CppInconsistentNaming
         using iterator_category = std::forward_iterator_tag;
-        // ReSharper disable once CppInconsistentNaming
         using value_type = std::array<WSABUF, c_bufferArraySize>;
-        // ReSharper disable once CppInconsistentNaming
         using difference_type = size_t;
-        // ReSharper disable once CppInconsistentNaming
         using pointer = std::array<WSABUF, c_bufferArraySize>*;
-        // ReSharper disable once CppInconsistentNaming
         using reference = std::array<WSABUF, c_bufferArraySize>&;
 
         ~iterator() = default;
@@ -204,7 +197,6 @@ public:
                     m_wsaBufArray[0].len + m_wsaBufArray[1].len + m_wsaBufArray[2].len + m_wsaBufArray[3].len + m_wsaBufArray[4].len;
 
                 // must guarantee that after we send this datagram we have enough bytes for the next send if there are bytes left over
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto bytesRemaining = m_bytesToSend - static_cast<int64_t>(totalBytesToSend);
                 if (bytesRemaining > 0 && bytesRemaining <= c_udpDatagramDataHeaderLength)
                 {
@@ -260,13 +252,11 @@ public:
         // the this->wsabuf[4].len field is dependent on bytes_to_send and can change by iterator()
     }
 
-    // ReSharper disable once CppInconsistentNaming
     [[nodiscard]] iterator begin() noexcept
     {
         return {&m_qpcValue, m_bytesToSend, m_wsabuffer};
     }
 
-    // ReSharper disable once CppInconsistentNaming
     [[nodiscard]] iterator end() const noexcept
     {
         // end == null qpc + 0 byte length

@@ -119,7 +119,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         if (ctsConfig::g_configSettings->PauseAtEnd > 0)
         {
-        // stop all status updates being printed to the console and pause before destroying the broker object
+            // stop all status updates being printed to the console and pause before destroying the broker object
             statusTimer.reset();
             ctsConfig::PrintSummary(L"\n  Pausing-At-End for %lu milliseconds\n", ctsConfig::g_configSettings->PauseAtEnd);
             Sleep(ctsConfig::g_configSettings->PauseAtEnd);

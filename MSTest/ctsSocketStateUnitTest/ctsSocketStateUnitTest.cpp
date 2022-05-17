@@ -12,6 +12,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 #include <sdkddkver.h>
+#include <string>
 #include "CppUnitTest.h"
 
 #include <Windows.h>
@@ -22,12 +23,35 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketBroker.h"
 #include "ctsWinsockLayer.h"
 
+namespace Microsoft::VisualStudio::CppUnitTestFramework
+{
+template <>
+inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& q)
+{
+{
+    switch (q)
+    {
+        case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIo";
+        case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
+        case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIo";
+        case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
+        case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
+        case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
+        case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
+        case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
+        default: return {};
+    }
+}
+}
+}
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 
 ///
 /// Fakes
 ///
+
 namespace ctsTraffic
 {
 shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
@@ -163,47 +187,47 @@ void ResetStatics(DWORD _create = g_ShouldNeverHitErrorCode, DWORD _connect = g_
 
 void CreateFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    const auto shared_socket(socket.lock());
-    Assert::IsNotNull(shared_socket.get());
+    const auto sharedSocket(socket.lock());
+    Assert::IsNotNull(sharedSocket.get());
 
     Assert::AreNotEqual(g_ShouldNeverHitErrorCode, g_CreateReturnCode);
 
     ctl::ctMemoryGuardIncrement(&g_CallbackCount);
-    if (shared_socket)
+    if (sharedSocket)
     {
-        shared_socket->CompleteState(g_CreateReturnCode);
+        sharedSocket->CompleteState(g_CreateReturnCode);
     }
 }
 
 void ConnectFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    const auto shared_socket(socket.lock());
-    Assert::IsNotNull(shared_socket.get());
+    const auto sharedSocket(socket.lock());
+    Assert::IsNotNull(sharedSocket.get());
 
     Assert::AreNotEqual(g_ShouldNeverHitErrorCode, g_ConnectReturnCode);
 
     const SOCKET s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     Assert::AreNotEqual(INVALID_SOCKET, s);
-    shared_socket->SetSocket(s);
+    sharedSocket->SetSocket(s);
 
     ctl::ctMemoryGuardIncrement(&g_CallbackCount);
-    if (shared_socket)
+    if (sharedSocket)
     {
-        shared_socket->CompleteState(g_ConnectReturnCode);
+        sharedSocket->CompleteState(g_ConnectReturnCode);
     }
 }
 
 void IoFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 {
-    const auto shared_socket(socket.lock());
-    Assert::IsNotNull(shared_socket.get());
+    const auto sharedSocket(socket.lock());
+    Assert::IsNotNull(sharedSocket.get());
 
     Assert::AreNotEqual(g_ShouldNeverHitErrorCode, g_IOReturnCode);
 
     ctl::ctMemoryGuardIncrement(&g_CallbackCount);
-    if (shared_socket)
+    if (sharedSocket)
     {
-        shared_socket->CompleteState(g_IOReturnCode);
+        sharedSocket->CompleteState(g_IOReturnCode);
     }
 }
 
@@ -239,11 +263,15 @@ public:
         const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
         test->Start();
 
-        do
+        for (auto count = 0; count < 1000; ++count)
         {
-            Sleep(100);
+            Sleep(25);
+            if (test->GetCurrentState() == ctsSocketState::InternalState::Closed)
+            {
+                break;
+            }
         }
-        while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
+        Assert::AreEqual(ctsSocketState::InternalState::Closed, test->GetCurrentState());
 
         Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
     }

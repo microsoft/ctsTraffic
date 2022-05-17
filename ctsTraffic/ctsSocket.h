@@ -17,6 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <functional>
 #include <type_traits>
+#include <utility>
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
@@ -25,7 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-#include <utility>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"

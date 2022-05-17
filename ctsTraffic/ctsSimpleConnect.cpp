@@ -42,7 +42,6 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
     auto error = 0;
     const auto socketReference(sharedSocket->AcquireSocketLock());
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto socket = socketReference.GetSocket();
     if (socket != INVALID_SOCKET)
     {

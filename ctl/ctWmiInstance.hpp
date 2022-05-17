@@ -83,10 +83,14 @@ public:
         return !(*this == obj);
     }
 
+    [[nodiscard]] wil::com_ptr<IWbemClassObject> get_instance() const noexcept
+    {
+        return m_instanceObject;
+    }
+
     [[nodiscard]] wil::unique_bstr get_path() const
     {
         wil::unique_variant objectPathVariant;
-        // ReSharper disable once StringLiteralTypo
         get(L"__RELPATH", objectPathVariant.addressof());
 
         if (IsVariantEmptyOrNull(objectPathVariant.addressof()))
@@ -125,65 +129,18 @@ public:
         return wil::make_bstr(V_BSTR(&classVariant));
     }
 
-    [[nodiscard]] wil::com_ptr<IWbemClassObject> get_instance_object() const noexcept
-    {
-        return m_instanceObject;
-    }
-
     // Returns a class object for the class represented by this instance
     [[nodiscard]] ctWmiClassObject get_class_object() const noexcept
     {
         return {m_wbemServices, m_instanceObject};
     }
 
-    // get() and set()
-    //
-    //   Exposes the properties of the WMI object instantiated
-    //   WMI instances don't use all VARIANT types - some specializations
-    //   exist because, for example, 64-bit integers actually get passed through
-    //   WMI as BSTRs (even though variants support 64-bit integers directly).
-    //   See the MSDN documentation for WMI MOF Data Types (Numbers):
-    //   http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
-    //
-    //   Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
-    //   around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
-    //   correctly through WMI directly.
-    //
-    // get() returns false if the value is empty or null
-    //       returns true if retrieved the matching type
-
-    bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
-    {
-        VariantClear(value);
-        get_property(propname, value);
-        return !IsVariantEmptyOrNull(value);
-    }
-
-    void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
-    {
-        set_property(propname, value);
-    }
-
-    template <typename T>
-    void set(_In_ PCWSTR propname, const T value) const
-    {
-        set_property(propname, ctWmiMakeVariant(value).addressof());
-    }
-
-    template <typename T>
-    bool get(_In_ PCWSTR propname, _Out_ T* value) const
-    {
-        wil::unique_variant variant;
-        get_property(propname, variant.addressof());
-        return ctWmiReadFromVariant(variant.addressof(), value);
-    }
-
-    /// Writes the instantiated object to the WMI repository
+    // Writes the instantiated object to the WMI repository
     // Supported wbemFlags:
     //   WBEM_FLAG_CREATE_OR_UPDATE
     //   WBEM_FLAG_UPDATE_ONLY
     //   WBEM_FLAG_CREATE_ONLY
-    void write_class_object(_In_opt_ IWbemContext* context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
+    void write_instance(_In_opt_ IWbemContext* context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
     {
         wil::com_ptr<IWbemCallResult> result;
         THROW_IF_FAILED(m_wbemServices->PutInstance(
@@ -197,12 +154,12 @@ public:
         THROW_IF_FAILED(status);
     }
 
-    void write_class_object(LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
+    void write_instance(LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
     {
-        write_class_object(nullptr, wbemFlags);
+        write_instance(nullptr, wbemFlags);
     }
 
-    void delete_class_object()
+    void delete_instance()
     {
         // delete the instance based off the __REPATH property
         wil::com_ptr<IWbemCallResult> result;
@@ -217,17 +174,15 @@ public:
         THROW_IF_FAILED(status);
     }
 
-    // Invokes an instance method with zero arguments from the instantiated IWbemClassObject
+
+    // Invokes an instance method with zero -> 5 arguments from the instantiated IWbemClassObject
     // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
+    // (the property "ReturnValue" contains the return value)
     ctWmiInstance execute_method(_In_ PCWSTR method)
     {
         return execute_method_impl(method, nullptr);
     }
 
-    // Invokes an instance method with one argument from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
     template <typename Arg1>
     ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1)
     {
@@ -255,9 +210,6 @@ public:
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    // Invokes an instance method with two arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
     template <typename Arg1, typename Arg2>
     ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2)
     {
@@ -287,9 +239,6 @@ public:
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    // Invokes an instance method with three arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
     template <typename Arg1, typename Arg2, typename Arg3>
     ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3)
     {
@@ -321,9 +270,6 @@ public:
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    // Invokes an instance method with four arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
     template <typename Arg1, typename Arg2, typename Arg3, typename Arg4>
     ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4)
     {
@@ -357,9 +303,6 @@ public:
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    // Invokes an instance method with five arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
-    //   (the property "ReturnValue" contains the return value)
     template <typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
     ctWmiInstance execute_method(_In_ PCWSTR method, Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4, Arg5 arg5)
     {
@@ -380,6 +323,7 @@ public:
         auto propertyItererator = propertyObject.property_begin();
 
         // write each property
+        //
         ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
         propertyclassObject.set(*propertyItererator, arg1);
         ++propertyItererator;
@@ -400,6 +344,49 @@ public:
         wil::unique_variant variant;
         get_property(propname, variant.addressof());
         return V_VT(&variant) == VT_NULL;
+    }
+
+    // get() and set()
+    //
+    //   Exposes the properties of the WMI object instantiated
+    //   WMI instances don't use all VARIANT types - some specializations
+    //   exist because, for example, 64-bit integers actually get passed through
+    //   WMI as BSTRs (even though variants support 64-bit integers directly).
+    //   See the MSDN documentation for WMI MOF Data Types (Numbers):
+    //   http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
+    //
+    //   Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
+    //   around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
+    //   correctly through WMI directly.
+    //
+    // get() returns false if the value is empty or null
+    //       returns true if retrieved the matching type
+
+
+    bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
+    {
+        VariantClear(value);
+        get_property(propname, value);
+        return !IsVariantEmptyOrNull(value);
+    }
+
+    template <typename T>
+    bool get(_In_ PCWSTR propname, _Out_ T* value) const
+    {
+        wil::unique_variant variant;
+        get_property(propname, variant.addressof());
+        return ctWmiReadFromVariant(variant.addressof(), value);
+    }
+
+    void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
+    {
+        set_property(propname, value);
+    }
+
+    template <typename T>
+    void set(_In_ PCWSTR propname, const T value) const
+    {
+        set_property(propname, ctWmiMakeVariant(value).addressof());
     }
 
     // Calling IWbemClassObject::Delete on a property of an instance resets to the default value.

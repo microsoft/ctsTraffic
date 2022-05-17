@@ -14,8 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #pragma once
 
 // os headers
-// ReSharper disable once CppUnusedIncludeDirective
-#include <Windows.h>
+#include <winnt.h>
 
 namespace ctl
 {

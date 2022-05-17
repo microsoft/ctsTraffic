@@ -35,7 +35,6 @@ namespace ctl
 class ctNetAdapterAddresses
 {
 public:
-    // ReSharper disable once CppInconsistentNaming
     class iterator
     {
     public:
@@ -105,13 +104,12 @@ public:
 
         iterator operator++(int)
         {
-            // ReSharper disable once CppUseAuto
-            iterator temp(*this);
+            auto tempIterator(*this);
             ++*this;
-            return temp;
+            return tempIterator;
         }
 
-        iterator& operator+=(DWORD inc)
+        iterator& operator+=(uint32_t inc)
         {
             for (unsigned loop = 0; loop < inc && m_current != nullptr; ++loop)
             {
@@ -210,9 +208,6 @@ public:
     }
 
 private:
-    ///
-    /// private members
-    ///
     std::shared_ptr<std::vector<BYTE>> m_buffer{};
 };
 
@@ -229,13 +224,11 @@ struct ctNetAdapterMatchingAddrPredicate
 
     bool operator ()(const IP_ADAPTER_ADDRESSES& ipAddress) const noexcept
     {
-        for (auto* unicastAddress = ipAddress.FirstUnicastAddress;
+        for (const auto* unicastAddress = ipAddress.FirstUnicastAddress;
              unicastAddress != nullptr;
              unicastAddress = unicastAddress->Next)
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
-            const ctSockaddr unicastSockaddr(&unicastAddress->Address);
-            if (unicastSockaddr == m_targetAddr)
+            if (ctSockaddr(&unicastAddress->Address) == m_targetAddr)
             {
                 return true;
             }

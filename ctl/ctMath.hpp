@@ -16,6 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <tuple>
 #include <numeric>
 #include <cmath>
+#include <wil/resource.h>
 
 namespace ctl
 {
@@ -32,20 +33,15 @@ std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterato
     const auto size = end - begin;
     if (size == 0)
     {
-        return std::make_tuple(
-            static_cast<double>(0),
-            static_cast<double>(0));
+        return std::make_tuple(double{0.0}, double{0.0});
     }
     if (size == 1)
     {
-        return std::make_tuple(
-            static_cast<double>(*begin),
-            static_cast<double>(0));
+        return std::make_tuple(static_cast<double>(*begin), double{0.0});
     }
 
     const double sum = std::accumulate(begin, end, 0.0);
     const double mean = sum / static_cast<double>(size);
-    // ReSharper disable once CppUseAuto
     auto accum = 0.0;
     for (auto iter = begin; iter != end; ++iter)
     {
@@ -77,9 +73,9 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
     if (size < 3)
     {
         return std::make_tuple(
-            static_cast<double>(0),
-            static_cast<double>(0),
-            static_cast<double>(0));
+            double{0},
+            double{0},
+            double{0});
     }
 
     if (size == 3)
@@ -137,7 +133,6 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
                 // must guard against overflow
                 const auto lhsValue{static_cast<double>(*lhs)};
                 const auto rhsValue{static_cast<double>(*rhs)};
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto sum = lhsValue + rhsValue;
                 if (sum < lhsValue || sum < rhsValue)
                 {

@@ -11,7 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-// ReSharper disable CppClangTidyClangDiagnosticExitTimeDestructors
 
 // parent header
 #include "ctsIOPattern.h"
@@ -130,7 +129,6 @@ char* ctsIoPattern::AccessSharedBuffer() noexcept
 
 void ctsIoPattern::CreateRecvBuffers()
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto recvCount = m_recvBufferFreeList.size();
     if (recvCount > 0)
     {
@@ -448,7 +446,6 @@ ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, uint32_t curre
                 }
                 else
                 {
-                    // ReSharper disable once CppTooWideScopeInitStatement
                     const auto currentStatus = UpdateLastError(statusCode);
                     if (currentStatus != c_statusIoRunning)
                     {
@@ -611,7 +608,6 @@ ctsTask ctsIoPattern::CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) 
 
                     // we have to be careful making this adjustment since the remainingbytes this quantum could be very small
                     // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
-                    // ReSharper disable once CppTooWideScopeInitStatement
                     const auto bytesToAdjust = m_bytesSendingPerQuantum * quantumsSkippedSinceLastSend;
                     if (bytesToAdjust > m_bytesSendingThisQuantum)
                     {
@@ -1099,41 +1095,33 @@ ctsTask ctsIoPatternDuplex::GetNextTaskFromPattern() noexcept
 
 ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
 {
-    // ReSharper disable once CppIncompleteSwitchStatement
     switch (task.m_ioAction)
     {
         case ctsTaskAction::Send:
+        {
             m_statistics.m_bytesSent.Add(completedBytes);
             m_sendBytesInflight -= completedBytes;
 
-        // first, we need to adjust the total back from our over-subscription guard when this task was created
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
             m_remainingSendBytes += task.m_bufferLength;
-        // then we need to subtract back out the actual number of bytes sent
+            // then we need to subtract back out the actual number of bytes sent
             m_remainingSendBytes -= completedBytes;
             break;
-
+        }
         case ctsTaskAction::Recv:
+        {
             m_statistics.m_bytesRecv.Add(completedBytes);
             ++m_recvNeeded;
 
-        // first, we need to adjust the total back from our over-subscription guard when this task was created
+            // first, we need to adjust the total back from our over-subscription guard when this task was created
             m_remainingRecvBytes += task.m_bufferLength;
-        // then we need to subtract back out the actual number of bytes received
+            // then we need to subtract back out the actual number of bytes received
             m_remainingRecvBytes -= completedBytes;
             break;
+        }
 
-        case ctsTaskAction::None:
-            [[fallthrough]];
-        case ctsTaskAction::GracefulShutdown:
-            [[fallthrough]];
-        case ctsTaskAction::HardShutdown:
-            [[fallthrough]];
-        case ctsTaskAction::Abort:
-            [[fallthrough]];
-        case ctsTaskAction::FatalAbort:
-            [[fallthrough]];
-        default: ; // NOLINT(clang-diagnostic-covered-switch-default)
-        // fall through to return NoError
+        default: ;
+        // all others fall through to return NoError
     }
 
     return ctsIoPatternError::NoError;

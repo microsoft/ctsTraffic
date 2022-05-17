@@ -11,6 +11,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
 // cpp headers
@@ -179,7 +180,7 @@ public:
         }
 
         // increment by integer
-        iterator& operator+=(DWORD _inc)
+        iterator& operator+=(uint32_t _inc)
         {
             for (auto loop = 0ul; loop < _inc; ++loop)
             {
@@ -196,7 +197,7 @@ public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = wil::shared_bstr;
         using difference_type = int;
-        using pointer = wil::shared_bstr*;
+        using pointer = BSTR;
         using reference = wil::shared_bstr&;
 
     private:
@@ -209,12 +210,13 @@ public:
 
             CIMTYPE nextCimtype;
             wil::shared_bstr nextName;
-            switch (THROW_IF_FAILED(m_wbemClassObject->Next(
+            const auto hr = m_wbemClassObject->Next(
                 0,
                 nextName.addressof(),
                 nullptr,
                 &nextCimtype,
-                nullptr)))
+                nullptr);
+            switch (hr)
             {
                 case WBEM_S_NO_ERROR:
                 {
@@ -235,7 +237,7 @@ public:
                     break;
                 }
 
-                default: FAIL_FAST();
+                default: THROW_IF_FAILED(hr);
             }
         }
     };

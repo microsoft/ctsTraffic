@@ -242,7 +242,10 @@ namespace details
                     // all successful - save this listen socket
                     tempListeners.push_back(listenSocketInfo);
                 }
-                CATCH_LOG()
+                catch (...)
+                {
+                    ctsConfig::PrintThrownException();
+                }
             }
 
             if (tempListeners.empty())

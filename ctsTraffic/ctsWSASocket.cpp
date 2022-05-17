@@ -44,7 +44,7 @@ void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     if (ctsConfig::g_configSettings->LocalPortHigh != 0 && ctsConfig::g_configSettings->LocalPortLow != 0)
     {
         const auto portCounter = ctl::ctMemoryGuardIncrement(&g_portCounter);
-        nextPort = static_cast<USHORT>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
+        nextPort = static_cast<uint16_t>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
     }
     else
     {

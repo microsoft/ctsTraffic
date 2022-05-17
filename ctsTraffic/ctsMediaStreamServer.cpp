@@ -249,7 +249,6 @@ namespace ctsMediaStreamServerImpl
             {
                 auto waitingEndpoint = g_awaitingEndpoints.rbegin();
 
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto existingSocket = std::ranges::find_if(
                     g_connectedSockets,
                     [&](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
@@ -304,7 +303,6 @@ namespace ctsMediaStreamServerImpl
     {
         const auto lockConnectedObject = g_socketVectorGuard.lock();
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto foundSocket = std::ranges::find_if(
             g_connectedSockets,
             [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
@@ -324,7 +322,6 @@ namespace ctsMediaStreamServerImpl
     {
         const auto lockAwaitingObject = g_socketVectorGuard.lock();
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto existingSocket = std::ranges::find_if(
             g_connectedSockets,
             [&targetAddr](const std::shared_ptr<ctsMediaStreamServerConnectedSocket>& connectedSocket) noexcept {
@@ -339,7 +336,7 @@ namespace ctsMediaStreamServerImpl
             // between the client and server as they attempt to negotiating starting a new stream
             return;
         }
-        // ReSharper disable once CppTooWideScopeInitStatement
+
         const auto awaitingEndpoint = std::ranges::find_if(
             g_awaitingEndpoints,
             [&targetAddr](const std::pair<SOCKET, ctl::ctSockaddr>& endpoint) noexcept {
@@ -414,7 +411,6 @@ namespace ctsMediaStreamServerImpl
             wsabuffer.buf = nextTask.m_buffer;
             wsabuffer.len = nextTask.m_bufferLength;
 
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto sendResult = WSASendTo(
                 socket,
                 &wsabuffer,
@@ -445,7 +441,6 @@ namespace ctsMediaStreamServerImpl
                 sequenceNumber,
                 nextTask.m_bufferLength);
 
-            // ReSharper disable once CppTooWideScopeInitStatement
             ctsMediaStreamSendRequests sendingRequests(
                 nextTask.m_bufferLength, // total bytes to send
                 sequenceNumber,
@@ -454,7 +449,6 @@ namespace ctsMediaStreamServerImpl
             {
                 // making a synchronous call
                 DWORD bytesSent{};
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto sendResult = WSASendTo(
                     socket,
                     sendRequest.data(),

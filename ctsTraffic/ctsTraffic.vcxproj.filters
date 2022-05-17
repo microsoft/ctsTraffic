@@ -235,6 +235,9 @@
       <Filter>TestScripts</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="..\TestScripts\ctsTraffic_test_max_udp_tput.cmd">
+      <Filter>TestScripts</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\TestScripts\streaming.txt">

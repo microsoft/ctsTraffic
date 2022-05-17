@@ -11,7 +11,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-// ReSharper disable StringLiteralTypo
 // ReSharper disable CppInconsistentNaming
 #pragma once
 
@@ -391,7 +390,7 @@ namespace details
         LONG lid{};
         THROW_IF_FAILED(config->AddObjectByTemplate(
             wmi.get(),
-            instance.get_instance_object().get(),
+            instance.get_instance().get(),
             0,
             nullptr,
             m_enumerationObject.addressof(),
@@ -593,12 +592,16 @@ namespace details
 
         ~ctWmiPerformanceCounterData() noexcept = default;
 
-        // instance_name == nullptr means match everything
+        // instanceName == nullptr means match everything
         bool match(_In_opt_ PCWSTR instanceName) const
         {
             if (!instanceName)
             {
                 return true;
+            }
+            if (m_instanceName.empty())
+            {
+                return nullptr == instanceName;
             }
             return ctString::iordinal_equals(instanceName, m_instanceName);
         }
@@ -1055,9 +1058,8 @@ protected:
             if (trackedInstance == std::end(m_counterData))
             {
                 m_counterData.push_back(
-                    std::unique_ptr<details::ctWmiPerformanceCounterData<T>>
-                    (std::make_unique<details::ctWmiPerformanceCounterData<T>>(
-                        m_collectionType, instance, m_counterName.c_str())));
+                    std::make_unique<details::ctWmiPerformanceCounterData<T>>(
+                        m_collectionType, instance, m_counterName.c_str()));
                 (*m_counterData.rbegin())->add(instance);
             }
             else
@@ -1200,8 +1202,8 @@ public:
         {
             auto lock = m_lockedData->m_lock.lock();
             m_lockedData->m_countersStarted = true;
-            m_timerInterval = interval;
-            FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * m_timerInterval);
+            m_timerIntervalMs = interval;
+            FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * m_timerIntervalMs);
             SetThreadpoolTimer(m_timer.get(), &relativeTimeout, 0, 0);
         }
     }
@@ -1231,6 +1233,16 @@ public:
         }
     }
 
+    void reset_counters()
+    {
+        m_callbacks.clear();
+
+        // release this Refresher and ConfigRefresher, so future counters will be added cleanly
+        m_refresher = wil::CoCreateInstance<WbemRefresher, IWbemRefresher>();
+        m_configRefresher = m_refresher.query<IWbemConfigureRefresher>();
+    }
+
+    // non-copyable
     ctWmiPerformance(const ctWmiPerformance&) = delete;
     ctWmiPerformance& operator=(const ctWmiPerformance&) = delete;
     ctWmiPerformance& operator=(ctWmiPerformance&& rhs) noexcept = delete;
@@ -1244,7 +1256,7 @@ private:
     wil::com_ptr<IWbemConfigureRefresher> m_configRefresher;
     // for each interval, callback each of the registered aggregators
     std::vector<details::ctWmiPerformanceCallback> m_callbacks;
-    uint32_t m_timerInterval{};
+    uint32_t m_timerIntervalMs{};
     // timer to fire to indicate when to Refresh the data
     // declare last to guarantee will be destroyed first
     wil::unique_threadpool_timer m_timer;
@@ -1280,7 +1292,7 @@ private:
         auto lock = pThis->m_lockedData->m_lock.lock();
         if (pThis->m_lockedData->m_countersStarted)
         {
-            FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * pThis->m_timerInterval);
+            FILETIME relativeTimeout = wil::filetime::from_int64(-1 * wil::filetime_duration::one_millisecond * pThis->m_timerIntervalMs);
             SetThreadpoolTimer(pThis->m_timer.get(), &relativeTimeout, 0, 0);
         }
     }
@@ -1823,6 +1835,14 @@ std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(
 {
     // 'static' WMI PerfCounters enumerate via IWbemClassObject and accessed/refreshed via IWbemClassObject
     return std::make_shared<ctWmiPerformanceCounterImpl<IWbemClassObject, IWbemClassObject, T>>(wmi, className, counterName, collectionType);
+}
+
+template <typename T>
+std::shared_ptr<ctWmiPerformanceCounter<T>> ctMakeStaticPerfCounter(
+    PCWSTR className, PCWSTR counterName, const ctWmiPerformanceCollectionType collectionType = ctWmiPerformanceCollectionType::Detailed)
+{
+    const ctWmiService wmi(L"root\\cimv2");
+    return ctMakeStaticPerfCounter<T>(wmi, className, counterName, collectionType);
 }
 
 template <typename T>

@@ -306,7 +306,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::wstri
 }
 
 // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
-inline wil::unique_variant ctWmiMakeVariant(const UINT64 value)
+inline wil::unique_variant ctWmiMakeVariant(const unsigned long long value)
 {
     wil::unique_variant localVariant;
     V_VT(localVariant.addressof()) = VT_BSTR;
@@ -315,7 +315,7 @@ inline wil::unique_variant ctWmiMakeVariant(const UINT64 value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ UINT64* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long long* value)
 {
     *value = 0;
     if (IsVariantEmptyOrNull(variant))
@@ -328,7 +328,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ UINT64* valu
 }
 
 // Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
-inline wil::unique_variant ctWmiMakeVariant(_In_ const INT64 value)
+inline wil::unique_variant ctWmiMakeVariant(_In_ const long long value)
 {
     wil::unique_variant localVariant;
     V_VT(localVariant.addressof()) = VT_BSTR;
@@ -337,7 +337,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ const INT64 value)
     return localVariant;
 }
 
-inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ INT64* value)
+inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long long* value)
 {
     *value = 0;
     if (IsVariantEmptyOrNull(variant))

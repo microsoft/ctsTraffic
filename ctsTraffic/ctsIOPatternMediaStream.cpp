@@ -205,7 +205,6 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
         ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(static_cast<int64_t>(completedBytes) * 8LL);
         m_statistics.m_bitsReceived.Add(static_cast<int64_t>(completedBytes) * 8LL);
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto receivedsequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
         if (receivedsequenceNumber > m_finalFrame)
         {
@@ -223,7 +222,6 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
             // search our circular queue (starting at the head_entry)
             // for the seq number we just received, and if found, tag as received
             //
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto foundSlot = FindSequenceNumber(receivedsequenceNumber);
             if (foundSlot != m_frameEntries.end())
             {

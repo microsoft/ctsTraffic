@@ -200,7 +200,6 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
             else
             {
                 m_priorFailureWasConectionReset = false;
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(m_recvBuffer.data(), bytesReceived));
                 switch (message.m_action)
                 {

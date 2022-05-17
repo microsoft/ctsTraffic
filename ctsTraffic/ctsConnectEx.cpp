@@ -100,7 +100,6 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     try
     {
         const auto socketReference(sharedSocket->AcquireSocketLock());
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto socket = socketReference.GetSocket();
         if (socket != INVALID_SOCKET)
         {
@@ -111,7 +110,6 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             // get a new IO request from the socket's TP
             const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
 
-            // ReSharper disable once CppTooWideScopeInitStatement
             OVERLAPPED* pOverlapped = connectIocp->new_request(
                 [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
 

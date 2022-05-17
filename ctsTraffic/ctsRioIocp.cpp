@@ -340,7 +340,6 @@ namespace ctsTraffic { namespace Rioiocp
             // scopedDeleteAllCqs will take care of cleaning up these threads on failure
 
             // if everything succeeds, post a Notify to catch the first set of IO
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto notify = ctl::ctRIONotify(g_rioCompletionQueue);
             if (notify != NO_ERROR)
             {
@@ -414,7 +413,6 @@ namespace ctsTraffic { namespace Rioiocp
             // guarantee room in the RQ for this next IO
             if (newSendSize > m_requestQueueSendSize || newRecvSize > m_requestQueueRecvSize)
             {
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto makeRoomError = Rioiocp::MakeRoomInCq(m_rioRqGrowthFactor);
                 if (makeRoomError != NO_ERROR)
                 {
@@ -750,7 +748,6 @@ namespace ctsTraffic { namespace Rioiocp
                         case ctsTaskAction::Recv:
                         {
                             pRioFunction = "RIOReceive";
-                            // ReSharper disable once CppTooWideScopeInitStatement
                             const DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? RIO_MSG_WAITALL : 0;
                             if (!ctl::ctRIOReceive(m_rioRequestQueue, &rioBuffer, 1, flags, pNextTask))
                             {
@@ -820,7 +817,6 @@ namespace ctsTraffic { namespace Rioiocp
                 &pOverlapped,
                 INFINITE))
             {
-                // ReSharper disable once CppDeclaratorNeverUsed
                 const auto gle = GetLastError();
 
                 // IO was dequeued from the IOCP, meaning the deque operation failed
@@ -857,7 +853,6 @@ namespace ctsTraffic { namespace Rioiocp
                 const auto bytesTransferred = rioResultArray[iterResults].BytesTransferred;
                 const auto status = rioResultArray[iterResults].Status;
                 auto* const requestContext = reinterpret_cast<ctsTask*>(rioResultArray[iterResults].RequestContext); // NOLINT(performance-no-int-to-ptr)
-                // ReSharper disable once CppTooWideScopeInitStatement
                 auto* const socketContext = reinterpret_cast<RioSocketContext*>(rioResultArray[iterResults].SocketContext); // NOLINT(performance-no-int-to-ptr)
 
                 // Complete the dequeued IO to track the IO

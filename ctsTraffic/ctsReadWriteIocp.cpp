@@ -51,7 +51,6 @@ static void ctsReadWriteIocpIoCompletionCallback(
     }
 
     DWORD transferred = 0;
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto socket = lockedSocket.GetSocket();
     if (INVALID_SOCKET == socket)
     {
@@ -130,7 +129,6 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     long ioCount = -1;
     uint32_t ioError = NO_ERROR;
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     auto socket = lockedSocket.GetSocket();
     if (socket != INVALID_SOCKET)
     {

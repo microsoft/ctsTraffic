@@ -399,7 +399,7 @@ namespace ctsConfig
         bool UseSharedBuffer = false;
         bool ShouldVerifyBuffers = false;
 
-        static constexpr DWORD c_CriticalSectionSpinlock = 100ul;
+        static constexpr DWORD c_CriticalSectionSpinlock = 200ul;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////

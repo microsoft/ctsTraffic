@@ -117,16 +117,14 @@ void ctsSocketState::CompleteState(DWORD error) noexcept
     }
     else
     {
-        if (InternalState::InitiatedIo == m_state)
+        m_lastError = error;
+        if (m_state > InternalState::Connected)
         {
             m_initiatedIo = true;
         }
-        m_lastError = error;
         m_state = InternalState::Closing;
     }
-    //
-    // schedule the next functor to run when not closing down the socket
-    //
+
     SubmitThreadpoolWork(m_threadPoolWorker.get());
 }
 
@@ -146,7 +144,6 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
     // - since this could complete inline if it fails, and complete_state
     //   needs to know that we already tried to run the functor for this state
     //
-    // ReSharper disable once CppTooWideScopeInitStatement
     auto* thisPtr = static_cast<ctsSocketState*>(context);
     switch (thisPtr->m_state)
     {
@@ -202,6 +199,7 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
             }
             catch (...)
             {
+                PRINT_DEBUG_INFO(L"\t\tctsSocketState InitiatingIo failed\n");
                 thisPtr->CompleteState(wil::ResultFromCaughtException());
             }
             break;

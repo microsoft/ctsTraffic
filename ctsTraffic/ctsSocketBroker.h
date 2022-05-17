@@ -23,6 +23,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
+#include "ctThreadpoolQueue.hpp"
 
 namespace ctsTraffic
 {
@@ -58,6 +59,8 @@ public:
     ctsSocketBroker& operator=(ctsSocketBroker&&) = delete;
 
 private:
+    void RefreshSockets() noexcept;
+
     // CS to guard access to the vector socket_pool
     wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     // notification event when we're done
@@ -66,8 +69,6 @@ private:
     // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
     // - and thus there must be at least one refcount on that object to call shared_from_this()
     std::vector<std::shared_ptr<ctsSocketState>> m_socketPool{};
-    // timer to initiate the savenge routine TimerCallback()
-    wil::unique_threadpool_timer m_wakeupTimer;
     // keep a burn-down count as connections are made to know when to be 'done'
     ULONGLONG m_totalConnectionsRemaining = 0ULL;
     // track what's pended and what's active
@@ -75,10 +76,6 @@ private:
     uint32_t m_pendingSockets = 0UL;
     uint32_t m_activeSockets = 0UL;
 
-    //
-    // Callback for the threadpool timer to scavenge closed sockets and recreate new ones
-    // - this allows destroying ctsSockets outside of an inline path from ctsSocket
-    //
-    static void TimerCallback(_In_ ctsSocketBroker* pBroker) noexcept;
+    ctl::ctThreadpoolQueue<ctl::ctThreadpoolGrowthPolicy::Flat> m_tpFlatQueue;
 };
 } // namespace

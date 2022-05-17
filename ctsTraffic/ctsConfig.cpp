@@ -375,7 +375,6 @@ static void ParseForCreate(const vector<const wchar_t*>&)
 static void ParseForConnect(vector<const wchar_t*>& args)
 {
     auto connectSpecifed = false;
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArg = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-conn");
         return value != nullptr;
@@ -387,7 +386,6 @@ static void ParseForConnect(vector<const wchar_t*>& args)
             throw invalid_argument("-conn (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArg, L"-conn");
         if (ctString::iordinal_equals(L"ConnectEx", value))
         {
@@ -440,7 +438,6 @@ static void ParseForAccept(vector<const wchar_t*>& args)
 {
     g_configSettings->AcceptLimit = c_defaultAcceptExLimit;
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-acc");
         return value != nullptr;
@@ -452,7 +449,6 @@ static void ParseForAccept(vector<const wchar_t*>& args)
             throw invalid_argument("-acc (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-acc");
         if (ctString::iordinal_equals(L"accept", value))
         {
@@ -502,7 +498,6 @@ static void ParseForAccept(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForIoFunction(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-io");
         return value != nullptr;
@@ -514,7 +509,6 @@ static void ParseForIoFunction(vector<const wchar_t*>& args)
             throw invalid_argument("-io (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-io");
         if (ctString::iordinal_equals(L"iocp", value))
         {
@@ -582,14 +576,12 @@ static void ParseForIoFunction(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForInlineCompletions(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-inlinecompletions");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-inlinecompletions");
         if (ctString::iordinal_equals(L"on", value))
         {
@@ -618,14 +610,12 @@ static void ParseForInlineCompletions(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForMsgWaitAll(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-msgwaitall");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-msgwaitall");
         if (ctString::iordinal_equals(L"on", value))
         {
@@ -658,14 +648,12 @@ static void ParseForMsgWaitAll(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForProtocol(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-Protocol");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-Protocol");
         if (ctString::iordinal_equals(L"tcp", value))
         {
@@ -701,7 +689,6 @@ static void ParseForOptions(vector<const wchar_t*>& args)
     for (;;)
     {
         // loop until cannot fine -Options
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
             const auto* const value = ParseArgument(parameter, L"-Options");
             return value != nullptr;
@@ -709,7 +696,6 @@ static void ParseForOptions(vector<const wchar_t*>& args)
 
         if (foundArgument != end(args))
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundArgument, L"-Options");
             if (ctString::iordinal_equals(L"keepalive", value))
             {
@@ -756,7 +742,6 @@ static void ParseForOptions(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForKeepAlive(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-keepalivevalue");
         return value != nullptr;
@@ -804,7 +789,6 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
             throw invalid_argument("-pattern (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-pattern");
         if (ctString::iordinal_equals(L"push", value))
         {
@@ -845,7 +829,6 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
     }
 
     // Now look for options tightly coupled to Protocol
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundPushbytes = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-pushbytes");
         return value != nullptr;
@@ -865,7 +848,6 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
         g_configSettings->PushBytes = c_defaultPushBytes;
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundPullbytes = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-pullbytes");
         return value != nullptr;
@@ -885,7 +867,6 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
         g_configSettings->PullBytes = c_defaultPullBytes;
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundBurstCount = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-burstcount");
         return value != nullptr;
@@ -906,7 +887,6 @@ static void ParseForIoPattern(vector<const wchar_t*>& args)
         args.erase(foundBurstCount);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundBurstDelay = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-burstdelay");
         return value != nullptr;
@@ -1058,7 +1038,6 @@ static void ParseForAddress(vector<const wchar_t*>& args)
         });
         if (foundListen != end(args))
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundListen, L"-listen");
             if (ctString::iordinal_equals(L"*", value))
             {
@@ -1124,7 +1103,6 @@ static void ParseForAddress(vector<const wchar_t*>& args)
         });
         if (foundBind != end(args))
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto* const value = ParseArgument(*foundBind, L"-bind");
             // check for a comma-delimited list of IP Addresses
             if (ctString::iordinal_equals(L"*", value))
@@ -1257,7 +1235,6 @@ static void ParseForAddress(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForPort(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-Port");
         return value != nullptr;
@@ -1283,7 +1260,6 @@ static void ParseForPort(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForConnections(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-connections");
         return value != nullptr;
@@ -1313,7 +1289,6 @@ static void ParseForConnections(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForServerExitLimit(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-ServerExitLimit");
         return value != nullptr;
@@ -1344,7 +1319,6 @@ static void ParseForServerExitLimit(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForThrottleConnections(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-throttleconnections");
         return value != nullptr;
@@ -1410,7 +1384,6 @@ void ReadRangeValues(_In_z_ const wchar_t* value, T& outLow, T& outHigh)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForBuffer(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-buffer");
         return value != nullptr;
@@ -1422,7 +1395,6 @@ static void ParseForBuffer(vector<const wchar_t*>& args)
             throw invalid_argument("-buffer (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-buffer");
         if (value[0] == L'[')
         {
@@ -1458,7 +1430,6 @@ static void ParseForBuffer(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForTransfer(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-transfer");
         return value != nullptr;
@@ -1470,7 +1441,6 @@ static void ParseForTransfer(vector<const wchar_t*>& args)
             throw invalid_argument("-transfer (only applicable to TCP)");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-transfer");
         if (value[0] == L'[')
         {
@@ -1499,7 +1469,6 @@ static void ParseForTransfer(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForLocalport(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-LocalPort");
         return value != nullptr;
@@ -1507,7 +1476,6 @@ static void ParseForLocalport(vector<const wchar_t*>& args)
 
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-LocalPort");
         if (value[0] == L'[')
         {
@@ -1537,7 +1505,6 @@ static void ParseForLocalport(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForIfIndex(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-IfIndex");
         return value != nullptr;
@@ -1568,7 +1535,6 @@ static void ParseForIfIndex(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForRatelimit(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundRatelimit = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-RateLimit");
         return value != nullptr;
@@ -1579,7 +1545,7 @@ static void ParseForRatelimit(vector<const wchar_t*>& args)
         {
             throw invalid_argument("-RateLimit (only applicable to TCP)");
         }
-        // ReSharper disable once CppTooWideScopeInitStatement
+
         const auto* const value = ParseArgument(*foundRatelimit, L"-RateLimit");
         if (value[0] == L'[')
         {
@@ -1598,7 +1564,6 @@ static void ParseForRatelimit(vector<const wchar_t*>& args)
         args.erase(foundRatelimit);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundRatelimitPeriod = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-RateLimitPeriod");
         return value != nullptr;
@@ -1628,7 +1593,6 @@ static void ParseForRatelimit(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForIterations(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-Iterations");
         return value != nullptr;
@@ -1659,7 +1623,6 @@ static void ParseForIterations(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForLogging(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundVerbosity = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-ConsoleVerbosity");
         return value != nullptr;
@@ -1675,7 +1638,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         args.erase(foundVerbosity);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundStatusUpdate = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-StatusUpdate");
         return value != nullptr;
@@ -1697,7 +1659,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
     wstring jitterFilename;
     wstring tcpInfoFilename;
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundConnectionFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-ConnectionFilename");
         return value != nullptr;
@@ -1709,7 +1670,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         args.erase(foundConnectionFilename);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundErrorFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-ErrorFilename");
         return value != nullptr;
@@ -1721,7 +1681,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         args.erase(foundErrorFilename);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundStatusFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-StatusFilename");
         return value != nullptr;
@@ -1733,7 +1692,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         args.erase(foundStatusFilename);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundJitterFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-JitterFilename");
         return value != nullptr;
@@ -1745,7 +1703,6 @@ static void ParseForLogging(vector<const wchar_t*>& args)
         args.erase(foundJitterFilename);
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundTcpInfoFilename = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-TcpInfoFilename");
         return value != nullptr;
@@ -1870,14 +1827,12 @@ static void ParseForLogging(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForError(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-OnError");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-OnError");
         if (ctString::iordinal_equals(L"log", value))
         {
@@ -1905,7 +1860,6 @@ static void ParseForError(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForPrepostrecvs(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-PrePostRecvs");
         return value != nullptr;
@@ -1935,7 +1889,6 @@ static void ParseForPrepostrecvs(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForPrepostsends(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-PrePostSends");
         return value != nullptr;
@@ -1966,7 +1919,6 @@ static void ParseForPrepostsends(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForRecvbufvalue(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-RecvBufValue");
         return value != nullptr;
@@ -1989,7 +1941,6 @@ static void ParseForRecvbufvalue(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForSendbufvalue(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-SendBufValue");
         return value != nullptr;
@@ -2012,7 +1963,6 @@ static void ParseForSendbufvalue(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForCompartment(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-Compartment");
         return value != nullptr;
@@ -2050,14 +2000,13 @@ static void ParseForCompartment(vector<const wchar_t*>& args)
 static void ParseForThreadpool(vector<const wchar_t*>& args)
 {
     auto setRunsLong = false;
-    // ReSharper disable once CppTooWideScopeInitStatement
+
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-threadpool");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-threadpool");
         if (ctString::iordinal_equals(L"default", value))
         {
@@ -2107,14 +2056,12 @@ static void ParseForThreadpool(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForShouldVerifyBuffers(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-verify");
         return value != nullptr;
     });
     if (foundArgument != end(args))
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-verify");
         if (ctString::iordinal_equals(L"always", value) || ctString::iordinal_equals(L"data", value))
         {
@@ -2149,7 +2096,6 @@ static void ParseForShutdown(vector<const wchar_t*>& args)
         g_configSettings->TcpShutdown = TcpShutdownType::ServerSideShutdown;
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-shutdown");
         return value != nullptr;
@@ -2161,7 +2107,6 @@ static void ParseForShutdown(vector<const wchar_t*>& args)
             throw invalid_argument("-shutdown is a client-only option");
         }
 
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto* const value = ParseArgument(*foundArgument, L"-shutdown");
         if (ctString::iordinal_equals(L"graceful", value))
         {
@@ -2190,7 +2135,6 @@ static void ParseForShutdown(vector<const wchar_t*>& args)
 //////////////////////////////////////////////////////////////////////////////////////////
 static void ParseForTimelimit(vector<const wchar_t*>& args)
 {
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundTimeLimitArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
         const auto* const value = ParseArgument(parameter, L"-timelimit");
         return value != nullptr;
@@ -2641,9 +2585,9 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     vector args(argBegin, argEnd);
 
     //
-    // first check of they asked for help text
+    // First:
+    // check of they asked for help text
     //
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto foundHelp = ranges::find_if(args,
         [](const wchar_t* arg) -> bool {
             return ctString::istarts_with(arg, L"-Help") ||
@@ -2677,22 +2621,19 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
         return false;
     }
 
-    //
     // create the handle for ctrl-c
-    //
     g_configSettings->CtrlCHandle = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     if (!g_configSettings->CtrlCHandle)
     {
         THROW_WIN32_MSG(GetLastError(), "CreateEvent");
     }
 
-    //
     // Many of the below settings must be made in a specified order - comments below help to explain this reasoning
     // note: the IO function definitions must come after *all* other settings
     //       since instantiations of those IO functions might reference global Settings values
 
     //
-    // First:
+    // Next:
     // Establish logging settings including verbosity levels and error policies before any functional settings
     // Create the threadpool before instantiating any other object
     //
@@ -2801,7 +2742,6 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
         throw invalid_argument("-RateLimit and -Burstdelay cannot be used concurrently");
     }
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto ratePerPeriod = g_rateLimitLow * g_configSettings->TcpBytesPerSecondPeriod / 1000LL;
     if (g_configSettings->Protocol == ProtocolType::TCP && g_rateLimitLow > 0 && ratePerPeriod < 1)
     {
@@ -2842,7 +2782,6 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     }
     if (g_configSettings->LocalPortLow != 0)
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         const USHORT numberOfPorts = g_configSettings->LocalPortHigh == 0 ? 1 : static_cast<USHORT>(g_configSettings->LocalPortHigh - g_configSettings->LocalPortLow + 1);
         if (numberOfPorts < g_configSettings->ConnectionLimit)
         {
@@ -3251,7 +3190,6 @@ void PrintStatusUpdate() noexcept
             {
                 // capture the timeslices
                 const auto lPrevioutimeslice = g_previousPrintTimeslice;
-                // ReSharper disable once CppTooWideScopeInitStatement
                 const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
                 if (lCurrentTimeslice > lPrevioutimeslice)
@@ -4172,7 +4110,6 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
         else if (!localAddress.isAddressAny() && localAddress.port() == 0)
         {
             constexpr DWORD optval{1}; // BOOL
-            // ReSharper disable once CppTooWideScopeInitStatement
             constexpr int optlen{sizeof optval};
 
             if (setsockopt(
@@ -4234,7 +4171,6 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     else if (g_configSettings->Options & Keepalive)
     {
         constexpr DWORD optval{1};
-        // ReSharper disable once CppTooWideScopeInitStatement
         constexpr int optlen{sizeof optval};
 
         if (setsockopt(
@@ -4296,7 +4232,6 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     if (g_configSettings->Options & EnableCircularQueueing)
     {
         DWORD bytesReturned{};
-        // ReSharper disable once CppTooWideScopeInitStatement
         const auto error = WSAIoctl(
             socket,
             SIO_ENABLE_CIRCULAR_QUEUEING,
@@ -4705,11 +4640,10 @@ SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags)
         oldCompartmentId = GetCurrentThreadCompartmentId();
         if (oldCompartmentId != g_compartmentId)
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
-            const auto dwErr = SetCurrentThreadCompartmentId(g_compartmentId);
-            if (dwErr != NO_ERROR)
+            const auto error = SetCurrentThreadCompartmentId(g_compartmentId);
+            if (error != NO_ERROR)
             {
-                PrintErrorInfo(wil::str_printf<std::wstring>(L"SetCurrentThreadCompartmentId for ID %u failed err %u", g_compartmentId, dwErr).c_str());
+                PrintErrorInfo(wil::str_printf<std::wstring>(L"SetCurrentThreadCompartmentId for ID %u failed err %u", g_compartmentId, error).c_str());
             }
             else
             {
@@ -4723,11 +4657,10 @@ SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags)
 
     if (bCompartmentIdSet)
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
-        const auto dwErr = SetCurrentThreadCompartmentId(oldCompartmentId);
-        if (dwErr != NO_ERROR)
+        const auto error = SetCurrentThreadCompartmentId(oldCompartmentId);
+        if (error != NO_ERROR)
         {
-            PrintErrorInfo(wil::str_printf<std::wstring>(L"SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, dwErr).c_str());
+            PrintErrorInfo(wil::str_printf<std::wstring>(L"SetCurrentThreadCompartmentId for ID %u failed err %u", oldCompartmentId, error).c_str());
         }
     }
 

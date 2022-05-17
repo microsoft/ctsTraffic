@@ -47,7 +47,6 @@ struct ctThreadIocpCallbackInfo
     PVOID padding{}; // required padding before the std::function for the below static_assert alignment/sizing to be correct
     ctThreadIocpCallback_t callback;
 
-    // ReSharper disable once CppPossiblyUninitializedMember
     explicit ctThreadIocpCallbackInfo(ctThreadIocpCallback_t&& _callback) noexcept :
         callback(std::move(_callback))
     {
@@ -151,9 +150,7 @@ public:
     OVERLAPPED* new_request(std::function<void(OVERLAPPED*)> _callback) const
     {
         // this can fail by throwing std::bad_alloc
-        // ReSharper disable CppNonReclaimedResourceAcquisition
         auto* new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
-        // ReSharper restore CppNonReclaimedResourceAcquisition
 
         // once creating a new request succeeds, start the IO
         // - all below calls are no-fail calls

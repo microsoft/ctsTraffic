@@ -88,7 +88,7 @@ public:
 
         iterator& operator++(); // preincrement
         iterator operator++(int); // postincrement
-        iterator& operator+=(DWORD); // increment by integer
+        iterator& operator+=(uint32_t); // increment by integer
 
         // iterator_traits
         // - allows <algorithm> functions to be used
@@ -207,7 +207,7 @@ inline ctWmiEnumerate::iterator ctWmiEnumerate::iterator::operator++(int)
 }
 
 // increment by integer
-inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(DWORD inc)
+inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(uint32_t inc)
 {
     for (auto loop = 0ul; loop < inc; ++loop)
     {

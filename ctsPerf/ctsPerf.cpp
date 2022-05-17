@@ -12,7 +12,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 // cpp headers
-// ReSharper disable CppClangTidyClangDiagnosticExitTimeDestructors
 #include <cstdio>
 #include <cwchar>
 #include <vector>
@@ -255,7 +254,6 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 
     try
     {
-        // ReSharper disable once CppTooWideScopeInitStatement
         ctsPerf::ctsEstats estats;
         if (trackEstats)
         {
@@ -478,13 +476,12 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 
         if (g_meanOnly)
         {
-            // ReSharper disable once CppUseAuto
-            vector normalizedProcessorTime(processorTimeVector);
+            auto normalizedProcessorTimeVector(processorTimeVector);
 
             // convert to a percentage
             auto calculatedProcessorTime = static_cast<double>(processorTimeVector[3]) / 100.0;
             calculatedProcessorTime *= processorPercentVector[3] / 100.0;
-            normalizedProcessorTime[3] = static_cast<ULONGLONG>(calculatedProcessorTime * 100UL);
+            normalizedProcessorTimeVector[3] = static_cast<ULONGLONG>(calculatedProcessorTime * 100UL);
 
             writer.WriteMean(
                 L"Processor",
@@ -494,7 +491,7 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
             writer.WriteMean(
                 L"Processor",
                 L"Normalized CPU Usage (Raw * PercentofMaximumFrequency)",
-                normalizedProcessorTime);
+                normalizedProcessorTimeVector);
 
             ullData.assign(percent_dpc_time_range.first, percent_dpc_time_range.second);
             writer.WriteMean(

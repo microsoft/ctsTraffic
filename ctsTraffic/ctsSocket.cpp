@@ -214,7 +214,8 @@ void ctsSocket::InitiateIsbNotification() noexcept try
         const auto lambdaSocket = lambdaLockedSocket.GetSocket();
         if (lambdaSocket != INVALID_SOCKET)
         {
-            DWORD transferred, flags; // unneeded
+            DWORD transferred; // unneeded
+            DWORD flags; // unneeded
             if (!WSAGetOverlappedResult(lambdaSocket, pOverlapped, &transferred, FALSE, &flags))
             {
                 gle = WSAGetLastError();
@@ -254,13 +255,11 @@ void ctsSocket::InitiateIsbNotification() noexcept try
         }
     }); // lambda for new_request
 
-    // ReSharper disable once CppTooWideScopeInitStatement
     const auto localSocket = lockedSocket.GetSocket();
     if (localSocket != INVALID_SOCKET)
     {
         if (SOCKET_ERROR == idealsendbacklognotify(localSocket, ov, nullptr))
         {
-            // ReSharper disable once CppTooWideScopeInitStatement
             const auto gle = WSAGetLastError();
             // expect this to be pending
             if (gle != WSA_IO_PENDING)

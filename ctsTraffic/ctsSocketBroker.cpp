@@ -31,11 +31,6 @@ namespace ctsTraffic
 using namespace ctl;
 using namespace std;
 
-// timer to wake up and clean up the socket pool
-// - delete any closed sockets
-// - create new sockets
-uint32_t ctsSocketBroker::m_timerCallbackTimeoutMs = 333; // millseconds
-
 ctsSocketBroker::ctsSocketBroker()
 {
     if (ctsConfig::g_configSettings->AcceptFunction)
@@ -70,10 +65,11 @@ ctsSocketBroker::ctsSocketBroker()
 
 ctsSocketBroker::~ctsSocketBroker() noexcept
 {
+    // first signal the done event to stop work
     m_doneEvent.SetEvent();
 
-    // first, turn off the timer to stop creating/tearing down the socket pool
-    m_wakeupTimer.reset();
+    // next stop the TP if anything is running or queued
+    m_tpFlatQueue.cancel();
 
     // now delete all children, guaranteeing they stop processing
     // - must do this explicitly before deleting the CS
@@ -107,20 +103,6 @@ void ctsSocketBroker::Start()
         ++m_pendingSockets;
         --m_totalConnectionsRemaining;
     }
-
-    // intiate the threadpool timer
-    m_wakeupTimer.reset(
-        CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER ptimer) {
-            auto* const pThis = static_cast<ctsSocketBroker*>(context);
-            pThis->TimerCallback(pThis);
-
-            FILETIME scheduledFiletime{wil::filetime::from_int64(wil::filetime::convert_msec_to_100ns(pThis->m_timerCallbackTimeoutMs))};
-            SetThreadpoolTimer(ptimer, &scheduledFiletime, 0, pThis->m_timerCallbackTimeoutMs / 100);
-        }, this, nullptr));
-    THROW_LAST_ERROR_IF(!m_wakeupTimer);
-
-    FILETIME scheduledFiletime{wil::filetime::from_int64(wil::filetime::convert_msec_to_100ns(m_timerCallbackTimeoutMs))};
-    SetThreadpoolTimer(m_wakeupTimer.get(), &scheduledFiletime, m_timerCallbackTimeoutMs, 0);
 }
 
 //
@@ -139,6 +121,8 @@ void ctsSocketBroker::InitiatingIo() noexcept
 
     --m_pendingSockets;
     ++m_activeSockets;
+
+    m_tpFlatQueue.submit([&] { RefreshSockets(); });
 }
 
 //
@@ -165,6 +149,8 @@ void ctsSocketBroker::Closing(bool wasActive) noexcept
             m_activeSockets);
         --m_pendingSockets;
     }
+
+    m_tpFlatQueue.submit([&] { RefreshSockets(); });
 }
 
 bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
@@ -197,78 +183,79 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 // Timer callback to scavenge any closed sockets
 // Then refresh sockets that should be created anew
 //
-void ctsSocketBroker::TimerCallback(_In_ ctsSocketBroker* pBroker) noexcept
+void ctsSocketBroker::RefreshSockets() noexcept try
 {
-    // removed_objects will delete the closed objects outside of the broker lock
-    // ReSharper disable once CppTooWideScope
+    // removedObjects will delete the closed objects outside of the broker lock
     vector<shared_ptr<ctsSocketState>> removedObjects;
-    {
-        // ReSharper disable once CppTooWideScopeInitStatement
-        const auto lock = pBroker->m_lock.try_lock();
-        if (!lock)
-        {
-            return;
-        }
 
-        // refresh our pool of sockets if more sockets should be added
-        try
+    auto exiting = false;
+    try
+    {
+        const auto lock = m_lock.lock();
+
+        exiting = 0 == m_totalConnectionsRemaining &&
+                  0 == m_pendingSockets &&
+                  0 == m_activeSockets;
+
+        if (exiting)
         {
-            //
-            // Everything must occur under the broker lock
-            // - touching the socket_pool
-            // - touching the socket / connection counters
-            //
-            for (auto& socketPoolEntry : pBroker->m_socketPool)
-            {
+            removedObjects = std::move(m_socketPool);
+        }
+        else
+        {
+            std::erase_if(m_socketPool, [&](const auto& socketPoolEntry) {
                 if (ctsSocketState::InternalState::Closed == socketPoolEntry->GetCurrentState())
                 {
-                    removedObjects.push_back(socketPoolEntry);
-                    socketPoolEntry.reset();
+                    removedObjects.emplace_back(std::move(socketPoolEntry));
+                    return true;
                 }
-            }
+                return false;
+            });
 
-            std::erase(pBroker->m_socketPool, nullptr);
-
-            if (0 == pBroker->m_totalConnectionsRemaining &&
-                0 == pBroker->m_pendingSockets &&
-                0 == pBroker->m_activeSockets)
-            {
-                // it's time to exit if no more work is to be done
-                SetEvent(pBroker->m_doneEvent.get());
-            }
-            else
+            if (!m_doneEvent.is_signaled())
             {
                 // don't spin up more if the user asked to shutdown
-                if (WAIT_OBJECT_0 != WaitForSingleObject(pBroker->m_doneEvent.get(), 0))
+                // catch up to the expected # of pended connections
+                while (m_pendingSockets < m_pendingLimit && m_totalConnectionsRemaining > 0)
                 {
-                    // catch up to the expected # of pended connections
-                    while (pBroker->m_pendingSockets < pBroker->m_pendingLimit && pBroker->m_totalConnectionsRemaining > 0)
+                    // not throttling the server accepting sockets based off total # of connections (pending + active)
+                    // - only throttling total connections for outgoing connections
+                    if (!ctsConfig::g_configSettings->AcceptFunction)
                     {
-                        // not throttling the server accepting sockets based off total # of connections (pending + active)
-                        // - only throttling total connections for outgoing connections
-                        if (!ctsConfig::g_configSettings->AcceptFunction)
+                        // ReSharper disable once CppRedundantParentheses
+                        if ((m_pendingSockets + m_activeSockets) >= ctsConfig::g_configSettings->ConnectionLimit)
                         {
-                            // ReSharper disable once CppRedundantParentheses
-                            if ((pBroker->m_pendingSockets + pBroker->m_activeSockets) >= ctsConfig::g_configSettings->ConnectionLimit)
-                            {
-                                break;
-                            }
-                            // throttle pending connection attempts as specified
-                            if (pBroker->m_pendingSockets >= ctsConfig::g_configSettings->ConnectionThrottleLimit)
-                            {
-                                break;
-                            }
+                            break;
                         }
-
-                        pBroker->m_socketPool.push_back(make_shared<ctsSocketState>(pBroker->shared_from_this()));
-                        (*pBroker->m_socketPool.rbegin())->Start();
-                        ++pBroker->m_pendingSockets;
-                        --pBroker->m_totalConnectionsRemaining;
+                        // throttle pending connection attempts as specified
+                        if (m_pendingSockets >= ctsConfig::g_configSettings->ConnectionThrottleLimit)
+                        {
+                            break;
+                        }
                     }
+
+                    m_socketPool.push_back(make_shared<ctsSocketState>(shared_from_this()));
+                    (*m_socketPool.rbegin())->Start();
+                    ++m_pendingSockets;
+                    --m_totalConnectionsRemaining;
                 }
             }
         }
-        CATCH_LOG()
     }
+    catch (...)
+    {
+        ctsConfig::PrintThrownException();
+    }
+
+    removedObjects.clear();
+
+    if (exiting)
+    {
+        SetEvent(m_doneEvent.get());
+    }
+}
+catch (...)
+{
+    ctsConfig::PrintThrownException();
 }
 } // namespace

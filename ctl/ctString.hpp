@@ -532,7 +532,6 @@ std::wstring __cdecl format_string(_In_ _Printf_format_string_ PCWSTR pszFormat,
     va_list args;
     va_start(args, pszFormat);
     const auto hr = wil::details::str_vprintf_nothrow<std::wstring>(formattedString, pszFormat, args);
-    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     va_end(args);
     THROW_IF_FAILED(hr);
     return formattedString;

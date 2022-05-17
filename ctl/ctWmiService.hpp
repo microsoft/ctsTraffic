@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // os headers
 #include <Windows.h>
-#include <oleauto.h>
 #include <WbemIdl.h>
 // wil headers
 #include <wil/stl.h>

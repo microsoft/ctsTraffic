@@ -3,38 +3,25 @@ ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -buf
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -JitterFilename:simpletestjitter.csv
 
 
-30Gbps with fewer bits/sec but higher connection count:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:300
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:300
+100Gbps with lower bits/sec per connection, but higher connection count:
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:400
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:data -connections:400
+expecting 0% loss rate (on my Ryzen 7 5800X)
 
-
-40Gbps with smaller connection cound but higher bits/sec:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:40
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:5 -StreamLength:30 -iterations:1 -connections:40 -ConsoleVerbosity:1 -verify:data
--- seeing consistent <1% frame loss on 1903 on Ryzen 7 2700X 8 core 4Ghz processor, 16GB ram
---- allowing for random odd runs with higher loss
-
-
-45Gbps
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:45
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:45 -ConsoleVerbosity:1 -verify:connection
-
-
-Max UDP:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:200
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:2 -StreamLength:30 -iterations:1 -connections:200 -ConsoleVerbosity:1 -verify:connection
+100Gbps with higher bits/sec per connection, but lower connection count:
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:100
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:100 
+expecting < 0.2% drop rate (on my Ryzen 7 5800X)
 
 Max TCP:
 ctsTraffic.exe -listen:* -consoleverbosity:1 -verify:connection -buffer:1048576 -transfer:0xffffffffffffffff -msgwaitall:on
-ctsTraffic.exe -target:localhost -buffer:1048576 -consoleverbosity:1 -transfer:0xffffffffffffffff -msgwaitall:on
-
+ctsTraffic.exe -target:localhost -consoleverbosity:1 -verify:connection -buffer:1048576 -transfer:0xffffffffffffffff -msgwaitall:on
+expecting ~160 Gbps (on my Ryzen 7 5800X)
 
 UDP logging:
 
 ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500 -serverexitlimit:1 -connectionfilename:udpserver_conn.log -statusfilename:udpserver_status.log -errorfilename:udpserver_error.log
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -connectionfilename:udpclient_conn.csv -statusfilename:udpclient_status.csv -jitterfilename:udpclient_jitter.csv
-
-
 
 TCP logging:
 
