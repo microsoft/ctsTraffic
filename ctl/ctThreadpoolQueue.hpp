@@ -31,13 +31,6 @@ enum class ctThreadpoolGrowthPolicy
 template <ctThreadpoolGrowthPolicy GrowthPolicy>
 class ctThreadpoolQueue;
 
-namespace details
-{
-    // forward-declare details classes that can instantiate a ThreadPoolWaitableResult object
-    template <typename TReturn>
-    class ctThreadpoolQueueWaitableWorkItemWithResults;
-} // namespace details
-
 class ctThreadpoolQueueWaitableResultInterface
 {
 public:
@@ -113,10 +106,6 @@ public:
     ctThreadpoolQueueWaitableResult& operator=(ctThreadpoolQueueWaitableResult&&) noexcept = delete;
 
 private:
-    // limit who can run() and abort()
-    template <ctThreadpoolGrowthPolicy GrowthPolicy>
-    friend class ctThreadpoolQueue;
-
     void run() noexcept override
     {
         // we are now running in the TP callback
@@ -193,14 +182,13 @@ public:
     {
         FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
-        std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult;
+        std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult{std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor))};
         auto shouldSubmit = false;
 
         // scope to the queue lock
         {
             const auto queueLock = m_lock.lock();
             shouldSubmit = ShouldSubmitThreadpoolWork();
-            returnResult = std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor));
             m_workItems.emplace_back(returnResult);
         }
 
@@ -247,16 +235,19 @@ public:
             FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
         }
 
-        HRESULT hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
-        if (const auto waitableResult = submit_with_results<HRESULT>(std::forward<FunctorType>(functor)))
+        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Growable)
         {
-            hr = HRESULT_FROM_WIN32(waitableResult->wait(INFINITE));
-            if (SUCCEEDED(hr))
+            HRESULT hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
+            if (const auto waitableResult = submit_with_results<HRESULT>(std::forward<FunctorType>(functor)))
             {
-                hr = waitableResult->read_result();
+                hr = HRESULT_FROM_WIN32(waitableResult->wait(INFINITE));
+                if (SUCCEEDED(hr))
+                {
+                    hr = waitableResult->read_result();
+                }
             }
+            return hr;
         }
-        return hr;
     }
     CATCH_RETURN()
 
@@ -280,10 +271,11 @@ public:
 
                 m_workItems.clear();
             }
-
-            // force the m_tpHandle to wait and close the TP
-            m_tpHandle.reset();
         }
+
+        // force the m_tpHandle to wait and close the TP
+        m_tpHandle.reset();
+        m_tpEnvironment.reset();
     }
     CATCH_LOG()
 
@@ -306,10 +298,11 @@ public:
 private:
     struct TpEnvironment
     {
-        TP_CALLBACK_ENVIRON m_tpEnvironment{};
-
         using unique_tp_pool = wil::unique_any<PTP_POOL, decltype(&CloseThreadpool), CloseThreadpool>;
         unique_tp_pool m_threadPool;
+
+        using unique_tp_env = wil::unique_struct<TP_CALLBACK_ENVIRON, decltype(&DestroyThreadpoolEnvironment), DestroyThreadpoolEnvironment>;
+        unique_tp_env m_tpEnvironment;
 
         TpEnvironment(DWORD countMinThread, DWORD countMaxThread)
         {
@@ -329,6 +322,12 @@ private:
             wil::unique_threadpool_work newThreadpool(CreateThreadpoolWork(callback, pv, m_threadPool ? &m_tpEnvironment : nullptr));
             THROW_LAST_ERROR_IF_NULL(newThreadpool.get());
             return newThreadpool;
+        }
+
+        void reset()
+        {
+            m_threadPool.reset();
+            m_tpEnvironment.reset();
         }
     };
 
