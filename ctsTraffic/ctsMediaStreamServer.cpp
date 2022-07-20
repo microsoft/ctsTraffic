@@ -286,6 +286,8 @@ namespace ctsMediaStreamServerImpl
                     "Could not find the socket (%Iu) in the waiting_endpoint from our listening sockets (%p)\n",
                     waitingEndpoint->first, &g_listeningSockets);
 
+                ctsConfig::SetPostConnectOptions(sharedSocket->AcquireSocketLock().GetSocket(), waitingEndpoint->second);
+
                 sharedSocket->SetLocalSockaddr((*foundSocket)->GetListeningAddress());
                 sharedSocket->SetRemoteSockaddr(waitingEndpoint->second);
                 sharedSocket->CompleteState(NO_ERROR);
@@ -369,6 +371,8 @@ namespace ctsMediaStreamServerImpl
                 // verify is successfully added to connected_sockets before popping off accepting_sockets
                 addToAwaiting = false;
                 g_acceptingSockets.pop_back();
+
+                ctsConfig::SetPostConnectOptions(socket, targetAddr);
 
                 // now complete the accepted ctsSocket back to the ctsSocketState
                 sharedInstance->SetLocalSockaddr(localAddr);

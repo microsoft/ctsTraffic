@@ -69,6 +69,11 @@ static void ctsConnectExIoCompletionCallback(
 
     ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
 
+    if (NO_ERROR == gle)
+    {
+        ctsConfig::SetPostConnectOptions(socket, targetAddress);
+    }
+
     ctl::ctSockaddr localAddr;
     if (NO_ERROR == gle)
     {
@@ -104,8 +109,6 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         if (socket != INVALID_SOCKET)
         {
             const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
-            error = ctsConfig::SetPreConnectOptions(socket);
-            THROW_IF_WIN32_ERROR_MSG(error, "ctsConfig::SetPreConnectOptions");
 
             // get a new IO request from the socket's TP
             const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();

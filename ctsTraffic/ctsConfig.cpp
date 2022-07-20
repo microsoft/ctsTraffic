@@ -22,6 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <WinSock2.h>
 #include <mstcpip.h>
 #include <iphlpapi.h>
+#include <qos2.h>
 // multimedia timer
 #include <mmsystem.h>
 // wil headers
@@ -101,16 +102,19 @@ static uint64_t g_transferSizeHigh = 0;
 constexpr uint32_t c_defaultPushBytes = 0x100000;
 constexpr uint32_t c_defaultPullBytes = 0x100000;
 
-static uint32_t g_timePeriodRefCount{};
+static uint32_t g_timePeriodRefCount = 0;
 
-static int64_t g_previousPrintTimeslice{};
-static int64_t g_printTimesliceCount{};
+static int64_t g_previousPrintTimeslice = 0;
+static int64_t g_printTimesliceCount = 0;
 
 static NET_IF_COMPARTMENT_ID g_compartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
 static ctNetAdapterAddresses* g_netAdapterAddresses = nullptr;
 
 static MediaStreamSettings g_mediaStreamSettings;
 static ctRandomTwister g_randomTwister;
+
+static HANDLE g_qosHandle = nullptr;
+static uint32_t g_qosDscpValue = 0;
 
 // default to 5 seconds
 constexpr uint32_t c_defaultStatusUpdateFrequency = 5000;
@@ -732,6 +736,38 @@ static void ParseForOptions(vector<const wchar_t*>& args)
             // didn't find -Options
             break;
         }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+///
+/// Parses for a specified DSCP value
+/// -QosDscpValue:#### [-Options:<...>]
+///
+//////////////////////////////////////////////////////////////////////////////////////////
+static void ParseForDscpValue(vector<const wchar_t*>& args)
+{
+    const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool {
+        const auto* const value = ParseArgument(parameter, L"-QosDscpValue");
+        return value != nullptr;
+        });
+
+    if (foundArgument != end(args))
+    {
+        const auto value = ConvertToIntegral<uint32_t>(ParseArgument(*foundArgument, L"-QosDscpValue"));
+        if (value > 63)
+        {
+            throw invalid_argument("Invalid QosDscpValue");
+        }
+
+        // verify we can load QoS
+        QOS_VERSION QosVersion{1, 0};
+        THROW_IF_WIN32_BOOL_FALSE_MSG(QOSCreateHandle(&QosVersion, &g_qosHandle), "QOSCreateHandle failed");
+
+        g_qosDscpValue = value;
+
+    	// always remove the arg from our vector
+        args.erase(foundArgument);
     }
 }
 
@@ -2527,6 +2563,10 @@ void PrintUsage(PrintUsageOption option)
                 L"\t- <default> == 1 for non-RIO TCP (Winsock will adjust automatically according to ISB)\n"
                 L"\t- <default> == 0 (ISB) for RIO TCP (RIO doesn't user send buffers so callers must track ISB)\n"
                 L"\t- <default> == 1 for UDP (one send request on each timer tick)\n"
+                L"-QosDscpValue:#####\n"
+                L"   - specifies an outgoing DSCP value for all connected sockets\n"
+                L"   - note: the value must be from 0 to 63 inclusive\n"
+                L"\t- <default> == None\n"
                 L"-RateLimitPeriod:#####\n"
                 L"   - the # of milliseconds describing the granularity by which -RateLimit bytes/second is enforced\n"
                 L"\t     the -RateLimit bytes/second will be evenly split across -RateLimitPeriod milliseconds\n"
@@ -2725,6 +2765,7 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     // Next: capture other various settings which do not have explicit dependencies
     //
     ParseForOptions(args);
+    ParseForDscpValue(args);
     ParseForKeepAlive(args);
     ParseForCompartment(args);
     ParseForConnections(args);
@@ -2733,7 +2774,6 @@ bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     ParseForTransfer(args);
     ParseForIterations(args);
     ParseForServerExitLimit(args);
-
     ParseForRatelimit(args);
     ParseForTimelimit(args);
 
@@ -4029,12 +4069,11 @@ float GetStatusTimeStamp() noexcept
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// Set*Options
-/// - functions capturing any options that need to be set on a socket across different states
-/// - currently only implementing pre-bind options
+/// SetPreBindOptions
+/// - functions capturing any options that need to be set on a socket before calling bind()
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
+int32_t SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
 {
     ctsConfigInitOnce();
 
@@ -4261,10 +4300,50 @@ int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     return NO_ERROR;
 }
 
-int SetPreConnectOptions(SOCKET) noexcept
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// SetPostConnectOptions
+/// - functions capturing any options that need to be set once connected
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+int32_t SetPostConnectOptions(SOCKET socket, const ctSockaddr& remoteAddress) noexcept
 {
     ctsConfigInitOnce();
-    return 0;
+
+    if (g_qosHandle)
+    {
+        // attempt to assign the DSCP value to this socket
+        auto destinationAddress{remoteAddress};
+        QOS_FLOWID flowID{ 0 };
+        if (!QOSAddSocketToFlow(
+            g_qosHandle,
+            socket,
+            destinationAddress.sockaddr(),
+            QOSTrafficTypeBestEffort,
+            0,
+            &flowID))
+        {
+            const auto gle = GetLastError();
+            PrintErrorIfFailed("QOSAddSocketToFlow(QOSTrafficTypeBestEffort)", gle);
+        }
+        else
+        {
+            if (!QOSSetFlow(
+                g_qosHandle,
+                flowID,
+                QOSSetOutgoingDSCPValue,
+                sizeof(DWORD),
+                &g_qosDscpValue,
+                0,
+                nullptr))
+            {
+                const auto gle = GetLastError();
+                PrintErrorIfFailed("QOSSetFlow(QOSSetOutgoingDSCPValue)", gle);
+            }
+        }
+    }
+
+    return NO_ERROR;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4476,6 +4555,13 @@ void PrintSettings()
         settingString.append(
             wil::str_printf<std::wstring>(
                 L"\tIP Compartment: %u\n", g_compartmentId));
+    }
+
+    if (g_qosHandle)
+    {
+        settingString.append(
+            wil::str_printf<std::wstring>(
+            L"\tSetting QOS DSCP Value: %u\n", g_qosDscpValue));
     }
 
     if (!g_configSettings->ListenAddresses.empty())

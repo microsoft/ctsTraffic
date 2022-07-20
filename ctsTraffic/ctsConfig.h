@@ -241,7 +241,7 @@ namespace ctsConfig
 
     // Set* functions
     int32_t SetPreBindOptions(SOCKET socket, const ctl::ctSockaddr& localAddress) noexcept;
-    int32_t SetPreConnectOptions(SOCKET) noexcept;
+    int32_t SetPostConnectOptions(SOCKET socket, const ctl::ctSockaddr& remoteAddress) noexcept;
 
     // for the MediaStream pattern
     struct MediaStreamSettings
@@ -355,7 +355,6 @@ namespace ctsConfig
         OptionType Options = NoOptionSet;
 
         uint32_t SocketFlags = 0;
-
         uint64_t Iterations = 0;
         uint64_t ServerExitLimit = 0;
         uint32_t AcceptLimit = 0;

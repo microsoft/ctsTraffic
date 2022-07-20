@@ -174,14 +174,6 @@ void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noe
     }
 
     const auto socket = lockedSocket.GetSocket();
-    const auto error = ctsConfig::SetPreConnectOptions(socket);
-    ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
-    if (error != NO_ERROR)
-    {
-        sharedSocket->CompleteState(error);
-        return;
-    }
-
     const ctl::ctSockaddr targetAddress(sharedSocket->GetRemoteSockaddr());
     const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
@@ -204,6 +196,8 @@ void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noe
             sharedSocket->SetLocalSockaddr(localAddr);
         }
         sharedSocket->SetRemoteSockaddr(targetAddress);
+
+        ctsConfig::SetPostConnectOptions(socket, targetAddress);
 
         ctsConfig::PrintNewConnection(localAddr, targetAddress);
 
@@ -509,6 +503,9 @@ void ctsMediaStreamClientConnectionCompletionCallback(
             sharedSocket->SetLocalSockaddr(localAddr);
         }
         sharedSocket->SetRemoteSockaddr(targetAddress);
+
+        ctsConfig::SetPostConnectOptions(socket, targetAddress);
+
         ctsConfig::PrintNewConnection(localAddr, targetAddress);
     }
 

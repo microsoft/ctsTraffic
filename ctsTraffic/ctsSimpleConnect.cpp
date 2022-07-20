@@ -47,29 +47,24 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
 
-        error = ctsConfig::SetPreConnectOptions(socket);
-        if (error != NO_ERROR)
+        if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
         {
-            ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
+            error = WSAGetLastError();
+            ctsConfig::PrintErrorIfFailed("connect", error);
         }
         else
         {
-            if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
+            // set the local address
+            ctl::ctSockaddr localAddr;
+            auto localAddrLen = localAddr.length();
+            if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
-                error = WSAGetLastError();
-                ctsConfig::PrintErrorIfFailed("connect", error);
+                sharedSocket->SetLocalSockaddr(localAddr);
             }
-            else
-            {
-                // set the local address
-                ctl::ctSockaddr localAddr;
-                auto localAddrLen = localAddr.length();
-                if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
-                {
-                    sharedSocket->SetLocalSockaddr(localAddr);
-                }
-                ctsConfig::PrintNewConnection(localAddr, targetAddress);
-            }
+
+            ctsConfig::SetPostConnectOptions(socket, targetAddress);
+
+            ctsConfig::PrintNewConnection(localAddr, targetAddress);
         }
     }
     else

@@ -148,7 +148,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -158,7 +158,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
@@ -192,7 +192,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -201,7 +201,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TargetMachine>Machinex64</TargetMachine>
       <SetChecksum>true</SetChecksum>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
@@ -237,7 +237,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -246,7 +246,7 @@
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
@@ -285,14 +285,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
   </ItemDefinitionGroup>
@@ -332,14 +332,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Ole32.lib;OleAut32.lib</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;Ole32.lib;OleAut32.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TargetMachine>MachineX64</TargetMachine>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
       <StackCommitSize>32768</StackCommitSize>
@@ -385,14 +385,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ntdll.lib;ws2_32.lib;iphlpapi.lib;rpcrt4.lib;wbemuuid.lib;Winmm.lib;Qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
       <AdditionalOptions>/debugtype:cv,fixup</AdditionalOptions>
-      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Iphlpapi.dll;Winmm.dll;Qwave.dll</DelayLoadDLLs>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
     <Bscmake>

@@ -77,16 +77,10 @@ namespace details
             {
                 wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags)};
 
-                auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+                const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                 if (error != NO_ERROR)
                 {
                     THROW_WIN32_MSG(error, "SetPreBindOptions (ctsSimpleAccept)");
-                }
-
-                error = ctsConfig::SetPreConnectOptions(listening.get());
-                if (error != NO_ERROR)
-                {
-                    THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                 }
 
                 if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
@@ -231,13 +225,7 @@ namespace details
                 return;
             }
 
-            gle = ctsConfig::SetPreConnectOptions(newSocket);
-            if (gle != NO_ERROR)
-            {
-                ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", gle);
-                acceptSocket->CompleteState(gle);
-                return;
-            }
+            ctsConfig::SetPostConnectOptions(newSocket, remoteAddr);
 
             acceptSocket->CompleteState(0);
             ctsConfig::PrintNewConnection(localAddr, remoteAddr);

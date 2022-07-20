@@ -330,11 +330,6 @@ namespace details
         {
             THROW_WIN32_MSG(error, "SetPreBindOptions (ctsAcceptEx)");
         }
-        error = ctsConfig::SetPreConnectOptions(newAcceptedSocket.get());
-        if (error != 0)
-        {
-            THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsAcceptEx)");
-        }
 
         m_pOverlapped = listeningSocketObject->m_iocp->new_request(
             [this](OVERLAPPED* pCallbackOverlapped) noexcept { ctsAcceptExIoCompletionCallback(pCallbackOverlapped, this); });
@@ -494,6 +489,8 @@ namespace details
                         sharedSocket->SetLocalSockaddr(localAddr);
                     }
 
+                    ctsConfig::SetPostConnectOptions(acceptedSocket.m_acceptSocket.get(), acceptedSocket.m_remoteAddr);
+
                     // socket ownership was successfully transfered
                     sharedSocket->SetSocket(acceptedSocket.m_acceptSocket.release());
                     sharedSocket->SetRemoteSockaddr(acceptedSocket.m_remoteAddr);
@@ -605,6 +602,8 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         {
             sharedSocket->SetLocalSockaddr(localAddr);
         }
+
+        ctsConfig::SetPostConnectOptions(acceptedConnection.m_acceptSocket.get(), acceptedConnection.m_remoteAddr);
 
         // transfering ownership to the ctsSocket
         sharedSocket->SetSocket(acceptedConnection.m_acceptSocket.release());
