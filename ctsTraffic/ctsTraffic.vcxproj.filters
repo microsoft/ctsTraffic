@@ -96,6 +96,9 @@
     <ClCompile Include="ctsRioIocp.cpp">
       <Filter>TCPFunctions</Filter>
     </ClCompile>
+    <ClCompile Include="ctsConnectByName.cpp">
+      <Filter>TCPFunctions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
@@ -234,10 +237,10 @@
     <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd">
       <Filter>TestScripts</Filter>
     </None>
-    <None Include="packages.config" />
     <None Include="..\TestScripts\ctsTraffic_test_max_udp_tput.cmd">
       <Filter>TestScripts</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\TestScripts\streaming.txt">
@@ -248,5 +251,8 @@
     <Manifest Include="ctsTraffic.exe.manifest">
       <Filter>Resource Files</Filter>
     </Manifest>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
   </ItemGroup>
 </Project>

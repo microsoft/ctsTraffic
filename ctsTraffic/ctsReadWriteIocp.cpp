@@ -66,7 +66,10 @@ static void ctsReadWriteIocpIoCompletionCallback(
     }
 
     const char* functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
-    if (gle != NO_ERROR) { PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle); }
+    if (gle != NO_ERROR)
+    {
+        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle);
+    }
 
     if (lockedPattern)
     {
@@ -88,7 +91,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
             case ctsIoStatus::FailedIo:
                 // write out the error
                 ctsConfig::PrintErrorIfFailed(functionName, gle);
-            // protocol sees this as a failure - capture the error the protocol recorded
+                // protocol sees this as a failure - capture the error the protocol recorded
                 readwriteStatus = lockedPattern->GetLastPatternError();
                 break;
 
@@ -150,7 +153,13 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                 if (0 != shutdown(socket, SD_SEND))
                 {
                     ioError = WSAGetLastError();
+                    PRINT_DEBUG_INFO(L"\t\tIO Failed: shutdown(SD_SEND) (%u) [ctsReadWriteIocp]\n", ioError);
                 }
+                else
+                {
+                    PRINT_DEBUG_INFO(L"\t\tIO successfully called shutdown(SD_SEND) [ctsReadWriteIocp]\n");
+                }
+
                 ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
                 continue;
             }

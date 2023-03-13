@@ -618,7 +618,7 @@ namespace ctsTraffic { namespace Rioiocp
             if (status != NO_ERROR)
             {
                 PRINT_DEBUG_INFO(
-                    L"\t\tIO Failed: %hs (%d) [ctsRioIocp]\n", functionName, status);
+                    L"\t\tctsRioIocp Failed: %hs (%d) [ctsRioIocp]\n", functionName, status);
             }
 
             // CompleteIo() to see if the protocol needs to issue more IO
@@ -708,6 +708,11 @@ namespace ctsTraffic { namespace Rioiocp
                     if (0 != shutdown(rioSocket, SD_SEND))
                     {
                         error = WSAGetLastError();
+                        PRINT_DEBUG_INFO(L"\t\tctsRioIocp Failed: shutdown(SD_SEND) (%u)\n", error);
+                    }
+                    else
+                    {
+                        PRINT_DEBUG_INFO(L"\t\tctsRioIocp initiated shutdown(SD_SEND) (%u)\n", error);
                     }
                     continueIo = lockedPattern->CompleteIo(nextTask, 0, error) == ctsIoStatus::ContinueIo;
                     continue;

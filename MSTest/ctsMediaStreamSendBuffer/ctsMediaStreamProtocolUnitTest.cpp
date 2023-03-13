@@ -22,12 +22,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace ctsTraffic;
 
 template <>
-std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<unsigned short>(const unsigned short& _value)
-{
-    return std::to_wstring(_value);
-}
-
-template <>
 std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<MediaStreamAction>(const MediaStreamAction& _message)
 {
     switch (_message)
@@ -161,7 +155,7 @@ public:
 
     TEST_METHOD(ConstructStart)
     {
-        Assert::AreEqual(c_udpDatagramStartStringLength, strlen(g_udpDatagramStartString));
+        Assert::AreEqual(c_udpDatagramStartStringLength, static_cast<uint32_t>(strlen(g_udpDatagramStartString)));
 
         const ctsTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
         Assert::AreEqual(c_udpDatagramStartStringLength, test_task.m_bufferLength);

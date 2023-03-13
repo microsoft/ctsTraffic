@@ -365,6 +365,7 @@ namespace ctsConfig
         std::vector<ctl::ctSockaddr> ListenAddresses{};
         std::vector<ctl::ctSockaddr> TargetAddresses{};
         std::vector<ctl::ctSockaddr> BindAddresses{};
+        std::vector<std::wstring> TargetAddressStrings{};
 
         // stats for status updates and summaries
         ctsConnectionStatistics ConnectionStatusDetails;

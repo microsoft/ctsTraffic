@@ -166,6 +166,11 @@ wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept
     if (setsockopt(socket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&lingerOption), static_cast<int>(sizeof lingerOption)) != 0)
     {
         returnResult.m_errorCode = WSAGetLastError();
+        PRINT_DEBUG_INFO(L"\t\tIO Failed: setsockopt(SO_LINGER) (%d)\n", returnResult.m_errorCode);
+    }
+    else
+    {
+        PRINT_DEBUG_INFO(L"\t\tIO successfully called setsockopt(SO_LINGER) (%d)\n", returnResult.m_errorCode);
     }
 
     return returnResult;

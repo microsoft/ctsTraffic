@@ -258,7 +258,7 @@ namespace ctsMediaStreamServerImpl
                 if (existingSocket != std::end(g_connectedSockets))
                 {
                     ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
-                    PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
+                    PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
                         waitingEndpoint->second.writeCompleteAddress().c_str());
                     // return early if this was a duplicate request: this can happen if there is latency or drops
                     // between the client and server as they attempt to negotiating starting a new stream
@@ -272,7 +272,7 @@ namespace ctsMediaStreamServerImpl
                         waitingEndpoint->second,
                         ConnectedSocketIo));
 
-                PRINT_DEBUG_INFO(L"ctsMediaStreamServer::accept_socket - socket with remote address %ws added to connected_sockets",
+                PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::accept_socket - socket with remote address %ws added to connected_sockets",
                     waitingEndpoint->second.writeCompleteAddress().c_str());
 
                 // now complete the ctsSocket 'Create' request
@@ -330,7 +330,7 @@ namespace ctsMediaStreamServerImpl
         if (existingSocket != std::end(g_connectedSockets))
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
-            PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
+            PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
                 targetAddr.writeCompleteAddress().c_str());
             // return early if this was a duplicate request: this can happen if there is latency or drops
             // between the client and server as they attempt to negotiating starting a new stream
@@ -345,7 +345,7 @@ namespace ctsMediaStreamServerImpl
         if (awaitingEndpoint != std::end(g_awaitingEndpoints))
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
-            PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
+            PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
                 targetAddr.writeCompleteAddress().c_str());
             // return early if this was a duplicate request: this can happen if there is latency or drops
             // between the client and server as they attempt to negotiating starting a new stream
@@ -363,7 +363,7 @@ namespace ctsMediaStreamServerImpl
                 g_connectedSockets.emplace_back(
                     std::make_shared<ctsMediaStreamServerConnectedSocket>(weakInstance, socket, targetAddr, ConnectedSocketIo));
 
-                PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to connected_sockets",
+                PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws added to connected_sockets",
                     targetAddr.writeCompleteAddress().c_str());
 
                 // verify is successfully added to connected_sockets before popping off accepting_sockets
@@ -383,7 +383,7 @@ namespace ctsMediaStreamServerImpl
         // if we didn't find a waiting connection to accept it, queue it for when one arrives later
         if (addToAwaiting)
         {
-            PRINT_DEBUG_INFO(L"ctsMediaStreamServer::start - socket with remote address %ws added to awaiting_endpoints",
+            PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws added to awaiting_endpoints",
                 targetAddr.writeCompleteAddress().c_str());
 
             // only queue it if we aren't already waiting on this address

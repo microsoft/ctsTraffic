@@ -116,7 +116,7 @@ public:
 
     // Allows for executing a WMI query against the WMI service for an enumeration of WMI objects.
     // Assumes the query of of the WQL query language.
-    void query(_In_ PCWSTR query)
+    const ctWmiEnumerate& query(_In_ PCWSTR query)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),
@@ -124,9 +124,10 @@ public:
             WBEM_FLAG_BIDIRECTIONAL,
             nullptr,
             m_wbemEnumerator.put()));
+        return *this;
     }
 
-    void query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
+    const ctWmiEnumerate& query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),
@@ -134,6 +135,7 @@ public:
             WBEM_FLAG_BIDIRECTIONAL,
             context.get(),
             m_wbemEnumerator.put()));
+        return *this;
     }
 
     iterator begin() const
