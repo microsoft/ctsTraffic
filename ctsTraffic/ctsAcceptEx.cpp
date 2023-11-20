@@ -419,7 +419,7 @@ namespace details
             sizeof listeningSocket);
         FAIL_FAST_IF_MSG(
             err != 0,
-            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
+            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [0x%I64x], listen socket [0x%I64x]",
             WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
 
         SOCKADDR_INET* localAddr{};
