@@ -419,8 +419,8 @@ namespace details
             sizeof listeningSocket);
         FAIL_FAST_IF_MSG(
             err != 0,
-            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [0x%I64x], listen socket [0x%I64x]",
-            WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
+            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
+            WSAGetLastError(), reinterpret_cast<void*>(m_acceptSocket.get()), reinterpret_cast<void*>(listeningSocket));
 
         SOCKADDR_INET* localAddr{};
         auto localAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
