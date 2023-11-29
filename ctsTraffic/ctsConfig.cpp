@@ -3126,7 +3126,7 @@ namespace ctsTraffic::ctsConfig
 
         if (g_breakOnError)
         {
-            FAIL_FAST_MSG(ctString::convert_to_string(text).c_str());
+            FAIL_FAST_MSG("%ws", text);
         }
 
         fwprintf(stderr, L"%ws\n", text);
@@ -3933,7 +3933,7 @@ namespace ctsTraffic::ctsConfig
 
         if (g_breakOnError)
         {
-            FAIL_FAST_MSG(ctString::convert_to_string(text).c_str());
+            FAIL_FAST_MSG("%ws", text);
         }
 
         auto writeToConsole = false;
