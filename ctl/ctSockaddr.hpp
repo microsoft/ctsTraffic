@@ -692,7 +692,7 @@ inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[FixedStringLength],
             auto* const end = address + addressLength;
             if (auto* pScopePtr = std::find(address, end, '%'); pScopePtr != end)
             {
-                if (auto* pMovePtr = std::find(address, end, ']'); pMovePtr != end)
+                if (const auto* pMovePtr = std::find(address, end, ']'); pMovePtr != end)
                 {
                     while (pMovePtr != end)
                     {

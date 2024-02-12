@@ -94,7 +94,7 @@ namespace ctsTraffic
             switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle))
             {
             case ctsIoStatus::ContinueIo:
-                // more IO is requested from the protocol : invoke the new IO call while holding a refcount to the prior IO
+                // more IO is requested from the protocol : invoke the new IO call while holding a ref-count to the prior IO
                 ctsSendRecvIocp(weakSocket);
                 break;
 
@@ -218,7 +218,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    // process the completion if the API call failed, or if it succeeded and we're handling the completion inline, 
+                    // process the completion if the API call failed, or if it succeeded, and we're handling the completion inline, 
                     returnStatus.m_ioStarted = false;
                     // determine # of bytes transferred, if any
                     DWORD bytesTransferred = 0;
@@ -238,19 +238,19 @@ namespace ctsTraffic
 
                     // must cancel the IOCP TP since IO is not pended
                     ioThreadPool->cancel_request(pOverlapped);
-                    // call back to the socket to see if wants more IO
+                    // call back to the socket to see if it wants more IO
                     switch (const ctsIoStatus protocolStatus = sharedPattern->CompleteIo(nextIo, bytesTransferred, returnStatus.m_ioErrorcode))
                     {
                     case ctsIoStatus::ContinueIo:
                         // The protocol layer wants to transfer more data
-                        // if prior IO failed, the protocol wants to ignore the error
+                        // if the prior IO request failed, the protocol wants to ignore the error
                         returnStatus.m_ioErrorcode = NO_ERROR;
                         returnStatus.m_ioDone = false;
                         break;
 
                     case ctsIoStatus::CompletedIo:
                         // The protocol layer has successfully complete all IO on this connection
-                        // if prior IO failed, the protocol wants to ignore the error
+                        // if the prior IO request failed, the protocol wants to ignore the error
                         returnStatus.m_ioErrorcode = NO_ERROR;
                         returnStatus.m_ioDone = true;
                         break;
@@ -258,7 +258,7 @@ namespace ctsTraffic
                     case ctsIoStatus::FailedIo:
                         // write out the error
                         ctsConfig::PrintErrorIfFailed(functionName, sharedPattern->GetLastPatternError());
-                        // the protocol acknoledged the failure - socket is done with IO
+                        // the protocol acknowledged the failure - socket is done with IO
                         returnStatus.m_ioErrorcode = sharedPattern->GetLastPatternError();
                         returnStatus.m_ioDone = true;
                         break;
@@ -315,7 +315,7 @@ namespace ctsTraffic
         {
             if (0 == sharedSocket->DecrementIo())
             {
-                // this should never be zero since we should be holding a refcount for this callback
+                // this should never be zero since we should be holding a ref-count for this callback
                 FAIL_FAST_MSG(
                     "The refcount of the ctsSocket object (%p) fell to zero during a scheduled callback", sharedSocket.get());
             }
@@ -359,7 +359,7 @@ namespace ctsTraffic
         // IO is always done in the ctsProcessIOTask function,
         // - either synchronously or scheduled through a timer object
         //
-        // The IO refcount must be incremented here to hold an IO count on the socket
+        // The IO ref-count must be incremented here to hold an IO count on the socket
         // - so that we won't inadvertently call complete_state() while IO is still being scheduled
         //
         sharedSocket->IncrementIo();
@@ -400,7 +400,7 @@ namespace ctsTraffic
             // if no IO was started, decrement the IO counter
             if (!status.m_ioStarted)
             {
-                // since IO is not pended, remove the refcount
+                // since IO is not pended, remove the ref-count
                 if (0 == sharedSocket->DecrementIo())
                 {
                     // this should never be zero as we are holding a reference outside the loop
@@ -409,7 +409,7 @@ namespace ctsTraffic
                 }
             }
         }
-        // decrement IO at the end to release the refcount held before the loop
+        // decrement IO at the end to release the ref-count held before the loop
         if (0 == sharedSocket->DecrementIo())
         {
             sharedSocket->CompleteState(status.m_ioErrorcode);

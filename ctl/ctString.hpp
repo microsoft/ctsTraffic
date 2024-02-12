@@ -65,7 +65,7 @@ inline std::string convert_to_string(const std::wstring& wstr)
     }
 
     std::string buf(len, '\0');
-    len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &buf[0], len, nullptr, nullptr);
+    len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, buf.data(), len, nullptr, nullptr);
     if (len == 0)
     {
         THROW_WIN32_MSG(GetLastError(), "WideCharToMultiByte");
@@ -90,7 +90,7 @@ inline std::wstring convert_to_wstring(const std::string& str)
     }
 
     std::wstring buf(len, L'\0');
-    len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &buf[0], len);
+    len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buf.data(), len);
     if (len == 0)
     {
         THROW_WIN32_MSG(GetLastError(), "MultiByteToWideChar");

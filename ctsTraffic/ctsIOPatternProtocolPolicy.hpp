@@ -225,7 +225,7 @@ public:
         }
         else
         {
-            // otherwise, we still have an on-going connection
+            // otherwise, we still have an ongoing connection
             // - let the protocol determine how to handle this error given its state
             UpdateErrorPerProtocol(errorCode);
             if (InternalPatternState::ErrorIoFailed == m_internalState)
@@ -433,7 +433,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::UpdateErr
         if (InternalPatternState::RequestFin == m_internalState &&
             (WSAETIMEDOUT == errorCode || WSAECONNRESET == errorCode || WSAECONNABORTED == errorCode))
         {
-            // this is actually OK - the client may have just sent a RST instead of a graceful FIN
+            // this is actually OK - the client may have just sent an RST instead of a graceful FIN
             m_internalState = InternalPatternState::CompletedTransfer;
             // must update pended since the IO is no longer pended, 
             // - but the class doesn't realize this since we are not moving to a failed internal state
@@ -450,7 +450,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::UpdateErr
 template <>
 inline ctsIoPatternType ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>::GetNextPatternTypePerProtocol() const noexcept
 {
-    // if gets here, the state is either completed or failed
+    // if we get here, the state is either completed or failed
     FAIL_FAST_IF_MSG(
         !IsCompleted(),
         "ctsIOPatternState::get_next_task was called in an invalid state (%d) - should be completed: dt %p ctsTraffic!ctsTraffic::ctsIOPatternProtocolPolicy<ctsIOPatternProtocolUdp>",
@@ -594,7 +594,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
                     }
                     else
                     {
-                        if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::g_configSettings->TcpShutdown)
+                        if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::GetShutdownType())
                         {
                             PRINT_DEBUG_INFO(L"\t\tctsIOPatternState::completedTask : GracefulShutdown\n");
                             m_internalState = InternalPatternState::GracefulShutdown;

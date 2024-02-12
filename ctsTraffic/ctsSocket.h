@@ -143,7 +143,7 @@ public:
     void SetIoPattern();
 
     //
-    // methods for functors to use for refcounting the # of IO they have issued on this socket
+    // methods for functors to use for ref-counting the # of IO they have issued on this socket
     //
     int32_t IncrementIo() noexcept;
     int32_t DecrementIo() noexcept;
@@ -186,7 +186,7 @@ private:
     void InitiateIsbNotification() noexcept;
 
     // private members for this socket instance
-    // mutable is requred to EnterCS/LeaveCS in const methods
+    // mutable is required to EnterCS/LeaveCS in const methods
 
     mutable wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Guarded_by_(m_lock) wil::unique_socket m_socket;

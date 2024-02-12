@@ -62,7 +62,7 @@ class ctsIoPatternState
 
         // TCP: instruct the function to call shutdown(SD_SEND) on the socket
         GracefulShutdown,
-        // TCP: force a RST instead of a 4-way-FIN
+        // TCP: force an RST instead of a 4-way-FIN
         HardShutdown,
         // TCP: next ask for IO will be a recv for the zero-byte FIN
         RequestFin,
@@ -278,7 +278,7 @@ inline ctsIoPatternError ctsIoPatternState::UpdateError(DWORD error) noexcept
                 InternalPatternState::RequestFin == m_internalState &&
                 (WSAETIMEDOUT == error || WSAECONNRESET == error || WSAECONNABORTED == error))
             {
-                // these errors on the server are OK when we are waiting for a FIN from the client
+                // these errors on the server are OK when we are waiting for a FIN from the client.
                 // the client may have just RST instead of a graceful FIN after receiving our status
                 return ctsIoPatternError::NoError;
             }
@@ -444,7 +444,7 @@ inline ctsIoPatternError ctsIoPatternState::CompletedTask(const ctsTask& complet
                             return ctsIoPatternError::TooFewBytes;
                         }
 
-                        if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::g_configSettings->TcpShutdown)
+                        if (ctsConfig::TcpShutdownType::GracefulShutdown == ctsConfig::GetShutdownType())
                         {
                             PRINT_DEBUG_INFO(L"\t\tctsIOPatternState::CompletedTask (ClientRecvCompletion) : GracefulShutdown\n");
                             m_internalState = InternalPatternState::GracefulShutdown;

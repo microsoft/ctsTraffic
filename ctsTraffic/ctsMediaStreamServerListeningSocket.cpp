@@ -194,7 +194,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                     ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
                     m_priorFailureWasConectionReset = false;
                 }
-                // this receive failed - do nothing immediately in response
+                // this receive-call failed - do nothing immediately in response
                 // - just attempt to post another recv at the end of this function
             }
             else

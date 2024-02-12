@@ -157,7 +157,7 @@ wsIOResult ctsWSASendTo(
     return returnResult;
 }
 
-wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept
+wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept
 {
     wsIOResult returnResult{};
     linger lingerOption{};
