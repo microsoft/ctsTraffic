@@ -273,7 +273,7 @@ private:
         }
     };
 
-    // RIO buffer Id for sends and recv's
+    // RIO buffer-Id for send()'s and recv()'s
     // cannot use the same RIO_BUFFERID concurrently (not supported by RIO)
     std::vector<RioBufferId> m_receivingRioBufferIds;
     std::vector<RioBufferId> m_sendingRioBufferIds;

@@ -81,7 +81,7 @@ public:
 
     [[nodiscard]] static iterator end() noexcept
     {
-        return iterator();
+        return {};
     }
 
     // A forward iterator to enable forward-traversing instances of the queried WMI provider

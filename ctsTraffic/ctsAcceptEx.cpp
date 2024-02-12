@@ -419,8 +419,8 @@ namespace details
             sizeof listeningSocket);
         FAIL_FAST_IF_MSG(
             err != 0,
-            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
-            WSAGetLastError(), reinterpret_cast<void*>(m_acceptSocket.get()), reinterpret_cast<void*>(listeningSocket));
+            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%zu], listen socket [%zu]",
+            WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
 
         SOCKADDR_INET* localAddr{};
         auto localAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
@@ -535,7 +535,7 @@ namespace details
 //
 //
 // An accepted socket is being requested
-// - if have one queued, return that
+// - if there is one queued, return that
 // - else store the weak_ptr<ctsSocket> to be fulfilled later
 //
 //
@@ -569,7 +569,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             try { details::g_acceptExImpl.m_pendedAcceptRequests.push(weakSocket); }
             catch (...)
             {
-                // fail the caller if can't save this request
+                // fail the caller if we can't save this request
                 error = WSAENOBUFS;
             }
         }
@@ -593,7 +593,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     }
 
     //
-    // if did not defer the accept request and we have a new accepted socket,
+    // if did not defer the accept request, and we have a new accepted socket,
     // complete this socket state
     //
     if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)

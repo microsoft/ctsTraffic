@@ -177,6 +177,11 @@ uint32_t ConsoleVerbosity() noexcept
 {
     return 0;
 }
+
+TcpShutdownType GetShutdownType() noexcept
+{
+    return TcpShutdownType::GracefulShutdown;
+}
 }
 
 ///
@@ -469,7 +474,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Push;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = false;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -529,7 +534,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Push;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = false;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -602,7 +607,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Push;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = true;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -662,7 +667,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Push;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = true;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -735,7 +740,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Push;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = true;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = false;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -803,7 +808,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Pull;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = false;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -861,7 +866,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Pull;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = false;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = true;
         ctsConfig::g_configSettings->PrePostRecvs = 1;
@@ -919,7 +924,7 @@ public:
     {
         ctsConfig::g_configSettings->IoPattern = ctsConfig::IoPatternType::Pull;
         ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::ServerSideShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::NoShutdownOptionSet;
         ctsConfig::g_configSettings->UseSharedBuffer = true;
         ctsConfig::g_configSettings->ShouldVerifyBuffers = false;
         ctsConfig::g_configSettings->PrePostRecvs = 1;

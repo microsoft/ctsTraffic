@@ -34,7 +34,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl
 {
 // class ctWmiClassObject
-// Exposes enumerating properties of a WMI Provider through an property_iterator interface.
+// Exposes enumerating properties of a WMI Provider through a property_iterator interface.
 class ctWmiClassObject
 {
 private:
@@ -83,12 +83,12 @@ public:
 
     [[nodiscard]] property_iterator property_begin(bool fNonSystemPropertiesOnly = true) const
     {
-        return property_iterator(m_wbemClassObject, fNonSystemPropertiesOnly);
+        return {m_wbemClassObject, fNonSystemPropertiesOnly};
     }
 
     [[nodiscard]] static property_iterator property_end() noexcept
     {
-        return property_iterator();
+        return {};
     }
 
     //

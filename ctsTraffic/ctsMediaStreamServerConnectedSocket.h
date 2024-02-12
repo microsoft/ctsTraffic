@@ -35,7 +35,7 @@ using ctsMediaStreamConnectedSocketIoFunctor = std::function<wsIOResult (ctsMedi
 class ctsMediaStreamServerConnectedSocket
 {
 private:
-    // the CS is mutable so we can take a lock / release a lock in const methods
+    // the CS is mutable, so we can take a lock / release a lock in const methods
     mutable wil::critical_section m_objectGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Guarded_by_(m_objectGuard) ctsTask m_nextTask;
 

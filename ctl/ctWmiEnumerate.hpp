@@ -115,7 +115,7 @@ public:
     }
 
     // Allows for executing a WMI query against the WMI service for an enumeration of WMI objects.
-    // Assumes the query of of the WQL query language.
+    // Assumes the query of the WQL query language.
     const ctWmiEnumerate& query(_In_ PCWSTR query)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
@@ -145,7 +145,7 @@ public:
             return end();
         }
         THROW_IF_FAILED(m_wbemEnumerator->Reset());
-        return iterator(m_wbemServices, m_wbemEnumerator);
+        return {m_wbemServices, m_wbemEnumerator};
     }
 
     iterator end() const noexcept
@@ -160,7 +160,7 @@ public:
             return cend();
         }
         THROW_IF_FAILED(m_wbemEnumerator->Reset());
-        return iterator(m_wbemServices, m_wbemEnumerator);
+        return {m_wbemServices, m_wbemEnumerator};
     }
 
     iterator cend() const noexcept

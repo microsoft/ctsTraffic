@@ -229,12 +229,6 @@ public:
     template <typename FunctorType>
     HRESULT submit_and_wait(FunctorType&& functor) noexcept try
     {
-        // this is not applicable for flat queues
-        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)
-        {
-            FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
-        }
-
         if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Growable)
         {
             HRESULT hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
@@ -248,6 +242,9 @@ public:
             }
             return hr;
         }
+
+        // this is not applicable for flat queues
+        FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
     }
     CATCH_RETURN()
 
@@ -262,7 +259,7 @@ public:
 
                 for (const auto& work : m_workItems)
                 {
-                    // signal that these are canceled before we shutdown the TP which they could be scheduled
+                    // signal that these are canceled before we shut down the TP which they could be scheduled
                     if (const auto* pWaitableWorkitem = std::get_if<WaitableFunctionT>(&work))
                     {
                         (*pWaitableWorkitem)->abort();

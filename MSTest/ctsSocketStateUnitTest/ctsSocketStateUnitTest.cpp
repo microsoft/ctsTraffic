@@ -60,7 +60,7 @@ shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
     return nullptr;
 }
 
-wsIOResult ctsSetLingertoResetSocket(SOCKET) noexcept
+wsIOResult ctsSetLingerToResetSocket(SOCKET) noexcept
 {
     return wsIOResult();
 }

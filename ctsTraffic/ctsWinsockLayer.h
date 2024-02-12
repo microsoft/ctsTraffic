@@ -153,6 +153,6 @@ wsIOResult ctsWSASendTo(
     const ctsTask& task,
     std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
-// Set LINGER options to force a RST when the socket is closed
-wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept;
+// Set LINGER options to force an RST when the socket is closed
+wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept;
 }

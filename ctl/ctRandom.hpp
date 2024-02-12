@@ -62,7 +62,7 @@ public:
 
     // Generates a new random floating-point number in the range [lowerInclusiveBound, upperInclusiveBound].
     //
-    // The result is chosen according to a uniformaly random distribution of real numbers, not a uniformly
+    // The result is chosen according to a uniformly random distribution of real numbers, not a uniformly
     // random distribution of those numbers representable as RealTs. That is, even though a double can represent
     // more distinct values in the range [0.0, 1.0] than it can in the range [99.0, 100.0], uniform_real(0.0, 100.0)
     // will return a number in those two ranges equally often.

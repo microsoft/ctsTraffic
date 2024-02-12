@@ -31,7 +31,7 @@ using namespace std;
 
 // default values are assigned in the class declaration
 ctsSocket::ctsSocket(weak_ptr<ctsSocketState> parent) noexcept :
-    m_parent(move(parent))
+    m_parent(std::move(parent))
 {
 }
 
@@ -52,7 +52,7 @@ _No_competing_thread_ ctsSocket::~ctsSocket() noexcept
     }
     */
 
-    // if the IO pattern is still alive, must delete it once in the d'tor before this object goes away
+    // if the IO pattern is still alive, must delete it once in the destructor before this object goes away
     // - can't reset this in ctsSocket::shutdown since ctsSocket::shutdown can be called from the parent ctsSocketState 
     //   and there may be callbacks still running holding onto a reference to this ctsSocket object
     //   which causes the potential to AV in the io_pattern
@@ -90,7 +90,7 @@ int ctsSocket::CloseSocket(uint32_t errorCode) noexcept
         {
             // always try to RST if we are closing due to an error
             // to best-effort notify the opposite endpoint
-            const wsIOResult result = ctsSetLingertoResetSocket(m_socket.get());
+            const wsIOResult result = ctsSetLingerToResetSocket(m_socket.get());
             error = static_cast<int>(result.m_errorCode);
         }
 
@@ -109,7 +109,7 @@ const shared_ptr<ctThreadIocp>& ctsSocket::GetIocpThreadpool()
 {
     // use the SOCKET cs to also guard creation of this TP object
     const auto lock = m_lock.lock();
-    // must verify a valid socket first to avoid racing destrying the iocp shared_ptr as we try to create it here
+    // must verify a valid socket first to avoid racing destroying the iocp shared_ptr as we try to create it here
     if (m_socket && !m_tpIocp)
     {
         m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), ctsConfig::g_configSettings->pTpEnvironment); // can throw
@@ -310,8 +310,8 @@ void ctsSocket::Shutdown() noexcept
     // Must destroy these threadpool objects outside the CS to prevent a deadlock
     // - from when worker threads attempt to callback this ctsSocket object when IO completes
     // Must wait for the threadpool from this method when ctsSocketState calls ctsSocket::shutdown
-    // - instead of calling this from the d'tor of ctsSocket, as the final reference
-    //   to this ctsSocket might be from a TP thread - in which case this d'tor will deadlock
+    // - instead of calling this from the destructor of ctsSocket, as the final reference
+    //   to this ctsSocket might be from a TP thread - in which case this destructor will deadlock
     //   (it will wait for all TP threads to exit, but it is using/blocking on of those TP threads)
     m_tpIocp.reset();
     m_tpTimer.reset();

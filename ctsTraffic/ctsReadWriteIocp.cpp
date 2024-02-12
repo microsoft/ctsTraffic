@@ -79,7 +79,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
         {
             case ctsIoStatus::ContinueIo:
                 // more IO is requested from the protocol
-                // - invoke the new IO call while holding a refcount to the prior IO
+                // - invoke the new IO call while holding a ref-count to the prior IO
                 ctsReadWriteIocp(weakSocket);
                 break;
 
@@ -233,7 +233,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                 const char* functionName = ctsTaskAction::Send == nextIo.m_ioAction ? "WriteFile" : "ReadFile";
                 PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, ioError);
 
-                // call back to the socket that it failed to see if wants more IO
+                // call back to the socket to inform it that the call failed to see if it wants to request more IO
                 switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(nextIo, 0, ioError))
                 {
                     case ctsIoStatus::ContinueIo:
@@ -251,7 +251,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                     case ctsIoStatus::FailedIo:
                         // print the error on failure
                         ctsConfig::PrintErrorIfFailed(functionName, ioError);
-                    // the protocol acknoledged the failure - socket is done with IO
+                    // the protocol acknowledged the failure - socket is done with IO
                         ioError = static_cast<int>(lockedPattern->GetLastPatternError());
                         ioDone = true;
                         break;

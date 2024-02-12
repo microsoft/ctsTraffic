@@ -968,7 +968,7 @@ namespace ctsPerf { namespace Details
             {
                 // IPv4
                 RefreshIPv4Data();
-                auto* const pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]);
+                auto* const pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data());
                 for (auto count = 0ul; count < pIpv4TcpTable->dwNumEntries; ++count)
                 {
                     auto* const tableEntry = &pIpv4TcpTable->table[count];
@@ -1000,7 +1000,7 @@ namespace ctsPerf { namespace Details
 
                 // IPv6
                 RefreshIPv6Data();
-                auto* const pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]);
+                auto* const pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data());
                 for (auto count = 0ul; count < pIpv6TcpTable->dwNumEntries; ++count)
                 {
                     auto* const tableEntry = &pIpv6TcpTable->table[count];
@@ -1064,17 +1064,17 @@ namespace ctsPerf { namespace Details
         {
             m_tcpTable.resize(m_tcpTable.capacity());
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
-            ZeroMemory(&m_tcpTable[0], table_size);
+            ZeroMemory(m_tcpTable.data(), table_size);
 
             ULONG error = GetTcpTable(
-                reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
+                reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data()),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
                 error = GetTcpTable(
-                    reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
+                    reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data()),
                     &table_size,
                     FALSE); // no need to sort them
             }
@@ -1088,17 +1088,17 @@ namespace ctsPerf { namespace Details
         {
             m_tcpTable.resize(m_tcpTable.capacity());
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
-            ZeroMemory(&m_tcpTable[0], table_size);
+            ZeroMemory(m_tcpTable.data(), table_size);
 
             ULONG error = GetTcp6Table(
-                reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
+                reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data()),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
                 error = GetTcp6Table(
-                    reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
+                    reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data()),
                     &table_size,
                     FALSE); // no need to sort them
             }

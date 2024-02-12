@@ -63,7 +63,7 @@ void ctsSocketState::CompleteState(DWORD) noexcept
     Logger::WriteMessage(L"ctsSocketState::complete_state\n");
 }
 
-wsIOResult ctsSetLingertoResetSocket(SOCKET) noexcept
+wsIOResult ctsSetLingerToResetSocket(SOCKET) noexcept
 {
     return wsIOResult();
 }

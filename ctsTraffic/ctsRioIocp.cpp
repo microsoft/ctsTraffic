@@ -186,7 +186,7 @@ namespace ctsTraffic { namespace Rioiocp
                         c_exitCompletionKey,
                         static_cast<OVERLAPPED*>(g_rioNotifySettings.Iocp.Overlapped)))
                     {
-                        // if can't indicate to exit, kill the process to see why
+                        // if we can't indicate to exit, kill the process to see why
                         FAIL_FAST_MSG(
                             "PostQueuedCompletionStatus(%p) failed [%u] to tear down the threadpool",
                             g_rioNotifySettings.Iocp.IocpHandle, GetLastError());
@@ -203,7 +203,7 @@ namespace ctsTraffic { namespace Rioiocp
                         TRUE,
                         INFINITE) != WAIT_OBJECT_0)
                 {
-                    // if can't wait for the worker threads, kill the process to see why
+                    // if we can't wait for the worker threads, kill the process to see why
                     FAIL_FAST_MSG(
                         "WaitForMultipleObjects(%p) failed [%u] to wait on the threadpool",
                         &g_pRioWorkerThreads[0], GetLastError());
@@ -381,7 +381,7 @@ namespace ctsTraffic { namespace Rioiocp
         uint32_t m_requestQueueRecvSize = m_rioRqGrowthFactor / 2;
         uint32_t m_outstandingSends = 0;
         uint32_t m_outstandingRecvs = 0;
-        // pre-allocate all ctsTasks needed so we don't alloc/free with each IO request
+        // pre-allocate all ctsTasks needed, so we don't alloc/free with each IO request
         std::vector<ctsTask> m_tasks;
 
         // Guarantees that there is roon in the RQ for the next IO request
@@ -488,7 +488,7 @@ namespace ctsTraffic { namespace Rioiocp
             }
 
             // pCompletedTask is pointing to a ctsTask in m_tasks
-            // update the task so it's now available to be used for future IO
+            // update the task, so it's now available to be used for future IO
             pCompletedTask->m_rioBufferid = RIO_INVALID_BUFFERID;
         }
 

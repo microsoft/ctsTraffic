@@ -249,7 +249,7 @@ public:
         m_wsabuffer[3].len = c_udpDatagramQpfLength;
 
         m_wsabuffer[4].buf = const_cast<char*>(sendBuffer);
-        // the this->wsabuf[4].len field is dependent on bytes_to_send and can change by iterator()
+        // the "this->wsabuf[4].len" field is dependent on bytes_to_send and can change by iterator()
     }
 
     [[nodiscard]] iterator begin() noexcept
@@ -402,7 +402,7 @@ struct ctsMediaStreamMessage
             rawTask.m_bufferLength, ctsStatistics::ConnectionIdLength + c_udpDatagramProtocolHeaderFlagLength);
 
         ctsTask returnTask{rawTask};
-        // populate the buffer with the connection Id and protocol field
+        // populate the buffer with the ConnectionId and protocol field
         memcpy_s(returnTask.m_buffer, c_udpDatagramProtocolHeaderFlagLength, &c_udpDatagramProtocolHeaderFlagId, c_udpDatagramProtocolHeaderFlagLength);
         memcpy_s(returnTask.m_buffer + c_udpDatagramProtocolHeaderFlagLength, ctsStatistics::ConnectionIdLength, connectionId, ctsStatistics::ConnectionIdLength);
 

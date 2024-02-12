@@ -153,7 +153,7 @@ namespace ctsTraffic
                 // every recv will need their own buffer to use
                 // we must keep track of the raw buffers even with RIO as we need the backing buffers to compare against
                 m_recvBufferContainer.resize(ctsConfig::GetMaxBufferSize() * recvCount);
-                auto* const rawRecvBuffer = &m_recvBufferContainer[0];
+                auto* const rawRecvBuffer = m_recvBufferContainer.data();
 
                 for (auto bufferCount = 0ul; bufferCount < recvCount; ++bufferCount)
                 {

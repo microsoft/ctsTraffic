@@ -128,7 +128,7 @@ namespace ctsTraffic
         if (NO_ERROR == gle)
         {
             // setting the socket option to support dual-mode sockets must be done before calling bind
-            // must enable dual-mode sockets before calling WSAConnectByName so it can connect to either IPv4 or IPv6 addresses
+            // must enable dual-mode sockets before calling WSAConnectByName, so it can connect to either IPv4 or IPv6 addresses
             if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
             {
                 PRINT_DEBUG_INFO(L"\t\tEnabling Dual-mode sockets\n");
@@ -154,7 +154,7 @@ namespace ctsTraffic
             }
             else
             {
-                // sleep up to 5 seconds to allow TCP to cleanup its internal state
+                // sleep up to 5 seconds to allow TCP to clean up its internal state
                 constexpr auto bindRetryCount = 5;
                 for (auto bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {

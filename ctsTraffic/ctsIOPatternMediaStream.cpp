@@ -420,7 +420,7 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
             m_headEntry->m_sequenceNumber);
 
         // track the dropped frame
-        // indicate zero's for the other values so we won't calculate jitter for a dropped datagram
+        // indicate zero's for the other values, so we won't calculate jitter for a dropped datagram
         ctsConfig::JitterFrameEntry droppedFrame;
         droppedFrame.m_sequenceNumber = m_headEntry->m_sequenceNumber;
         PrintJitterUpdate(droppedFrame, ctsConfig::JitterFrameEntry());
@@ -435,7 +435,7 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
             m_headEntry->m_sequenceNumber);
     }
 
-    // update the current sequence number so it's now the "end" sequence number of the queue (the new max value)
+    // update the current sequence number, so it's now the "end" sequence number of the queue (the new max value)
     m_headEntry->m_sequenceNumber = m_headEntry->m_sequenceNumber + static_cast<int64_t>(m_frameEntries.size());
     m_headEntry->m_bytesReceived = 0;
 
