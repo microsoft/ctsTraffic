@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 # This is the top-level workflow that runs on each pull request and push to main.
 # It invokes other jobs to perform builds and possibly run tests.
