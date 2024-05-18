@@ -421,6 +421,7 @@ namespace ctsTraffic
 
             std::optional<uint32_t> BurstCount;
             std::optional<uint32_t> BurstDelay;
+            std::optional<uint32_t> CpuGroupId;
 
             uint32_t OutgoingIfIndex = 0;
 

@@ -124,7 +124,6 @@ namespace ctsTraffic::ctsConfig
     static bool g_breakOnError = false;
     static ExitProcessType g_processStatus = ExitProcessType::Running;
 
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Singleton values used as the actual implementation for every 'connection'
@@ -2289,6 +2288,29 @@ namespace ctsTraffic::ctsConfig
         }
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Parses for the optional CPU Group ID to set affinity
+    ///
+    /// -CpuSetGroupId:##
+    ///
+    //////////////////////////////////////////////////////////////////////////////////////////
+    static void ParseForCpuSets(vector<const wchar_t*>& args)
+    {
+        const auto foundCpuGroupIdArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
+        {
+            const auto* const value = ParseArgument(parameter, L"-CpuSetGroupId");
+            return value != nullptr;
+        });
+        if (foundCpuGroupIdArgument != end(args))
+        {
+            g_configSettings->CpuGroupId = ConvertToIntegral<uint32_t>(
+                ParseArgument(*foundCpuGroupIdArgument, L"-CpuSetGroupId"));
+            // always remove the arg from our vector
+            args.erase(foundCpuGroupIdArgument);
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
@@ -2581,6 +2603,11 @@ namespace ctsTraffic::ctsConfig
                 L"\t- connect : uses blocking calls to connect\n"
                 L"\t- ConnectByName: uses blocking calls to WSAConnectByName to connect\n"
                 L"\t          : be careful using blocking options as it will not scale out as well as each call blocks a thread\n"
+                L"-CpuSetGroupId:####\n"
+                L"   - specifies the CPU Set Group ID that ctsTraffic should affinitize\n"
+                L"    will call GetSystemCpuSetInformation to find the matching Group ID\n"
+                L"    and pass that list of CPU IDs to SetProcessDefaultCpuSets\n"
+                L"\t- <default> == (not set)\n"
                 L"-IfIndex:####\n"
                 L"   - the interface index which to use for outbound connectivity\n"
                 L"     assigns the interface with IP_UNICAST_IF / IPV6_UNICAST_IF\n"
@@ -2699,6 +2726,8 @@ namespace ctsTraffic::ctsConfig
         fwprintf_s(stdout, L"%ws", usage.c_str());
     }
 
+    // forward declare this function called by Startup, but implemented later in this function
+    bool SetProcessDefaultCpuSets();
     bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
     {
         ctsConfigInitOnce();
@@ -2771,6 +2800,14 @@ namespace ctsTraffic::ctsConfig
         //
         ParseForError(args);
         ParseForLogging(args);
+
+        // right after logging is configured, set process affinity if specified
+        ParseForCpuSets(args);
+        if (!SetProcessDefaultCpuSets())
+        {
+	        // if we can't set the cpu id, clear it so we won't print it later
+            g_configSettings->CpuGroupId.reset();
+        }
 
         //
         // Next: check for static machine configuration
@@ -4329,6 +4366,124 @@ namespace ctsTraffic::ctsConfig
     /// - currently only implementing pre-bind options
     ///
     ////////////////////////////////////////////////////////////////////////////////////////////////////
+	bool SetProcessDefaultCpuSets()
+	{
+        if (!g_configSettings->CpuGroupId.has_value())
+        {
+	        return false;
+        }
+        const DWORD settingsGroupId = g_configSettings->CpuGroupId.value();
+		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: trying to find CPUs on Group %lu\n", settingsGroupId);
+
+		typedef BOOL (__stdcall*pfn_SetProcessDefaultCpuSets)(
+			HANDLE Process,
+			_In_reads_(CpuSetIdCount) const DWORD* CpuSetIds,
+			DWORD CpuSetIdCount);
+
+		typedef BOOL (__stdcall*pfn_GetSystemCpuSetInformation)(
+			PSYSTEM_CPU_SET_INFORMATION Info,
+			ULONG Length,
+			PULONG ReturnLength,
+			PVOID SystemInformation,
+			ULONG SystemInformationLength);
+
+        // deliberately "leaking" this module handle - we want it loaded the lifetime of the process
+		auto* const hMod = LoadLibraryEx(L"kernel32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		if (!hMod)
+		{
+			const auto gle = GetLastError();
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: LoadLibraryEx failed to load kernel32.dll: %lu\n", gle);
+	        return false;
+		}
+
+		const auto pfnSetProcessDefaultCpuSets = reinterpret_cast<pfn_SetProcessDefaultCpuSets>(
+					GetProcAddress(hMod, "SetProcessDefaultCpuSets"));
+		const auto pfnGetSystemCpuSetInformation = reinterpret_cast<pfn_GetSystemCpuSetInformation>(
+							GetProcAddress(hMod, "GetSystemCpuSetInformation"));
+		if (!pfnSetProcessDefaultCpuSets || !pfnGetSystemCpuSetInformation)
+		{
+			const auto gle = GetLastError();
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: GetProcAddress failed to load CpuSet functions: %lu\n", gle);
+	        return false;
+		}
+
+		ULONG returnedLength = 0;
+		pfnGetSystemCpuSetInformation(nullptr, 0, &returnedLength, nullptr, 0);
+		if (returnedLength == 0)
+		{
+			// the API should have given us the length - something failed
+			const auto gle = GetLastError();
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: GetSystemCpuSetInformation failed to get the length reuqired: %lu\n", gle);
+	        return false;
+		}
+
+		const std::unique_ptr<BYTE[]> buffer(new BYTE[returnedLength]);
+		if (!pfnGetSystemCpuSetInformation(reinterpret_cast<PSYSTEM_CPU_SET_INFORMATION>(buffer.get()), returnedLength,
+		                                &returnedLength, nullptr, 0))
+		{
+			const auto gle = GetLastError();
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: GetSystemCpuSetInformation failed: %lu\n", gle);
+	        return false;
+		}
+
+		std::vector<DWORD> cpuSetIdsOnCpuGroupZero;
+
+		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: SYSTEM_CPU_SET_INFORMATION\n");
+		PRINT_DEBUG_INFO(
+			L"Id\t\tGroup\t\tLogicalProcessorIndex\t\tCoreIndex\tNumaNodeIndex\n");
+
+		void* current_buffer = buffer.get();
+		const void* end_of_buffer = buffer.get() + returnedLength;
+		while (current_buffer < end_of_buffer)
+		{
+			const SYSTEM_CPU_SET_INFORMATION* cpu_set_info = static_cast<PSYSTEM_CPU_SET_INFORMATION>(current_buffer);
+			PRINT_DEBUG_INFO(
+                L"Id: %lu\t\t"
+			    L"Group: %d\t"
+			    L"LogicalProcessorIndex: %d\t"
+			    L"CoreIndex:%d\t"
+			    L"NumaNodeIndex: %d\n",
+		       cpu_set_info->CpuSet.Id,
+		       cpu_set_info->CpuSet.Group,
+		       cpu_set_info->CpuSet.LogicalProcessorIndex,
+		       cpu_set_info->CpuSet.CoreIndex,
+		       cpu_set_info->CpuSet.NumaNodeIndex);
+
+			if (cpu_set_info->CpuSet.Group == settingsGroupId)
+			{
+				cpuSetIdsOnCpuGroupZero.push_back(cpu_set_info->CpuSet.Id);
+			}
+
+			current_buffer = static_cast<BYTE*>(current_buffer) + cpu_set_info->Size;
+		}
+
+        if (cpuSetIdsOnCpuGroupZero.empty())
+        {
+	        PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: No CPU IDs found on Group %lu\n", settingsGroupId);
+	        return false;
+		}
+
+		if (!pfnSetProcessDefaultCpuSets(
+			GetCurrentProcess(),
+			cpuSetIdsOnCpuGroupZero.data(),
+			static_cast<DWORD>(cpuSetIdsOnCpuGroupZero.size())))
+		{
+			const auto gle = GetLastError();
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: SetProcessDefaultCpuSets failed: %lu\n", gle);
+	        return false;
+		}
+
+        PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: SetProcessDefaultCpuSets set process affinity to all CPU IDs in Group %lu\n", settingsGroupId);
+        return true;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Set*Options
+    /// - functions capturing any options that need to be set on a socket across different states
+    /// - currently only implementing pre-bind options
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
     int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
     {
         ctsConfigInitOnce();
@@ -4900,6 +5055,14 @@ namespace ctsTraffic::ctsConfig
                         totalConnections,
                         totalConnections));
             }
+        }
+
+        if (g_configSettings->CpuGroupId)
+        {
+            settingString.append(
+                wil::str_printf<std::wstring>(
+                    L"\tAffinitized to all CPU IDs on CPU Group %lu\n",
+                    g_configSettings->CpuGroupId.value()));
         }
 
         settingString.append(L"\n");
