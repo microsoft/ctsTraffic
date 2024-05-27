@@ -176,7 +176,6 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
             // else we need to initiate another IO
             // add-ref the IO about to start
-            // TODO: socket is locked - no need for interlocked
             ioCount = sharedSocket->IncrementIo();
 
             std::shared_ptr<ctl::ctThreadIocp> ioThreadPool;

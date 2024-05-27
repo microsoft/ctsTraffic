@@ -203,11 +203,13 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
 
         // track the # of *bits* received
         ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(static_cast<int64_t>(completedBytes) * 8LL);
-        // local stats are called under lock - no need for Interlocked* calls
+
+        // because this is called while holding the parent lock (which is the pattern lock)
+        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         m_statistics.m_bitsReceived.AddNoLock(static_cast<int64_t>(completedBytes) * 8LL);
 
-        const auto receivedsequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
-        if (receivedsequenceNumber > m_finalFrame)
+        const auto receivedSequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
+        if (receivedSequenceNumber > m_finalFrame)
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
             // local stats are called under lock - no need for Interlocked* calls
@@ -215,7 +217,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternMediaStreamClient recevieved **an unknown** seq number (%lld) (outside the final frame %lu)\n",
-                receivedsequenceNumber,
+                receivedSequenceNumber,
                 m_finalFrame);
         }
         else
@@ -224,7 +226,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
             // search our circular queue (starting at the head_entry)
             // for the seq number we just received, and if found, tag as received
             //
-            const auto foundSlot = FindSequenceNumber(receivedsequenceNumber);
+            const auto foundSlot = FindSequenceNumber(receivedSequenceNumber);
             if (foundSlot != m_frameEntries.end())
             {
                 const auto bufferedQpc = *reinterpret_cast<int64_t*>(task.m_buffer + 8);
@@ -246,7 +248,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
                 // stop the timer once we receive the last frame
                 // - it's not perfect (e.g. might have received them out of order)
                 // - but it will be very close for tracking the total bits/sec
-                if (static_cast<uint32_t>(receivedsequenceNumber) == m_finalFrame)
+                if (static_cast<uint32_t>(receivedSequenceNumber) == m_finalFrame)
                 {
                     EndStatistics();
                 }
@@ -258,18 +260,18 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
                 // local stats are called under lock - no need for Interlocked* calls
                 m_statistics.m_errorFrames.IncrementNoLock();
 
-                if (receivedsequenceNumber < m_headEntry->m_sequenceNumber)
+                if (receivedSequenceNumber < m_headEntry->m_sequenceNumber)
                 {
                     PRINT_DEBUG_INFO(
                         L"\t\tctsIOPatternMediaStreamClient received **a stale** seq number (%lld) - current seq number (%lld)\n",
-                        receivedsequenceNumber,
+                        receivedSequenceNumber,
                         m_headEntry->m_sequenceNumber);
                 }
                 else
                 {
                     PRINT_DEBUG_INFO(
                         L"\t\tctsIOPatternMediaStreamClient recevieved **a future** seq number (%lld) - head of queue (%lld) tail of queue (%llu)\n",
-                        receivedsequenceNumber,
+                        receivedSequenceNumber,
                         m_headEntry->m_sequenceNumber,
                         m_headEntry->m_sequenceNumber + m_frameEntries.size() - 1);
                 }

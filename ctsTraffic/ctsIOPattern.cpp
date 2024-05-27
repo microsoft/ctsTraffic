@@ -510,7 +510,7 @@ namespace ctsTraffic
             {
                 ctsConfig::g_configSettings->TcpStatusDetails.m_bytesSent.Add(currentTransfer);
             }
-            else
+            else if (ctsTaskAction::Recv == originalTask.m_ioAction)
             {
                 ctsConfig::g_configSettings->TcpStatusDetails.m_bytesRecv.Add(currentTransfer);
             }
@@ -834,14 +834,16 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
+        // because this is called while holding the parent lock (which is the pattern lock)
+        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.Add(completedBytes);
+            m_statistics.m_bytesSent.AddNoLock(completedBytes);
             m_sendBytesInflight -= completedBytes;
         }
-        else
+        else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.Add(completedBytes);
+            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
             ++m_recvNeeded;
         }
 
@@ -896,14 +898,16 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPush::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
+        // because this is called while holding the parent lock (which is the pattern lock)
+        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.Add(completedBytes);
+            m_statistics.m_bytesSent.AddNoLock(completedBytes);
             m_sendBytesInflight -= completedBytes;
         }
-        else
+        else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.Add(completedBytes);
+            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
             ++m_recvNeeded;
         }
 
@@ -981,13 +985,15 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPushPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept
     {
+        // because this is called while holding the parent lock (which is the pattern lock)
+        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.Add(currentTransfer);
+            m_statistics.m_bytesSent.AddNoLock(currentTransfer);
         }
-        else
+        else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.Add(currentTransfer);
+            m_statistics.m_bytesRecv.AddNoLock(currentTransfer);
         }
 
         m_ioNeeded = true;
@@ -1099,11 +1105,13 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
+        // because this is called while holding the parent lock (which is the pattern lock)
+        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         switch (task.m_ioAction)
         {
         case ctsTaskAction::Send:
         {
-            m_statistics.m_bytesSent.Add(completedBytes);
+            m_statistics.m_bytesSent.AddNoLock(completedBytes);
             m_sendBytesInflight -= completedBytes;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
@@ -1114,7 +1122,7 @@ namespace ctsTraffic
         }
         case ctsTaskAction::Recv:
         {
-            m_statistics.m_bytesRecv.Add(completedBytes);
+            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
             ++m_recvNeeded;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created

@@ -305,7 +305,6 @@ namespace ctsTraffic
         // where it's handled appropriately
 
         // increment IO for this IO request
-        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
 
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
@@ -363,7 +362,6 @@ namespace ctsTraffic
         // The IO ref-count must be incremented here to hold an IO count on the socket
         // - so that we won't inadvertently call complete_state() while IO is still being scheduled
         //
-        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
 
         ctsSendRecvStatus status{};
@@ -377,7 +375,6 @@ namespace ctsTraffic
             }
 
             // increment IO for each individual request
-            // TODO: socket is locked - no need for interlocked
             sharedSocket->IncrementIo();
 
             if (nextIo.m_timeOffsetMilliseconds > 0)

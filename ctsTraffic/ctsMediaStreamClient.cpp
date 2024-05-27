@@ -117,7 +117,6 @@ namespace ctsTraffic
                 //
 
                 // increment IO count while issuing this Impl, so we hold a ref-count during this out of band callback
-                // TODO: socket is locked - no need for interlocked
                 if (lambdaSharedSocket->IncrementIo() > 1)
                 {
                     // only running this one task in the OOB callback
@@ -140,7 +139,6 @@ namespace ctsTraffic
             });
 
         // increment IO count while issuing this Impl, so we hold a ref-count during this out of band callback
-        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
         IoImplStatus status = ctsMediaStreamClientIoImpl(
             sharedSocket,
@@ -247,7 +245,6 @@ namespace ctsTraffic
         case ctsTaskAction::Recv:
             {
                 // add-ref the IO about to start
-                // TODO: the socket locked when ctsMediaStreamClientIoImpl is called
                 sharedSocket->IncrementIo();
                 auto callback = [weak_reference = std::weak_ptr(sharedSocket), task](OVERLAPPED* ov) noexcept
                 {

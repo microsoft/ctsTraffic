@@ -305,9 +305,9 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsUdpStatistics& operator=(ctsUdpStatistics&&) = delete;
 
         // currently only called by the UDP client - only tracking the receives
-        [[nodiscard]] int64_t GetBytesTransferred() const noexcept
+        [[nodiscard]] int64_t GetBytesTransferredNoLock() const noexcept
         {
-            return m_bitsReceived.GetValue() / 8;
+            return m_bitsReceived.GetValueNoLock() / 8;
         }
 
         //
@@ -371,9 +371,9 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsTcpStatistics operator=(const ctsTcpStatistics&) = delete;
         ctsTcpStatistics operator=(ctsTcpStatistics&&) = delete;
 
-        [[nodiscard]] int64_t GetBytesTransferred() const noexcept
+        [[nodiscard]] int64_t GetBytesTransferredNoLock() const noexcept
         {
-            return m_bytesRecv.GetValue() + m_bytesSent.GetValue();
+            return m_bytesRecv.GetValueNoLock() + m_bytesSent.GetValueNoLock();
         }
 
         //

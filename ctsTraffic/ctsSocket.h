@@ -123,7 +123,7 @@ public:
     // The only successful DWORD value is NO_ERROR (0)
     // Any other DWORD indicates error
     //
-    void CompleteState(DWORD errorCode) noexcept;
+    void CompleteState(DWORD errorCode) const noexcept;
 
     //
     // Gets/Sets the local address of the SOCKET
@@ -147,7 +147,7 @@ public:
     //
     int32_t IncrementIo() noexcept;
     int32_t DecrementIo() noexcept;
-    int32_t GetPendedIoCount() noexcept;
+    int32_t GetPendedIoCount() const noexcept;
 
     //
     // method for the parent to instruct the ctsSocket to print the connection data
@@ -186,11 +186,9 @@ private:
     void InitiateIsbNotification() noexcept;
 
     // private members for this socket instance
-    // mutable is required to EnterCS/LeaveCS in const methods
-
+    // mutable is required to EnterCriticalSection/LeaveCriticalSection in const methods
     mutable wil::critical_section m_lock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Guarded_by_(m_lock) wil::unique_socket m_socket;
-    _Interlocked_ long m_ioCount = 0L;
 
     // maintain a weak-reference to the parent and child
     std::weak_ptr<ctsSocketState> m_parent;
@@ -205,6 +203,8 @@ private:
 
     ctl::ctSockaddr m_localSockaddr;
     ctl::ctSockaddr m_targetSockaddr;
+
+    long m_ioCount = 0L;
 
     static void NTAPI ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER);
 };

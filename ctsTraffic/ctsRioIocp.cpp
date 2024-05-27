@@ -730,7 +730,6 @@ namespace ctsTraffic { namespace Rioiocp
 
                 // if we're here, we're attempting IO
                 // pre-incremenet IO tracking on the socket before issuing the IO
-                // TODO: socket is locked - no need for interlocked
                 ioRefcount = sharedSocket->IncrementIo();
 
                 // must ensure we have room in the RQ & CQ before initiating the IO
