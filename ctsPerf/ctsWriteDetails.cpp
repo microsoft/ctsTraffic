@@ -17,12 +17,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctString.hpp>
-
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsPerf
 {

@@ -26,13 +26,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <objbase.h>
 #include <oleauto.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
-#include <wil/win32_helpers.h>
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
+#include <wil/win32_helpers.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///

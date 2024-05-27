@@ -21,6 +21,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctTimer.hpp>
 #include <ctMemoryGuard.hpp>
+// wil headers always included last
 #include <wil/resource.h>
 
 namespace ctsTraffic { namespace ctsStatistics
@@ -115,6 +116,13 @@ namespace ctsTraffic { namespace ctsStatistics
             return ctl::ctMemoryGuardRead(&m_currentValue);
         }
 
+        // called when there is no possibility of a race with m_currentValue
+        // e.g., when printing the final results after it's fully stopped
+        [[nodiscard]] int64_t GetValueNoLock() const noexcept
+        {
+            return m_currentValue;
+        }
+
         //
         // Safely writes to the current value, returning the *prior* value
         //
@@ -129,11 +137,27 @@ namespace ctsTraffic { namespace ctsStatistics
         }
 
         //
+        // Writes to the current value without requiring Interlocked* semantics
+        //
+        void SetValueNoLock(int64_t new_value) noexcept
+        {
+            m_currentValue = new_value;
+        }
+
+        //
         // Adds 1 to the current value, returning the new value
         //
         int64_t Increment() noexcept
         {
             return ctl::ctMemoryGuardIncrement(&m_currentValue);
+        }
+
+        //
+        // Adds 1 to the current value without any Interlocked* semantics
+        //
+        void IncrementNoLock() noexcept
+        {
+            ++m_currentValue;
         }
 
         //
@@ -150,6 +174,14 @@ namespace ctsTraffic { namespace ctsStatistics
         int64_t Add(int64_t value) noexcept
         {
             return ctl::ctMemoryGuardAdd(&m_currentValue, value);
+        }
+
+        //
+        // Adds the [in] value to the current value without Interlocked* semantics
+        //
+        void AddNoLock(int64_t value) noexcept
+        {
+            m_currentValue += value;
         }
 
         //
@@ -233,13 +265,14 @@ namespace ctsTraffic { namespace ctsStatistics
                                           m_startTime.SetPriorValue(currentTime) :
                                           m_startTime.GetPriorValue();
 
+            // all writes to the local variable do not require Interlocked* semantics
             ctsConnectionStatistics returnStats(priorTimeRead);
-            returnStats.m_endTime.SetValue(currentTime);
+            returnStats.m_endTime.SetValueNoLock(currentTime);
 
-            returnStats.m_activeConnectionCount.SetValue(m_activeConnectionCount.GetValue());
-            returnStats.m_successfulCompletionCount.SetValue(m_successfulCompletionCount.GetValue());
-            returnStats.m_connectionErrorCount.SetValue(m_connectionErrorCount.GetValue());
-            returnStats.m_protocolErrorCount.SetValue(m_protocolErrorCount.GetValue());
+            returnStats.m_activeConnectionCount.SetValueNoLock(m_activeConnectionCount.GetValue());
+            returnStats.m_successfulCompletionCount.SetValueNoLock(m_successfulCompletionCount.GetValue());
+            returnStats.m_connectionErrorCount.SetValueNoLock(m_connectionErrorCount.GetValue());
+            returnStats.m_protocolErrorCount.SetValueNoLock(m_protocolErrorCount.GetValue());
 
             return returnStats;
         }
@@ -271,7 +304,8 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsUdpStatistics& operator=(const ctsUdpStatistics&) = delete;
         ctsUdpStatistics& operator=(ctsUdpStatistics&&) = delete;
 
-        [[nodiscard]] int64_t GetBytesReceived() const noexcept
+        // currently only called by the UDP client - only tracking the receives
+        [[nodiscard]] int64_t GetBytesTransferred() const noexcept
         {
             return m_bitsReceived.GetValue() / 8;
         }
@@ -286,24 +320,25 @@ namespace ctsTraffic { namespace ctsStatistics
                                           m_startTime.SetPriorValue(currentTime) :
                                           m_startTime.GetPriorValue();
 
+            // all writes to the local variable do not require Interlocked* semantics
             ctsUdpStatistics returnStats(priorTimeRead);
-            returnStats.m_endTime.SetValue(currentTime);
+            returnStats.m_endTime.SetValueNoLock(currentTime);
 
             if (clear_settings)
             {
-                returnStats.m_bitsReceived.SetValue(m_bitsReceived.SnapValueDifference());
-                returnStats.m_successfulFrames.SetValue(m_successfulFrames.SnapValueDifference());
-                returnStats.m_droppedFrames.SetValue(m_droppedFrames.SnapValueDifference());
-                returnStats.m_duplicateFrames.SetValue(m_duplicateFrames.SnapValueDifference());
-                returnStats.m_errorFrames.SetValue(m_errorFrames.SnapValueDifference());
+                returnStats.m_bitsReceived.SetValueNoLock(m_bitsReceived.SnapValueDifference());
+                returnStats.m_successfulFrames.SetValueNoLock(m_successfulFrames.SnapValueDifference());
+                returnStats.m_droppedFrames.SetValueNoLock(m_droppedFrames.SnapValueDifference());
+                returnStats.m_duplicateFrames.SetValueNoLock(m_duplicateFrames.SnapValueDifference());
+                returnStats.m_errorFrames.SetValueNoLock(m_errorFrames.SnapValueDifference());
             }
             else
             {
-                returnStats.m_bitsReceived.SetValue(m_bitsReceived.ReadValueDifference());
-                returnStats.m_successfulFrames.SetValue(m_successfulFrames.ReadValueDifference());
-                returnStats.m_droppedFrames.SetValue(m_droppedFrames.ReadValueDifference());
-                returnStats.m_duplicateFrames.SetValue(m_duplicateFrames.ReadValueDifference());
-                returnStats.m_errorFrames.SetValue(m_errorFrames.ReadValueDifference());
+                returnStats.m_bitsReceived.SetValueNoLock(m_bitsReceived.ReadValueDifference());
+                returnStats.m_successfulFrames.SetValueNoLock(m_successfulFrames.ReadValueDifference());
+                returnStats.m_droppedFrames.SetValueNoLock(m_droppedFrames.ReadValueDifference());
+                returnStats.m_duplicateFrames.SetValueNoLock(m_duplicateFrames.ReadValueDifference());
+                returnStats.m_errorFrames.SetValueNoLock(m_errorFrames.ReadValueDifference());
             }
 
             return returnStats;
@@ -336,7 +371,7 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsTcpStatistics operator=(const ctsTcpStatistics&) = delete;
         ctsTcpStatistics operator=(ctsTcpStatistics&&) = delete;
 
-        [[nodiscard]] int64_t GetBytesReceived() const noexcept
+        [[nodiscard]] int64_t GetBytesTransferred() const noexcept
         {
             return m_bytesRecv.GetValue() + m_bytesSent.GetValue();
         }

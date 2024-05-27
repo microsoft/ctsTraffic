@@ -186,10 +186,10 @@ private:
     ///
     /// Private method which must be implemented by the derived interface (the IO pattern)
     ///
-    /// ctsIOTask GetNextTask()
+    /// ctsIOTask GetNextTaskFromPattern()
     /// - must return a ctsIOTask returned from CreateTrackedTask or CreateUntrackedTask
     ///
-    /// ctsIoPatternError CompleteTask(const ctsIOTask&, uint32_t currentTransfer) noexcept
+    /// ctsIoPatternError CompleteTaskBackToPattern(const ctsIOTask&, uint32_t currentTransfer) noexcept
     /// - a notification to the derived class over what task completed
     ///   - ctsIOTask argument: the ctsIOTask which it previously returned from GetNextTask()
     ///   - uint32_t argument:  the # of bytes actually transferred
@@ -477,7 +477,7 @@ public:
     void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept override
     {
         // before printing the final results, make sure the timers are stopped
-        if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesReceived())
+        if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesTransferred())
         {
             PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transfered zero bytes\n");
             UpdateLastPatternError(ctsIoPatternError::TooFewBytes);

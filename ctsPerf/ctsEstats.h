@@ -26,12 +26,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
 #include <tcpestats.h>
-// wil headers
+// ctl headers
+#include <ctSockaddr.hpp>
+// wil headers always included last
 #include <wil/stl.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
-// ctl headers
-#include <ctSockaddr.hpp>
 
 namespace ctsPerf { namespace Details
     {

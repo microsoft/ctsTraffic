@@ -19,7 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
@@ -176,6 +176,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
             // else we need to initiate another IO
             // add-ref the IO about to start
+            // TODO: socket is locked - no need for interlocked
             ioCount = sharedSocket->IncrementIo();
 
             std::shared_ptr<ctl::ctThreadIocp> ioThreadPool;

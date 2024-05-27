@@ -24,7 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsMediaStreamProtocol.hpp"
-// wil headers
+// wil headers always included last
 #include <wil/stl.h>
 #include <wil/resource.h>
 
@@ -203,13 +203,15 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
 
         // track the # of *bits* received
         ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(static_cast<int64_t>(completedBytes) * 8LL);
-        m_statistics.m_bitsReceived.Add(static_cast<int64_t>(completedBytes) * 8LL);
+        // local stats are called under lock - no need for Interlocked* calls
+        m_statistics.m_bitsReceived.AddNoLock(static_cast<int64_t>(completedBytes) * 8LL);
 
         const auto receivedsequenceNumber = ctsMediaStreamMessage::GetSequenceNumberFromTask(task);
         if (receivedsequenceNumber > m_finalFrame)
         {
             ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
-            m_statistics.m_errorFrames.Increment();
+            // local stats are called under lock - no need for Interlocked* calls
+            m_statistics.m_errorFrames.IncrementNoLock();
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsIOPatternMediaStreamClient recevieved **an unknown** seq number (%lld) (outside the final frame %lu)\n",
@@ -253,7 +255,8 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
             {
                 // didn't find a slot for the received seq. number
                 ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
-                m_statistics.m_errorFrames.Increment();
+                // local stats are called under lock - no need for Interlocked* calls
+                m_statistics.m_errorFrames.IncrementNoLock();
 
                 if (receivedsequenceNumber < m_headEntry->m_sequenceNumber)
                 {
@@ -393,7 +396,8 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
     if (m_headEntry->m_bytesReceived == m_frameSizeBytes)
     {
         ctsConfig::g_configSettings->UdpStatusDetails.m_successfulFrames.Increment();
-        m_statistics.m_successfulFrames.Increment();
+        // local stats are called under lock - no need for Interlocked* calls
+        m_statistics.m_successfulFrames.IncrementNoLock();
 
         PRINT_DEBUG_INFO(
             L"\t\tctsIOPatternMediaStreamClient rendered frame %lld\n",
@@ -413,7 +417,8 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
     else if (m_headEntry->m_bytesReceived < m_frameSizeBytes)
     {
         ctsConfig::g_configSettings->UdpStatusDetails.m_droppedFrames.Increment();
-        m_statistics.m_droppedFrames.Increment();
+        // local stats are called under lock - no need for Interlocked* calls
+        m_statistics.m_droppedFrames.IncrementNoLock();
 
         PRINT_DEBUG_INFO(
             L"\t\tctsIOPatternMediaStreamClient **dropped** frame for seq number (%lld)\n",
@@ -428,7 +433,8 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
     else // m_headEntry->bytes_received > m_frameSizeBytes
     {
         ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
-        m_statistics.m_duplicateFrames.Increment();
+        // local stats are called under lock - no need for Interlocked* calls
+        m_statistics.m_duplicateFrames.IncrementNoLock();
 
         PRINT_DEBUG_INFO(
             L"\t\tctsIOPatternMediaStreamClient **a duplicate** frame for seq number (%lld)\n",
@@ -509,7 +515,8 @@ VOID CALLBACK ctsIoPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE
 
                 // indicate all frames were dropped
                 ctsConfig::g_configSettings->UdpStatusDetails.m_droppedFrames.Add(thisPtr->m_finalFrame);
-                thisPtr->m_statistics.m_droppedFrames.Add(thisPtr->m_finalFrame);
+                // local stats are called under lock - no need for Interlocked* calls
+                thisPtr->m_statistics.m_droppedFrames.AddNoLock(thisPtr->m_finalFrame);
 
                 thisPtr->m_finishedStream = true;
                 ctsTask abortTask;

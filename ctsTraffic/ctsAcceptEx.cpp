@@ -20,15 +20,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 using ctsTraffic::ctsConfig::g_configSettings;
 

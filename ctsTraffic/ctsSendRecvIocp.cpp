@@ -19,7 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
@@ -305,6 +305,7 @@ namespace ctsTraffic
         // where it's handled appropriately
 
         // increment IO for this IO request
+        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
 
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
@@ -362,6 +363,7 @@ namespace ctsTraffic
         // The IO ref-count must be incremented here to hold an IO count on the socket
         // - so that we won't inadvertently call complete_state() while IO is still being scheduled
         //
+        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
 
         ctsSendRecvStatus status{};
@@ -375,6 +377,7 @@ namespace ctsTraffic
             }
 
             // increment IO for each individual request
+            // TODO: socket is locked - no need for interlocked
             sharedSocket->IncrementIo();
 
             if (nextIo.m_timeOffsetMilliseconds > 0)

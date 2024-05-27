@@ -410,6 +410,7 @@ public:
     {
         const ctsUdpStatistics udpData(ctsConfig::g_configSettings->UdpStatusDetails.SnapView(clearStatus));
         const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
+        // can call GetValueNoLock on both Statistics objects since they are copies
 
         if (ctsConfig::StatusFormatting::Csv == format)
         {
@@ -417,17 +418,17 @@ public:
             // converting milliseconds to seconds before printing
             charactersWritten += AppendCsvOutput(charactersWritten, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
             // calculating # of bytes that were received between the previous format() and current call to format()
-            const int64_t timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+            const int64_t timeElapsed = udpData.m_endTime.GetValueNoLock() - udpData.m_startTime.GetValueNoLock();
             charactersWritten += AppendCsvOutput(
                 charactersWritten,
                 c_bitsPerSecondLength,
-                timeElapsed > 0LL ? udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? udpData.m_bitsReceived.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            charactersWritten += AppendCsvOutput(charactersWritten, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_droppedFramesLength, udpData.m_droppedFrames.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_errorFramesLength, udpData.m_errorFrames.GetValue(), false); // no comma at the end
+            charactersWritten += AppendCsvOutput(charactersWritten, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_competedFramesLength, udpData.m_successfulFrames.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_droppedFramesLength, udpData.m_droppedFrames.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_errorFramesLength, udpData.m_errorFrames.GetValueNoLock(), false); // no comma at the end
             TerminateFileString(charactersWritten);
         }
         else
@@ -435,17 +436,17 @@ public:
             // converting milliseconds to seconds before printing
             RightJustifyOutput(c_timeSliceOffset, c_timeSliceLength, static_cast<float>(currentTime) / 1000.0f);
             // calculating # of bytes that were received between the previous format() and current call to format()
-            const int64_t timeElapsed = udpData.m_endTime.GetValue() - udpData.m_startTime.GetValue();
+            const int64_t timeElapsed = udpData.m_endTime.GetValueNoLock() - udpData.m_startTime.GetValueNoLock();
             RightJustifyOutput(
                 c_bitsPerSecondOffset,
                 c_bitsPerSecondLength,
-                timeElapsed > 0LL ? udpData.m_bitsReceived.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? udpData.m_bitsReceived.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            RightJustifyOutput(c_currentStreamsOffset, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValue());
-            RightJustifyOutput(c_competedFramesOffset, c_competedFramesLength, udpData.m_successfulFrames.GetValue());
-            RightJustifyOutput(c_droppedFramesOffset, c_droppedFramesLength, udpData.m_droppedFrames.GetValue());
-            RightJustifyOutput(c_duplicatedFramesOffset, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValue());
-            RightJustifyOutput(c_errorFramesOffset, c_errorFramesLength, udpData.m_errorFrames.GetValue());
+            RightJustifyOutput(c_currentStreamsOffset, c_currentStreamsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            RightJustifyOutput(c_competedFramesOffset, c_competedFramesLength, udpData.m_successfulFrames.GetValueNoLock());
+            RightJustifyOutput(c_droppedFramesOffset, c_droppedFramesLength, udpData.m_droppedFrames.GetValueNoLock());
+            RightJustifyOutput(c_duplicatedFramesOffset, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValueNoLock());
+            RightJustifyOutput(c_errorFramesOffset, c_errorFramesLength, udpData.m_errorFrames.GetValueNoLock());
             if (format == ctsConfig::StatusFormatting::ConsoleOutput)
             {
                 TerminateString(c_errorFramesOffset);
@@ -505,8 +506,9 @@ public:
     {
         const ctsTcpStatistics tcpData(ctsConfig::g_configSettings->TcpStatusDetails.SnapView(clearStatus));
         const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
+        // can call GetValueNoLock on both Statistics objects since they are copies
 
-        const int64_t timeElapsed = tcpData.m_endTime.GetValue() - tcpData.m_startTime.GetValue();
+        const int64_t timeElapsed = tcpData.m_endTime.GetValueNoLock() - tcpData.m_startTime.GetValueNoLock();
 
         if (format == ctsConfig::StatusFormatting::Csv)
         {
@@ -518,17 +520,17 @@ public:
             charactersWritten += AppendCsvOutput(
                 charactersWritten,
                 c_sendBytesPerSecondLength,
-                timeElapsed > 0LL ? tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? tcpData.m_bytesSent.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
             // calculating # of bytes that were received between the previous format() and current call to format()
             charactersWritten += AppendCsvOutput(
                 charactersWritten,
                 c_recvBytesPerSecondLength,
-                timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            charactersWritten += AppendCsvOutput(charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValue());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValue(), false); // no comma at the end
+            charactersWritten += AppendCsvOutput(charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(charactersWritten, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock(), false); // no comma at the end
             TerminateFileString(charactersWritten);
         }
         else
@@ -540,17 +542,17 @@ public:
             RightJustifyOutput(
                 c_sendBytesPerSecondOffset,
                 c_sendBytesPerSecondLength,
-                timeElapsed > 0LL ? tcpData.m_bytesSent.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? tcpData.m_bytesSent.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
             // calculating # of bytes that were received between the previous format() and current call to format()
             RightJustifyOutput(
                 c_recvBytesPerSecondOffset,
                 c_recvBytesPerSecondLength,
-                timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValue() * 1000LL / timeElapsed : 0LL);
+                timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            RightJustifyOutput(c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValue());
-            RightJustifyOutput(c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValue());
-            RightJustifyOutput(c_connectionErrorsOffset, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValue());
-            RightJustifyOutput(c_protocolErrorsOffset, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValue());
+            RightJustifyOutput(c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            RightJustifyOutput(c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
+            RightJustifyOutput(c_connectionErrorsOffset, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
+            RightJustifyOutput(c_protocolErrorsOffset, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock());
             if (format == ctsConfig::StatusFormatting::ConsoleOutput)
             {
                 TerminateString(c_protocolErrorsOffset);

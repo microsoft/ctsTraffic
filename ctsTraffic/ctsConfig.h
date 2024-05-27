@@ -16,10 +16,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable CppClangTidyClangDiagnosticGnuZeroVariadicMacroArguments
 
 // cpp headers
-#include <stdexcept>
-#include <vector>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <stdexcept>
+#include <vector>
 // os headers
 #include <Windows.h>
 // ctl headers
@@ -27,11 +28,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
-// - with the below exceptions : these do not include any cts* headers
-//   -- ctsStatistics.hpp
+// - with the exception of ctsStatistics.hpp
+// - this header *can* be included here because it does not include any cts* headers
 //
-#include <optional>
-
 #include "ctsStatistics.hpp"
 
 namespace ctsTraffic

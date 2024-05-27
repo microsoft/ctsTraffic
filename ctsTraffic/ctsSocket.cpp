@@ -16,13 +16,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // OS headers
 #include <Windows.h>
 // ctl headers
-#include <wil/win32_helpers.h>
-// ctl headers
 #include <ctMemoryGuard.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/win32_helpers.h>
 
 namespace ctsTraffic
 {
@@ -129,8 +129,7 @@ void ctsSocket::PrintPatternResults(uint32_t lastError) const noexcept
     else
     {
         // failed during socket creation, bind, or connect
-        ctsConfig::PrintConnectionResults(
-            lastError);
+        ctsConfig::PrintConnectionResults(lastError);
     }
 }
 
@@ -286,20 +285,25 @@ catch (...)
 
 int32_t ctsSocket::IncrementIo() noexcept
 {
-    return ctMemoryGuardIncrement(&m_ioCount);
+    // not apply memory guards - we are holding the socket lock
+    ++m_ioCount;
+    return m_ioCount;
 }
 
 int32_t ctsSocket::DecrementIo() noexcept
 {
-    const auto ioValue = ctMemoryGuardDecrement(&m_ioCount);
+    // not apply memory guards - we are holding the socket lock
+    --m_ioCount;
     FAIL_FAST_IF_MSG(
-        ioValue < 0,
-        "ctsSocket: io count fell below zero (%d)\n", ioValue);
-    return ioValue;
+        m_ioCount < 0,
+        "ctsSocket: io count fell below zero (%d)\n", m_ioCount);
+    return m_ioCount;
 }
 
 int32_t ctsSocket::GetPendedIoCount() noexcept
 {
+    // using Interlocked* to read to force CPU synchronization
+    // even though writes do not need to be synchronized (we are OK having a small drift with the actual count)
     return ctMemoryGuardRead(&m_ioCount);
 }
 

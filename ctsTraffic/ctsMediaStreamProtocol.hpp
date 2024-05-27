@@ -20,14 +20,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include <ctTimer.hpp>
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
+// wil headers always included last
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {

@@ -24,9 +24,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <iphlpapi.h>
 // multimedia timer
 #include <mmsystem.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 #include <ctString.hpp>
@@ -40,11 +37,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsLogger.hpp"
 #include "ctsIOPattern.h"
 #include "ctsPrintStatus.hpp"
-// project functors
+// project headers
 #include "ctsTCPFunctions.h"
 #include "ctsMediaStreamClient.h"
 #include "ctsMediaStreamServer.h"
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 using namespace std;
 using namespace ctl;
@@ -3778,7 +3778,8 @@ namespace ctsTraffic::ctsConfig
             errorType = ErrorType::NetworkError;
         }
 
-        const int64_t totalTime = stats.m_endTime.GetValue() - stats.m_startTime.GetValue();
+        // the connection has ended - no locks needed
+        const int64_t totalTime = stats.m_endTime.GetValueNoLock() - stats.m_startTime.GetValueNoLock();
         FAIL_FAST_IF_MSG(
             totalTime < 0LL,
             "end_time is less than start_time in this ctsTcpStatistics object (%p)", &stats);
@@ -3818,10 +3819,10 @@ namespace ctsTraffic::ctsConfig
                 currentTime,
                 wsaLocalAddress,
                 wsaRemoteAddress,
-                stats.m_bytesSent.GetValue(),
-                totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
-                stats.m_bytesRecv.GetValue(),
-                totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
+                stats.m_bytesSent.GetValueNoLock(),
+                totalTime > 0LL ? stats.m_bytesSent.GetValueNoLock() * 1000LL / totalTime : 0LL,
+                stats.m_bytesRecv.GetValueNoLock(),
+                totalTime > 0LL ? stats.m_bytesRecv.GetValueNoLock() * 1000LL / totalTime : 0LL,
                 totalTime,
                 ErrorType::ProtocolError == errorType
                     ? ctsIoPattern::BuildProtocolErrorString(error)
@@ -3847,10 +3848,10 @@ namespace ctsTraffic::ctsConfig
                     wsaLocalAddress,
                     wsaRemoteAddress,
                     stats.m_connectionIdentifier,
-                    stats.m_bytesSent.GetValue(),
-                    totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
-                    stats.m_bytesRecv.GetValue(),
-                    totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
+                    stats.m_bytesSent.GetValueNoLock(),
+                    totalTime > 0LL ? stats.m_bytesSent.GetValueNoLock() * 1000LL / totalTime : 0LL,
+                    stats.m_bytesRecv.GetValueNoLock(),
+                    totalTime > 0LL ? stats.m_bytesRecv.GetValueNoLock() * 1000LL / totalTime : 0LL,
                     totalTime);
             }
             else
@@ -3870,10 +3871,10 @@ namespace ctsTraffic::ctsConfig
                     wsaLocalAddress,
                     wsaRemoteAddress,
                     stats.m_connectionIdentifier,
-                    stats.m_bytesSent.GetValue(),
-                    totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
-                    stats.m_bytesRecv.GetValue(),
-                    totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
+                    stats.m_bytesSent.GetValueNoLock(),
+                    totalTime > 0LL ? stats.m_bytesSent.GetValueNoLock() * 1000LL / totalTime : 0LL,
+                    stats.m_bytesRecv.GetValueNoLock(),
+                    totalTime > 0LL ? stats.m_bytesRecv.GetValueNoLock() * 1000LL / totalTime : 0LL,
                     totalTime);
             }
         }
@@ -3955,8 +3956,9 @@ namespace ctsTraffic::ctsConfig
         }
 
         const float currentTime = GetStatusTimeStamp();
-        const int64_t elapsedTime(stats.m_endTime.GetValue() - stats.m_startTime.GetValue());
-        const int64_t bitsPerSecond = elapsedTime > 0LL ? stats.m_bitsReceived.GetValue() * 1000LL / elapsedTime : 0LL;
+        // the connection has ended - no locks needed
+        const int64_t elapsedTime(stats.m_endTime.GetValueNoLock() - stats.m_startTime.GetValueNoLock());
+        const int64_t bitsPerSecond = elapsedTime > 0LL ? stats.m_bitsReceived.GetValueNoLock() * 1000LL / elapsedTime : 0LL;
 
         wstring csvString;
         wstring textString;
@@ -3993,10 +3995,10 @@ namespace ctsTraffic::ctsConfig
                 wsaLocalAddress,
                 wsaRemoteAddress,
                 bitsPerSecond,
-                stats.m_successfulFrames.GetValue(),
-                stats.m_droppedFrames.GetValue(),
-                stats.m_duplicateFrames.GetValue(),
-                stats.m_errorFrames.GetValue(),
+                stats.m_successfulFrames.GetValueNoLock(),
+                stats.m_droppedFrames.GetValueNoLock(),
+                stats.m_duplicateFrames.GetValueNoLock(),
+                stats.m_errorFrames.GetValueNoLock(),
                 ErrorType::ProtocolError == errorType
                     ? ctsIoPattern::BuildProtocolErrorString(error)
                     : errorString.c_str(),
@@ -4022,10 +4024,10 @@ namespace ctsTraffic::ctsConfig
                     wsaRemoteAddress,
                     stats.m_connectionIdentifier,
                     bitsPerSecond,
-                    stats.m_successfulFrames.GetValue(),
-                    stats.m_droppedFrames.GetValue(),
-                    stats.m_duplicateFrames.GetValue(),
-                    stats.m_errorFrames.GetValue());
+                    stats.m_successfulFrames.GetValueNoLock(),
+                    stats.m_droppedFrames.GetValueNoLock(),
+                    stats.m_duplicateFrames.GetValueNoLock(),
+                    stats.m_errorFrames.GetValueNoLock());
             }
             else
             {
@@ -4045,10 +4047,10 @@ namespace ctsTraffic::ctsConfig
                     wsaRemoteAddress,
                     stats.m_connectionIdentifier,
                     bitsPerSecond,
-                    stats.m_successfulFrames.GetValue(),
-                    stats.m_droppedFrames.GetValue(),
-                    stats.m_duplicateFrames.GetValue(),
-                    stats.m_errorFrames.GetValue());
+                    stats.m_successfulFrames.GetValueNoLock(),
+                    stats.m_droppedFrames.GetValueNoLock(),
+                    stats.m_duplicateFrames.GetValueNoLock(),
+                    stats.m_errorFrames.GetValueNoLock());
             }
         }
 
@@ -4103,17 +4105,18 @@ namespace ctsTraffic::ctsConfig
             remoteAddr.writeCompleteAddress(wsaRemoteAddress);
 
             static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
-            const int64_t totalTime{stats.m_endTime.GetValue() - stats.m_startTime.GetValue()};
+            // the connection has ended - no locks needed
+            const int64_t totalTime{stats.m_endTime.GetValueNoLock() - stats.m_startTime.GetValueNoLock()};
             auto textString = wil::str_printf<std::wstring>(
                 tcpSuccessfulResultTextFormat,
                 GetStatusTimeStamp(),
                 wsaLocalAddress,
                 wsaRemoteAddress,
                 stats.m_connectionIdentifier,
-                stats.m_bytesSent.GetValue(),
-                totalTime > 0LL ? stats.m_bytesSent.GetValue() * 1000LL / totalTime : 0LL,
-                stats.m_bytesRecv.GetValue(),
-                totalTime > 0LL ? stats.m_bytesRecv.GetValue() * 1000LL / totalTime : 0LL,
+                stats.m_bytesSent.GetValueNoLock(),
+                totalTime > 0LL ? stats.m_bytesSent.GetValueNoLock() * 1000LL / totalTime : 0LL,
+                stats.m_bytesRecv.GetValueNoLock(),
+                totalTime > 0LL ? stats.m_bytesRecv.GetValueNoLock() * 1000LL / totalTime : 0LL,
                 totalTime);
 
             DWORD bytesReturned;

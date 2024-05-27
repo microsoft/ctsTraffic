@@ -25,10 +25,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include "ctSockaddr.hpp"
+// wil headers always included last
+#include <wil/resource.h>
 
 namespace ctl
 {

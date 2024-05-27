@@ -16,15 +16,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 // cpp headers
 #include <vector>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctTimer.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsTCPFunctions.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -1197,7 +1197,8 @@ namespace ctsTraffic
             const int64_t currentTransferBits = static_cast<int64_t>(currentTransfer) * 8LL;
 
             ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(currentTransferBits);
-            m_statistics.m_bitsReceived.Add(currentTransferBits);
+            // local updates are always under lock - not requiring Interlocked* calls
+            m_statistics.m_bitsReceived.AddNoLock(currentTransferBits);
 
             m_currentFrameCompleted += currentTransfer;
             if (m_currentFrameCompleted == m_frameSizeBytes)

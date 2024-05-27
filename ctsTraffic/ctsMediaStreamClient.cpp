@@ -16,9 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 // project headers
@@ -29,6 +26,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 #include "ctsSocket.h"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -117,6 +117,7 @@ namespace ctsTraffic
                 //
 
                 // increment IO count while issuing this Impl, so we hold a ref-count during this out of band callback
+                // TODO: socket is locked - no need for interlocked
                 if (lambdaSharedSocket->IncrementIo() > 1)
                 {
                     // only running this one task in the OOB callback
@@ -139,6 +140,7 @@ namespace ctsTraffic
             });
 
         // increment IO count while issuing this Impl, so we hold a ref-count during this out of band callback
+        // TODO: socket is locked - no need for interlocked
         sharedSocket->IncrementIo();
         IoImplStatus status = ctsMediaStreamClientIoImpl(
             sharedSocket,
@@ -245,6 +247,7 @@ namespace ctsTraffic
         case ctsTaskAction::Recv:
             {
                 // add-ref the IO about to start
+                // TODO: the socket locked when ctsMediaStreamClientIoImpl is called
                 sharedSocket->IncrementIo();
                 auto callback = [weak_reference = std::weak_ptr(sharedSocket), task](OVERLAPPED* ov) noexcept
                 {

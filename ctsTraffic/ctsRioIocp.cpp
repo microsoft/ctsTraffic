@@ -20,16 +20,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctSockaddr.hpp>
-// local headers
+// project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic { namespace Rioiocp
     {
@@ -730,6 +730,7 @@ namespace ctsTraffic { namespace Rioiocp
 
                 // if we're here, we're attempting IO
                 // pre-incremenet IO tracking on the socket before issuing the IO
+                // TODO: socket is locked - no need for interlocked
                 ioRefcount = sharedSocket->IncrementIo();
 
                 // must ensure we have room in the RQ & CQ before initiating the IO
