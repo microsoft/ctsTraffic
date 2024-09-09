@@ -103,19 +103,19 @@ namespace ctsPerf { namespace Details
         {
             if (data.empty())
             {
-                return std::wstring();
+                return {};
             }
 
             // sort the data for IQR calculations
             sort(data.begin(), data.end());
 
             auto stdTuple = ctl::ctSampledStandardDeviation(data.begin(), data.end());
-            auto interquartileTuple = ctl::ctInterquartileRange(data.begin(), data.end());
+            auto interQuartileTuple = ctl::ctInterquartileRange(data.begin(), data.end());
 
             auto formattedData = Details::Write(static_cast<DWORD>(data.size())); // SampleCount
             formattedData += Details::Write(*data.begin(), *data.rbegin()); // Min,Max
             formattedData += Details::Write(std::get<0>(stdTuple) - std::get<1>(stdTuple), std::get<0>(stdTuple), std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
-            formattedData += Details::Write(std::get<0>(interquartileTuple), std::get<1>(interquartileTuple), std::get<2>(interquartileTuple)); // -1IQR,Median,+1IQR
+            formattedData += Details::Write(std::get<0>(interQuartileTuple), std::get<1>(interQuartileTuple), std::get<2>(interQuartileTuple)); // -1IQR,Median,+1IQR
             return formattedData;
         }
 

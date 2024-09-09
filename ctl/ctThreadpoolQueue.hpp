@@ -356,6 +356,8 @@ private:
         {
             return true;
         }
+
+        return false;
     }
 
     static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, void* context, PTP_WORK) noexcept try

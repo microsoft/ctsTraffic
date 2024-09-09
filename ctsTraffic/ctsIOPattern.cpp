@@ -71,8 +71,8 @@ namespace ctsTraffic
         while (writeSizeRemaining > 0)
         {
             const auto bytesToWrite = writeSizeRemaining > c_bufferPatternSize ? c_bufferPatternSize : writeSizeRemaining;
-            const auto memerror = memcpy_s(protectedDestination, writeSizeRemaining, g_bufferPattern, bytesToWrite);
-            FAIL_FAST_IF(memerror != 0);
+            const auto memError = memcpy_s(protectedDestination, writeSizeRemaining, g_bufferPattern, bytesToWrite);
+            FAIL_FAST_IF(memError != 0);
 
             protectedDestination += bytesToWrite;
             writeSizeRemaining -= bytesToWrite;
@@ -580,11 +580,11 @@ namespace ctsTraffic
         ctsTask returnTask;
         if (ctsTaskAction::Send == action)
         {
-            // with RIO, we have preallocated only so many pre-pinned buffers for data to keep in flight
+            // with RIO, we have pre-allocated only so many pre-pinned buffers for data to keep in flight
             // if that's exhausted, return no-IO yet
             if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO) && m_sendingRioBufferIds.empty())
             {
-                return ctsTask();
+                return {};
             }
 
             //
@@ -610,7 +610,7 @@ namespace ctsTraffic
                         const auto quantumsSkippedSinceLastSend = (currentTimeMs - m_quantumStartTimeMs) / ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
                         m_quantumStartTimeMs += quantumsSkippedSinceLastSend * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
 
-                        // we have to be careful making this adjustment since the remainingbytes this quantum could be very small
+                        // we have to be careful making this adjustment since the remaining bytes this quantum could be very small
                         // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
                         const auto bytesToAdjust = m_bytesSendingPerQuantum * quantumsSkippedSinceLastSend;
                         if (bytesToAdjust > m_bytesSendingThisQuantum)
@@ -626,7 +626,7 @@ namespace ctsTraffic
                 else
                 {
                     // we have sent more than required for this quantum
-                    // - check if this fullfilled future quantums as well
+                    // - check if this full-filled future quantums as well
                     const auto quantumAheadToSchedule = m_bytesSendingThisQuantum / m_bytesSendingPerQuantum;
 
                     // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
@@ -829,7 +829,7 @@ namespace ctsTraffic
             return returnTask;
         }
 
-        return ctsTask();
+        return {};
     }
 
     ctsIoPatternError ctsIoPatternPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
@@ -893,7 +893,7 @@ namespace ctsTraffic
             return returnTask;
         }
 
-        return ctsTask();
+        return {};
     }
 
     ctsIoPatternError ctsIoPatternPush::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
@@ -980,7 +980,7 @@ namespace ctsTraffic
                 ctsTaskAction::Recv,
                 segmentSize - m_intraSegmentTransfer);
         }
-        return ctsTask();
+        return {};
     }
 
     ctsIoPatternError ctsIoPatternPushPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept
@@ -1167,7 +1167,7 @@ namespace ctsTraffic
         switch (m_state)
         {
         case ServerState::NotStarted:
-            // get a writable buffer (ie. Recv), then update the fields in the task for the connection_id
+            // get a writable buffer (i.e. Recv), then update the fields in the task for the connection_id
             returnTask = ctsMediaStreamMessage::MakeConnectionIdTask(
                 CreateUntrackedTask(ctsTaskAction::Recv, c_udpDatagramConnectionIdHeaderLength),
                 GetConnectionIdentifier());

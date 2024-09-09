@@ -53,7 +53,7 @@ namespace ctsTraffic::ctsConfig
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	///
-	/// Settings is being defined in this cpp - it was extern'd from ctsConfig.h
+	/// Settings is being defined in this cpp - it is extern'd from ctsConfig.h
 	///
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	ctsConfigSettings* g_configSettings;
@@ -124,16 +124,8 @@ namespace ctsTraffic::ctsConfig
 	static bool g_breakOnError = false;
 	static ExitProcessType g_processStatus = ExitProcessType::Running;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Singleton values used as the actual implementation for every 'connection'
-	///
-	/// publicly exposed callers invoke ::InitOnceExecuteOnce(&InitImpl, InitOncectsConfigImpl, NULL, NULL);
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	static INIT_ONCE g_configInitImpl = INIT_ONCE_STATIC_INIT;
-
-	static BOOL CALLBACK InitOncectsConfigImpl(PINIT_ONCE, PVOID, PVOID*)
+	static BOOL CALLBACK InitOnceConfigImpl(PINIT_ONCE, PVOID, PVOID*)
 	{
 		g_configSettings = new ctsConfigSettings;
 		g_configSettings->Port = c_defaultPort;
@@ -150,13 +142,11 @@ namespace ctsTraffic::ctsConfig
 
 		g_previousPrintTimeslice = 0LL;
 		g_printTimesliceCount = 0LL;
-
 		return TRUE;
 	}
-
 	static void ctsConfigInitOnce() noexcept
 	{
-		FAIL_FAST_IF(!InitOnceExecuteOnce(&g_configInitImpl, InitOncectsConfigImpl, nullptr, nullptr));
+		FAIL_FAST_IF(!InitOnceExecuteOnce(&g_configInitImpl, InitOnceConfigImpl, nullptr, nullptr));
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -225,6 +215,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		PRINT_DEBUG_INFO(
 			L"\t\tQuerying for NetAdapterRsc failed : 0x%x\n", wil::ResultFromCaughtException());
+		return {};
 	}
 
 	static std::wstring CheckOffloadLso(const std::wstring& inputInterfaceDescription) noexcept try
@@ -255,6 +246,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		PRINT_DEBUG_INFO(
 			L"\t\tQuerying for NetAdapterLso failed : 0x%x\n", wil::ResultFromCaughtException());
+		return {};
 	}
 
 	static std::wstring CheckOffloadRss(const std::wstring& inputInterfaceDescription) noexcept try
@@ -282,6 +274,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		PRINT_DEBUG_INFO(
 			L"\t\tQuerying for NetAdapterRss failed : 0x%x\n", wil::ResultFromCaughtException());
+		return {};
 	}
 
 	static std::wstring PrintPhysicalAdapter(const std::wstring& inputInterfaceDescription) noexcept try
@@ -393,6 +386,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		PRINT_DEBUG_INFO(
 			L"\t\tQuerying for MSFT_NetAdapterHardwareInfo failed : 0x%x\n", wil::ResultFromCaughtException());
+		return {};
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -407,19 +401,19 @@ namespace ctsTraffic::ctsConfig
 	static const wchar_t* ParseArgument(_In_z_ const wchar_t* inputArgument, _In_z_ const wchar_t* expectedParam)
 	{
 		const wchar_t* paramEnd = inputArgument + wcslen(inputArgument);
-		const wchar_t* paramDelimeter = find(inputArgument, paramEnd, L':');
-		if (!(paramEnd > paramDelimeter + 1))
+		const wchar_t* paramDelimiter = find(inputArgument, paramEnd, L':');
+		if (!(paramEnd > paramDelimiter + 1))
 		{
 			throw invalid_argument(ctString::convert_to_string(inputArgument));
 		}
 		// temporarily null-terminate it at the delimiter to do a string compare
-		*const_cast<wchar_t*>(paramDelimeter) = L'\0';
+		*const_cast<wchar_t*>(paramDelimiter) = L'\0';
 		const wchar_t* returnValue = nullptr;
 		if (ctString::iordinal_equals(expectedParam, inputArgument))
 		{
-			returnValue = paramDelimeter + 1;
+			returnValue = paramDelimiter + 1;
 		}
-		*const_cast<wchar_t*>(paramDelimeter) = L':';
+		*const_cast<wchar_t*>(paramDelimiter) = L':';
 		return returnValue;
 	}
 
@@ -571,7 +565,7 @@ namespace ctsTraffic::ctsConfig
 	//////////////////////////////////////////////////////////////////////////////////////////
 	static void ParseForConnect(vector<const wchar_t*>& args)
 	{
-		auto connectSpecifed = false;
+		auto connectSpecified = false;
 		const auto foundArg = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
 				const auto* const value = ParseArgument(parameter, L"-conn");
@@ -604,7 +598,7 @@ namespace ctsTraffic::ctsConfig
 			{
 				throw invalid_argument("-conn");
 			}
-			connectSpecifed = true;
+			connectSpecified = true;
 			// always remove the arg from our vector
 			args.erase(foundArg);
 		}
@@ -622,7 +616,7 @@ namespace ctsTraffic::ctsConfig
 			}
 		}
 
-		if (IoPatternType::MediaStream == g_configSettings->IoPattern && connectSpecifed)
+		if (IoPatternType::MediaStream == g_configSettings->IoPattern && connectSpecified)
 		{
 			throw invalid_argument("-conn (MediaStream has its own internal connection handler)");
 		}
