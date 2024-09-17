@@ -715,7 +715,7 @@ namespace ctsTraffic::ctsConfig
 				g_configSettings->Options |= HandleInlineIocp;
 				g_ioFunctionName = L"Iocp (WSASend/WSARecv using IOCP)";
 			}
-			else if (ctString::iordinal_equals(L"readwritefile", value))
+			else if (ctString::iordinal_equals(L"ReadWriteFile", value))
 			{
 				g_configSettings->IoFunction = ctsReadWriteIocp;
 				g_ioFunctionName = L"ReadWriteFile (ReadFile/WriteFile using IOCP)";
@@ -1142,7 +1142,7 @@ namespace ctsTraffic::ctsConfig
 			}
 			g_mediaStreamSettings.BitsPerSecond = ConvertToIntegral<int64_t>(
 				ParseArgument(*foundArgument, L"-BitsPerSecond"));
-			// bitspersecond must align on a byte-boundary
+			// BitsPerSecond must align on a byte-boundary
 			if (g_mediaStreamSettings.BitsPerSecond % 8 != 0)
 			{
 				g_mediaStreamSettings.BitsPerSecond -= g_mediaStreamSettings.BitsPerSecond % 8;
@@ -1235,7 +1235,7 @@ namespace ctsTraffic::ctsConfig
 	///
 	/// 3 different parameters read address/name settings:
 	/// Supports specifying the parameter multiple times:
-	///   e.g. -target:machinea -target:machineb
+	///   e.g. -target:machine-a -target:machine-b
 	///
 	/// -listen: (address to listen on)
 	///   - specifying * == listen to all addresses
@@ -1382,7 +1382,7 @@ namespace ctsTraffic::ctsConfig
 		if (!g_configSettings->TargetAddresses.empty())
 		{
 			//
-			// guarantee that bindaddress and targetaddress families can match
+			// guarantee that BindAddresses and TargetAddresses families can match
 			// - can't allow a bind address to be chosen if there are no TargetAddresses with the same family
 			//
 			uint32_t bindV4 = 0;
@@ -1588,14 +1588,14 @@ namespace ctsTraffic::ctsConfig
 	///
 	/// Parses for the connection limit [max number of connections to maintain]
 	///
-	/// -throttleconnections:####
+	/// -ThrottleConnections:####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
 	static void ParseForThrottleConnections(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
-				const auto* const value = ParseArgument(parameter, L"-throttleconnections");
+				const auto* const value = ParseArgument(parameter, L"-ThrottleConnections");
 				return value != nullptr;
 			});
 		if (foundArgument != end(args))
@@ -1605,7 +1605,7 @@ namespace ctsTraffic::ctsConfig
 				throw invalid_argument("-ThrottleConnections is only supported when running as a client");
 			}
 			g_configSettings->ConnectionThrottleLimit = ConvertToIntegral<uint32_t>(
-				ParseArgument(*foundArgument, L"-throttleconnections"));
+				ParseArgument(*foundArgument, L"-ThrottleConnections"));
 			if (0 == g_configSettings->ConnectionThrottleLimit)
 			{
 				// zero means no limit
@@ -1745,7 +1745,7 @@ namespace ctsTraffic::ctsConfig
 	/// -LocalPort:##
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForLocalport(vector<const wchar_t*>& args)
+	static void ParseForLocalPort(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
@@ -1762,7 +1762,7 @@ namespace ctsTraffic::ctsConfig
 			}
 			else
 			{
-				// single value are written to localport_low with localport_high left at zero
+				// single value are written to LocalPortLow with LocalPortHigh left at zero
 				g_configSettings->LocalPortHigh = 0;
 				g_configSettings->LocalPortLow = ConvertToIntegral<uint16_t>(value);
 			}
@@ -1813,21 +1813,21 @@ namespace ctsTraffic::ctsConfig
 	/// -RateLimitPeriod:####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForRatelimit(vector<const wchar_t*>& args)
+	static void ParseForRateLimit(vector<const wchar_t*>& args)
 	{
-		const auto foundRatelimit = ranges::find_if(args, [](const wchar_t* parameter) -> bool
+		const auto foundRateLimit = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
 				const auto* const value = ParseArgument(parameter, L"-RateLimit");
 				return value != nullptr;
 			});
-		if (foundRatelimit != end(args))
+		if (foundRateLimit != end(args))
 		{
 			if (g_configSettings->Protocol != ProtocolType::TCP)
 			{
 				throw invalid_argument("-RateLimit (only applicable to TCP)");
 			}
 
-			const auto* const value = ParseArgument(*foundRatelimit, L"-RateLimit");
+			const auto* const value = ParseArgument(*foundRateLimit, L"-RateLimit");
 			if (value[0] == L'[')
 			{
 				ReadRangeValues(value, g_rateLimitLow, g_rateLimitLow);
@@ -1835,22 +1835,22 @@ namespace ctsTraffic::ctsConfig
 			else
 			{
 				// singe values are written to g_BufferSizeLow, with g_BufferSizeHigh left at zero
-				g_rateLimitLow = ConvertToIntegral<int64_t>(ParseArgument(*foundRatelimit, L"-RateLimit"));
+				g_rateLimitLow = ConvertToIntegral<int64_t>(ParseArgument(*foundRateLimit, L"-RateLimit"));
 			}
 			if (0LL == g_rateLimitLow)
 			{
 				throw invalid_argument("-RateLimit");
 			}
 			// always remove the arg from our vector
-			args.erase(foundRatelimit);
+			args.erase(foundRateLimit);
 		}
 
-		const auto foundRatelimitPeriod = ranges::find_if(args, [](const wchar_t* parameter) -> bool
+		const auto foundRateLimitPeriod = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
 				const auto* const value = ParseArgument(parameter, L"-RateLimitPeriod");
 				return value != nullptr;
 			});
-		if (foundRatelimitPeriod != end(args))
+		if (foundRateLimitPeriod != end(args))
 		{
 			if (g_configSettings->Protocol != ProtocolType::TCP)
 			{
@@ -1861,9 +1861,9 @@ namespace ctsTraffic::ctsConfig
 				throw invalid_argument("-RateLimitPeriod requires specifying -RateLimit");
 			}
 			g_configSettings->TcpBytesPerSecondPeriod = ConvertToIntegral<int64_t>(
-				ParseArgument(*foundRatelimitPeriod, L"-RateLimitPeriod"));
+				ParseArgument(*foundRateLimitPeriod, L"-RateLimitPeriod"));
 			// always remove the arg from our vector
-			args.erase(foundRatelimitPeriod);
+			args.erase(foundRateLimitPeriod);
 		}
 	}
 
@@ -2147,12 +2147,12 @@ namespace ctsTraffic::ctsConfig
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	///
-	/// Sets optional prepostrecvs value
+	/// Sets optional PrePostRecvs value
 	///
 	/// -PrePostRecvs:#####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForPrepostrecvs(vector<const wchar_t*>& args)
+	static void ParseForPrePostRecvs(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
@@ -2178,12 +2178,12 @@ namespace ctsTraffic::ctsConfig
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	///
-	/// Sets optional prepostsends value
+	/// Sets optional PrePostSends value
 	///
 	/// -PrePostSends:#####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForPrepostsends(vector<const wchar_t*>& args)
+	static void ParseForPrePostSends(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
@@ -2215,7 +2215,7 @@ namespace ctsTraffic::ctsConfig
 	/// -RecvBufValue:#####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForRecvbufvalue(vector<const wchar_t*>& args)
+	static void ParseForRecvBufValue(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
@@ -2239,7 +2239,7 @@ namespace ctsTraffic::ctsConfig
 	/// -SendBufValue:#####
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForSendbufvalue(vector<const wchar_t*>& args)
+	static void ParseForSendBufValue(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
@@ -2330,7 +2330,15 @@ namespace ctsTraffic::ctsConfig
 
 		SYSTEM_INFO systemInfo;
 		GetSystemInfo(&systemInfo);
-		g_threadPoolThreadCount = systemInfo.dwNumberOfProcessors * c_defaultThreadpoolFactor;
+		g_threadPoolThreadCount = systemInfo.dwNumberOfProcessors;
+		if (g_threadPoolThreadCount < 48)
+		{
+			g_threadPoolThreadCount = static_cast<uint32_t>(static_cast<float>(g_threadPoolThreadCount) * 1.25f);
+		}
+		if (g_threadPoolThreadCount > 96)
+		{
+			g_threadPoolThreadCount = static_cast<uint32_t>(static_cast<float>(g_threadPoolThreadCount) / 1.25f);
+		}
 
 		g_threadPool = CreateThreadpool(nullptr);
 		if (!g_threadPool)
@@ -2441,20 +2449,20 @@ namespace ctsTraffic::ctsConfig
 	/// -PauseAtEnd:##
 	///
 	//////////////////////////////////////////////////////////////////////////////////////////
-	static void ParseForTimelimit(vector<const wchar_t*>& args)
+	static void ParseForTimeLimit(vector<const wchar_t*>& args)
 	{
 		const auto foundTimeLimitArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
-				const auto* const value = ParseArgument(parameter, L"-timelimit");
+				const auto* const value = ParseArgument(parameter, L"-TimeLimit");
 				return value != nullptr;
 			});
 		if (foundTimeLimitArgument != end(args))
 		{
 			g_configSettings->TimeLimit = ConvertToIntegral<uint32_t>(
-				ParseArgument(*foundTimeLimitArgument, L"-timelimit"));
+				ParseArgument(*foundTimeLimitArgument, L"-TimeLimit"));
 			if (0 == g_configSettings->TimeLimit)
 			{
-				throw invalid_argument("-timelimit");
+				throw invalid_argument("-TimeLimit");
 			}
 			// always remove the arg from our vector
 			args.erase(foundTimeLimitArgument);
@@ -2462,16 +2470,16 @@ namespace ctsTraffic::ctsConfig
 
 		const auto foundPauseAtEndArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
-				const auto* const value = ParseArgument(parameter, L"-pauseatend");
+				const auto* const value = ParseArgument(parameter, L"-PauseAtEnd");
 				return value != nullptr;
 			});
 		if (foundPauseAtEndArgument != end(args))
 		{
 			g_configSettings->PauseAtEnd = ConvertToIntegral<uint32_t>(
-				ParseArgument(*foundPauseAtEndArgument, L"-pauseatend"));
+				ParseArgument(*foundPauseAtEndArgument, L"-PauseAtEnd"));
 			if (0 == g_configSettings->PauseAtEnd)
 			{
-				throw invalid_argument("-pauseatend");
+				throw invalid_argument("-PauseAtEnd");
 			}
 			// always remove the arg from our vector
 			args.erase(foundPauseAtEndArgument);
@@ -2531,7 +2539,7 @@ namespace ctsTraffic::ctsConfig
 				L"Client-side:\n"
 				L"\tctsTraffic -Target:<addr or name> [-Port:####] [-Protocol:<tcp/udp>] [-Verify:####] [-Connections:<####>] [-Iterations:<####>] [Protocol-specific options]\n"
 				L"\n\n"
-				L"A simple example showing default parameters:\n\n"
+				L"Getting started: run with default parameters:\n\n"
 				L"Server-side:\n"
 				L"\tctsTraffic.exe -listen:*\n"
 				L"Client-side:\n"
@@ -2542,9 +2550,9 @@ namespace ctsTraffic::ctsConfig
 				L" - the client will establish 8 concurrently connected TCP connections to the server (controlled with -Connections and -Target)\n"
 				L" - the client will indefinitely create new connections to keep 8 connections established (controlled with -Iterations)\n"
 				L" - the client and server will default to the 'push' IO pattern - client pushes data to the server (controlled with -Pattern)\n"
-				L"   - i.e., once the TCP connection is made, the client will send the entire [-Transfer] bytes to the server\n"
+				L"   - i.e., once the TCP connection is made, the client will send the entire [-Transfer] of 1TB of data to the server\n"
 				L" - both client and server send and recv data using 64KB buffers (controlled with -Buffer)\n"
-				L" - when data is received by either side, the entire data buffer is checked for data integrity (controlled with -Verify)\n"
+				L" - as data is received by either side, the entire data buffer is checked for data integrity (controlled with -Verify)\n"
 				L"\n\n"
 				L"The Server-side and Client-side may have fully independent settings *except* for the following:\n"
 				L"(these *must* match exactly on both the client and the server)\n"
@@ -2577,6 +2585,11 @@ namespace ctsTraffic::ctsConfig
 				L"\t- supports range : [low,high]  (each connection will randomly choose a buffer size from within this range)\n"
 				L"\t  note : Buffer is note required when -Pattern:MediaStream is specified,\n"
 				L"\t       : FrameSize is the effective buffer size in that traffic pattern\n"
+				L"-Connections:#####\n"
+				L"   - the # of active concurrent connections a client should maintain to indicated servers\n"
+				L"\t- <default> == 8\n"
+				L"\t  note : this is only applicable to clients - servers accept any # of connections\n"
+				L"\t  note : as a connection closes, another is immediately connected to maintain the target count\n"
 				L"-IO:<iocp,rioiocp>\n"
 				L"   - the API set and usage for processing the protocol pattern\n"
 				L"\t- <default> == iocp\n"
@@ -2622,7 +2635,7 @@ namespace ctsTraffic::ctsConfig
 				L"\t- graceful : client will initiate a 4-way FIN with the server and wait for the server's FIN\n"
 				L"\t- rude : client will immediately close the connection once it receives the 'done' response from the server\n"
 				L"         : this will deliberately tell TCP to linger for zero seconds and close the socket\n"
-				L"         : this may reesult in a RST instead of a FIN\n"
+				L"         : this may result in a RST instead of a FIN\n"
 				L"\n");
 			break;
 
@@ -2776,9 +2789,9 @@ namespace ctsTraffic::ctsConfig
 				L"     ::SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)\n"
 				L"\t- <default> == on for TCP 'iocp' -IO option, and is on for UDP client receivers\n"
 				L"                 off for all other -IO options\n"
-				L"-IO:<readwritefile>\n"
+				L"-IO:<ReadWriteFile>\n"
 				L"   - an additional IO option beyond iocp and rioiocp\n"
-				L"\t- readwritefile : leverages ReadFile/WriteFile using IOCP for async completions\n"
+				L"\t- ReadWriteFile : leverages ReadFile/WriteFile using IOCP for async completions\n"
 				L"-KeepAliveValue:####\n"
 				L"   - the # of milliseconds to set KeepAlive for TCP connections\n"
 				L"\t- <default> == not set\n"
@@ -2875,13 +2888,13 @@ namespace ctsTraffic::ctsConfig
 				L"   - the maximum number of milliseconds to run before the application is aborted and terminated\n"
 				L"\t- <default> == <no time limit>\n"
 				L"\t  note : this is to be used only to cap the maximum time to run, as this will log an error\n"
-				L"\t         if this timelimit is exceeded; predictable results should have the scenario finish\n"
+				L"\t         if this TimeLimit is exceeded; predictable results should have the scenario finish\n"
 				L"\t         before this time limit is hit\n"
 				L"\n");
 			break;
 		}
 
-		fwprintf_s(stdout, L"%ws", usage.c_str());
+		(void)fwprintf_s(stdout, L"%ws", usage.c_str());
 	}
 
 	// forward declare this function called by Startup, but implemented later in this function
@@ -3002,7 +3015,7 @@ namespace ctsTraffic::ctsConfig
 		ParseForAddress(args);
 		ParseForPort(args);
 		ParseForPortScalability(args);
-		ParseForLocalport(args);
+		ParseForLocalPort(args);
 		ParseForIfIndex(args);
 
 		//
@@ -3087,8 +3100,8 @@ namespace ctsTraffic::ctsConfig
 		ParseForIterations(args);
 		ParseForServerExitLimit(args);
 
-		ParseForRatelimit(args);
-		ParseForTimelimit(args);
+		ParseForRateLimit(args);
+		ParseForTimeLimit(args);
 
 		if (g_rateLimitLow > 0LL && g_configSettings->BurstDelay.has_value())
 		{
@@ -3120,7 +3133,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_mediaStreamSettings.FrameSizeBytes > 0)
 		{
-			// the buffersize is now effectively the frame size
+			// the bufferSize is now effectively the frame size
 			g_bufferSizeHigh = 0;
 			g_bufferSizeLow = g_mediaStreamSettings.FrameSizeBytes;
 			if (g_bufferSizeLow < 20)
@@ -3129,7 +3142,7 @@ namespace ctsTraffic::ctsConfig
 			}
 		}
 
-		// validate localport usage
+		// validate LocalPort usage
 		if (!g_configSettings->ListenAddresses.empty() && g_configSettings->LocalPortLow != 0)
 		{
 			throw invalid_argument(
@@ -3217,16 +3230,16 @@ namespace ctsTraffic::ctsConfig
 			}
 		}
 
-		ParseForPrepostrecvs(args);
+		ParseForPrePostRecvs(args);
 		if (ProtocolType::TCP == g_configSettings->Protocol &&
 			g_configSettings->ShouldVerifyBuffers &&
 			g_configSettings->PrePostRecvs > 1)
 		{
 			throw invalid_argument("-PrePostRecvs > 1 requires -Verify:connection when using TCP");
 		}
-		ParseForPrepostsends(args);
-		ParseForRecvbufvalue(args);
-		ParseForSendbufvalue(args);
+		ParseForPrePostSends(args);
+		ParseForRecvBufValue(args);
+		ParseForSendBufValue(args);
 
 		if (!args.empty())
 		{
@@ -3313,11 +3326,11 @@ namespace ctsTraffic::ctsConfig
 			{
 				if (const auto* legend = g_printStatusInformation->PrintLegend(StatusFormatting::ConsoleOutput))
 				{
-					fwprintf(stdout, L"%ws\n", legend);
+					(void)fwprintf_s(stdout, L"%ws\n", legend);
 				}
 				if (const auto* header = g_printStatusInformation->PrintHeader(StatusFormatting::ConsoleOutput))
 				{
-					fwprintf(stdout, L"%ws\n", header);
+					(void)fwprintf_s(stdout, L"%ws\n", header);
 				}
 			}
 
@@ -3370,7 +3383,7 @@ namespace ctsTraffic::ctsConfig
 					L"[%.3f] %hs",
 					GetStatusTimeStamp(),
 					exceptionText));
-			fwprintf(stderr, L"%ws\n", formattedString.c_str());
+			(void)fwprintf_s(stderr, L"%ws\n", formattedString.c_str());
 
 			if (g_errorLogger)
 			{
@@ -3380,7 +3393,7 @@ namespace ctsTraffic::ctsConfig
 		}
 		catch (...)
 		{
-			fwprintf(stderr, L"Error : failed to allocate memory\n");
+			(void)fwprintf_s(stderr, L"Error : failed to allocate memory\n");
 			if (g_errorLogger)
 			{
 				g_errorLogger->LogError(L"Error : failed to allocate memory\r\n");
@@ -3446,7 +3459,7 @@ namespace ctsTraffic::ctsConfig
 			case 4: // connection info + error info
 			case 5: // connection info + error info + status updates
 			case 6: // above + debug info
-				fwprintf(stderr, L"[%.3f] Exception thrown: %hs\n", GetStatusTimeStamp(), e.what());
+				(void)fwprintf_s(stderr, L"[%.3f] Exception thrown: %hs\n", GetStatusTimeStamp(), e.what());
 			}
 		}
 	}
@@ -3502,7 +3515,7 @@ namespace ctsTraffic::ctsConfig
 			FAIL_FAST_MSG("%ws", text);
 		}
 
-		fwprintf(stderr, L"%ws\n", text);
+		(void)fwprintf_s(stderr, L"%ws\n", text);
 
 		if (g_errorLogger)
 		{
@@ -3576,7 +3589,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (writeToConsole)
 		{
-			fwprintf(stderr, L"%ws\n", errorString.c_str());
+			(void)fwprintf_s(stderr, L"%ws\n", errorString.c_str());
 		}
 
 		if (g_errorLogger)
@@ -3624,12 +3637,11 @@ namespace ctsTraffic::ctsConfig
 
 		if (const auto lock = g_statusUpdateLock.try_lock())
 		{
-			// capture the timeslices
-			const auto lPrevioutimeslice = g_previousPrintTimeslice;
-			const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->
-				StartTimeMilliseconds;
+			// capture the timeSlices
+			const auto lPreviousTimeslice = g_previousPrintTimeslice;
+			const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
-			if (lCurrentTimeslice > lPrevioutimeslice)
+			if (lCurrentTimeslice > lPreviousTimeslice)
 			{
 				// write out the header to the console every 40 updates 
 				if (writeToConsole)
@@ -3639,7 +3651,7 @@ namespace ctsTraffic::ctsConfig
 						if (const auto* header = g_printStatusInformation->PrintHeader(
 							StatusFormatting::ConsoleOutput))
 						{
-							fwprintf(stdout, L"%ws", header);
+							(void)fwprintf_s(stdout, L"%ws", header);
 						}
 					}
 				}
@@ -3664,7 +3676,7 @@ namespace ctsTraffic::ctsConfig
 					if (const auto* printString = g_printStatusInformation->PrintStatus(
 						StatusFormatting::ConsoleOutput, lCurrentTimeslice, clearStatus))
 					{
-						fwprintf(stdout, L"%ws", printString);
+						(void)fwprintf_s(stdout, L"%ws", printString);
 					}
 				}
 
@@ -3746,7 +3758,8 @@ namespace ctsTraffic::ctsConfig
 		remoteAddr.writeCompleteAddress(wsaRemoteAddress);
 		if (writeToConsole)
 		{
-			wprintf_s(
+			(void)fwprintf_s(
+				stdout,
 				ProtocolType::TCP == g_configSettings->Protocol
 				? L"[%.3f] TCP connection established [%ws - %ws]\n"
 				: L"[%.3f] UDP connection established [%ws - %ws]\n",
@@ -3886,7 +3899,7 @@ namespace ctsTraffic::ctsConfig
 		if (writeToConsole)
 		{
 			// text strings always go to the console
-			fwprintf(stdout, L"%ws\n", textString.c_str());
+			(void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
 		}
 
 		if (g_connectionLogger)
@@ -4063,7 +4076,7 @@ namespace ctsTraffic::ctsConfig
 		if (writeToConsole)
 		{
 			// text strings always go to the console
-			fwprintf(stdout, L"%ws\n", textString.c_str());
+			(void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
 		}
 
 		if (g_connectionLogger)
@@ -4238,7 +4251,7 @@ namespace ctsTraffic::ctsConfig
 		if (writeToConsole)
 		{
 			// text strings always go to the console
-			fwprintf(stdout, L"%ws\n", textString.c_str());
+			(void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
 		}
 
 		if (g_connectionLogger)
@@ -4375,7 +4388,7 @@ namespace ctsTraffic::ctsConfig
 		{
 			wstring formattedString;
 			wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-			fwprintf(stdout, L"%ws", formattedString.c_str());
+			(void)fwprintf_s(stdout, L"%ws", formattedString.c_str());
 
 			if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
 			{
@@ -4430,7 +4443,7 @@ namespace ctsTraffic::ctsConfig
 			if (writeToConsole)
 			{
 				wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-				fwprintf(stdout, L"%ws\n", formattedString.c_str());
+				(void)fwprintf_s(stdout, L"%ws\n", formattedString.c_str());
 			}
 
 			if (g_errorLogger && !g_errorLogger->IsCsvFormat())
@@ -4675,7 +4688,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_configSettings->OutgoingIfIndex > 0)
 		{
-			constexpr int optlen{ sizeof g_configSettings->OutgoingIfIndex };
+			constexpr int optLength{ sizeof g_configSettings->OutgoingIfIndex };
 
 			if (localAddress.family() == AF_INET)
 			{
@@ -4684,9 +4697,9 @@ namespace ctsTraffic::ctsConfig
 				if (setsockopt(
 					socket,
 					IPPROTO_IP, // level
-					IP_UNICAST_IF, // optname
+					IP_UNICAST_IF,
 					reinterpret_cast<const char*>(&optionValue),
-					optlen) != 0)
+					optLength) != 0)
 				{
 					const auto gle = WSAGetLastError();
 					PrintErrorIfFailed("setsockopt(IP_UNICAST_IF)", gle);
@@ -4699,9 +4712,9 @@ namespace ctsTraffic::ctsConfig
 				if (setsockopt(
 					socket,
 					IPPROTO_IPV6, // level
-					IPV6_UNICAST_IF, // optname
+					IPV6_UNICAST_IF,
 					reinterpret_cast<const char*>(&g_configSettings->OutgoingIfIndex),
-					optlen) != 0)
+					optLength) != 0)
 				{
 					const auto gle = WSAGetLastError();
 					PrintErrorIfFailed("setsockopt(IPV6_UNICAST_IF)", gle);
@@ -4725,17 +4738,17 @@ namespace ctsTraffic::ctsConfig
 			{
 				// the admin configured the system to use this socket option
 				// it is not compatible with SO_PORT_SCALABILITY
-				constexpr DWORD optval{ 1 }; // BOOL
-				constexpr int optlen{ sizeof optval };
+				constexpr DWORD optValue{ 1 }; // BOOL
+				constexpr int optLength{ sizeof optValue };
 #ifndef SO_REUSE_UNICASTPORT
 #define SO_REUSE_UNICASTPORT (SO_PORT_SCALABILITY + 1)
 #endif
 				if (setsockopt(
 					socket,
 					SOL_SOCKET, // level
-					SO_REUSE_UNICASTPORT, // optname
-					reinterpret_cast<const char*>(&optval),
-					optlen) != 0)
+					SO_REUSE_UNICASTPORT,
+					reinterpret_cast<const char*>(&optValue),
+					optLength) != 0)
 				{
 					const auto gle = WSAGetLastError();
 					PrintErrorIfFailed("setsockopt(SO_REUSE_UNICASTPORT)", gle);
@@ -4744,15 +4757,15 @@ namespace ctsTraffic::ctsConfig
 			}
 			else if (!localAddress.isAddressAny() && localAddress.port() == 0)
 			{
-				constexpr DWORD optval{ 1 }; // BOOL
-				constexpr int optlen{ sizeof optval };
+				constexpr DWORD optValue{ 1 }; // BOOL
+				constexpr int optLength{ sizeof optValue };
 
 				if (setsockopt(
 					socket,
 					SOL_SOCKET, // level
-					SO_PORT_SCALABILITY, // optname
-					reinterpret_cast<const char*>(&optval),
-					optlen) != 0)
+					SO_PORT_SCALABILITY,
+					reinterpret_cast<const char*>(&optValue),
+					optLength) != 0)
 				{
 					const auto gle = WSAGetLastError();
 					PrintErrorIfFailed("setsockopt(SO_PORT_SCALABILITY)", gle);
@@ -4805,15 +4818,15 @@ namespace ctsTraffic::ctsConfig
 		}
 		else if (g_configSettings->Options & KeepAlive)
 		{
-			constexpr DWORD optval{ 1 };
-			constexpr int optlen{ sizeof optval };
+			constexpr DWORD optValue{ 1 };
+			constexpr int optLength{ sizeof optValue };
 
 			if (setsockopt(
 				socket,
 				SOL_SOCKET, // level
-				SO_KEEPALIVE, // optname
-				reinterpret_cast<const char*>(&optval),
-				optlen) != 0)
+				SO_KEEPALIVE,
+				reinterpret_cast<const char*>(&optValue),
+				optLength) != 0)
 			{
 				const auto gle = WSAGetLastError();
 				PrintErrorIfFailed("setsockopt(SO_KEEPALIVE)", gle);
@@ -4885,9 +4898,10 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_configSettings->Options & HandleInlineIocp)
 		{
-			if (!SetFileCompletionNotificationModes(reinterpret_cast<HANDLE>(socket),
+			
+			if (!SetFileCompletionNotificationModes(
+				reinterpret_cast<HANDLE>(socket), // NOLINT(performance-no-int-to-ptr)
 				FILE_SKIP_COMPLETION_PORT_ON_SUCCESS))
-				// NOLINT(performance-no-int-to-ptr)
 			{
 				const auto gle = GetLastError();
 				PrintErrorIfFailed("SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)", gle);
@@ -5123,13 +5137,13 @@ namespace ctsTraffic::ctsConfig
 		if (!g_configSettings->ListenAddresses.empty())
 		{
 			settingString.append(L"\tAccepting connections on addresses:\n");
-			WCHAR wsaddress[ctSockaddr::FixedStringLength]{};
+			WCHAR address[ctSockaddr::FixedStringLength]{};
 			for (const auto& addr : g_configSettings->ListenAddresses)
 			{
-				if (addr.writeCompleteAddress(wsaddress))
+				if (addr.writeCompleteAddress(address))
 				{
 					settingString.append(L"\t\t");
-					settingString.append(wsaddress);
+					settingString.append(address);
 					settingString.append(L"\n");
 				}
 			}
@@ -5144,13 +5158,13 @@ namespace ctsTraffic::ctsConfig
 			}
 
 			settingString.append(L"\tConnecting out to addresses:\n");
-			WCHAR wsaddress[ctSockaddr::FixedStringLength]{};
+			WCHAR address[ctSockaddr::FixedStringLength]{};
 			for (const auto& addr : g_configSettings->TargetAddresses)
 			{
-				if (addr.writeCompleteAddress(wsaddress))
+				if (addr.writeCompleteAddress(address))
 				{
 					settingString.append(L"\t\t");
-					settingString.append(wsaddress);
+					settingString.append(address);
 					settingString.append(L"\n");
 				}
 			}
@@ -5158,10 +5172,10 @@ namespace ctsTraffic::ctsConfig
 			settingString.append(L"\tBinding to local addresses for outgoing connections:\n");
 			for (const auto& addr : g_configSettings->BindAddresses)
 			{
-				if (addr.writeCompleteAddress(wsaddress))
+				if (addr.writeCompleteAddress(address))
 				{
 					settingString.append(L"\t\t");
-					settingString.append(wsaddress);
+					settingString.append(address);
 					settingString.append(L"\n");
 				}
 			}
@@ -5264,7 +5278,7 @@ namespace ctsTraffic::ctsConfig
 		case 6: // above + debug info
 		default:
 		{
-			fwprintf(stdout, L"%ws", settingString.c_str());
+			(void)fwprintf_s(stdout, L"%ws", settingString.c_str());
 		}
 		}
 

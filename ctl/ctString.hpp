@@ -51,21 +51,21 @@ namespace ctl::ctString
 /// Can throw std::bad_alloc
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-inline std::string convert_to_string(const std::wstring& wstr)
+inline std::string convert_to_string(const std::wstring& str)
 {
-    if (wstr.length() == 0)
+    if (str.empty())
     {
         return {};
     }
 
-    auto len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    auto len = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (len == 0)
     {
         THROW_WIN32_MSG(GetLastError(), "WideCharToMultiByte");
     }
 
     std::string buf(len, '\0');
-    len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, buf.data(), len, nullptr, nullptr);
+    len = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), -1, buf.data(), len, nullptr, nullptr);
     if (len == 0)
     {
         THROW_WIN32_MSG(GetLastError(), "WideCharToMultiByte");
@@ -78,7 +78,7 @@ inline std::string convert_to_string(const std::wstring& wstr)
 
 inline std::wstring convert_to_wstring(const std::string& str)
 {
-    if (str.length() == 0)
+    if (str.empty())
     {
         return {};
     }
@@ -108,7 +108,7 @@ inline std::wstring convert_to_wstring(const std::string& str)
 /// iordinal_equals
 ///
 /// Performs Ordinal comparisons of 2 strings, returning a bool if they compare equally.
-/// *Note the 'i' version is a case-insensative comparison
+/// *Note the 'i' version is a case-insensitive comparison
 ///
 /// Ordinal comparisons are desired when you want "binary equality". Examples include:
 /// - want to find a system resource (file, directory, registry key)
@@ -122,14 +122,14 @@ inline std::wstring convert_to_wstring(const std::string& str)
 ///    wchar_t hello[] = L"Hello";
 ///    if (ordinal_equals(hello, L"Hello)) { printf(L"Correct!"); }
 ///
-///    std::wstring wshello (L"hello");
-///    if (iordinal_equals(hello, wshello)) { printf(L"Correct!"); }
+///    std::wstring wstringHello (L"hello");
+///    if (iordinal_equals(hello, wstringHello)) { printf(L"Correct!"); }
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // Note: wcslen(convert_to_ptr(x)) == get_string_length(x) is strictly required for any pair of
-// convert_to_ptr/get_string_length implementations, but can't be cleanly expressed in OACR annotations
+// convert_to_ptr/get_string_length implementations, but can't be cleanly expressed in SAL annotations
 
 namespace Detail
 {
@@ -257,7 +257,7 @@ namespace Detail
 template <typename LeftStringT, typename RightStringT>
 bool ordinal_equals(LeftStringT lhs, RightStringT rhs)
 {
-#pragma prefast(suppress:26018, "OACR doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
+#pragma prefast(suppress:26018, "SAL doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
     return Detail::OrdinalEquals(
         Detail::ConvertToPtr(lhs),
         Detail::GetStringLength(lhs),
@@ -269,7 +269,7 @@ bool ordinal_equals(LeftStringT lhs, RightStringT rhs)
 template <typename LeftStringT, typename RightStringT>
 bool iordinal_equals(LeftStringT lhs, RightStringT rhs)
 {
-#pragma prefast(suppress:26018, "OACR doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
+#pragma prefast(suppress:26018, "SAL doesn't offer a way to annotate the requirement that wcslen(convert_to_ptr(x)) == get_string_length(x)")
     return Detail::OrdinalEquals(
         Detail::ConvertToPtr(lhs),
         Detail::GetStringLength(lhs),
@@ -395,11 +395,11 @@ inline std::wstring format_message(DWORD messageId)
 ///
 ///   This is not valid:
 ///     wchar_t hello[] = L"hello";
-///     repalce_all(hello, L"h", L"j");
+///     replace_all(hello, L"h", L"j");
 ///
 ///   This is valid:
 ///     std::wstring hello(L"hello");
-///     repalce_all(hello, L"h", L"j");
+///     replace_all(hello, L"h", L"j");
 /// 
 /// - replace_all_copy takes an original string by value into std::wstring.
 ///   Meaning an implicit std::wstring object *can* be created.
@@ -408,15 +408,15 @@ inline std::wstring format_message(DWORD messageId)
 ///
 ///   This is now valid:
 ///     wchar_t hello[] = L"hello";
-///     std::wstring jello = repalce_all_copy(hello, L"h", L"j");
+///     std::wstring jello = replace_all_copy(hello, L"h", L"j");
 ///
 ///   This is still valid:
 ///     std::wstring hello(L"hello");
-///     std::wstring jello = repalce_all_copy(hello, L"h", L"j");
+///     std::wstring jello = replace_all_copy(hello, L"h", L"j");
 ///
 ///   This is also valid - will pass down as an R-Value to avoid any copies:
 ///     std::wstring hello(L"ello");
-///     std::wstring jello = repalce_all_copy(L"h" + hello, L"h", L"j");
+///     std::wstring jello = replace_all_copy(L"h" + hello, L"h", L"j");
 ///
 ///
 /// Can throw a std::exception under low-resources

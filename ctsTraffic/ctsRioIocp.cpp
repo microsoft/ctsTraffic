@@ -219,7 +219,7 @@ namespace ctsTraffic { namespace Rioiocp
                 }
             }
 
-            free(g_pRioWorkerThreads);
+            free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
             g_pRioWorkerThreads = nullptr;
             g_rioWorkerThreadCount = 0;
 
@@ -321,7 +321,7 @@ namespace ctsTraffic { namespace Rioiocp
             }
             // free the handle array on error
             auto freeHandleArrayOnError = wil::scope_exit([&]() noexcept {
-                free(g_pRioWorkerThreads);
+                free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
                 g_pRioWorkerThreads = nullptr;
             });
 
@@ -364,7 +364,7 @@ namespace ctsTraffic { namespace Rioiocp
     ///
     /// This ptr is passed through RIO APIs as the SOCKET context for that IO operation
     /// 
-    /// This stores all relevant information with regards to the RIO SOCKET
+    /// This stores all relevant information regarding the RIO SOCKET
     /// Including encapsulating the RIO_RQ associated with the socket
     /// 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
