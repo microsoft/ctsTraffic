@@ -213,7 +213,7 @@ namespace ctl
     namespace details
     {
         inline wil::unique_variant ReadCounterFromWbemObjectAccess(_In_ IWbemObjectAccess* instance,
-            _In_ PCWSTR counterName)
+                                                                   _In_ PCWSTR counterName)
         {
             LONG propertyHandle{};
             CIMTYPE propertyType{};
@@ -224,52 +224,52 @@ namespace ctl
             {
             case CIM_SINT32:
             case CIM_UINT32:
-            {
-                ULONG value{};
-                THROW_IF_FAILED(instance->ReadDWORD(propertyHandle, &value));
-                currentValue = ctWmiMakeVariant(value);
-                break;
-            }
+                {
+                    ULONG value{};
+                    THROW_IF_FAILED(instance->ReadDWORD(propertyHandle, &value));
+                    currentValue = ctWmiMakeVariant(value);
+                    break;
+                }
 
             case CIM_SINT64:
             case CIM_UINT64:
-            {
-                ULONGLONG value{};
-                THROW_IF_FAILED(instance->ReadQWORD(propertyHandle, &value));
-                currentValue = ctWmiMakeVariant(value);
-                break;
-            }
+                {
+                    ULONGLONG value{};
+                    THROW_IF_FAILED(instance->ReadQWORD(propertyHandle, &value));
+                    currentValue = ctWmiMakeVariant(value);
+                    break;
+                }
 
             case CIM_STRING:
-            {
-                constexpr long cimStringDefaultSize = 64;
-                std::wstring value(cimStringDefaultSize, L'\0');
-                long valueSize = cimStringDefaultSize * sizeof(WCHAR);
-                long returnedSize{};
-                auto hr = instance->ReadPropertyValue(
-                    propertyHandle,
-                    valueSize,
-                    &returnedSize,
-                    reinterpret_cast<BYTE*>(value.data()));
-                if (WBEM_E_BUFFER_TOO_SMALL == hr)
                 {
-                    valueSize = returnedSize;
-                    value.resize(valueSize / sizeof(WCHAR));
-                    hr = instance->ReadPropertyValue(
+                    constexpr long cimStringDefaultSize = 64;
+                    std::wstring value(cimStringDefaultSize, L'\0');
+                    long valueSize = cimStringDefaultSize * sizeof(WCHAR);
+                    long returnedSize{};
+                    auto hr = instance->ReadPropertyValue(
                         propertyHandle,
                         valueSize,
                         &returnedSize,
                         reinterpret_cast<BYTE*>(value.data()));
+                    if (WBEM_E_BUFFER_TOO_SMALL == hr)
+                    {
+                        valueSize = returnedSize;
+                        value.resize(valueSize / sizeof(WCHAR));
+                        hr = instance->ReadPropertyValue(
+                            propertyHandle,
+                            valueSize,
+                            &returnedSize,
+                            reinterpret_cast<BYTE*>(value.data()));
+                    }
+                    THROW_IF_FAILED(hr);
+                    currentValue = ctWmiMakeVariant(value.c_str());
+                    break;
                 }
-                THROW_IF_FAILED(hr);
-                currentValue = ctWmiMakeVariant(value.c_str());
-                break;
-            }
 
             default:
                 THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                    "ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
-                    counterName, static_cast<unsigned>(propertyType));
+                             "ctWmiPerformance only supports data of type INT32, INT64, and BSTR: counter %ws is of type %u",
+                             counterName, static_cast<unsigned>(propertyType));
             }
 
             return currentValue;
@@ -317,7 +317,7 @@ namespace ctl
             using ctAccessIterator = typename std::vector<TAccess*>::const_iterator;
 
             ctWmiPerformanceDataAccessor(ctWmiService wmi, const wil::com_ptr<IWbemConfigureRefresher>& config,
-                _In_ PCWSTR classname);
+                                         _In_ PCWSTR classname);
 
             ~ctWmiPerformanceDataAccessor() noexcept
             {
@@ -393,7 +393,7 @@ namespace ctl
             if (enumInstances.begin() == enumInstances.end())
             {
                 THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_NOT_FOUND),
-                    "Failed to refresh a static instances of the WMI class %ws", classname);
+                             "Failed to refresh a static instances of the WMI class %ws", classname);
             }
 
             const auto instance = *enumInstances.begin();
@@ -484,7 +484,7 @@ namespace ctl
         class ctWmiPerformanceCounterData
         {
         private:
-            mutable wil::critical_section m_guardData{ 500 };
+            mutable wil::critical_section m_guardData{500};
             const ctWmiPerformanceCollectionType m_collectionType = ctWmiPerformanceCollectionType::Detailed;
             const std::wstring m_instanceName;
             const std::wstring m_counterName;
@@ -973,7 +973,7 @@ namespace ctl
         wil::com_ptr<IWbemConfigureRefresher> m_configRefresher;
         std::vector<ctWmiPerformanceInstanceFilter> m_instanceFilter;
         // Must lock access to counter_data
-        mutable wil::critical_section m_guardCounterData{ 500 };
+        mutable wil::critical_section m_guardCounterData{500};
         std::vector<std::unique_ptr<details::ctWmiPerformanceCounterData<T>>> m_counterData;
         bool m_dataStopped = true;
 
@@ -988,25 +988,25 @@ namespace ctl
             // the callback function must be no-except - it can't leak an exception to the caller
             // as it shouldn't break calling all other callbacks if one happens to fail an update
             return [this](const details::CallbackAction updateData) noexcept
+            {
+                try
                 {
-                    try
+                    switch (updateData)
                     {
-                        switch (updateData)
-                        {
-                        case details::CallbackAction::Start:
-                            m_dataStopped = false;
-                            break;
+                    case details::CallbackAction::Start:
+                        m_dataStopped = false;
+                        break;
 
-                        case details::CallbackAction::Stop:
-                            m_dataStopped = true;
-                            break;
+                    case details::CallbackAction::Stop:
+                        m_dataStopped = true;
+                        break;
 
-                        case details::CallbackAction::Update:
-                            // only the derived class has appropriate the accessor class to update the data
-                            update_counter_data();
-                            break;
+                    case details::CallbackAction::Update:
+                        // only the derived class has appropriate the accessor class to update the data
+                        update_counter_data();
+                        break;
 
-                        case details::CallbackAction::Clear:
+                    case details::CallbackAction::Clear:
                         {
                             FAIL_FAST_IF_MSG(
                                 !m_dataStopped,
@@ -1019,12 +1019,12 @@ namespace ctl
                             }
                             break;
                         }
-                        }
                     }
-                    CATCH_LOG()
-                        // if failed to update the counter data this pass
-                        // will try again the next timer callback
-                };
+                }
+                CATCH_LOG()
+                // if failed to update the counter data this pass
+                // will try again the next timer callback
+            };
         }
 
         //
@@ -1046,7 +1046,7 @@ namespace ctl
             if (!fAddData)
             {
                 fAddData = std::any_of(std::cbegin(m_instanceFilter), std::cend(m_instanceFilter),
-                    [&](const auto& filter) { return filter == instance; });
+                                       [&](const auto& filter) { return filter == instance; });
             }
 
             // add the counter data for this instance if:
@@ -1112,10 +1112,10 @@ namespace ctl
     {
     public:
         ctWmiPerformanceCounterImpl(const ctWmiService& wmi, _In_ PCWSTR className, _In_ PCWSTR counterName,
-            const ctWmiPerformanceCollectionType collectionType) :
+                                    const ctWmiPerformanceCollectionType collectionType) :
             ctWmiPerformanceCounter<TData>(counterName, collectionType),
             m_accessor(wmi, this->access_refresher(), className)
-            // must qualify 'this' name lookup to access access_refresher since it's in the base class
+        // must qualify 'this' name lookup to access access_refresher since it's in the base class
         {
         }
 
@@ -1197,9 +1197,9 @@ namespace ctl
         {
             m_callbacks.push_back(perfCounterObject->register_callback());
             auto revertCallback = wil::scope_exit([&]() noexcept
-                {
-                    m_callbacks.pop_back();
-                });
+            {
+                m_callbacks.pop_back();
+            });
 
             THROW_IF_FAILED(m_configRefresher->AddRefresher(perfCounterObject->m_refresher.get(), 0, nullptr));
             // dismiss scope-guard - successfully added refresher
@@ -1286,7 +1286,7 @@ namespace ctl
         // and the ctWmiPerformance objects must be movable
         struct LockedData
         {
-            wil::critical_section m_lock{ 500 };
+            wil::critical_section m_lock{500};
             bool m_countersStarted = false;
         };
 
@@ -1369,7 +1369,7 @@ namespace ctl
 
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONG>(_In_ PCWSTR name) const noexcept
-        // NOLINT(bugprone-exception-escape)
+    // NOLINT(bugprone-exception-escape)
     {
         for (auto counter = 0ul; counter < m_ulongFieldNameCount; ++counter)
         {
@@ -1384,7 +1384,7 @@ namespace ctl
 
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<ULONGLONG>(_In_ PCWSTR name) const noexcept
-        // NOLINT(bugprone-exception-escape)
+    // NOLINT(bugprone-exception-escape)
     {
         for (auto counter = 0ul; counter < m_ulonglongFieldNameCount; ++counter)
         {
@@ -1399,7 +1399,7 @@ namespace ctl
 
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<std::wstring>(_In_ PCWSTR name) const noexcept
-        // NOLINT(bugprone-exception-escape)
+    // NOLINT(bugprone-exception-escape)
     {
         for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
         {
@@ -1414,7 +1414,7 @@ namespace ctl
 
     template <>
     inline bool ctWmiPerformanceCounterProperties::PropertyNameExists<wil::unique_bstr>(_In_ PCWSTR name) const noexcept
-        // NOLINT(bugprone-exception-escape)
+    // NOLINT(bugprone-exception-escape)
     {
         for (auto counter = 0ul; counter < m_stringFieldNameCount; ++counter)
         {
