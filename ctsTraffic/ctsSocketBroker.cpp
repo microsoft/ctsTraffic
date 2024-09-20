@@ -80,7 +80,7 @@ ctsSocketBroker::~ctsSocketBroker() noexcept
 void ctsSocketBroker::Start()
 {
     PRINT_DEBUG_INFO(
-        L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
+        L"\t\tStarting broker: total connections remaining (0x%llx), pending limit (0x%x)\n",
         m_totalConnectionsRemaining, m_pendingLimit);
 
     // must always guard access to the vector

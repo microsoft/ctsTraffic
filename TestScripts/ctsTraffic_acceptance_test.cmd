@@ -59,7 +59,7 @@ set ServerOptions= -listen:* -buffer:101 -ServerExitLimit:%CONNECTIONS% -Connect
 set ClientOptions= -target:localhost -buffer:100 -connections:%CONNECTIONS% -iterations:1 -ConnectionFilename:client_connections.log -ErrorFilename:client_errors.log -StatusFilename:client_status.log -TcpInfoFilename:client_tcpinfo.csv
 
 REM **********************************************************************************************
-REM Test : verify:connection and a single pended send
+REM Test : verify:data and a single pended send
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
@@ -122,7 +122,7 @@ IF ERRORLEVEL 1 (
 
 
 REM **********************************************************************************************
-REM Test : verify:connection with randomized buffers
+REM Test : verify:data with randomized buffers
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
@@ -143,16 +143,59 @@ IF ERRORLEVEL 1 (
 
 
 REM **********************************************************************************************
-REM Test : verify:connection with rate-limited connections [10 x 100 byte sends per second]
+REM Test : verify:data with rate-limited connections [10 x 100 byte sends per second]
+REM        also testing highest verbosity level for all prints
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
-  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:connection -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:1
+  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:6
 )
 if '%Role%' == 'client' (
    REM delay the client
    ping localhost -n 5 > nul
-   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:connection -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:1 -conn:%3
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -ratelimit:10000 -transfer:%NORMAL_TRANSFER% -consoleverbosity:6 -conn:%3
+)
+
+IF ERRORLEVEL 1 (
+  echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
+  PAUSE
+) else (
+  echo PASSED
+)
+
+
+REM **********************************************************************************************
+REM Test : verify:data with  connections terminated with a RST (rude)
+REM **********************************************************************************************
+Set ERRORLEVEL=
+if '%Role%' == 'server' (
+  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -transfer:%NORMAL_TRANSFER% -consoleverbosity:1
+)
+if '%Role%' == 'client' (
+   REM delay the client
+   ping localhost -n 5 > nul
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -shutdown:rude -transfer:%NORMAL_TRANSFER% -consoleverbosity:1 -conn:%3
+)
+
+IF ERRORLEVEL 1 (
+  echo TEST FAILED: this test is expected to succeed : %ERRORLEVEL%
+  PAUSE
+) else (
+  echo PASSED
+)
+
+
+REM **********************************************************************************************
+REM Test : verify:data with  connections terminated with a bursts
+REM **********************************************************************************************
+Set ERRORLEVEL=
+if '%Role%' == 'server' (
+  cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ServerOptions% -pattern:%1 -io:%2 -verify:data -burstcount:2 -burstdelay:150 -transfer:%VERY_SMALL_TRANSFER% -consoleverbosity:1
+)
+if '%Role%' == 'client' (
+   REM delay the client
+   ping localhost -n 5 > nul
+   cdb.exe -gG -snul -sins -y c:\ -srcpath c:\  -failinc  ctsTraffic.exe %ClientOptions% -pattern:%1 -io:%2 -verify:data -burstcount:2 -burstdelay:150 -transfer:%VERY_SMALL_TRANSFER% -consoleverbosity:1 -conn:%3
 )
 
 IF ERRORLEVEL 1 (
@@ -185,7 +228,7 @@ IF ERRORLEVEL 1 (
 
 
 REM **********************************************************************************************
-REM Test : verify one extremely long transfer not verifying data without msgwaitall
+REM Test : verify one extremely long transfer verifying data without msgwaitall
 REM **********************************************************************************************
 Set ERRORLEVEL=
 if '%Role%' == 'server' (
@@ -203,6 +246,7 @@ IF ERRORLEVEL 1 (
 ) else (
   echo PASSED
 )
+
 
 
 REM **********************************************************************************************

@@ -266,7 +266,17 @@ inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) noexcept
 
 inline bool ctSockaddr::operator==(const ctSockaddr& inAddr) const noexcept
 {
-    return 0 == memcmp(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+	switch (m_saddr.si_family)
+	{
+	case AF_INET:
+        // only require the v4 slice of the union to match
+		return 0 == memcmp(&m_saddr.Ipv4, &inAddr.m_saddr.Ipv4, sizeof(SOCKADDR_IN));
+	case AF_INET6:
+        // only require the v6 slice of the union to match
+		return 0 == memcmp(&m_saddr.Ipv6, &inAddr.m_saddr.Ipv6, sizeof(SOCKADDR_IN6));
+	default:
+		return 0 == memcmp(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+	}
 }
 
 inline bool ctSockaddr::operator!=(const ctSockaddr& inAddr) const noexcept

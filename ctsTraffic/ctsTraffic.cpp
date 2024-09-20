@@ -76,14 +76,13 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     if (err == ERROR_INVALID_DATA)
     {
         wprintf(
-            L"\n\n"
+            L"\n"
             L"For more information on command line options, specify -Help\n"
             L"ctsTraffic.exe -Help:[tcp] [udp] [logging] [advanced]\n"
-            L"\t- <default> == prints this usage statement\n"
-            L"\t- tcp : prints usage for TCP-specific options\n"
-            L"\t- udp : prints usage for UDP-specific options\n"
-            L"\t- logging : prints usage for logging options\n"
-            L"\t- advanced : prints the usage for advanced and experimental options\n"
+            L"   -help:tcp : prints usage for TCP options\n"
+            L"   -help:udp : prints usage for UDP options\n"
+            L"   -help:logging : prints usage for logging options\n"
+            L"   -help:advanced : prints the usage for advanced and experimental options\n"
             L"\n\n");
         return err;
     }

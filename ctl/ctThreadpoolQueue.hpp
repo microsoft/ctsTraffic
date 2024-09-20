@@ -341,6 +341,7 @@ private:
     std::deque<FunctionVariantT> m_workItems;
     mutable LONG64 m_threadpoolThreadId{0}; // useful for callers to assert they are running within the queue
 
+    // ReSharper disable once CppNotAllPathsReturnValue
     bool ShouldSubmitThreadpoolWork() noexcept
     {
         if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)

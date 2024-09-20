@@ -286,7 +286,7 @@ namespace ctl
         ///       this class is not providing locking at this level
         ///
         /// Note: callers *MUST* guarantee connections with the WMI service stay connected
-        ///       for the lifetime of this object [e.g. guarnated ctWmiService is instanitated]
+        ///       for the lifetime of this object [e.g. guaranteed ctWmiService is instantiated]
         ///
         /// Note: callers *MUST* guarantee that COM is CoInitialized on this thread before calling
         ///
@@ -714,7 +714,7 @@ namespace ctl
     /// - Exposes the iterator class for users to traverse the data points gathered
     ///
     /// Note: callers *MUST* guarantee connections with the WMI service stay connected
-    ///       for the lifetime of this object [e.g. guarnated ctWmiService is instanitated]
+    ///       for the lifetime of this object [e.g. guaranteed ctWmiService is instantiated]
     /// Note: callers *MUST* guarantee that COM is CoInitialized on this thread before calling
     /// Note: the ctWmiPerformance class *will* retain WMI service instance
     ///       it's recommended to guarantee it stays alive
@@ -876,7 +876,7 @@ namespace ctl
         }
 
         ///
-        /// returns a begin/end pair of interator that exposes data for each time-slice
+        /// returns a begin/end pair of iterators that exposes data for each time-slice
         /// - static classes will have a null instance name
         ///
         std::pair<iterator, iterator> reference_range(_In_opt_ PCWSTR instanceName = nullptr)
@@ -905,7 +905,7 @@ namespace ctl
 
     private:
         //
-        // private stucture to track the 'filter' which instances to track
+        // private structure to track the 'filter' which instances to track
         //
         struct ctWmiPerformanceInstanceFilter
         {
@@ -1137,7 +1137,7 @@ namespace ctl
         /// invoked from the parent class to add data matching any/all filters
         ///
         /// private function required to be implemented from the abstract base class
-        /// - concrete classe must pass back a function callback for adding data points for the specified counter
+        /// - concrete class must pass back a function callback for adding data points for the specified counter
         ///
         void update_counter_data() override
         {
@@ -1429,6 +1429,7 @@ namespace ctl
 
     namespace ctWmiPerformanceDetails
     {
+        // ReSharper disable StringLiteralTypo
         inline const wchar_t* g_commonStringPropertyNames[]{
             L"Caption",
             L"Description",
@@ -1692,6 +1693,7 @@ namespace ctl
             L"RejectedConnections",
             L"RejectedConnectionsPersec"
         };
+        // ReSharper restore StringLiteralTypo
 
         // this patterns (const array of wchar_t* pointers)
         // allows for compile-time construction of the array of properties
