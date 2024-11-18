@@ -66,7 +66,7 @@ namespace ctsTraffic
                 DWORD localAddrLength = localAddr.length();
                 DWORD remoteAddrLength = remoteAddr.length();
 
-                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %lu\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
+                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
                 if (!WSAConnectByNameW(
                     socket,
                     const_cast<LPWSTR>(targetAddr.c_str()),

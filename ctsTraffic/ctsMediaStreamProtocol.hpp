@@ -72,18 +72,14 @@ public:
 
 
     static constexpr uint32_t c_bufferArraySize = 5;
-    ///
-    /// compose iteration across buffers to be sent per instantiated request
-    ///
+    //
+    // compose iteration across buffers to be sent per instantiated request
+    //
     class iterator
     {
     public:
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// iterator_traits
-        /// - allows <algorithm> functions to be used
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
+        // iterator_traits
+        // - allows <algorithm> functions to be used
         using iterator_category = std::forward_iterator_tag;
         using value_type = std::array<WSABUF, c_bufferArraySize>;
         using difference_type = size_t;
@@ -96,10 +92,8 @@ public:
         iterator(iterator&&) = default;
         iterator& operator=(iterator&&) = default;
 
-        ///
-        /// Dereferencing operators
-        /// - returning non-const array references as Winsock APIs don't take const WSABUF*
-        ///
+        // Dereferencing operators
+        // - returning non-const array references as Winsock APIs don't take const WSABUF*
         std::array<WSABUF, c_bufferArraySize>* operator->() noexcept
         {
             FAIL_FAST_IF_MSG(
@@ -124,9 +118,6 @@ public:
             return m_wsaBufArray;
         }
 
-        ///
-        /// Equality operators
-        ///
         bool operator ==(const iterator& comparand) const noexcept
         {
             return m_qpcAddress == comparand.m_qpcAddress &&
@@ -138,7 +129,6 @@ public:
             return !(*this == comparand);
         }
 
-        /// preincrement
         iterator& operator++() noexcept
         {
             FAIL_FAST_IF_MSG(
@@ -158,7 +148,6 @@ public:
             return *this;
         }
 
-        // postincrement
         iterator operator++(int) noexcept
         {
             const iterator temp(*this);
@@ -167,7 +156,7 @@ public:
         }
 
     private:
-        // c'tor is only available to the begin() and end() methods of ctsMediaStreamSendRequests
+        // constructor is only available to the begin() and end() methods of ctsMediaStreamSendRequests
         friend class ctsMediaStreamSendRequests;
 
         iterator(_In_opt_ LARGE_INTEGER* qpcAddress, int64_t bytesToSend, const std::array<WSABUF, c_bufferArraySize>& wsaBufferArray) noexcept :
@@ -221,11 +210,11 @@ public:
     };
 
 
-    ///
-    /// Constructor of the ctsMediaStreamSendRequests captures the properties of the next Send() request
-    /// - the total # of bytes to send (across X number of send requests)
-    /// - the sequence number to tag in every send request
-    ///
+    //
+    // Constructor of the ctsMediaStreamSendRequests captures the properties of the next Send() request
+    // - the total # of bytes to send (across X number of send requests)
+    // - the sequence number to tag in every send request
+    //
     ctsMediaStreamSendRequests(int64_t bytesToSend, int64_t sequenceNumber, const char* sendBuffer) noexcept :
         m_qpf(ctl::ctTimer::snap_qpf()),
         m_bytesToSend(bytesToSend),
@@ -236,36 +225,36 @@ public:
             "ctsMediaStreamSendRequests requires a buffer size to send larger than the ctsTraffic UDP header");
 
         // buffer layout: header#, seq. number, qpc, qpf, then the buffered data
-        m_wsabuffer[0].buf = reinterpret_cast<char*>(const_cast<unsigned short*>(&c_udpDatagramProtocolHeaderFlagData));
-        m_wsabuffer[0].len = c_udpDatagramProtocolHeaderFlagLength;
+        m_wsaBuffer[0].buf = reinterpret_cast<char*>(const_cast<unsigned short*>(&c_udpDatagramProtocolHeaderFlagData));
+        m_wsaBuffer[0].len = c_udpDatagramProtocolHeaderFlagLength;
 
-        m_wsabuffer[1].buf = reinterpret_cast<char*>(&m_sequenceNumber);
-        m_wsabuffer[1].len = c_udpDatagramSequenceNumberLength;
+        m_wsaBuffer[1].buf = reinterpret_cast<char*>(&m_sequenceNumber);
+        m_wsaBuffer[1].len = c_udpDatagramSequenceNumberLength;
 
-        m_wsabuffer[2].buf = reinterpret_cast<char*>(&m_qpcValue.QuadPart);
-        m_wsabuffer[2].len = c_udpDatagramQpcLength;
+        m_wsaBuffer[2].buf = reinterpret_cast<char*>(&m_qpcValue.QuadPart);
+        m_wsaBuffer[2].len = c_udpDatagramQpcLength;
 
-        m_wsabuffer[3].buf = reinterpret_cast<char*>(&m_qpf);
-        m_wsabuffer[3].len = c_udpDatagramQpfLength;
+        m_wsaBuffer[3].buf = reinterpret_cast<char*>(&m_qpf);
+        m_wsaBuffer[3].len = c_udpDatagramQpfLength;
 
-        m_wsabuffer[4].buf = const_cast<char*>(sendBuffer);
+        m_wsaBuffer[4].buf = const_cast<char*>(sendBuffer);
         // the "this->wsabuf[4].len" field is dependent on bytes_to_send and can change by iterator()
     }
 
     [[nodiscard]] iterator begin() noexcept
     {
-        return {&m_qpcValue, m_bytesToSend, m_wsabuffer};
+        return {&m_qpcValue, m_bytesToSend, m_wsaBuffer};
     }
 
     [[nodiscard]] iterator end() const noexcept
     {
         // end == null qpc + 0 byte length
-        return {nullptr, 0, m_wsabuffer};
+        return {nullptr, 0, m_wsaBuffer};
     }
 
 
 private:
-    std::array<WSABUF, c_bufferArraySize> m_wsabuffer{};
+    std::array<WSABUF, c_bufferArraySize> m_wsaBuffer{};
     LARGE_INTEGER m_qpcValue{};
     int64_t m_qpf;
     int64_t m_bytesToSend;

@@ -39,7 +39,7 @@ public:
     // - create new sockets
     static uint32_t m_timerCallbackTimeoutMs;
 
-    // only the c'tor can throw
+    // only the constructor can throw
     ctsSocketBroker();
     ~ctsSocketBroker() noexcept;
 

@@ -162,7 +162,7 @@ namespace ctsTraffic
                         if (WSAEADDRINUSE == gle)
                         {
                             constexpr uint32_t bindRetrySleepMs = 1000;
-                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %ld, sleeping %lu ms.\n", bindRetry + 1, bindRetrySleepMs);
+                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %d, sleeping %u ms.\n", bindRetry + 1, bindRetrySleepMs);
                             Sleep(bindRetrySleepMs);
                         }
                     }
@@ -170,7 +170,7 @@ namespace ctsTraffic
                     {
                         // succeeded - exit the loop
                         gle = NO_ERROR;
-                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %ld\n", bindRetry + 1);
+                        PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind succeeded on attempt %d\n", bindRetry + 1);
                         break;
                     }
                 }

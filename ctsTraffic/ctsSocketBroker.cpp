@@ -173,7 +173,7 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 
         default:
             FAIL_FAST_MSG(
-                "ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
+                "ctsSocketBroker - WaitForMultipleObjects(%p) failed [%lu]",
                 arWait, GetLastError());
     }
     return fReturn;

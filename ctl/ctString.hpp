@@ -24,33 +24,26 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/resource.h>
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-///
-/// String parsing and manipulation functions to enable faster, more reliable development
-///
-/// Notice all functions are in the ctl::ctString namespace
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
+//
+//
+// String parsing and manipulation functions to enable faster, more reliable development
+//
+// Notice all functions are in the ctl::ctString namespace
+//
 
 namespace ctl::ctString
 {
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// convert_to_string
-/// convert_to_wstring
-///
-/// Converts between std::string and std::wstring using win32 conversion functions
-///
-/// These use UTF8 for all conversion operations
-///
-/// Can throw wil::ResultException on failures from the underlying conversion calls
-/// Can throw std::bad_alloc
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// convert_to_string
+// convert_to_wstring
+//
+// Converts between std::string and std::wstring using win32 conversion functions
+//
+// These use UTF8 for all conversion operations
+//
+// Can throw wil::ResultException on failures from the underlying conversion calls
+// Can throw std::bad_alloc
+//
 inline std::string convert_to_string(const std::wstring& str)
 {
     if (str.empty())
@@ -102,35 +95,31 @@ inline std::wstring convert_to_wstring(const std::string& str)
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// ordinal_equals
-/// iordinal_equals
-///
-/// Performs Ordinal comparisons of 2 strings, returning a bool if they compare equally.
-/// *Note the 'i' version is a case-insensitive comparison
-///
-/// Ordinal comparisons are desired when you want "binary equality". Examples include:
-/// - want to find a system resource (file, directory, registry key)
-/// - want to sort consistently regardless of user locale
-/// - want to compare against a value *you* control that's not affected by user locale
-///
-/// Can throw a wil::ResultException if the Win32 API fails
-///
-/// Examples:
-///
-///    wchar_t hello[] = L"Hello";
-///    if (ordinal_equals(hello, L"Hello)) { printf(L"Correct!"); }
-///
-///    std::wstring wstringHello (L"hello");
-///    if (iordinal_equals(hello, wstringHello)) { printf(L"Correct!"); }
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
+//
+// ordinal_equals
+// iordinal_equals
+//
+// Performs Ordinal comparisons of 2 strings, returning a bool if they compare equally.
+// *Note the 'i' version is a case-insensitive comparison
+//
+// Ordinal comparisons are desired when you want "binary equality". Examples include:
+// - want to find a system resource (file, directory, registry key)
+// - want to sort consistently regardless of user locale
+// - want to compare against a value *you* control that's not affected by user locale
+//
+// Can throw a wil::ResultException if the Win32 API fails
+//
+// Examples:
+//
+//    wchar_t hello[] = L"Hello";
+//    if (ordinal_equals(hello, L"Hello)) { printf(L"Correct!"); }
+//
+//    std::wstring wstringHello (L"hello");
+//    if (iordinal_equals(hello, wstringHello)) { printf(L"Correct!"); }
+//
 // Note: wcslen(convert_to_ptr(x)) == get_string_length(x) is strictly required for any pair of
 // convert_to_ptr/get_string_length implementations, but can't be cleanly expressed in SAL annotations
-
+//
 namespace Detail
 {
     inline bool OrdinalEquals(
@@ -279,24 +268,21 @@ bool iordinal_equals(LeftStringT lhs, RightStringT rhs)
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// starts_with
-/// istarts_with
-/// ends_with
-/// iends_with
-///
-/// Searches the relevant portion of the input string for the search string, returning bool
-///
-/// Most useful in combination with std::bind as a predicate to find_if and its friends
-///
-/// The "i" versions perform case-insensitive (but *NOT* locale-sensitive) searches.
-/// The non-i versions perform exact character comparison - case-sensitive, locale-insensitive
-///
-/// *NOT* nothrow
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
+//
+// starts_with
+// istarts_with
+// ends_with
+// iends_with
+//
+// Searches the relevant portion of the input string for the search string, returning bool
+//
+// Most useful in combination with std::bind as a predicate to find_if and its friends
+//
+// The "i" versions perform case-insensitive (but *NOT* locale-sensitive) searches.
+// The non-i versions perform exact character comparison - case-sensitive, locale-insensitive
+//
+// *NOT* nothrow
+//
 inline bool starts_with(const std::wstring& haystack, const std::wstring& needle)
 {
     return
@@ -379,49 +365,47 @@ inline std::wstring format_message(DWORD messageId)
     return stringBuffer;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// replace_all
-/// replace_all_copy
-///
-/// Performs a find/replace of a specific character sequence.
-///
-/// *Note this is an exact character comparison - case-sensitive without respect for locale
-///
-/// *Note key differences between the 2 functions:
-///
-/// - replace_all takes an original string as an std::wstring reference.
-///   Meaning an implicit std::wstring object cannot be created.
-///
-///   This is not valid:
-///     wchar_t hello[] = L"hello";
-///     replace_all(hello, L"h", L"j");
-///
-///   This is valid:
-///     std::wstring hello(L"hello");
-///     replace_all(hello, L"h", L"j");
-/// 
-/// - replace_all_copy takes an original string by value into std::wstring.
-///   Meaning an implicit std::wstring object *can* be created.
-///   Additionally, R-value references can be passed through it via std::move semantics.
-///   A new std::wstring is returned with the escaped string.
-///
-///   This is now valid:
-///     wchar_t hello[] = L"hello";
-///     std::wstring jello = replace_all_copy(hello, L"h", L"j");
-///
-///   This is still valid:
-///     std::wstring hello(L"hello");
-///     std::wstring jello = replace_all_copy(hello, L"h", L"j");
-///
-///   This is also valid - will pass down as an R-Value to avoid any copies:
-///     std::wstring hello(L"ello");
-///     std::wstring jello = replace_all_copy(L"h" + hello, L"h", L"j");
-///
-///
-/// Can throw a std::exception under low-resources
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// replace_all
+// replace_all_copy
+//
+// Performs a find/replace of a specific character sequence.
+//
+// *Note this is an exact character comparison - case-sensitive without respect for locale
+//
+// *Note key differences between the 2 functions:
+//
+// - replace_all takes an original string as an std::wstring reference.
+//   Meaning an implicit std::wstring object cannot be created.
+//
+//   This is not valid:
+//     wchar_t hello[] = L"hello";
+//     replace_all(hello, L"h", L"j");
+//
+//   This is valid:
+//     std::wstring hello(L"hello");
+//     replace_all(hello, L"h", L"j");
+// 
+// - replace_all_copy takes an original string by value into std::wstring.
+//   Meaning an implicit std::wstring object *can* be created.
+//   Additionally, R-value references can be passed through it via std::move semantics.
+//   A new std::wstring is returned with the escaped string.
+//
+//   This is now valid:
+//     wchar_t hello[] = L"hello";
+//     std::wstring jello = replace_all_copy(hello, L"h", L"j");
+//
+//   This is still valid:
+//     std::wstring hello(L"hello");
+//     std::wstring jello = replace_all_copy(hello, L"h", L"j");
+//
+//   This is also valid - will pass down as an R-Value to avoid any copies:
+//     std::wstring hello(L"ello");
+//     std::wstring jello = replace_all_copy(L"h" + hello, L"h", L"j");
+//
+//
+// Can throw a std::exception under low-resources
+//
 inline void replace_all(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString) // NOLINT(google-runtime-references)
 {
     const auto searchSize = searchString.size();
@@ -459,25 +443,23 @@ inline std::string replace_all_copy(std::string originalString, const std::strin
     return originalString;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// escape_wmi_query
-/// escape_wmi_query_copy
-///
-/// Escapes characters that are 'special' in the context of a WMI WQL query which could
-///  inadvertently affect the result of the query.
-///
-/// - escape_wmi_query takes an original string as an std::wstring reference.
-///   Meaning an implicit std::wstring object cannot be created.
-///
-/// - escape_wmi_query_copy takes an original string by value into std::wstring.
-///   Meaning an implicit std::wstring object *can* be created.
-///   Additionally, R-value references can be passed through it via std::move semantics.
-///   A new std::wstring is returned with the escaped string.
-///
-/// Can throw a std::exception under low-resources
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// escape_wmi_query
+// escape_wmi_query_copy
+//
+// Escapes characters that are 'special' in the context of a WMI WQL query which could
+//  inadvertently affect the result of the query.
+//
+// - escape_wmi_query takes an original string as an std::wstring reference.
+//   Meaning an implicit std::wstring object cannot be created.
+//
+// - escape_wmi_query_copy takes an original string by value into std::wstring.
+//   Meaning an implicit std::wstring object *can* be created.
+//   Additionally, R-value references can be passed through it via std::move semantics.
+//   A new std::wstring is returned with the escaped string.
+//
+// Can throw a std::exception under low-resources
+//
 inline void escape_wmi_query(std::wstring& unescapedString)
 {
     if (unescapedString.size() > 1)
@@ -501,28 +483,6 @@ inline std::wstring escape_wmi_query_copy(std::wstring unescapedString)
 {
     escape_wmi_query(unescapedString);
     return unescapedString;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// format_string
-/// format_string_va
-///
-/// Creates a formatted string for the caller - growing the buffer for _vsnwprintf_s
-/// Returns a std::wstring with the resulting formatted string
-///
-/// Will continue to grow the formatted string up to MAXINT32 characters to avoid truncation
-///  to ensure the entire formatted string is captured
-///
-/// Can throw a std::exception under low-resources
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-inline
-std::wstring __cdecl format_string_va(_In_ _Printf_format_string_ PCWSTR pszFormat, va_list args)
-{
-    std::wstring formattedString;
-    THROW_IF_FAILED(wil::details::str_vprintf_nothrow<std::wstring>(formattedString, pszFormat, args));
-    return formattedString;
 }
 
 inline

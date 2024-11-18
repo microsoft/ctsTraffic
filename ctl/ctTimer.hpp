@@ -22,7 +22,7 @@ namespace ctl {namespace ctTimer { namespace Details
         {
             ///
             /// InitOnce the QPF value as it won't change after the OS has booted
-            /// - hiding within an unnamed namesapce
+            /// - hiding within an unnamed namespace
             ///
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;

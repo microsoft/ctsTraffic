@@ -3,6 +3,7 @@
 /ctsTraffic/Release
 /ctsTraffic/x64
 /ctsTraffic/ARM64
+/ctsTraffic/ctsTraffic.log
 /Debug
 /Release
 /x64
@@ -13,7 +14,8 @@
 /MSTest/*/Debug/*
 /MSTest/*/Release
 /MSTest/*/Release/*
-/MSTest/*/x64
+/MSTest/*/x64*
+/MSTest/*/ARM*
 /ctsPerf/Debug
 /ctsPerf/Release
 /ctsPerf/x64
@@ -27,8 +29,5 @@
 *.sdf
 *.aps
 /.vs
-/ARM
-/ctsTraffic/ctsTraffic.log
 /_ReSharper.Caches
 /packages
-/MSTest/ctsIOPatternProtocolPolicyUnitTest/ARM/Release

@@ -19,7 +19,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-enum class ctsIoPatternType
+enum class ctsIoPatternType : std::uint8_t
 {
     NoIo,
     SendConnectionGuid,
@@ -32,7 +32,7 @@ enum class ctsIoPatternType
     RequestFin
 };
 
-enum class ctsIoPatternError
+enum class ctsIoPatternError : std::uint8_t
 {
     NotProtocolError,
     NoConnectionGuid,
@@ -108,7 +108,7 @@ template <typename Protocol>
 class ctsIoPatternProtocolPolicy
 {
 private:
-    enum class InternalPatternState
+    enum class InternalPatternState : std::uint8_t
     {
         Initialized,
         MoreIo,
@@ -128,7 +128,7 @@ private:
     // need to know when to stop
     uint64_t m_maxTransfer = 0;
     // need to know in-flight bytes
-    uint64_t m_inflightBytes = 0;
+    uint64_t m_inFlightBytes = 0;
     // tracking the pattern state
     mutable InternalPatternState m_internalState = InternalPatternState::Initialized;
     // tracking the specific error for this connection
@@ -147,17 +147,17 @@ public:
         //
         // Guard our internal tracking - all protocol logic assumes these rules
         //
-        const auto alreadyTransferred = m_confirmedBytes + m_inflightBytes;
+        const auto alreadyTransferred = m_confirmedBytes + m_inFlightBytes;
 
         FAIL_FAST_IF_MSG(
-            alreadyTransferred < m_confirmedBytes || alreadyTransferred < m_inflightBytes,
-            "ctsIOPatternState internal overflow (already_transferred = m_confirmedBytes + m_inflightBytes)\n"
+            alreadyTransferred < m_confirmedBytes || alreadyTransferred < m_inFlightBytes,
+            "ctsIOPatternState internal overflow (already_transferred = m_confirmedBytes + m_inFlightBytes)\n"
             "already_transferred: %llu\n"
             "m_confirmedBytes: %llu\n"
-            "m_inflightBytes: %llu\n",
+            "m_inFlightBytes: %llu\n",
             alreadyTransferred,
             m_confirmedBytes,
-            m_inflightBytes);
+            m_inFlightBytes);
         FAIL_FAST_IF_MSG(
             alreadyTransferred > m_maxTransfer,
             "ctsIOPatternState internal error: bytes already transferred (%llu) is >= the total we're expected to transfer (%llu)\n",
@@ -261,19 +261,12 @@ public:
 
 private:
     //
-    // these private methods are specialized by the Potocol specified in the class template
+    // these private methods are specialized by the Protocol specified in the class template
     //
     ctsIoPatternType GetNextPatternTypePerProtocol() const noexcept;
     void CompletedTaskPerProtocol(const ctsTask& completedTask, uint32_t completedTransferredBytes) noexcept;
     void UpdateErrorPerProtocol(DWORD errorCode) const noexcept;
 };
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// Definitions for the class methods
-/// - including the specialized methods per-protocol
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename Protocol>
 ctsIoPatternType ctsIoPatternProtocolPolicy<Protocol>::GetNextPatternType() const noexcept
@@ -290,7 +283,7 @@ ctsIoPatternType ctsIoPatternProtocolPolicy<Protocol>::GetNextPatternType() cons
     //
     if (InternalPatternState::MoreIo == m_internalState)
     {
-        if (m_confirmedBytes + m_inflightBytes < m_maxTransfer)
+        if (m_confirmedBytes + m_inFlightBytes < m_maxTransfer)
         {
             return ctsIoPatternType::MoreIo;
         }
@@ -343,7 +336,7 @@ void ctsIoPatternProtocolPolicy<Protocol>::NotifyNextTask(const ctsTask& nextTas
 {
     if (nextTask.m_trackIo)
     {
-        m_inflightBytes += nextTask.m_bufferLength;
+        m_inFlightBytes += nextTask.m_bufferLength;
     }
 }
 
@@ -367,7 +360,7 @@ void ctsIoPatternProtocolPolicy<Protocol>::CompletedTask(const ctsTask& complete
         if (completedTransferredBytes != ctsStatistics::ConnectionIdLength)
         {
             PRINT_DEBUG_INFO(
-                L"\t\tctsIOPatternState::completedTask : ErrorIoFailed (TooFewBytes) [transfered %u, Expected ConnectionID (%u)]\n",
+                L"\t\tctsIOPatternState::completedTask : ErrorIoFailed (TooFewBytes) [transferred %u, Expected ConnectionID (%u)]\n",
                 completedTransferredBytes, ctsStatistics::ConnectionIdLength);
             UpdateProtocolError(ctsIoPatternError::NoConnectionGuid);
             return;
@@ -382,13 +375,13 @@ void ctsIoPatternProtocolPolicy<Protocol>::CompletedTask(const ctsTask& complete
         // Checking for an inconsistent internal state 
         //
         FAIL_FAST_IF_MSG(
-            completedTransferredBytes > m_inflightBytes,
+            completedTransferredBytes > m_inFlightBytes,
             "ctsIOPatternState::completedTask : ctsIOTask (%p) returned more bytes (%u) than were in flight (%llu)",
-            &completedTask, completedTransferredBytes, m_inflightBytes);
+            &completedTask, completedTransferredBytes, m_inFlightBytes);
         FAIL_FAST_IF_MSG(
-            completedTask.m_bufferLength > m_inflightBytes,
+            completedTask.m_bufferLength > m_inFlightBytes,
             "ctsIOPatternState::completedTask : the ctsIOTask (%p) had requested more bytes (%u) than were in-flight (%llu)\n",
-            &completedTask, completedTask.m_bufferLength, m_inflightBytes);
+            &completedTask, completedTask.m_bufferLength, m_inFlightBytes);
         FAIL_FAST_IF_MSG(
             completedTransferredBytes > completedTask.m_bufferLength,
             "ctsIOPatternState::completedTask : ctsIOTask (%p) returned more bytes (%u) than were posted (%u)\n",
@@ -396,7 +389,7 @@ void ctsIoPatternProtocolPolicy<Protocol>::CompletedTask(const ctsTask& complete
         //
         // now update our internal tracking of bytes in-flight / completed
         //
-        m_inflightBytes -= completedTask.m_bufferLength;
+        m_inFlightBytes -= completedTask.m_bufferLength;
         m_confirmedBytes += completedTransferredBytes;
     }
     //
@@ -547,7 +540,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>::CompletedTaskPe
 template <>
 inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::CompletedTaskPerProtocol(const ctsTask& completedTask, uint32_t completedTransferredBytes) noexcept
 {
-    const auto alreadyTransferred = m_confirmedBytes + m_inflightBytes;
+    const auto alreadyTransferred = m_confirmedBytes + m_inFlightBytes;
     //
     // TCP has a full state machine
     //
@@ -571,9 +564,9 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
     }
     else if (alreadyTransferred == m_maxTransfer)
     {
-        // With TCP, if inflight_bytes > 0, we are not yet done
+        // With TCP, if inFlightBytes > 0, we are not yet done
         // - we need to wait for that pended IO to complete
-        if (0 == m_inflightBytes)
+        if (0 == m_inFlightBytes)
         {
             // clients will recv the server status, then process their shutdown sequence
             switch (m_internalState)
@@ -632,7 +625,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
 
                 default:
                     FAIL_FAST_MSG(
-                        "ctsIOPatternState::completedTask - invalid internal state (%d): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctstraffic::ctsIOTask",
+                        "ctsIOPatternState::completedTask - invalid internal state (%d): dt %p ctsTraffic!ctsTraffic::ctsIOPatternState, dt %p ctsTraffic!ctsTraffic::ctsIOTask",
                         m_internalState, this, &completedTask);
             }
         }
@@ -650,7 +643,7 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
 template <>
 inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::CompletedTaskPerProtocol(const ctsTask&, uint32_t completedTransferredBytes) noexcept
 {
-    const auto alreadyTransferred = m_confirmedBytes + m_inflightBytes;
+    const auto alreadyTransferred = m_confirmedBytes + m_inFlightBytes;
     //
     // TCP has a full state machine
     //
@@ -674,9 +667,9 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::Completed
     }
     else if (alreadyTransferred == m_maxTransfer)
     {
-        // With TCP, if inflight_bytes > 0, we are not yet done
+        // With TCP, if inFlightBytes > 0, we are not yet done
         // - we need to wait for that pended IO to complete
-        if (0 == m_inflightBytes)
+        if (0 == m_inFlightBytes)
         {
             // servers will first send their final status before starting their shutdown sequence
             switch (m_internalState)

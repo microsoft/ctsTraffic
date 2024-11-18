@@ -15,6 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "targetver.h"
 
 // CRT headers
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 // os headers
@@ -32,9 +33,9 @@ using namespace std;
 
 
 // global ptr for easing debugging
-ctsSocketBroker* g_socketBroker = nullptr;
+static ctsSocketBroker* g_socketBroker = nullptr;
 
-BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
+static BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
     // handle all exit types - notify config that it's time to shut down
     ctsConfig::PrintSummary(L"\n  **** ctrl-break hit -- shutting down ****\n");
@@ -208,9 +209,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     int64_t errorCount =
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
-    if (errorCount > MAXINT)
-    {
-        errorCount = MAXINT;
-    }
+
+    errorCount = std::min<int64_t>(errorCount, MAXINT);
     return static_cast<int>(errorCount);
 }

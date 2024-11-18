@@ -65,41 +65,37 @@ struct ctThreadIocpCallbackInfo
 static_assert(sizeof(ctThreadIocpCallbackInfo) == sizeof(OVERLAPPED) + sizeof(PVOID) + sizeof(ctThreadIocpCallback_t));
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// ctThreadIocp
-///
-/// class that encapsulates the new-to-Vista ThreadPool APIs around OVERLAPPED IO completion ports
-///
-/// it creates a handle to the system-managed thread pool, 
-/// - and exposes a method to get an OVERLAPPED* for asynchronous Win32 API calls which use OVERLAPPED I/O
-///
-/// Basic usage:
-/// - construct a ctThreadIocp object by passing in the HANDLE/SOCKET on which overlapped IO calls will be made
-/// - call new_request to get an OVERLAPPED* for an asynchronous Win32 API call the associated HANDLE/SOCKET
-///   - additionally pass a function to be invoked on IO completion 
-/// - if the Win32 API succeeds or returns ERROR_IO_PENDING:
-///    - the user's callback function will be called on completion [if succeeds or fails]
-///    - from the callback function, the user then calls GetOverlappedResult/WSAGetOverlappedResult 
-///      on the given OVERLAPPED* to get further details of the IO request [status, bytes transferred]
-/// - if the Win32 API fails with an error other than ERROR_IO_PENDING
-///    - the user *must* call cancel_request, providing the OVERLAPPED* used in the failed API call
-///    - that OVERLAPPED* is no longer valid and cannot be reused 
-///      [new_request must be called again for another OVLERAPPED*]
-///
-/// Additional notes regarding OVERLAPPED I/O:
-/// - the user must call new_request to get a new OVERLAPPED* before every Win32 API being made
-///   - an OVERLAPPED* is valid only for that one API call and is invalid once the corresponding callback completes
-/// - if the IO call must be canceled after is completed successfully or returned ERROR_IO_PENDING, 
-///   the user should take care to call the appropriate API (CancelIo, CancelIoEx, CloseHandle, closesocket)
-///   - the user should then expect the callback to be invoked for all IO requests on that HANDLE/SOCKET
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ctThreadIocp
+//
+// class that encapsulates the new-to-Vista ThreadPool APIs around OVERLAPPED IO completion ports
+//
+// it creates a handle to the system-managed thread pool, 
+// - and exposes a method to get an OVERLAPPED* for asynchronous Win32 API calls which use OVERLAPPED I/O
+//
+// Basic usage:
+// - construct a ctThreadIocp object by passing in the HANDLE/SOCKET on which overlapped IO calls will be made
+// - call new_request to get an OVERLAPPED* for an asynchronous Win32 API call the associated HANDLE/SOCKET
+//   - additionally pass a function to be invoked on IO completion 
+// - if the Win32 API succeeds or returns ERROR_IO_PENDING:
+//    - the user's callback function will be called on completion [if succeeds or fails]
+//    - from the callback function, the user then calls GetOverlappedResult/WSAGetOverlappedResult 
+//      on the given OVERLAPPED* to get further details of the IO request [status, bytes transferred]
+// - if the Win32 API fails with an error other than ERROR_IO_PENDING
+//    - the user *must* call cancel_request, providing the OVERLAPPED* used in the failed API call
+//    - that OVERLAPPED* is no longer valid and cannot be reused 
+//      [new_request must be called again for another OVERLAPPED*]
+//
+// Additional notes regarding OVERLAPPED I/O:
+// - the user must call new_request to get a new OVERLAPPED* before every Win32 API being made
+//   - an OVERLAPPED* is valid only for that one API call and is invalid once the corresponding callback completes
+// - if the IO call must be canceled after is completed successfully or returned ERROR_IO_PENDING, 
+//   the user should take care to call the appropriate API (CancelIo, CancelIoEx, CloseHandle, closesocket)
+//   - the user should then expect the callback to be invoked for all IO requests on that HANDLE/SOCKET
 class ctThreadIocp
 {
 public:
     //
-    // These c'tors can fail under low resources
+    // These constructors can fail under low resources
     // - wil::ResultException (from the ThreadPool APIs)
     //
     explicit ctThreadIocp(HANDLE _handle, _In_opt_ PTP_CALLBACK_ENVIRON _ptp_env = nullptr) :
@@ -128,7 +124,7 @@ public:
     }
 
     //
-    // new_request is expected to be called before each call to a Win32 function taking an OVLERAPPED*
+    // new_request is expected to be called before each call to a Win32 function taking an OVERLAPPED*
     // - which the caller expects to have their std::function invoked with the following signature:
     //     void callback_function(OVERLAPPED* _overlapped)
     //
@@ -174,10 +170,6 @@ public:
         delete old_request;
     }
 
-    //
-    // No default c'tor - preventing zombie objects
-    // No copy c'tors
-    //
     ctThreadIocp() = delete;
     ctThreadIocp(const ctThreadIocp&) = delete;
     ctThreadIocp& operator=(const ctThreadIocp&) = delete;
@@ -189,15 +181,15 @@ private:
         PTP_CALLBACK_INSTANCE /*_instance*/,
         PVOID /*_context*/,
         PVOID _overlapped,
-        ULONG /*_ioresult*/,
-        ULONG_PTR /*_numberofbytestransferred*/,
+        ULONG /*_ioResult*/,
+        ULONG_PTR /*_numberOfBytesTransferred*/,
         PTP_IO /*_io*/) noexcept
     {
         // this code may look really odd 
         // the Win32 TP APIs eat stack overflow exceptions and reuses the thread for the next TP request
-        // it is *not* expected that callers can/will harden their callback functions to be resilient to running out of stack at any momemnt
+        // it is *not* expected that callers can/will harden their callback functions to be resilient to running out of stack at any moment
         // since we *do* hit this in stress, and we face ugly lock-related breaks since an SEH was swallowed while a callback held a lock, 
-        // we're working really hard to break and never let TP swalling SEH exceptions
+        // we're working really hard to break and never let TP swallowing SEH exceptions
         const EXCEPTION_POINTERS* exr = nullptr;
         __try
         {

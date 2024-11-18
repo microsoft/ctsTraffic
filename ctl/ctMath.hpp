@@ -97,14 +97,14 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
         }
 
         const auto numericQuotient = numericCount / 2;
-        const auto numericRemaineder = numericCount % 2;
+        const auto numericRemainder = numericCount % 2;
 
         // choose the (N+1)/2 value
         // - if it lands on a value, the iterator before and after
         // - if it lands between 2 values, return those 2 values
         BidirectionalIterator lhs;
         BidirectionalIterator rhs;
-        if (numericRemaineder == 0)
+        if (numericRemainder == 0)
         {
             // before and after the median
             lhs = splitBegin + numericQuotient - 2;

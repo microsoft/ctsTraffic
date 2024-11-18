@@ -46,7 +46,7 @@ namespace ctsTraffic { namespace ctsMediaStreamServerImpl
         // - remove_socket takes the remote address to find the socket
         // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
         //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
-        //   (which will wait for all TP threads to complete in the d'tor)
+        //   (which will wait for all TP threads to complete in the destructor)
         void RemoveSocket(const ctl::ctSockaddr& targetAddr);
 
         // Processes the incoming START request from the client

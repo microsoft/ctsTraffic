@@ -13,18 +13,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// os headers
 #include <winnt.h>
 
 namespace ctl
 {
-//////////////////////////////////////////////////////////////////////////////////////////
-///
-/// Can concurrent-safely read from both const and non-const
-///  long long * 
-///  long *
-///
-//////////////////////////////////////////////////////////////////////////////////////////
+
+// Can concurrent-safely read from both const and non-const
 inline long long ctMemoryGuardRead(const long long* value) noexcept
 {
     return ::InterlockedCompareExchange64(const_cast<long long*>(value), 0LL, 0LL);
@@ -45,19 +39,15 @@ inline long ctMemoryGuardRead(_In_ long* value) noexcept
     return ::InterlockedCompareExchange(value, 0LL, 0LL);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-///
-/// Can concurrent-safely update a long long or long value
-/// - *Write returns the *prior* value
-/// - *WriteConditionally returns the *prior* value
-/// - *Add returns the *prior* value
-/// - *Subtract returns the *prior* value
-///   (Note subtraction is just the adding a negative long value)
-///
-/// - *Increment returns the *new* value
-/// - *Decrement returns the *new* value
-///
-//////////////////////////////////////////////////////////////////////////////////////////
+// Can concurrent-safely update a long long or long value
+// - *Write returns the *prior* value
+// - *WriteConditionally returns the *prior* value
+// - *Add returns the *prior* value
+// - *Subtract returns the *prior* value
+//   (Note subtraction is just the adding a negative long value)
+//
+// - *Increment returns the *new* value
+// - *Decrement returns the *new* value
 inline long long ctMemoryGuardWrite(_Inout_ long long* value, long long newValue) noexcept
 {
     return ::InterlockedExchange64(value, newValue);

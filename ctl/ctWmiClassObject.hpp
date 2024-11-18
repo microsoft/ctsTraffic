@@ -94,14 +94,14 @@ public:
     //
     // Not yet implemented
     //
-    /// method_iterator method_begin(bool _fLocalMethodsOnly = true)
-    /// {
-    ///     return method_iterator(wbemClass, _fLocalMethodsOnly);
-    /// }
-    /// method_iterator method_end() noexcept
-    /// {
-    ///     return method_iterator();
-    /// }
+    // method_iterator method_begin(bool _fLocalMethodsOnly = true)
+    // {
+    //     return method_iterator(wbemClass, _fLocalMethodsOnly);
+    // }
+    // method_iterator method_end() noexcept
+    // {
+    //     return method_iterator();
+    // }
 
     // A forward property_iterator class type to enable forward-traversing instances of the queried WMI provider
     class property_iterator
@@ -140,13 +140,9 @@ public:
             swap(m_propertyType, rhs.m_propertyType);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// accessors:
-        /// - dereference operators to access the property name
-        /// - explicit type() method to expose its CIM type
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
+        // accessors:
+        // - dereference operators to access the property name
+        // - explicit type() method to expose its CIM type
         BSTR operator*()
         {
             if (m_index == c_endIteratorIndex)

@@ -139,7 +139,7 @@ namespace ctsTraffic
             const auto lock = m_lock.lock();
             FAIL_FAST_IF_MSG(
                 m_ioCount != 0,
-                "ctsSocket::complete_state is called with outstanding IO (%d)", m_ioCount);
+                "ctsSocket::complete_state is called with outstanding IO (%ld)", m_ioCount);
 
             if (m_pattern)
             {
@@ -191,7 +191,7 @@ namespace ctsTraffic
         if (ctsConfig::g_configSettings->PrePostSends == 0)
         {
             // user didn't specify a specific # of sends to pend
-            // start ISB notifications (best effort)
+            // start ISB notifications (best-effort)
             InitiateIsbNotification();
         }
     }
@@ -241,7 +241,7 @@ namespace ctsTraffic
                     if (0 == idealsendbacklogquery(lambdaSocket, &isb))
                     {
                         const auto lock = lambdaSharedThis->m_lock.lock();
-                        PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %u bytes\n", isb);
+                        PRINT_DEBUG_INFO(L"\t\tctsSocket::process_isb_notification : setting ISB to %lu bytes\n", isb);
                         lambdaSharedThis->m_pattern->SetIdealSendBacklog(isb);
                     }
                     else
@@ -299,7 +299,7 @@ namespace ctsTraffic
         --m_ioCount;
         FAIL_FAST_IF_MSG(
             m_ioCount < 0,
-            "ctsSocket: io count fell below zero (%d)\n", m_ioCount);
+            "ctsSocket: io count fell below zero (%ld)\n", m_ioCount);
         return m_ioCount;
     }
 

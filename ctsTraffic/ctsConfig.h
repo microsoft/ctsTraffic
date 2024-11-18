@@ -28,7 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
-// - with the exception of ctsStatistics.hpp
+// - except for ctsStatistics.hpp
 // - this header *can* be included here because it does not include any cts* headers
 //
 #include "ctsStatistics.hpp"
@@ -50,21 +50,21 @@ namespace ctsTraffic
         // Declaring enum types in the ctsConfig namespace
         // - to be referenced by ctsConfig functions
         //
-        enum class ExitProcessType : LONG
+        enum class ExitProcessType : std::uint8_t
         {
             Running,
             Normal,
             Rude
         };
 
-        enum class ProtocolType
+        enum class ProtocolType : std::uint8_t
         {
             NoProtocolSet,
             TCP,
             UDP
         };
 
-        enum class TcpShutdownType
+        enum class TcpShutdownType : std::uint8_t
         {
             NoShutdownOptionSet,
             GracefulShutdown,
@@ -72,7 +72,7 @@ namespace ctsTraffic
             Random
         };
 
-        enum class IoPatternType
+        enum class IoPatternType : std::uint8_t
         {
             NoIoSet,
             Push,
@@ -82,7 +82,7 @@ namespace ctsTraffic
             MediaStream
         };
 
-        enum class StatusFormatting
+        enum class StatusFormatting : std::uint8_t
         {
             NoFormattingSet,
             ClearText,
@@ -91,7 +91,7 @@ namespace ctsTraffic
         };
 
         // cannot be an enum class and have the below operator overloads work correctly
-        enum OptionType
+        enum OptionType : std::uint16_t
         {
             NoOptionSet = 0x0000,
             LoopbackFastPath = 0x0001,
@@ -107,11 +107,9 @@ namespace ctsTraffic
             // next enum  = 0x0400
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
         // custom operators for the OptionType enum (since it's to be used as a bitmask)
         //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // OR
         inline OptionType operator|(const OptionType& lhs, const OptionType& rhs) noexcept
@@ -155,15 +153,13 @@ namespace ctsTraffic
             return static_cast<OptionType>(~static_cast<uint32_t>(lhs));
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
         // Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
         //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
         bool Startup(int argc, _In_reads_(argc) const wchar_t** argv);
         void Shutdown(ExitProcessType type) noexcept;
 
-        enum class PrintUsageOption
+        enum class PrintUsageOption : std::uint8_t
         {
             Default,
             Tcp,
@@ -192,7 +188,7 @@ namespace ctsTraffic
 
         void __cdecl PrintSummary(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept;
         void PrintStatusUpdate() noexcept;
-        void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept;
+        void __cdecl PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR text, ...) noexcept;
         void PrintErrorIfFailed(_In_ PCSTR what, uint32_t why) noexcept;
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintErrorInfoOverride(_In_ PCWSTR text) noexcept;
@@ -434,12 +430,10 @@ namespace ctsTraffic
             static constexpr DWORD c_CriticalSectionSpinlock = 200ul;
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// Settings is defined in ctsConfig.cpp
-        /// - it's made available to all consumers of ctsConfig.h through extern
-        ///
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // ctsConfigSettings is defined in ctsConfig.cpp
+        // - it's made available to all consumers of ctsConfig.h through extern
+        //
         extern ctsConfigSettings* g_configSettings;
 
         SOCKET CreateSocket(int af, int type, int protocol, DWORD dwFlags);

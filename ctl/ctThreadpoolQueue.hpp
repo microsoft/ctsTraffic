@@ -22,7 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl
 {
 // forward-declare classes that can instantiate a ctThreadpoolQueueWaitableResult object
-enum class ctThreadpoolGrowthPolicy
+enum class ctThreadpoolGrowthPolicy : std::uint8_t
 {
     Growable,
     Flat
@@ -156,7 +156,7 @@ private:
     TReturn m_result{};
     DWORD m_internalError = NO_ERROR;
 
-    enum class RunStatus
+    enum class RunStatus : std::uint8_t
     {
         NotYetRun,
         Running,
@@ -253,16 +253,16 @@ public:
     {
         if (m_tpHandle)
         {
-            // immediately release anyone waiting for these workitems not yet run
+            // immediately release anyone waiting for these work-items not yet run
             {
                 const auto queueLock = m_lock.lock();
 
                 for (const auto& work : m_workItems)
                 {
                     // signal that these are canceled before we shut down the TP which they could be scheduled
-                    if (const auto* pWaitableWorkitem = std::get_if<WaitableFunctionT>(&work))
+                    if (const auto* pWaitableWorkItem = std::get_if<WaitableFunctionT>(&work))
                     {
-                        (*pWaitableWorkitem)->abort();
+                        (*pWaitableWorkItem)->abort();
                     }
                 }
 

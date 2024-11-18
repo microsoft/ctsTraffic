@@ -38,35 +38,27 @@ namespace ctsTraffic
         bool m_continueIo = false;
     };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Internal implementation functions
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    IoImplStatus ctsMediaStreamClientIoImpl(
+    // Internal implementation functions
+    static IoImplStatus ctsMediaStreamClientIoImpl(
         const std::shared_ptr<ctsSocket>& sharedSocket,
         SOCKET socket,
         const std::shared_ptr<ctsIoPattern>& lockedPattern,
         const ctsTask& task) noexcept;
 
-    void ctsMediaStreamClientIoCompletionCallback(
+    static void ctsMediaStreamClientIoCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctsTask& task
     ) noexcept;
 
-    void ctsMediaStreamClientConnectionCompletionCallback(
+    static void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
         const ctl::ctSockaddr& targetAddress
     ) noexcept;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
-    /// - with the specified ctsSocket
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
+    // - with the specified ctsSocket
     void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
@@ -120,7 +112,6 @@ namespace ctsTraffic
                 if (lambdaSharedSocket->IncrementIo() > 1)
                 {
                     // only running this one task in the OOB callback
-                    // ReSharper disable once CppUseStructuredBinding
                     const IoImplStatus status = ctsMediaStreamClientIoImpl(
                         lambdaSharedSocket, lambdaLockedSocket.GetSocket(), lambdaLockedPattern, task);
                     // decrement the IO count that we added before calling the Impl
@@ -160,12 +151,8 @@ namespace ctsTraffic
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
-    /// using IO Completion Ports
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // The function that is registered with ctsTraffic to 'connect' to the target server by sending a START command
+    // using IO Completion Ports
     void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
         // attempt to get a reference to the socket
@@ -367,11 +354,7 @@ namespace ctsTraffic
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// IO Threadpool completion callback 
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // IO Threadpool completion callback 
     void ctsMediaStreamClientIoCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
@@ -487,11 +470,7 @@ namespace ctsTraffic
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// IO Threadpool completion callback for the 'connect' request
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // IO Threadpool completion callback for the 'connect' request
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,

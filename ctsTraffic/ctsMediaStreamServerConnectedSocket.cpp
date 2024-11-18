@@ -48,7 +48,7 @@ ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
 
 ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() noexcept
 {
-    // stop the TP before letting the d'tor delete any member objects
+    // stop the TP before letting the destructor delete any member objects
     m_taskTimer.reset();
 }
 

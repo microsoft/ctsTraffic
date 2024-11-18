@@ -244,7 +244,7 @@ namespace details
         }
     };
 
-    std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
+    static std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
 

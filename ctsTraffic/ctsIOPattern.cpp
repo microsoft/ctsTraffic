@@ -34,11 +34,11 @@ namespace ctsTraffic
     constexpr uint32_t c_bufferPatternSize = 0xffff + 0x1; // fill from 0x0000 to 0xffff
     static unsigned char g_bufferPattern[c_bufferPatternSize * 2]; // * 2 as unsigned short values are twice as large as unsigned char
 
-    /// SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
-    /// will be memcmp'ing against for validity checks.
-    ///
-    /// The buffers' sizes will be the constant "BufferPatternSize + ctsConfig::GetMaxBufferSize()", but we
-    /// need to wait for input parsing before we can set that.
+    // SharedBuffer is a larger buffer with many copies of BufferPattern in it. This is what the various IO patterns
+    // will be memcmp'ing against for validity checks.
+    //
+    // The buffers' sizes will be the constant "BufferPatternSize + ctsConfig::GetMaxBufferSize()", but we
+    // need to wait for input parsing before we can set that.
 
     static INIT_ONCE g_ctsIoPatternInitializer = INIT_ONCE_STATIC_INIT;
     static char* g_receiverSharedBuffer = nullptr;
@@ -48,7 +48,7 @@ namespace ctsTraffic
     constexpr auto c_maxSupportedBytesInFlight = 0x1000000ul;
     static uint32_t g_maxNumberOfRioSendBuffers = 0;
 
-    BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID*) noexcept // NOLINT(bugprone-exception-escape)
+    static BOOL CALLBACK InitOnceIoPatternCallback(PINIT_ONCE, PVOID, PVOID*) noexcept // NOLINT(bugprone-exception-escape)
     {
         // first create the buffer pattern
         for (size_t fillSlot = 0; fillSlot < c_bufferPatternSize; ++fillSlot)
@@ -60,10 +60,10 @@ namespace ctsTraffic
         g_maxNumberOfRioSendBuffers = c_maxSupportedBytesInFlight / ctsConfig::GetMinBufferSize() + 1;
 
         g_receiverSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, g_maximumBufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
-        FAIL_FAST_IF_MSG(!g_receiverSharedBuffer, "VirtualAlloc alloc failed: %u", GetLastError());
+        FAIL_FAST_IF_MSG(!g_receiverSharedBuffer, "VirtualAlloc alloc failed: %lu", GetLastError());
 
         g_senderSharedBuffer = static_cast<char*>(VirtualAlloc(nullptr, g_maximumBufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
-        FAIL_FAST_IF_MSG(!g_senderSharedBuffer, "VirtualAlloc alloc failed: %u", GetLastError());
+        FAIL_FAST_IF_MSG(!g_senderSharedBuffer, "VirtualAlloc alloc failed: %lu", GetLastError());
 
         // fill in this allocated buffer while we can write to it
         auto* protectedDestination = g_senderSharedBuffer;
@@ -82,15 +82,17 @@ namespace ctsTraffic
         if (WI_IsFlagClear(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
         {
             DWORD oldSetting;
-            FAIL_FAST_IF_MSG(!VirtualProtect(g_senderSharedBuffer, g_maximumBufferSize, PAGE_READONLY, &oldSetting), "VirtualProtect failed: %u", GetLastError());
+            FAIL_FAST_IF_MSG(!VirtualProtect(g_senderSharedBuffer, g_maximumBufferSize, PAGE_READONLY, &oldSetting), "VirtualProtect failed: %lu", GetLastError());
         }
 
         return TRUE;
     }
 
+    //
     // Factory function to build known patterns
     // - can throw wil::ResultException on a Win32 error
     // - can throw exception on allocation failure
+    //
     shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
     {
         switch (ctsConfig::g_configSettings->IoPattern)
@@ -242,9 +244,9 @@ namespace ctsTraffic
         }
     }
 
-    ///
-    /// requires that the caller has locked the socket
-    /// 
+    //
+    // requires that the caller has locked the socket
+    // 
     ctsTask ctsIoPattern::InitiateIo() noexcept
     {
         // make sure stats starts tracking IO at the first IO request
@@ -346,22 +348,18 @@ namespace ctsTraffic
         return returnTask;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// CompleteIo
-    ///
-    /// requires that the caller has locked the socket
-    /// 
-    /// updates its internal counters to prepare for the next IO request
-    /// - the fact that complete_io was called assumes that the IO was successful
-    /// 
-    /// original_task : the task provided to the caller from initiate_io (or a copy of)
-    /// current_transfer : the number of bytes successfully transferred from the task
-    /// status_code: the return code from the prior IO operation [assumes a Win32 error code]
-    ///
-    /// Returns the current status of the IO operation on this socket
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // updates the internal counters to prepare for the next IO request
+    // - the fact that complete_io was called assumes that the IO was successful
+    // 
+    // - original_task: the task provided to the caller from initiate_io (or a copy of)
+    // - current_transfer: the number of bytes successfully transferred from the task
+    // - status_code: the return code from the prior IO operation [assumes a Win32 error code]
+    //
+    // - returns the current status of the IO operation on this socket
+    //
+    // requires that the caller has locked the socket
+    //
     ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask& originalTask, uint32_t currentTransfer, uint32_t statusCode) noexcept // NOLINT(bugprone-exception-escape)
     {
         // preserve the initial state for the prior task
@@ -396,24 +394,24 @@ namespace ctsTraffic
             break;
 
         case ctsTaskAction::FatalAbort:
-            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a FatalAbort (statusCode %lu)\n", statusCode);
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a FatalAbort (statusCode %u)\n", statusCode);
             UpdateLastError(c_statusErrorNotAllDataTransferred);
             break;
 
         case ctsTaskAction::Abort:
-            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing an Abort (statusCode %lu)\n", statusCode);
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing an Abort (statusCode %u)\n", statusCode);
             break;
 
         case ctsTaskAction::GracefulShutdown:
             // Fall-through to be processed like send or recv IO
-            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown (statusCode %lu)\n", statusCode);
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a GracefulShutdown (statusCode %u)\n", statusCode);
             [[fallthrough]];
         case ctsTaskAction::HardShutdown:
             // GracefulShutdown falls through to this case - don't print HardShutdown for that case
             if (originalTask.m_ioAction == ctsTaskAction::HardShutdown)
             {
                 // Fall-through to be processed like send or recv IO
-                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown (statusCode %lu)\n", statusCode);
+                PRINT_DEBUG_INFO(L"\t\tctsIOPattern : completing a HardShutdown (statusCode %u)\n", statusCode);
             }
             [[fallthrough]];
         case ctsTaskAction::Recv:
@@ -425,7 +423,7 @@ namespace ctsTraffic
             if (ctsTask::BufferType::TcpConnectionId == originalTask.m_bufferType ||
                 ctsTask::BufferType::CompletionMessage == originalTask.m_bufferType)
             {
-                // not verifying the buffer since it's the connection Id - but must complete the task to update the protocol
+                // not verifying the buffer since it's the connectionId - but must complete the task to update the protocol
                 verifyIo = false;
 
                 if (statusCode != NO_ERROR)
@@ -481,7 +479,7 @@ namespace ctsTraffic
                 {
                     FAIL_FAST_IF_MSG(
                         originalTask.m_expectedPatternOffset != m_recvPatternOffset,
-                        "ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%lu) does not match the current pattern_offset (%lu)",
+                        "ctsIOPattern::complete_io() : ctsIOTask (%p) expected_pattern_offset (%u) does not match the current pattern_offset (%u)",
                         &originalTask, originalTask.m_expectedPatternOffset, m_recvPatternOffset);
 
                     if (!VerifyBuffer(originalTask, currentTransfer))
@@ -698,11 +696,11 @@ namespace ctsTraffic
 
             FAIL_FAST_IF_MSG(
                 m_sendPatternOffset >= c_bufferPatternSize,
-                "pattern_offset being too large (larger than BufferPatternSize %lu) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                "pattern_offset being too large (larger than BufferPatternSize %u) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
                 c_bufferPatternSize, this);
             FAIL_FAST_IF_MSG(
                 returnTask.m_bufferLength + returnTask.m_bufferOffset > g_maximumBufferSize,
-                "return_task (%p) for a Send request is specifying a buffer that is larger than the static SharedBufferSize (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                "return_task (%p) for a Send request is specifying a buffer that is larger than the static SharedBufferSize (%u) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
                 &returnTask, g_maximumBufferSize, this);
         }
         else
@@ -735,14 +733,13 @@ namespace ctsTraffic
                 "pattern_offset being too large means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
             FAIL_FAST_IF_MSG(
                 returnTask.m_bufferLength + returnTask.m_bufferOffset > verifiedNewBufferSize,
-                "return_task (%p) for a Recv request is specifying a buffer that is larger than buffer_size (%lu) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                "return_task (%p) for a Recv request is specifying a buffer that is larger than buffer_size (%u) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
                 &returnTask, verifiedNewBufferSize, this);
         }
 
         return returnTask;
     }
 
-    // static
     bool ctsIoPattern::VerifyBuffer(const ctsTask& originalTask, uint32_t transferredBytes) noexcept
     {
         // only doing deep verification if the user asked us to
@@ -780,23 +777,20 @@ namespace ctsTraffic
         const auto sharedSocket = m_parentSocket.lock();
         if (!sharedSocket)
         {
-            // possible if we are in the d'tor of the pattern while the socket is being closed
+            // possible if we are in the destructor of the pattern while the socket is being closed
             // and one of the pattern's timer or callback threads is completing
             return {};
         }
         return sharedSocket->AcquireLock();
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     - Pull Pattern
-    ///    -- TCP-only
-    ///    -- The server pushes data (sends)
-    ///    -- The client pulls data (receives)
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // ctsIoPatternPull
+    // - Pull Pattern
+    //   - TCP-only
+    //   - The server pushes data (sends)
+    //   - The client pulls data (receives)
+    //
     ctsIoPatternPull::ctsIoPatternPull() :
         ctsIoPatternStatistics(ctsConfig::IsListening() ? 0 : ctsConfig::g_configSettings->PrePostRecvs),
         m_ioAction(ctsConfig::IsListening() ? ctsTaskAction::Send : ctsTaskAction::Recv),
@@ -804,16 +798,12 @@ namespace ctsTraffic
     {
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// virtual methods from the base class:
-    /// - assumes will be called under a CS from the base class
-    ///
-    /// tracking # of outstanding IO requests (configurable through the c'tor)
-    ///
-    /// Return an empty task when no more IO is needed
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // virtual methods from the base class:
+    // - assumes will be called under a CS from the base class
+    // - tracking # of outstanding IO requests (configurable through the constructor)
+    // - returns an empty task when no more IO is needed
+    //
     ctsTask ctsIoPatternPull::GetNextTaskFromPattern() noexcept
     {
         if (m_ioAction == ctsTaskAction::Recv && m_recvNeeded > 0)
@@ -822,10 +812,10 @@ namespace ctsTraffic
             return CreateTrackedTask(m_ioAction);
         }
 
-        if (m_ioAction == ctsTaskAction::Send && GetIdealSendBacklog() > m_sendBytesInflight)
+        if (m_ioAction == ctsTaskAction::Send && GetIdealSendBacklog() > m_sendBytesInFlight)
         {
             const auto returnTask(CreateTrackedTask(m_ioAction));
-            m_sendBytesInflight += returnTask.m_bufferLength;
+            m_sendBytesInFlight += returnTask.m_bufferLength;
             return returnTask;
         }
 
@@ -839,7 +829,7 @@ namespace ctsTraffic
         if (ctsTaskAction::Send == task.m_ioAction)
         {
             m_statistics.m_bytesSent.AddNoLock(completedBytes);
-            m_sendBytesInflight -= completedBytes;
+            m_sendBytesInFlight -= completedBytes;
         }
         else if (ctsTaskAction::Recv == task.m_ioAction)
         {
@@ -850,17 +840,13 @@ namespace ctsTraffic
         return ctsIoPatternError::NoError;
     }
 
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///  - Push Pattern
-    ///    -- TCP-only
-    ///    -- The client pushes data (send)
-    ///    -- The server pulls data (recv)
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // ctsIoPatternPush
+    // - Push Pattern
+    //   - TCP-only
+    //   - The client pushes data (send)
+    //   - The server pulls data (recv)
+    //
     ctsIoPatternPush::ctsIoPatternPush() :
         ctsIoPatternStatistics(ctsConfig::IsListening() ? ctsConfig::g_configSettings->PrePostRecvs : 0),
         m_ioAction(ctsConfig::IsListening() ? ctsTaskAction::Recv : ctsTaskAction::Send),
@@ -868,16 +854,12 @@ namespace ctsTraffic
     {
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// virtual methods from the base class:
-    /// - assumes will be called under a CS from the base class
-    ///
-    /// tracking # of outstanding IO requests (configurable through the c'tor)
-    ///
-    /// Return an empty task when no more IO is needed
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // virtual methods from the base class:
+    // - assumes will be called under a CS from the base class
+    // - tracking # of outstanding IO requests (configurable through the constructor)
+    // - returns an empty task when no more IO is needed
+    //
     ctsTask ctsIoPatternPush::GetNextTaskFromPattern() noexcept
     {
         if (m_ioAction == ctsTaskAction::Recv && m_recvNeeded > 0)
@@ -886,10 +868,10 @@ namespace ctsTraffic
             return CreateTrackedTask(m_ioAction);
         }
 
-        if (m_ioAction == ctsTaskAction::Send && GetIdealSendBacklog() > m_sendBytesInflight)
+        if (m_ioAction == ctsTaskAction::Send && GetIdealSendBacklog() > m_sendBytesInFlight)
         {
             const auto returnTask(CreateTrackedTask(m_ioAction));
-            m_sendBytesInflight += returnTask.m_bufferLength;
+            m_sendBytesInFlight += returnTask.m_bufferLength;
             return returnTask;
         }
 
@@ -903,7 +885,7 @@ namespace ctsTraffic
         if (ctsTaskAction::Send == task.m_ioAction)
         {
             m_statistics.m_bytesSent.AddNoLock(completedBytes);
-            m_sendBytesInflight -= completedBytes;
+            m_sendBytesInFlight -= completedBytes;
         }
         else if (ctsTaskAction::Recv == task.m_ioAction)
         {
@@ -914,21 +896,17 @@ namespace ctsTraffic
         return ctsIoPatternError::NoError;
     }
 
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     - PushPull Pattern
-    ///    -- TCP-only
-    ///    -- The client pushes data in 'segments'
-    ///    -- The server pulls data in 'segments'
-    ///    -- At each segment, roles swap (pusher/puller)
-    ///
-    ///    -- Currently not supporting concurrent IO via ctsConfig::GetConcurrentIoCount()
-    ///       as we need precise controls when to flip from send -> recv -> send
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // ctsIoPatternPushPull
+    // - PushPull Pattern
+    //   - TCP-only
+    //   - The client pushes data in 'segments'
+    //   - The server pulls data in 'segments'
+    //   - At each segment, roles swap (pusher/puller)
+    //
+    //   - Currently not supporting concurrent IO via ctsConfig::GetConcurrentIoCount()
+    //     as we need precise controls when to flip from send -> recv -> send
+    //
     ctsIoPatternPushPull::ctsIoPatternPushPull() :
         ctsIoPatternStatistics(1), // currently not supporting >1 concurrent IO requests
         m_pushSegmentSize(ctsConfig::g_configSettings->PushBytes),
@@ -938,16 +916,12 @@ namespace ctsTraffic
     {
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// virtual methods from the base class:
-    /// - assumes will be called under a CS from the base class
-    ///
-    /// tracks if sending or receiving in the IO flow
-    ///
-    /// Return an empty task when no more IO is needed
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // virtual methods from the base class:
+    // - assumes will be called under a CS from the base class
+    // - tracks if sending or receiving in the IO flow
+    // - returns an empty task when no more IO is needed
+    //
     ctsTask ctsIoPatternPushPull::GetNextTaskFromPattern() noexcept
     {
         uint32_t segmentSize{};
@@ -963,7 +937,7 @@ namespace ctsTraffic
 
         FAIL_FAST_IF_MSG(
             m_intraSegmentTransfer >= segmentSize,
-            "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
+            "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%u), segment_size (%u)",
             m_intraSegmentTransfer, segmentSize);
 
         if (m_ioNeeded)
@@ -1012,7 +986,7 @@ namespace ctsTraffic
 
         FAIL_FAST_IF_MSG(
             m_intraSegmentTransfer > segmentSize,
-            "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%lu), segment_size (%lu)",
+            "Invalid ctsIOPatternPushPull state: intra_segment_transfer (%u), segment_size (%u)",
             m_intraSegmentTransfer, segmentSize);
 
         if (segmentSize == m_intraSegmentTransfer)
@@ -1024,16 +998,12 @@ namespace ctsTraffic
         return ctsIoPatternError::NoError;
     }
 
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     - Concurrent Pattern
-    ///    -- TCP-only
-    ///    -- The client and server both send and receive data concurrently
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // ctsIoPatternDuplex
+    // - Concurrent Pattern
+    //   - TCP-only
+    //   - The client and server both send and receive data concurrently
+    //
     ctsIoPatternDuplex::ctsIoPatternDuplex() noexcept :
         ctsIoPatternStatistics(ctsConfig::g_configSettings->PrePostRecvs),
         m_recvNeeded(ctsConfig::g_configSettings->PrePostRecvs)
@@ -1056,16 +1026,12 @@ namespace ctsTraffic
             GetTotalTransfer());
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// virtual methods from the base class:
-    /// - assumes will be called under a CS from the base class
-    ///
-    /// tracks if sending or receiving in the IO flow
-    ///
-    /// Return an empty task when no more IO is needed
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // virtual methods from the base class:
+    // - assumes will be called under a CS from the base class
+    // - tracks if sending or receiving in the IO flow
+    // - returns an empty task when no more IO is needed
+    //
     ctsTask ctsIoPatternDuplex::GetNextTaskFromPattern() noexcept
     {
         ctsTask returnTask;
@@ -1084,7 +1050,7 @@ namespace ctsTraffic
             m_remainingRecvBytes -= returnTask.m_bufferLength;
             --m_recvNeeded;
         }
-        else if (m_remainingSendBytes > 0 && GetIdealSendBacklog() > m_sendBytesInflight)
+        else if (m_remainingSendBytes > 0 && GetIdealSendBacklog() > m_sendBytesInFlight)
         {
             // for very large transfers, we need to ensure our SafeInt<int64_t> doesn't overflow when it's cast 
             // to uint32_t when passed to tracked_task()
@@ -1093,7 +1059,7 @@ namespace ctsTraffic
                 static_cast<uint32_t>(m_remainingSendBytes);
             returnTask = CreateTrackedTask(ctsTaskAction::Send, maxRemainingBytes);
             m_remainingSendBytes -= returnTask.m_bufferLength;
-            m_sendBytesInflight += returnTask.m_bufferLength;
+            m_sendBytesInFlight += returnTask.m_bufferLength;
         }
         else
         {
@@ -1112,7 +1078,7 @@ namespace ctsTraffic
         case ctsTaskAction::Send:
         {
             m_statistics.m_bytesSent.AddNoLock(completedBytes);
-            m_sendBytesInflight -= completedBytes;
+            m_sendBytesInFlight -= completedBytes;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
             m_remainingSendBytes += task.m_bufferLength;
@@ -1139,19 +1105,15 @@ namespace ctsTraffic
         return ctsIoPatternError::NoError;
     }
 
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///     - ctsIOPatternMediaStream (Server) Pattern
-    ///    -- UDP-only
-    ///    -- The server sends data at a specified rate
-    ///    -- The client receives data continuously
-    ///       After a 'buffer period' of data has been received,
-    ///       The client starts as timer to 'process' a time-slice of data
-    ///
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // ctsIoPatternMediaStreamServer
+    // - ctsIOPatternMediaStream (Server) Pattern
+    //   - UDP-only
+    //   - The server sends data at a specified rate
+    //   - The client receives data continuously
+    //     After a 'buffer period' of data has been received,
+    //     The client starts as timer to 'process' a time-slice of data
+    //
     ctsIoPatternMediaStreamServer::ctsIoPatternMediaStreamServer() noexcept :
         ctsIoPatternStatistics(1), // the pattern will use the recv writeable-buffer for sending a connection ID
         m_frameSizeBytes(ctsConfig::GetMediaStream().FrameSizeBytes),

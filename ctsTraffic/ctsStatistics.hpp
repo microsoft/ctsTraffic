@@ -47,7 +47,7 @@ namespace ctsTraffic { namespace ctsStatistics
             FAIL_FAST_IF_MSG(
                 // ReSharper disable once CppRedundantParentheses
                 strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (ConnectionIdLength - 1),
-                "UuidToString returned a string not 36 characters long (%Iu)",
+                "UuidToString returned a string not 36 characters long (%zu)",
                 strlen(reinterpret_cast<LPSTR>(connectionIdString)));
 
             const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
@@ -247,7 +247,7 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsConnectionStatistics(const ctsConnectionStatistics&) = default;
         ctsConnectionStatistics(ctsConnectionStatistics&&) = default;
         // not implementing the assignment operator
-        // only implemeting the copy c'tor (due to maintaining memory barriers)
+        // only implementing the copy constructor (due to maintaining memory barriers)
         ctsConnectionStatistics& operator=(const ctsConnectionStatistics&) = delete;
         ctsConnectionStatistics& operator=(ctsConnectionStatistics&&) = delete;
 

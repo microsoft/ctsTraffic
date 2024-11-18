@@ -51,20 +51,13 @@ using namespace ctl;
 
 namespace ctsTraffic::ctsConfig
 {
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Settings is being defined in this cpp - it is extern'd from ctsConfig.h
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
 	ctsConfigSettings* g_configSettings;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Hiding the details of the raw data in an unnamed namespace to make it completely private
-	/// Free functions below provide proper access to this information
-	/// This design avoids having to pass a "config" object all over to share this information
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Hiding the details of the raw data in an unnamed namespace to make it completely private
+	// Free functions below provide proper access to this information
+	// This design avoids having to pass a "config" object all over to share this information
+	//
 	static wil::critical_section g_statusUpdateLock{ ctsConfigSettings::c_CriticalSectionSpinlock };
 	static wil::critical_section g_shutdownLock{ ctsConfigSettings::c_CriticalSectionSpinlock };
 
@@ -78,7 +71,6 @@ namespace ctsTraffic::ctsConfig
 	constexpr uint32_t c_defaultTcpConnectionLimit = 8;
 	constexpr uint32_t c_defaultUdpConnectionLimit = 1;
 	constexpr uint32_t c_defaultConnectionThrottleLimit = 1000;
-	constexpr uint32_t c_defaultThreadpoolFactor = 2;
 
 	static PTP_POOL g_threadPool = nullptr;
 	static TP_CALLBACK_ENVIRON g_threadPoolEnvironment;
@@ -149,11 +141,9 @@ namespace ctsTraffic::ctsConfig
 		FAIL_FAST_IF(!InitOnceExecuteOnce(&g_configInitImpl, InitOnceConfigImpl, nullptr, nullptr));
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// parses the configuration of the local system for options dependent on deployments
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// parses the configuration of the local system for options dependent on deployments
+	//
 	static void CheckReuseUnicastPort() noexcept try
 	{
 		// Windows 10+ exposes a new socket option: SO_REUSE_UNICASTPORT
@@ -214,7 +204,7 @@ namespace ctsTraffic::ctsConfig
 	catch (...)
 	{
 		PRINT_DEBUG_INFO(
-			L"\t\tQuerying for NetAdapterRsc failed : 0x%x\n", wil::ResultFromCaughtException());
+			L"\t\tQuerying for NetAdapterRsc failed : 0x%lx\n", wil::ResultFromCaughtException());
 		return {};
 	}
 
@@ -245,7 +235,7 @@ namespace ctsTraffic::ctsConfig
 	catch (...)
 	{
 		PRINT_DEBUG_INFO(
-			L"\t\tQuerying for NetAdapterLso failed : 0x%x\n", wil::ResultFromCaughtException());
+			L"\t\tQuerying for NetAdapterLso failed : 0x%lx\n", wil::ResultFromCaughtException());
 		return {};
 	}
 
@@ -273,7 +263,7 @@ namespace ctsTraffic::ctsConfig
 	catch (...)
 	{
 		PRINT_DEBUG_INFO(
-			L"\t\tQuerying for NetAdapterRss failed : 0x%x\n", wil::ResultFromCaughtException());
+			L"\t\tQuerying for NetAdapterRss failed : 0x%lx\n", wil::ResultFromCaughtException());
 		return {};
 	}
 
@@ -385,19 +375,17 @@ namespace ctsTraffic::ctsConfig
 	catch (...)
 	{
 		PRINT_DEBUG_INFO(
-			L"\t\tQuerying for MSFT_NetAdapterHardwareInfo failed : 0x%x\n", wil::ResultFromCaughtException());
+			L"\t\tQuerying for MSFT_NetAdapterHardwareInfo failed : 0x%lx\n", wil::ResultFromCaughtException());
 		return {};
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// parses the input argument to determine if it matches the expected parameter
-	/// if so, it returns a ptr to the corresponding parameter value
-	/// otherwise, returns nullptr
-	///
-	/// throws invalid_parameter if something is obviously wrong 
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// parses the input argument to determine if it matches the expected parameter
+	// if so, it returns a ptr to the corresponding parameter value
+	// otherwise, returns nullptr
+	//
+	// throws invalid_parameter if something is obviously wrong 
+	//
 	static const wchar_t* ParseArgument(_In_z_ const wchar_t* inputArgument, _In_z_ const wchar_t* expectedParam)
 	{
 		const wchar_t* paramEnd = inputArgument + wcslen(inputArgument);
@@ -417,30 +405,28 @@ namespace ctsTraffic::ctsConfig
 		return returnValue;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// ConvertToIntegral(wstring)
-	///
-	/// Directly converts the *entire* contents of the passed in string to a numeric value
-	/// - the type of that numeric value being the template type specified
-	///
-	/// e.g.
-	/// auto a = ConvertToIntegral<long>(L"-1");
-	/// auto b = ConvertToIntegral<uint32_t>(L"0xa");
-	/// auto a = ConvertToIntegral<int64_t>(L"0x123456789abcdef");
-	/// auto a = ConvertToIntegral<uint64_t>(L"999999999999999999");
-	/// 
-	/// NOTE:
-	/// - will *only* assume a string starting with "0x" to be converted as hexadecimal
-	///   if does not start with "0x", will assume as base-10
-	/// - if an unsigned type is specified in the template and a negative number is entered,
-	///   will convert that to the "unsigned" version of that set of bits
-	///   e.g.
-	///       uint64_t test = ConvertToIntegral<uint64_t>(L"-1");
-	///       // test == 0xffffffffffffffff
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	int64_t ConvertToIntegralSigned(const wstring& inputString)
+	//
+	// ConvertToIntegral(wstring)
+	//
+	// Directly converts the *entire* contents of the passed in string to a numeric value
+	// - the type of that numeric value being the template type specified
+	//
+	// e.g.
+	// auto a = ConvertToIntegral<long>(L"-1");
+	// auto b = ConvertToIntegral<uint32_t>(L"0xa");
+	// auto a = ConvertToIntegral<int64_t>(L"0x123456789abcdef");
+	// auto a = ConvertToIntegral<uint64_t>(L"999999999999999999");
+	// 
+	// NOTE:
+	// - will *only* assume a string starting with "0x" to be converted as hexadecimal
+	//   if does not start with "0x", will assume as base-10
+	// - if an unsigned type is specified in the template and a negative number is entered,
+	//   will convert that to the "unsigned" version of that set of bits
+	//   e.g.
+	//       uint64_t test = ConvertToIntegral<uint64_t>(L"-1");
+	//       // test == 0xffffffffffffffff
+	//
+	static int64_t ConvertToIntegralSigned(const wstring& inputString)
 	{
 		auto returnValue = 0ll;
 		size_t firstUnconvertedOffset = 0;
@@ -460,7 +446,7 @@ namespace ctsTraffic::ctsConfig
 		return returnValue;
 	}
 
-	uint64_t ConvertToIntegralUnsigned(const wstring& inputString)
+	static uint64_t ConvertToIntegralUnsigned(const wstring& inputString)
 	{
 		auto returnValue = 0ull;
 		size_t firstUnconvertedOffset = 0;
@@ -539,11 +525,9 @@ namespace ctsTraffic::ctsConfig
 		return ConvertToIntegralUnsigned(inputString);
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the connect function to use
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the connect function to use
+	//
 	static void ParseForCreate(const vector<const wchar_t*>&)
 	{
 		if (nullptr == g_configSettings->CreateFunction)
@@ -553,16 +537,13 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the connect function to use
-	///
-	/// -conn:connect
-	/// -conn:wsaconnect
-	/// -conn:wsaconnectbyname
-	/// -conn:connectex  (*default)
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the connect function to use
+	//
+	// -conn:connect
+	// -conn:ConnectByName
+	// -conn:ConnectEx  (*default)
+	//
 	static void ParseForConnect(vector<const wchar_t*>& args)
 	{
 		auto connectSpecified = false;
@@ -622,15 +603,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the accept function to use
-	///
-	/// -acc:accept
-	/// -acc:wsaaccept
-	/// -acc:acceptex  (*default)
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the accept function to use
+	//
+	// -acc:accept
+	// -acc:acceptex  (*default)
+	//
 	static void ParseForAccept(vector<const wchar_t*>& args)
 	{
 		g_configSettings->AcceptLimit = c_defaultAcceptExLimit;
@@ -681,19 +659,17 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the IO (read/write) function to use
-	/// -- only applicable to TCP
-	///
-	/// -io:blocking
-	/// -io:nonblocking
-	/// -io:event
-	/// -io:iocp (*default)
-	/// -io:wsapoll
-	/// -io:rioiocp
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the IO (read/write) function to use
+	// -- only applicable to TCP
+	//
+	// -io:blocking
+	// -io:nonblocking
+	// -io:event
+	// -io:iocp (*default)
+	// -io:wsapoll
+	// -io:rioiocp
+	//
 	static void ParseForIoFunction(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -765,14 +741,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the InlineCompletions setting to use
-	///
-	/// -InlineCompletions:on
-	/// -InlineCompletions:off
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the InlineCompletions setting to use
+	//
+	// -InlineCompletions:on
+	// -InlineCompletions:off
+	//
 	static void ParseForInlineCompletions(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -800,14 +774,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the MsgWaitAll setting to use
-	///
-	/// -MsgWaitAll:on
-	/// -MsgWaitAll:off
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the MsgWaitAll setting to use
+	//
+	// -MsgWaitAll:on
+	// -MsgWaitAll:off
+	//
 	static void ParseForMsgWaitAll(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -839,14 +811,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the L4 Protocol to limit to usage
-	///
-	/// -Protocol:tcp
-	/// -Protocol:udp
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the L4 Protocol to limit to usage
+	//
+	// -Protocol:tcp
+	// -Protocol:udp
+	//
 	static void ParseForProtocol(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -879,13 +849,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for socket Options
-	/// - allows for more than one option to be set
-	/// -Options:<keepalive,tcpfastpath [-Options:<...>] [-Options:<...>]
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for socket Options
+	// - allows for more than one option to be set
+	// -Options:<keepalive,tcpfastpath [-Options:<...>] [-Options:<...>]
+	//
 	static void ParseForOptions(vector<const wchar_t*>& args)
 	{
 		for (;;)
@@ -938,11 +906,9 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses the optional -KeepAliveValue:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses the optional -KeepAliveValue:####
+	//
 	static void ParseForKeepAlive(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -970,17 +936,15 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the wire-Protocol to use
-	/// --- these only apply to TCP
-	///
-	/// -pattern:push
-	/// -pattern:pull
-	/// -pattern:pushpull
-	/// -pattern:duplex
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the wire-Protocol to use
+	// --- these only apply to TCP
+	//
+	// -pattern:push
+	// -pattern:pull
+	// -pattern:pushpull
+	// -pattern:duplex
+	//
 	static void ParseForIoPattern(vector<const wchar_t*>& args)
 	{
 		auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1128,7 +1092,6 @@ namespace ctsTraffic::ctsConfig
 		//
 		// Options for the UDP protocol
 		//
-
 		foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
 			{
 				const auto* const value = ParseArgument(parameter, L"-BitsPerSecond");
@@ -1228,22 +1191,20 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for IP address or machine name target to use
-	/// Can be comma-delimited if more than one
-	///
-	/// 3 different parameters read address/name settings:
-	/// Supports specifying the parameter multiple times:
-	///   e.g. -target:machine-a -target:machine-b
-	///
-	/// -listen: (address to listen on)
-	///   - specifying * == listen to all addresses
-	/// -target: (address to connect to)
-	/// -bind:   (address to bind before connecting)
-	///   - specifying * == bind to all addresses (default)
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for IP address or machine name target to use
+	// Can be comma-delimited if more than one
+	//
+	// 3 different parameters read address/name settings:
+	// Supports specifying the parameter multiple times:
+	//   e.g. -target:machine-a -target:machine-b
+	//
+	// -listen: (address to listen on)
+	//   - specifying * == listen to all addresses
+	// -target: (address to connect to)
+	// -bind:   (address to bind before connecting)
+	//   - specifying * == bind to all addresses (default)
+	//
 	static void ParseForAddress(vector<const wchar_t*>& args)
 	{
 		// -listen:<addr> 
@@ -1453,13 +1414,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the Port # to listen to/connect to
-	///
-	/// -Port:##
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the Port # to listen to/connect to
+	//
+	// -Port:##
+	//
 	static void ParseForPort(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1479,13 +1438,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the Port # to listen to/connect to
-	///
-	/// -PortScalability:<on,off>
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the Port # to listen to/connect to
+	//
+	// -PortScalability:<on,off>
+	//
 	static void ParseForPortScalability(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1521,13 +1478,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the connection limit [max number of connections to maintain]
-	///
-	/// -connections:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the connection limit [max number of connections to maintain]
+	//
+	// -connections:####
+	//
 	static void ParseForConnections(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1552,13 +1507,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the server limit [max number of connections before the server exits]
-	///
-	/// -ServerExitLimit:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the server limit [max number of connections before the server exits]
+	//
+	// -ServerExitLimit:####
+	//
 	static void ParseForServerExitLimit(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1584,13 +1537,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the connection limit [max number of connections to maintain]
-	///
-	/// -ThrottleConnections:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the connection limit [max number of connections to maintain]
+	//
+	// -ThrottleConnections:####
+	//
 	static void ParseForThrottleConnections(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1617,7 +1568,7 @@ namespace ctsTraffic::ctsConfig
 	}
 
 	template <typename T>
-	void ReadRangeValues(_In_z_ const wchar_t* value, T& outLow, T& outHigh)
+	static void ReadRangeValues(_In_z_ const wchar_t* value, T& outLow, T& outHigh)
 	{
 		// a range was specified
 		// - find the ',' the '[', and the ']'
@@ -1650,14 +1601,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the buffer size to push down per IO
-	///
-	/// -buffer:####
-	///        :[low,high]
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the buffer size to push down per IO
+	//
+	// -buffer:####
+	//        :[low,high]
+	//
 	static void ParseForBuffer(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1697,14 +1646,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the total transfer size in bytes per connection
-	///
-	/// -transfer:####
-	///          :[low,high]
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the total transfer size in bytes per connection
+	//
+	// -transfer:####
+	//          :[low,high]
+	//
 	static void ParseForTransfer(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1738,13 +1685,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the LocalPort # to bind for local connect
-	/// 
-	/// -LocalPort:##
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the LocalPort # to bind for local connect
+	// 
+	// -LocalPort:##
+	//
 	static void ParseForLocalPort(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1775,13 +1720,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for an explicitly specified interface index for outgoing connections
-	/// 
-	/// -IfIndex:##
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for an explicitly specified interface index for outgoing connections
+	// 
+	// -IfIndex:##
+	//
 	static void ParseForIfIndex(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1804,15 +1747,13 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for Tcp throttling parameters
-	///
-	/// -RateLimit:####
-	///           :[low,high]
-	/// -RateLimitPeriod:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for Tcp throttling parameters
+	//
+	// -RateLimit:####
+	//           :[low,high]
+	// -RateLimitPeriod:####
+	//
 	static void ParseForRateLimit(vector<const wchar_t*>& args)
 	{
 		const auto foundRateLimit = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1867,13 +1808,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the total # of iterations
-	///
-	/// -Iterations:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the total # of iterations
+	//
+	// -Iterations:####
+	//
 	static void ParseForIterations(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -1897,14 +1836,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the verbosity level
-	///
-	/// -ConsoleVerbosity:## <0-6>
-	/// -StatusUpdate:####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the verbosity level
+	//
+	// -ConsoleVerbosity:## <0-6>
+	// -StatusUpdate:####
+	//
 	static void ParseForLogging(vector<const wchar_t*>& args)
 	{
 		const auto foundVerbosity = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2111,13 +2048,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets error policy
-	///
-	/// -OnError:<log,break>
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets error policy
+	//
+	// -OnError:<log,break>
+	//
 	static void ParseForError(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2145,13 +2080,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets optional PrePostRecvs value
-	///
-	/// -PrePostRecvs:#####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets optional PrePostRecvs value
+	//
+	// -PrePostRecvs:#####
+	//
 	static void ParseForPrePostRecvs(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2176,13 +2109,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets optional PrePostSends value
-	///
-	/// -PrePostSends:#####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets optional PrePostSends value
+	//
+	// -PrePostSends:#####
+	//
 	static void ParseForPrePostSends(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2208,13 +2139,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets optional SO_RCVBUF value
-	///
-	/// -RecvBufValue:#####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets optional SO_RCVBUF value
+	//
+	// -RecvBufValue:#####
+	//
 	static void ParseForRecvBufValue(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2232,13 +2161,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets optional SO_SNDBUF value
-	///
-	/// -SendBufValue:#####
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets optional SO_SNDBUF value
+	//
+	// -SendBufValue:#####
+	//
 	static void ParseForSendBufValue(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2256,13 +2183,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets an IP Compartment (routing domain)
-	///
-	/// -Compartment:<ifalias>
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets an IP Compartment (routing domain)
+	//
+	// -Compartment:<ifalias>
+	//
 	static void ParseForCompartment(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2294,15 +2219,13 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Sets a threadpool environment for TP APIs to consume
-	///
-	/// Configuring for max threads == number of processors * 2
-	///
-	/// currently not exposing this as a command-line parameter
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Sets a threadpool environment for TP APIs to consume
+	//
+	// Configuring for max threads == number of processors * 2
+	//
+	// currently not exposing this as a command-line parameter
+	//
 	static void ParseForThreadpool(vector<const wchar_t*>& args)
 	{
 		auto setRunsLong = false;
@@ -2357,18 +2280,16 @@ namespace ctsTraffic::ctsConfig
 		g_configSettings->pTpEnvironment = &g_threadPoolEnvironment;
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for whether to verify buffer contents on receiver
-	///
-	/// -verify:<connection,data>
-	/// (the old options were <always,never>)
-	///
-	/// Note this controls if using a SharedBuffer across all IO or unique buffers
-	/// - if not validating data, won't waste memory creating buffers for every connection
-	/// - if validating data, must create buffers for every connection
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for whether to verify buffer contents on receiver
+	//
+	// -verify:<connection,data>
+	// (the old options were <always,never>)
+	//
+	// Note this controls if using a SharedBuffer across all IO or unique buffers
+	// - if not validating data, won't waste memory creating buffers for every connection
+	// - if validating data, must create buffers for every connection
+	//
 	static void ParseForShouldVerifyBuffers(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2398,13 +2319,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for how the client should close the connection with the server
-	///
-	/// -shutdown:<graceful,rude,random>
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for how the client should close the connection with the server
+	//
+	// -shutdown:<graceful,rude,random>
+	//
 	static void ParseForShutdown(vector<const wchar_t*>& args)
 	{
 		const auto foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2441,14 +2360,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the optional maximum time to run
-	///
-	/// -TimeLimit:##
-	/// -PauseAtEnd:##
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the optional maximum time to run
+	//
+	// -TimeLimit:##
+	// -PauseAtEnd:##
+	//
 	static void ParseForTimeLimit(vector<const wchar_t*>& args)
 	{
 		const auto foundTimeLimitArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2486,13 +2403,11 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Parses for the optional CPU Group ID to set affinity
-	///
-	/// -CpuSetGroupId:##
-	///
-	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Parses for the optional CPU Group ID to set affinity
+	//
+	// -CpuSetGroupId:##
+	//
 	static void ParseForCpuSets(vector<const wchar_t*>& args)
 	{
 		const auto foundCpuGroupIdArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
@@ -2514,11 +2429,9 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Members within the ctsConfig namespace that can be accessed anywhere within ctsTraffic
+	//
 	void PrintUsage(PrintUsageOption option)
 	{
 		ctsConfigInitOnce();
@@ -2945,7 +2858,7 @@ namespace ctsTraffic::ctsConfig
 	}
 
 	// forward declare this function called by Startup, but implemented later in this function
-	bool SetProcessDefaultCpuSets();
+	static bool SetProcessDefaultCpuSets();
 	bool Startup(int argc, _In_reads_(argc) const wchar_t** argv)
 	{
 		ctsConfigInitOnce();
@@ -3330,7 +3243,7 @@ namespace ctsTraffic::ctsConfig
 			if (!SetEvent(g_configSettings->CtrlCHandle))
 			{
 				FAIL_FAST_MSG(
-					"SetEvent(%p) failed [%u] when trying to shutdown",
+					"SetEvent(%p) failed [%lu] when trying to shutdown",
 					g_configSettings->CtrlCHandle, GetLastError());
 			}
 		}
@@ -3340,7 +3253,7 @@ namespace ctsTraffic::ctsConfig
 
 		while (g_timePeriodRefCount > 0)
 		{
-			timeEndPeriod(1);
+			(void)timeEndPeriod(1);
 			--g_timePeriodRefCount;
 		}
 	}
@@ -3448,14 +3361,12 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Print* functions
-	/// - tracks what level of -verbose was specified
-	///   and prints to console accordingly
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	void PrintException(const wil::ResultException& e) noexcept
+	//
+	// Print* functions
+	// - tracks what level of -verbose was specified
+	//   and prints to console accordingly
+	//
+	static void PrintException(const wil::ResultException& e) noexcept
 	{
 		ctsConfigInitOnce();
 
@@ -3475,7 +3386,7 @@ namespace ctsTraffic::ctsConfig
 		PrintErrorInfo(errorString);
 	}
 
-	void PrintException(const std::exception& e) noexcept
+	static void PrintException(const std::exception& e) noexcept
 	{
 		ctsConfigInitOnce();
 
@@ -3493,7 +3404,7 @@ namespace ctsTraffic::ctsConfig
 			const auto hr = wil::ResultFromCaughtException();
 			if (g_breakOnError)
 			{
-				FAIL_FAST_MSG("Fatal exception: 0x%x", hr);
+				FAIL_FAST_MSG("Fatal exception: 0x%lx", hr);
 			}
 
 			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -3537,7 +3448,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		const auto translation = ctString::format_message(why);
 		const auto formattedString = wil::str_printf<std::wstring>(
-			L"[exception] %ws%ws%ws%ws [%u / 0x%x - %ws]",
+			L"[exception] %ws%ws%ws%ws [%u / 0x%lx - %ws]",
 			what ? L" " : L"",
 			what ? what : L"",
 			where ? L" at " : L"",
@@ -3805,11 +3716,13 @@ namespace ctsTraffic::ctsConfig
 		remoteAddr.writeCompleteAddress(wsaRemoteAddress);
 		if (writeToConsole)
 		{
+			constexpr auto * const tcpConnectionString = L"[%.3f] TCP connection established [%ws - %ws]\n";
+			constexpr auto* const udpConnectionString = L"[%.3f] UDP connection established [%ws - %ws]\n";
+			const auto* const connectionString = ProtocolType::TCP == g_configSettings->Protocol ? tcpConnectionString : udpConnectionString;
+
 			(void)fwprintf_s(
 				stdout,
-				ProtocolType::TCP == g_configSettings->Protocol
-				? L"[%.3f] TCP connection established [%ws - %ws]\n"
-				: L"[%.3f] UDP connection established [%ws - %ws]\n",
+				connectionString,
 				GetStatusTimeStamp(),
 				wsaLocalAddress,
 				wsaRemoteAddress);
@@ -3863,7 +3776,7 @@ namespace ctsTraffic::ctsConfig
 			return;
 		}
 
-		enum class ErrorType
+		enum class ErrorType : std::uint8_t
 		{
 			Success,
 			NetworkError,
@@ -3999,7 +3912,7 @@ namespace ctsTraffic::ctsConfig
 			return;
 		}
 
-		enum class ErrorType
+		enum class ErrorType : std::uint8_t
 		{
 			Success,
 			NetworkError,
@@ -4176,7 +4089,7 @@ namespace ctsTraffic::ctsConfig
 			return;
 		}
 
-		enum class ErrorType
+		enum class ErrorType : std::uint8_t
 		{
 			Success,
 			NetworkError,
@@ -4489,8 +4402,10 @@ namespace ctsTraffic::ctsConfig
 			wstring formattedString;
 			if (writeToConsole)
 			{
-				wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-				(void)fwprintf_s(stdout, L"%ws\n", formattedString.c_str());
+				if (SUCCEEDED(wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr)))
+				{
+					(void)fwprintf_s(stdout, L"%ws\n", formattedString.c_str());
+				}
 			}
 
 			if (g_errorLogger && !g_errorLogger->IsCsvFormat())
@@ -4499,11 +4414,15 @@ namespace ctsTraffic::ctsConfig
 				{
 					wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
 				}
-				g_errorLogger->LogError(
-					wil::str_printf<std::wstring>(
-						L"[%.3f] %ws\r\n",
-						GetStatusTimeStamp(),
-						formattedString.c_str()).c_str());
+
+				if (!formattedString.empty())
+				{
+					g_errorLogger->LogError(
+						wil::str_printf<std::wstring>(
+							L"[%.3f] %ws\r\n",
+							GetStatusTimeStamp(),
+							formattedString.c_str()).c_str());
+				}
 			}
 		}
 		catch (...)
@@ -4512,12 +4431,10 @@ namespace ctsTraffic::ctsConfig
 		va_end(argptr);
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Get* 
-	/// - accessor functions made public to retrieve configuration details
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Get* 
+	// - accessor functions made public to retrieve configuration details
+	//
 	uint32_t GetBufferSize() noexcept
 	{
 		ctsConfigInitOnce();
@@ -4603,13 +4520,11 @@ namespace ctsTraffic::ctsConfig
 		return static_cast<float>(ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds) / 1000.0f;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Set*Options
-	/// - functions capturing any options that need to be set on a socket across different states
-	/// - currently only implementing pre-bind options
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Set*Options
+	// - functions capturing any options that need to be set on a socket across different states
+	// - currently only implementing pre-bind options
+	//
 	bool SetProcessDefaultCpuSets()
 	{
 		// default to CPU set zero
@@ -4618,7 +4533,7 @@ namespace ctsTraffic::ctsConfig
 		{
 			settingsGroupId = g_configSettings->CpuGroupId.value();
 		}
-		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: trying to find CPUs on Group %lu\n", settingsGroupId);
+		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: trying to find CPUs on Group %u\n", settingsGroupId);
 
 		typedef BOOL(__stdcall* pfn_SetProcessDefaultCpuSets)(
 			HANDLE Process,
@@ -4704,7 +4619,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (cpuSetIdsOnCpuGroupZero.empty())
 		{
-			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: No CPU IDs found on Group %lu\n", settingsGroupId);
+			PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: No CPU IDs found on Group %u\n", settingsGroupId);
 			return false;
 		}
 
@@ -4718,17 +4633,15 @@ namespace ctsTraffic::ctsConfig
 			return false;
 		}
 
-		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: SetProcessDefaultCpuSets set process affinity to all CPU IDs in Group %lu\n", settingsGroupId);
+		PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: SetProcessDefaultCpuSets set process affinity to all CPU IDs in Group %u\n", settingsGroupId);
 		return true;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// Set*Options
-	/// - functions capturing any options that need to be set on a socket across different states
-	/// - currently only implementing pre-bind options
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Set*Options
+	// - functions capturing any options that need to be set on a socket across different states
+	// - currently only implementing pre-bind options
+	//
 	int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
 	{
 		ctsConfigInitOnce();
@@ -4965,12 +4878,10 @@ namespace ctsTraffic::ctsConfig
 		return 0;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	///
-	/// PrintSettings
-	/// - public function to write out to the console applied settings
-	///
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// PrintSettings
+	// - public function to write out to the console applied settings
+	//
 	void PrintSettings()
 	{
 		ctsConfigInitOnce();
@@ -5100,7 +5011,7 @@ namespace ctsTraffic::ctsConfig
 		{
 			settingString.append(
 				wil::str_printf<std::wstring>(
-					L"\tBuffer used for each IO request: %u [0x%x] bytes\n",
+					L"\tBuffer used for each IO request: %u [0x%lx] bytes\n",
 					g_bufferSizeLow, g_bufferSizeLow));
 		}
 		else
@@ -5247,12 +5158,12 @@ namespace ctsTraffic::ctsConfig
 
 			settingString.append(
 				wil::str_printf<std::wstring>(
-					L"\tConnection limit (maximum established connections): %u [0x%x]\n",
+					L"\tConnection limit (maximum established connections): %u [0x%lx]\n",
 					g_configSettings->ConnectionLimit,
 					g_configSettings->ConnectionLimit));
 			settingString.append(
 				wil::str_printf<std::wstring>(
-					L"\tConnection throttling rate (maximum pended connection attempts): %u [0x%x]\n",
+					L"\tConnection throttling rate (maximum pended connection attempts): %u [0x%lx]\n",
 					g_configSettings->ConnectionThrottleLimit,
 					g_configSettings->ConnectionThrottleLimit));
 		}

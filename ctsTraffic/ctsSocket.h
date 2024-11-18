@@ -80,7 +80,7 @@ public:
     [[nodiscard]] SocketReference AcquireSocketLock() const noexcept;
 
     //
-    // c'tor requiring a parent ctsSocketState weak reference
+    // constructor requiring a parent ctsSocketState weak reference
     //
     explicit ctsSocket(std::weak_ptr<ctsSocketState> parent) noexcept;
 
