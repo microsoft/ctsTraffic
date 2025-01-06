@@ -14,18 +14,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 #include <memory>
+#include <string>
 #include <exception>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
-// ctl headers
-#include <ctSockaddr.hpp>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-// wil headers always included last
-#include <wil/stl.h>
-#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -89,7 +84,7 @@ namespace details
                     THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                 }
 
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
+                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), socket_address::length))
                 {
                     THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
                 }
@@ -103,7 +98,7 @@ namespace details
                 // socket is now being tracked in listening_sockets, release ownership
                 listening.release();
 
-                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.write_complete_address().c_str());
             }
 
             if (m_listeningSockets.empty())
@@ -194,8 +189,8 @@ namespace details
 
             // increment the listening socket before calling accept on the blocking socket
             ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
-            ctl::ctSockaddr remoteAddr;
-            auto remoteAddrLen = remoteAddr.length();
+            socket_address remoteAddr;
+            auto remoteAddrLen = socket_address::length;
             const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
             auto gle = WSAGetLastError();
             ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
@@ -212,8 +207,8 @@ namespace details
             acceptSocket->SetSocket(newSocket);
             acceptSocket->SetRemoteSockaddr(remoteAddr);
 
-            ctl::ctSockaddr localAddr;
-            auto localAddrLen = localAddr.length();
+            socket_address localAddr;
+            auto localAddrLen = socket_address::length;
             if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
             {
                 acceptSocket->SetLocalSockaddr(localAddr);

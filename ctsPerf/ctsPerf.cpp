@@ -17,9 +17,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <string>
 #include <memory>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
@@ -29,7 +30,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsEstats.h"
 // wil headers always included last
 #include <wil/stl.h>
-#include <wil/resource.h>
 
 using namespace std;
 using namespace ctl;

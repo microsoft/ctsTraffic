@@ -13,12 +13,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// cpp headers
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsPrintStatus.hpp"

@@ -13,11 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
-// ctl headers
-#include <ctSockaddr.hpp>
+#include <string>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -61,10 +61,10 @@ namespace ctsTraffic
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
 
                 // read the local sockaddr - e.g. if we needed to bind locally
-                ctl::ctSockaddr localAddr(sharedSocket->GetLocalSockaddr());
-                ctl::ctSockaddr remoteAddr;
-                DWORD localAddrLength = localAddr.length();
-                DWORD remoteAddrLength = remoteAddr.length();
+                socket_address localAddr(sharedSocket->GetLocalSockaddr());
+                socket_address remoteAddr;
+                DWORD localAddrLength = socket_address::length;
+                DWORD remoteAddrLength = socket_address::length;
 
                 PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
                 if (!WSAConnectByNameW(
@@ -82,7 +82,11 @@ namespace ctsTraffic
                     ctsConfig::PrintErrorIfFailed("WSAConnectByName", error);
                     THROW_WIN32(error);
                 }
-                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n", localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
+
+                PRINT_DEBUG_INFO(
+                    L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n",
+                    localAddr.write_complete_address().c_str(),
+                    remoteAddr.write_complete_address().c_str());
 
                 sharedSocket->SetLocalSockaddr(localAddr);
                 sharedSocket->SetRemoteSockaddr(remoteAddr);

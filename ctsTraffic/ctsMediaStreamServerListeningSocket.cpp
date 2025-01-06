@@ -14,13 +14,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <exception>
 #include <memory>
+#include <string>
 #include <utility>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 // ctl headers
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsMediaStreamServerListeningSocket.h"
 #include "ctsMediaStreamServer.h"
@@ -28,14 +27,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 // wil headers always included last
 #include <wil/stl.h>
-#include <wil/resource.h>
 
 namespace ctsTraffic
 {
-ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, ctl::ctSockaddr listeningAddr) :
+ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, socket_address listeningAddr) :
     m_threadIocp(std::make_shared<ctl::ctThreadIocp>(listeningSocket.get(), ctsConfig::g_configSettings->pTpEnvironment)),
     m_listeningSocket(std::move(listeningSocket)),
-    m_listeningAddr(std::move(listeningAddr))
+    m_listeningAddr(listeningAddr)
 {
     FAIL_FAST_IF_MSG(
         !!(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp),
@@ -58,7 +56,7 @@ SOCKET ctsMediaStreamServerListeningSocket::GetSocket() const noexcept
     return m_listeningSocket.get();
 }
 
-ctl::ctSockaddr ctsMediaStreamServerListeningSocket::GetListeningAddress() const noexcept
+socket_address ctsMediaStreamServerListeningSocket::GetListeningAddress() const noexcept
 {
     return m_listeningAddr;
 }
@@ -81,8 +79,8 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
                 ::ZeroMemory(m_recvBuffer.data(), m_recvBuffer.size());
 
                 m_recvFlags = 0;
-                m_remoteAddr.reset(m_remoteAddr.family(), ctl::ctSockaddr::AddressType::Any);
-                m_remoteAddrLen = m_remoteAddr.length();
+                m_remoteAddr.reset(m_remoteAddr.family());
+                m_remoteAddrLen = socket_address::length;
                 OVERLAPPED* pOverlapped = m_threadIocp->new_request(
                     [this](OVERLAPPED* pCallbackOverlapped) noexcept {
                         RecvCompletion(pCallbackOverlapped);
@@ -206,7 +204,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                     case MediaStreamAction::START:
                         PRINT_DEBUG_INFO(
                             L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                            m_remoteAddr.writeCompleteAddress().c_str());
+                            m_remoteAddr.write_complete_address().c_str());
 #ifndef TESTING_IGNORE_START
                     // Cannot be holding the object_guard when calling into any pimpl-> methods
                         pimplOperation = [this] {

@@ -17,17 +17,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <array>
 #include <string>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
 // ctl headers
 #include <ctTimer.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
-// wil headers always included last
-#include <wil/resource.h>
 
 namespace ctsTraffic
 {

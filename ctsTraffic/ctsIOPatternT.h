@@ -15,8 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <functional>
-// ctl headers
-#include <ctSockaddr.hpp>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
@@ -65,7 +65,7 @@ public:
     ///
     /// Enabling callers to trigger writing statistics via ctsConfig
     ///
-    virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
+    virtual void PrintStatistics(const socket_address& localAddr, const socket_address& remoteAddr) noexcept = 0;
 
     ///
     /// Some derived IO types require callbacks to the IO functions
@@ -89,7 +89,7 @@ public:
     ctsIoPatternT() = default;
     ~ctsIoPatternT() override = default;
 
-    void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept final
+    void PrintStatistics(const socket_address& localAddr, const socket_address& remoteAddr) noexcept final
     {
         // before printing the final results, make sure the timers are stopped
         if (0 == GetLastPatternError() && 0 == m_stats.current_bytes())

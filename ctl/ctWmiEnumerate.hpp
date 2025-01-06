@@ -23,11 +23,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WbemIdl.h>
-// wil headers
-#include <wil/com.h>
 // local headers
 #include "ctWmiService.hpp"
 #include "ctWmiInstance.hpp"
+// wil headers
+#include <wil/com.h>
 
 namespace ctl
 {

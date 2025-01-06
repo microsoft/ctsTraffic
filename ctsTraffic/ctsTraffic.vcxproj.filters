@@ -139,19 +139,10 @@
     <ClInclude Include="..\ctl\ctRandom.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctString.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctThreadIocp.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctTimer.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternState.hpp">
@@ -232,6 +223,9 @@
     <ClInclude Include="..\ctl\ctThreadpoolQueue.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
+    <ClInclude Include="..\ctl\ctString.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\TestScripts\ctsTraffic_acceptance_test.cmd">
@@ -251,8 +245,5 @@
     <Manifest Include="ctsTraffic.exe.manifest">
       <Filter>Resource Files</Filter>
     </Manifest>
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
   </ItemGroup>
 </Project>

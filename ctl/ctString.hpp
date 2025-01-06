@@ -20,9 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+#include <wil/stl.h>
 #include <wil/win32_helpers.h>
-#include <wil/resource.h>
-
 
 //
 //
@@ -30,7 +29,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //
 // Notice all functions are in the ctl::ctString namespace
 //
-
 namespace ctl::ctString
 {
 //

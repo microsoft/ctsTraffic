@@ -13,13 +13,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// os headers
-#include <Windows.h>
-#include <WinSock2.h>
+#include <string>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
 // ctl headers
-#include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 
@@ -28,7 +28,7 @@ namespace ctsTraffic
 static void ctsConnectExIoCompletionCallback(
     OVERLAPPED* overlapped,
     const std::weak_ptr<ctsSocket>& weakSocket,
-    const ctl::ctSockaddr& targetAddress) noexcept
+    const socket_address& targetAddress) noexcept
 {
     const auto sharedSocket(weakSocket.lock());
     if (!sharedSocket)
@@ -69,11 +69,11 @@ static void ctsConnectExIoCompletionCallback(
 
     ctsConfig::PrintErrorIfFailed("ConnectEx", gle);
 
-    ctl::ctSockaddr localAddr;
+    socket_address localAddr;
     if (NO_ERROR == gle)
     {
         // store the local addr of the connection
-        int localAddrLen = localAddr.length();
+        int localAddrLen = socket_address::length;
         if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
         {
             sharedSocket->SetLocalSockaddr(localAddr);
@@ -103,7 +103,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         const auto socket = socketReference.GetSocket();
         if (socket != INVALID_SOCKET)
         {
-            const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
+            const socket_address& targetAddress = sharedSocket->GetRemoteSockaddr();
             error = ctsConfig::SetPreConnectOptions(socket);
             THROW_IF_WIN32_ERROR_MSG(error, "ctsConfig::SetPreConnectOptions");
 
@@ -113,7 +113,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             OVERLAPPED* pOverlapped = connectIocp->new_request(
                 [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
 
-            if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))
+            if (!SocketFunctions.f.ConnectEx(socket, targetAddress.sockaddr(), socket_address::length, nullptr, 0, nullptr, pOverlapped))
             {
                 error = WSAGetLastError();
                 if (ERROR_IO_PENDING == error)
@@ -139,7 +139,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             ctsConfig::PrintErrorIfFailed("ConnectEx", error);
             if (NO_ERROR == error)
             {
-                PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.writeCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.write_complete_address().c_str());
             }
         }
         else

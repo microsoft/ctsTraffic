@@ -19,10 +19,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 // os headers
 #include <excpt.h>
-#include <Windows.h>
-#include <WinSock2.h>
-// wil headers
-#include <wil/resource.h>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 
 
 namespace ctl

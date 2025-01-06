@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctString.hpp>
 // wil headers always included last
 #include <wil/stl.h>
-#include <wil/resource.h>
 
 namespace ctsPerf
 {

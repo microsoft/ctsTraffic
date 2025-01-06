@@ -157,22 +157,22 @@ namespace ctsTraffic
         }
     }
 
-    const ctSockaddr& ctsSocket::GetLocalSockaddr() const noexcept
+    const socket_address& ctsSocket::GetLocalSockaddr() const noexcept
     {
         return m_localSockaddr;
     }
 
-    void ctsSocket::SetLocalSockaddr(const ctSockaddr& localAddress) noexcept
+    void ctsSocket::SetLocalSockaddr(const socket_address& localAddress) noexcept
     {
         m_localSockaddr = localAddress;
     }
 
-    const ctSockaddr& ctsSocket::GetRemoteSockaddr() const noexcept
+    const socket_address& ctsSocket::GetRemoteSockaddr() const noexcept
     {
         return m_targetSockaddr;
     }
 
-    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& targetAddress) noexcept
+    void ctsSocket::SetRemoteSockaddr(const socket_address& targetAddress) noexcept
     {
         m_targetSockaddr = targetAddress;
     }

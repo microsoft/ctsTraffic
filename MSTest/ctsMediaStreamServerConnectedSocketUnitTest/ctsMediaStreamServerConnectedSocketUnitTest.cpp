@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <atomic>
 
 #include <ctString.hpp>
-#include <ctSockaddr.hpp>
 
 #include <ctsConfig.h>
 #include "ctsSocket.h"
@@ -33,9 +32,9 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
 template <>
-inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _value)
+inline std::wstring ToString<wil::networking::socket_address>(const wil::networking::socket_address& _value)
 {
-    return _value.writeCompleteAddress();
+    return _value.write_complete_address();
 }
 }
 
@@ -53,15 +52,15 @@ namespace ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t) noexcept
     {
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
     {
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
     {
     }
 
@@ -178,7 +177,7 @@ public:
     }
 
     // none of these are called - required to be defined
-    void PrintStatistics(const ctl::ctSockaddr&, const ctl::ctSockaddr&) noexcept override
+    void PrintStatistics(const wil::networking::socket_address&, const wil::networking::socket_address&) noexcept override
     {
         Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
         Assert::IsFalse(true);
@@ -217,7 +216,7 @@ public:
         return nullptr;
     }
 
-    void PrintTcpInfo(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET) noexcept override
+    void PrintTcpInfo(const wil::networking::socket_address&, const wil::networking::socket_address&, SOCKET) noexcept override
     {
         Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::PrintTcpInfo\n");
     }
@@ -259,7 +258,7 @@ ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
 }
 
 // one callout fake to ctsMediaStreamServerImpl
-void ctsMediaStreamServerImpl::RemoveSocket(const ctl::ctSockaddr&)
+void ctsMediaStreamServerImpl::RemoveSocket(const wil::networking::socket_address&)
 {
 }
 }
@@ -305,7 +304,11 @@ public:
         g_IOTimeOffset = 0;
         ResetEvent(g_RemovedSocketEvent);
 
-        const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
+        std::vector<wil::networking::socket_address> test_addr;
+        for (const auto& address : wil::networking::resolve_name(L"1.1.1.1"))
+        {
+            test_addr.emplace_back(address);
+        }
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
         auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
@@ -351,7 +354,11 @@ public:
         g_IOTimeOffset = 0;
         ResetEvent(g_RemovedSocketEvent);
 
-        const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
+        std::vector<wil::networking::socket_address> test_addr;
+        for (const auto& address : wil::networking::resolve_name(L"1.1.1.1"))
+        {
+            test_addr.emplace_back(address);
+        }
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
         auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
@@ -397,7 +404,11 @@ public:
         g_IOTimeOffset = 100; // 100ms apart
         ResetEvent(g_RemovedSocketEvent);
 
-        const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
+        std::vector<wil::networking::socket_address> test_addr;
+        for (const auto& address : wil::networking::resolve_name(L"1.1.1.1"))
+        {
+            test_addr.emplace_back(address);
+        }
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
         auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
@@ -447,7 +458,11 @@ public:
         g_TaskAction = ctsTaskAction::None;
         ResetEvent(g_RemovedSocketEvent);
 
-        const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
+        std::vector<wil::networking::socket_address> test_addr;
+        for (const auto& address : wil::networking::resolve_name(L"1.1.1.1"))
+        {
+            test_addr.emplace_back(address);
+        }
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
         auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
@@ -494,7 +509,11 @@ public:
         g_IOTimeOffset = 100; // 100ms apart
         ResetEvent(g_RemovedSocketEvent);
 
-        const std::vector test_addr(ctl::ctSockaddr::ResolveName(L"1.1.1.1"));
+        std::vector<wil::networking::socket_address> test_addr;
+        for (const auto& address : wil::networking::resolve_name(L"1.1.1.1"))
+        {
+            test_addr.emplace_back(address);
+        }
         Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
         auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));

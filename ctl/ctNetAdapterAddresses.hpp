@@ -19,16 +19,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 #include <vector>
 #include <memory>
-// os headers
-// ReSharper disable once CppUnusedIncludeDirective
-#include <WinSock2.h>
-// ReSharper disable once CppUnusedIncludeDirective
-#include <ws2ipdef.h>
-#include <iphlpapi.h>
-// ctl headers
-#include "ctSockaddr.hpp"
-// wil headers always included last
-#include <wil/resource.h>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 
 namespace ctl
 {
@@ -200,8 +193,8 @@ private:
 // - to find the first interface that has the specified address assigned
 struct ctNetAdapterMatchingAddrPredicate
 {
-    explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr addr) noexcept :
-        m_targetAddr(std::move(addr))
+    explicit ctNetAdapterMatchingAddrPredicate(const wil::networking::socket_address& addr) noexcept :
+        m_targetAddr(addr)
     {
     }
 
@@ -211,7 +204,7 @@ struct ctNetAdapterMatchingAddrPredicate
              unicastAddress != nullptr;
              unicastAddress = unicastAddress->Next)
         {
-            if (ctSockaddr(&unicastAddress->Address) == m_targetAddr)
+            if (wil::networking::socket_address(&unicastAddress->Address) == m_targetAddr)
             {
                 return true;
             }
@@ -220,6 +213,6 @@ struct ctNetAdapterMatchingAddrPredicate
     }
 
 private:
-    const ctSockaddr m_targetAddr;
+    const wil::networking::socket_address m_targetAddr;
 };
 } // namespace ctl

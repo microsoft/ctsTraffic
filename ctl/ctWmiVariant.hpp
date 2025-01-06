@@ -20,9 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <objbase.h>
-#include <wil/stl.h>
 #include <wil/com.h>
-#include <wil/resource.h>
 
 // ctWmiMakeVariant(const ) functions are specializations designed to help callers
 // who want a way to construct a VARIANT that is safe for passing into WMI

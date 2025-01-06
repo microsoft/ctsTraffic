@@ -16,16 +16,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // CRT headers
 #include <algorithm>
-#include <cstdio>
 #include <exception>
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocketBroker.h"
+// wil headers
+#include <wil/stl.h>
 
 using namespace ctsTraffic;
 using namespace ctl;
@@ -39,7 +37,7 @@ static BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
     // handle all exit types - notify config that it's time to shut down
     ctsConfig::PrintSummary(L"\n  **** ctrl-break hit -- shutting down ****\n");
-    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+    Shutdown(ctsConfig::ExitProcessType::Rude);
     return TRUE;
 }
 
@@ -57,20 +55,20 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     {
         if (!ctsConfig::Startup(argc, argv))
         {
-            ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+            Shutdown(ctsConfig::ExitProcessType::Rude);
             err = ERROR_INVALID_DATA;
         }
     }
     catch (const invalid_argument& e)
     {
         ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+        Shutdown(ctsConfig::ExitProcessType::Rude);
         err = ERROR_INVALID_DATA;
     }
     catch (const exception& e)
     {
         ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+        Shutdown(ctsConfig::ExitProcessType::Rude);
         err = ERROR_INVALID_DATA;
     }
 
@@ -129,19 +127,19 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     catch (const wil::ResultException& e)
     {
         ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+        Shutdown(ctsConfig::ExitProcessType::Rude);
         return e.GetErrorCode();
     }
     catch (const bad_alloc&)
     {
         ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed: Out of Memory");
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+        Shutdown(ctsConfig::ExitProcessType::Rude);
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e)
     {
         ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed: %hs", e.what()).c_str());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+        Shutdown(ctsConfig::ExitProcessType::Rude);
         return ERROR_CANCELLED;
     }
 
@@ -150,7 +148,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     // write out the final status update
     ctsConfig::PrintStatusUpdate();
 
-    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Normal);
+    Shutdown(ctsConfig::ExitProcessType::Normal);
 
     ctsConfig::PrintSummary(
         L"\n\n"

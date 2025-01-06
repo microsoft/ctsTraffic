@@ -17,10 +17,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
+// project headers
+#include "ctsConfig.h"
 // wil headers
 #include <wil/resource.h>
-
-#include "ctsConfig.h"
 
 namespace ctsTraffic
 {

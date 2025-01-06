@@ -101,11 +101,11 @@ void PrintConnectionResults(uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -125,7 +125,7 @@ void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
-void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsTcpStatistics&) noexcept
+void PrintTcpDetails(const wil::networking::socket_address&, const wil::networking::socket_address&, SOCKET, const ctsTcpStatistics&) noexcept
 {
 }
 

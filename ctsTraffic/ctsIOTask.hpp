@@ -13,11 +13,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// os headers
-// ReSharper disable once CppUnusedIncludeDirective
-#include <WinSock2.h>
-#include <MSWSock.h>
-#include <Windows.h>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 

@@ -17,14 +17,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <array>
 #include <memory>
 #include <algorithm>
-// os headers
-#include <Windows.h>
+
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
 // project headers
 #include "ctsConfig.h"
 #include "ctsIOPatternState.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
-#include "ctSocketExtensions.hpp"
 
 namespace ctsTraffic
 {
@@ -82,8 +83,8 @@ public:
     virtual ~ctsIoPattern() noexcept = default;
 
     // Exposing statistics members publicly to ctsSocket
-    virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
-    virtual void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept = 0;
+    virtual void PrintStatistics(const socket_address& localAddr, const socket_address& remoteAddr) noexcept = 0;
+    virtual void PrintTcpInfo(const socket_address& localAddr, const socket_address& remoteAddr, SOCKET socket) noexcept = 0;
 
     //
     // These are public functions exposed to ctsSocket and the derived types
@@ -229,7 +230,7 @@ private:
         {
             if (m_bufferId != RIO_INVALID_BUFFERID)
             {
-                ctl::ctRIODeregisterBuffer(m_bufferId);
+                RioFunctions.f.RIODeregisterBuffer(m_bufferId);
                 m_bufferId = RIO_INVALID_BUFFERID;
             }
         }
@@ -441,7 +442,7 @@ public:
     ctsIoPatternStatistics& operator=(ctsIoPatternStatistics&&) = delete;
 
     // Printing of results is controlled by the applicable statistics type
-    void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept override
+    void PrintStatistics(const socket_address& localAddr, const socket_address& remoteAddr) noexcept override
     {
         // before printing the final results, make sure the timers are stopped
         // because this is called while holding the parent lock (which is the pattern lock)
@@ -459,7 +460,7 @@ public:
             m_statistics);
     }
 
-    void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept override
+    void PrintTcpInfo(const socket_address& localAddr, const socket_address& remoteAddr, SOCKET socket) noexcept override
     {
         // guarantee stats are ended
         EndStatistics();

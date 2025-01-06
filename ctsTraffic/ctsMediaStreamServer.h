@@ -15,8 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// ctl headers
-#include <ctSockaddr.hpp>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 // project headers
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
@@ -47,12 +47,12 @@ namespace ctsTraffic { namespace ctsMediaStreamServerImpl
         // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
         //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
         //   (which will wait for all TP threads to complete in the destructor)
-        void RemoveSocket(const ctl::ctSockaddr& targetAddr);
+        void RemoveSocket(const socket_address& targetAddr);
 
         // Processes the incoming START request from the client
         // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
         // - else we'll queue it to awaiting_endpoints
-        void Start(SOCKET socket, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& targetAddr);
+        void Start(SOCKET socket, const socket_address& localAddr, const socket_address& targetAddr);
     }
 
     // Called to 'accept' incoming connections

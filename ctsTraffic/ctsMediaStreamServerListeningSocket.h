@@ -16,10 +16,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <array>
 #include <memory>
-// os headers
-#include <Windows.h>
+// using wil::networking to pull in all necessary networking headers
+#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
 // project headers
 #include "ctsConfig.h"
@@ -36,10 +35,10 @@ private:
     mutable wil::critical_section m_listeningsocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
 
-    const ctl::ctSockaddr m_listeningAddr;
+    const socket_address m_listeningAddr;
     std::array<char, c_recvBufferSize> m_recvBuffer{};
     DWORD m_recvFlags{};
-    ctl::ctSockaddr m_remoteAddr;
+    socket_address m_remoteAddr;
     int m_remoteAddrLen{};
     bool m_priorFailureWasConectionReset = false;
 
@@ -48,13 +47,13 @@ private:
 public:
     ctsMediaStreamServerListeningSocket(
         wil::unique_socket&& listeningSocket,
-        ctl::ctSockaddr listeningAddr);
+        socket_address listeningAddr);
 
     ~ctsMediaStreamServerListeningSocket() noexcept;
 
     SOCKET GetSocket() const noexcept;
 
-    ctl::ctSockaddr GetListeningAddress() const noexcept;
+    socket_address GetListeningAddress() const noexcept;
 
     void InitiateRecv() noexcept;
 
