@@ -450,6 +450,7 @@ public:
         if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesTransferredNoLock())
         {
             PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transferred zero bytes\n");
+                    L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transferred 0 bytes\n")
             UpdateLastPatternError(ctsIoPatternError::TooFewBytes);
         }
 
