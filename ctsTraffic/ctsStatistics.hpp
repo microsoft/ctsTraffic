@@ -21,8 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctl headers
 #include <ctTimer.hpp>
 #include <ctMemoryGuard.hpp>
-// wil headers always included last
-#include <wil/resource.h>
 
 namespace ctsTraffic { namespace ctsStatistics
     {

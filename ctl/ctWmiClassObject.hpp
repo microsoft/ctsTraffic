@@ -16,20 +16,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <iterator>
-#include <exception>
 #include <stdexcept>
 #include <utility>
 // os headers
 #include <Windows.h>
 #include <oleauto.h>
 #include <WbemIdl.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
-#include <wil/com.h>
 // local headers
 #include "ctWmiService.hpp"
-
+// wil headers
+#include <wil/stl.h>
+#include <wil/com.h>
 
 namespace ctl
 {

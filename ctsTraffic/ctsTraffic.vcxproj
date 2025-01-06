@@ -130,9 +130,9 @@
       <Optimization>Disabled</Optimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -173,9 +173,9 @@
       <Optimization>Disabled</Optimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>
@@ -219,9 +219,9 @@
       <Optimization>Disabled</Optimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>
@@ -263,7 +263,7 @@
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -310,7 +310,7 @@
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -364,7 +364,7 @@
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -436,11 +436,9 @@
     <ClInclude Include="..\ctl\ctMemoryGuard.hpp" />
     <ClInclude Include="..\ctl\ctMath.hpp" />
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp" />
+    <ClInclude Include="..\ctl\ctString.hpp" />
     <ClInclude Include="..\ctl\ctThreadpoolQueue.hpp" />
     <ClInclude Include="..\ctl\ctRandom.hpp" />
-    <ClInclude Include="..\ctl\ctSockaddr.hpp" />
-    <ClInclude Include="..\ctl\ctSocketExtensions.hpp" />
-    <ClInclude Include="..\ctl\ctString.hpp" />
     <ClInclude Include="..\ctl\ctThreadIocp.hpp" />
     <ClInclude Include="..\ctl\ctTimer.hpp" />
     <ClInclude Include="..\ctl\ctWmiClassObject.hpp" />

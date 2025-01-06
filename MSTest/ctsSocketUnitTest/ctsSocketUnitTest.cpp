@@ -35,9 +35,9 @@ inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl
 }
 
 template <>
-inline std::wstring ToString<ctl::ctSockaddr>(const ctl::ctSockaddr& _addr)
+inline std::wstring ToString<socket_address>(const socket_address& _addr)
 {
-    return _addr.writeCompleteAddress();
+    return _addr.write_complete_address();
 }
 }
 
@@ -83,17 +83,17 @@ namespace ctsConfig
         va_end(args);
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }
@@ -240,9 +240,10 @@ public:
 
         // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
         // - trying to use it should fail with an invalid socket error
-        ctl::ctSockaddr local_addr(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        local_addr.setPort(55555);
-        const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
+        socket_address local_addr(AF_INET);
+        local_addr.set_address_loopback();
+        local_addr.set_port(55555);
+        const auto error = ::bind(socket_value, local_addr.sockaddr(), socket_address::length);
         const auto gle = WSAGetLastError();
         Assert::AreEqual(SOCKET_ERROR, error);
         Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);
@@ -270,8 +271,9 @@ public:
         shared_ptr<ctsSocketState> default_socket_state_object;
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        test_address.setPort(55555);
+        socket_address test_address(AF_INET);
+        test_address.set_address_loopback();
+        test_address.set_port(55555);
 
         test->SetLocalSockaddr(test_address);
         Assert::AreEqual(test_address, test->GetLocalSockaddr());
@@ -283,8 +285,9 @@ public:
         shared_ptr<ctsSocketState> default_socket_state_object;
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        ctl::ctSockaddr test_address(AF_INET, ctl::ctSockaddr::AddressType::Loopback);
-        test_address.setPort(55555);
+        socket_address test_address(AF_INET);
+        test_address.set_address_loopback();
+        test_address.set_port(55555);
 
         test->SetLocalSockaddr(test_address);
         Assert::AreEqual(test_address, test->GetLocalSockaddr());

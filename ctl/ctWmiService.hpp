@@ -19,8 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/stl.h>
 #include <wil/com.h>
-#include <wil/resource.h>
-
 
 namespace ctl
 {

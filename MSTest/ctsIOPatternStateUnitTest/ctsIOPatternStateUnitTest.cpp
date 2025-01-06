@@ -83,15 +83,15 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -134,7 +134,7 @@ uint32_t ConsoleVerbosity() noexcept
 
 TcpShutdownType GetShutdownType() noexcept
 {
-    return ctsConfig::g_configSettings->TcpShutdown;
+    return g_configSettings->TcpShutdown;
 }
 }
 
@@ -378,7 +378,7 @@ public:
 
     TEST_METHOD(TestSetMaxTransfer)
     {
-        static const uint64_t c_testTransferSize(100);
+        static constexpr uint64_t c_testTransferSize(100);
 
         this->InitGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, m_ioPatternState->GetMaxTransfer());
@@ -393,7 +393,7 @@ public:
 
     TEST_METHOD(TestGetRemainingTransferAfterSetMaxTransfer)
     {
-        static const uint64_t c_testTransferSize(100);
+        static constexpr uint64_t c_testTransferSize(100);
 
         this->InitGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, m_ioPatternState->GetMaxTransfer());

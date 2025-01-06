@@ -80,17 +80,17 @@ namespace ctsConfig
         va_end(args);
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, uint32_t) noexcept
+    void PrintConnectionResults(const socket_address&, uint32_t) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }

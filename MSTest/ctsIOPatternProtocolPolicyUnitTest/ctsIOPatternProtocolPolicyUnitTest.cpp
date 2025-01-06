@@ -77,7 +77,7 @@ inline std::wstring ToString<ctsTraffic::ctsIoPatternError>(const ctsTraffic::ct
 
 uint64_t g_transferSize = 0ULL;
 bool g_isListening = false;
-const uint32_t g_TestErrorCode = 1;
+constexpr uint32_t g_TestErrorCode = 1;
 
 ///
 /// Fakes
@@ -86,15 +86,15 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -132,7 +132,7 @@ uint32_t ConsoleVerbosity() noexcept
 
 TcpShutdownType GetShutdownType() noexcept
 {
-    return ctsConfig::g_configSettings->TcpShutdown;
+    return g_configSettings->TcpShutdown;
 }
 }
 
@@ -427,7 +427,7 @@ public:
 
     TEST_METHOD(GracefulShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+        constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitClientGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -440,7 +440,7 @@ public:
 
     TEST_METHOD(HardShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+        constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitClientHardShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -453,7 +453,7 @@ public:
 
     TEST_METHOD(TCPServerShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+        constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitServerGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -466,7 +466,7 @@ public:
 
     TEST_METHOD(UdpClientSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+        constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitUdpClientTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -479,7 +479,7 @@ public:
 
     TEST_METHOD(UdpServerSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+        constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitUdpServerTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());

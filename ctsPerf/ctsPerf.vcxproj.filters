@@ -10,12 +10,6 @@
     <ClInclude Include="..\ctl\ctRandom.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctSockaddr.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctString.hpp">
       <Filter>ctl</Filter>
     </ClInclude>

@@ -86,9 +86,9 @@ uint32_t g_BufferSize = 0UL;
 uint64_t g_transferSize = 0ULL;
 bool g_IsListening = false;
 ctsTraffic::ctsConfig::MediaStreamSettings g_MediaStreamSettings;
-const uint32_t g_TestRecvBufferLength = 1024;
-const uint32_t g_TestBufferLength = 4;
-const uint32_t g_TestErrorCode = 1;
+constexpr uint32_t g_TestRecvBufferLength = 1024;
+constexpr uint32_t g_TestBufferLength = 4;
+constexpr uint32_t g_TestErrorCode = 1;
 
 ///
 /// Fakes
@@ -101,11 +101,11 @@ void PrintConnectionResults(uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -125,7 +125,7 @@ void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
-void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsTcpStatistics&) noexcept
+void PrintTcpDetails(const socket_address&, const socket_address&, SOCKET, const ctsTcpStatistics&) noexcept
 {
 }
 
@@ -182,7 +182,7 @@ uint32_t ConsoleVerbosity() noexcept
 
 TcpShutdownType GetShutdownType() noexcept
 {
-    return ctsConfig::g_configSettings->TcpShutdown;
+    return g_configSettings->TcpShutdown;
 }
 }
 
@@ -229,7 +229,7 @@ private:
         Hard
     };
 
-    static const uint32_t DefaultTransferSize = 10UL;
+    static constexpr uint32_t DefaultTransferSize = 10UL;
 
     void SetTestBaseClassDefaults(TestRole _role, TestShutdownMethod _shutdown = Graceful) const
     {
@@ -1069,7 +1069,7 @@ public:
             Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task_two).c_str()).c_str());
 
             const ctsTask test_task_three = test_pattern->InitiateIo();
-            const uint32_t ZeroBytes = 0;
+            constexpr uint32_t ZeroBytes = 0;
             Assert::AreEqual(ZeroBytes, test_task_three.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::None, test_task_three.m_ioAction);
 
@@ -1131,7 +1131,7 @@ public:
             Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task_one).c_str()).c_str());
 
             const ctsTask test_task_three = test_pattern->InitiateIo();
-            const uint32_t ZeroBytes = 0;
+            constexpr uint32_t ZeroBytes = 0;
             Assert::AreEqual(ZeroBytes, test_task_three.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::None, test_task_three.m_ioAction);
 
@@ -1194,7 +1194,7 @@ public:
 
         // all are now pended, next should be empty
         ctsTask testTaskEmpty = test_pattern->InitiateIo();
-        const uint32_t ZeroBytes = 0;
+        constexpr uint32_t ZeroBytes = 0;
         Assert::AreEqual(ZeroBytes, testTaskEmpty.m_bufferLength);
         Assert::AreEqual(ctsTaskAction::None, testTaskEmpty.m_ioAction);
 
@@ -1260,7 +1260,7 @@ public:
             Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", ioCount, ToString<ctsTask>(testTaskLoop).c_str()).c_str());
 
             const ctsTask testTaskLoopTwo = testPattern->InitiateIo();
-            const uint32_t ZeroBytes = 0;
+            constexpr uint32_t ZeroBytes = 0;
             Assert::AreEqual(ZeroBytes, testTaskLoopTwo.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::None, testTaskLoopTwo.m_ioAction);
 
@@ -1321,7 +1321,7 @@ public:
             Logger::WriteMessage(wil::str_printf<std::wstring>(L"%u: %ws", io_count, ToString<ctsTask>(test_task_two).c_str()).c_str());
 
             const ctsTask test_task_three = test_pattern->InitiateIo();
-            const uint32_t ZeroBytes = 0;
+            constexpr uint32_t ZeroBytes = 0;
             Assert::AreEqual(ZeroBytes, test_task_three.m_bufferLength);
             Assert::AreEqual(ctsTaskAction::None, test_task_three.m_ioAction);
 

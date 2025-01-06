@@ -32,16 +32,16 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t,
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
     const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t,
+void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
     const ctsUdpStatistics&) noexcept
 {
 }

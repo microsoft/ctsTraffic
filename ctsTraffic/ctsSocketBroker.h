@@ -18,12 +18,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/resource.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
 #include "ctThreadpoolQueue.hpp"
+// wil headers
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
