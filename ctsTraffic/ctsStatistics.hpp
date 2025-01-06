@@ -22,7 +22,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctTimer.hpp>
 #include <ctMemoryGuard.hpp>
 
-namespace ctsTraffic { namespace ctsStatistics
+namespace ctsTraffic
+{
+    namespace ctsStatistics
     {
         constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
@@ -48,7 +50,8 @@ namespace ctsTraffic { namespace ctsStatistics
                 "UuidToString returned a string not 36 characters long (%zu)",
                 strlen(reinterpret_cast<LPSTR>(connectionIdString)));
 
-            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
+            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength,
+                                              connectionIdString, ConnectionIdLength);
             FAIL_FAST_IF_MSG(
                 copyError != 0,
                 "memcpy_s failed trying to copy a UUID string (%d)", copyError);
@@ -259,9 +262,9 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsConnectionStatistics SnapView(bool clear_settings) noexcept
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
-            const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+            const int64_t priorTimeRead = clear_settings
+                                              ? m_startTime.SetPriorValue(currentTime)
+                                              : m_startTime.GetPriorValue();
 
             // all writes to the local variable do not require Interlocked* semantics
             ctsConnectionStatistics returnStats(priorTimeRead);
@@ -314,9 +317,9 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsUdpStatistics SnapView(bool clear_settings) noexcept
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
-            const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+            const int64_t priorTimeRead = clear_settings
+                                              ? m_startTime.SetPriorValue(currentTime)
+                                              : m_startTime.GetPriorValue();
 
             // all writes to the local variable do not require Interlocked* semantics
             ctsUdpStatistics returnStats(priorTimeRead);
@@ -381,9 +384,9 @@ namespace ctsTraffic { namespace ctsStatistics
         ctsTcpStatistics SnapView(bool clear_settings) noexcept
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
-            const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+            const int64_t priorTimeRead = clear_settings
+                                              ? m_startTime.SetPriorValue(currentTime)
+                                              : m_startTime.GetPriorValue();
 
             ctsTcpStatistics returnStats(priorTimeRead);
             returnStats.m_endTime.SetValue(currentTime);

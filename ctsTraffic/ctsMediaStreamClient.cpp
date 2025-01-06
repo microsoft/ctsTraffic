@@ -15,7 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -179,7 +179,7 @@ namespace ctsTraffic
         const socket_address targetAddress(sharedSocket->GetRemoteSockaddr());
         const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
-        // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
+        // Will not add-ref the IO on the socket since this is a single send() simulating connect()
         const auto response = ctsWSASendTo(
             sharedSocket,
             lockedSocket.GetSocket(),

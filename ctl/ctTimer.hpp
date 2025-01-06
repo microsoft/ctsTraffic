@@ -18,35 +18,37 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/win32_helpers.h>
 
 // ctTimer namespace contains useful functions when working with QPC/QPF
-namespace ctl {namespace ctTimer { namespace Details
-        {
-            ///
+namespace ctl::ctTimer
+{
+    namespace Details
+    {
+        ///
             /// InitOnce the QPF value as it won't change after the OS has booted
             /// - hiding within an unnamed namespace
             ///
-            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;
-            static LARGE_INTEGER g_qpf;
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;
+        static LARGE_INTEGER g_qpf;
 
-            static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
-            {
-                QueryPerformanceFrequency(&g_qpf);
-                return TRUE;
-            }
-        }
-
-        // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
-        // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
-        inline FILETIME convert_ms_to_relative_filetime(int64_t milliseconds) noexcept
+        static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
         {
-            return wil::filetime::from_int64(-1 * wil::filetime::convert_msec_to_100ns(milliseconds));
+            QueryPerformanceFrequency(&g_qpf);
+            return TRUE;
         }
+    }
 
-        inline int64_t snap_qpf() noexcept
-        {
-            InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
-            return Details::g_qpf.QuadPart;
-        }
+    // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
+    // - e.g. SetThreadpoolTimer, where a negative value indicates the amount of time to wait relative to the current time 
+    inline FILETIME convert_ms_to_relative_filetime(int64_t milliseconds) noexcept
+    {
+        return wil::filetime::from_int64(-1 * wil::filetime::convert_msec_to_100ns(milliseconds));
+    }
+
+    inline int64_t snap_qpf() noexcept
+    {
+        InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+        return Details::g_qpf.QuadPart;
+    }
 
 #ifdef CTSTRAFFIC_UNIT_TESTS
         inline int64_t snap_qpc_as_msec() noexcept
@@ -54,14 +56,13 @@ namespace ctl {namespace ctTimer { namespace Details
             return 0;
         }
 #else
-        inline int64_t snap_qpc_as_msec() noexcept
-        {
-            InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
-            LARGE_INTEGER qpc;
-            QueryPerformanceCounter(&qpc);
-            // multiplying by 1000 as (qpc / qpf) == seconds
-            return qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart;
-        }
+    inline int64_t snap_qpc_as_msec() noexcept
+    {
+        InitOnceExecuteOnce(&Details::g_qpfInitOnce, Details::QpfInitOnceCallback, nullptr, nullptr);
+        LARGE_INTEGER qpc;
+        QueryPerformanceCounter(&qpc);
+        // multiplying by 1000 as (qpc / qpf) == seconds
+        return qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart;
+    }
 #endif
-    } // namespace ctTimer
-} // namespace ctl
+}

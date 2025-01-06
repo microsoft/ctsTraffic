@@ -14,7 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -24,57 +24,57 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-// IO Threadpool completion callback 
-static void ctsReadWriteIocpIoCompletionCallback(
-    _In_ OVERLAPPED* pOverlapped,
-    const std::weak_ptr<ctsSocket>& weakSocket,
-    const ctsTask& task) noexcept
-{
-    const auto sharedSocket(weakSocket.lock());
-    if (!sharedSocket)
+    // IO Threadpool completion callback 
+    static void ctsReadWriteIocpIoCompletionCallback(
+        _In_ OVERLAPPED* pOverlapped,
+        const std::weak_ptr<ctsSocket>& weakSocket,
+        const ctsTask& task) noexcept
     {
-        return;
-    }
-
-    uint32_t gle = NO_ERROR;
-
-    // hold a reference on the socket
-    const auto lockedSocket = sharedSocket->AcquireSocketLock();
-    const auto lockedPattern = lockedSocket.GetPattern();
-    if (!lockedPattern)
-    {
-        gle = WSAECONNABORTED;
-    }
-
-    DWORD transferred = 0;
-    const auto socket = lockedSocket.GetSocket();
-    if (INVALID_SOCKET == socket)
-    {
-        gle = WSAECONNABORTED;
-    }
-    else
-    {
-        DWORD flags;
-        if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
+        const auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
         {
-            gle = WSAGetLastError();
+            return;
         }
-    }
 
-    const char* functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
-    if (gle != NO_ERROR)
-    {
-        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle);
-    }
+        uint32_t gle = NO_ERROR;
 
-    if (lockedPattern)
-    {
-        // see if complete_io requests more IO
-        DWORD readwriteStatus = NO_ERROR;
-        switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle))
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
+        if (!lockedPattern)
         {
+            gle = WSAECONNABORTED;
+        }
+
+        DWORD transferred = 0;
+        const auto socket = lockedSocket.GetSocket();
+        if (INVALID_SOCKET == socket)
+        {
+            gle = WSAECONNABORTED;
+        }
+        else
+        {
+            DWORD flags;
+            if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
+            {
+                gle = WSAGetLastError();
+            }
+        }
+
+        const char* functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
+        if (gle != NO_ERROR)
+        {
+            PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle);
+        }
+
+        if (lockedPattern)
+        {
+            // see if complete_io requests more IO
+            DWORD readwriteStatus = NO_ERROR;
+            switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(task, transferred, gle))
+            {
             case ctsIoStatus::ContinueIo:
                 // more IO is requested from the protocol
                 // - invoke the new IO call while holding a ref-count to the prior IO
@@ -89,151 +89,162 @@ static void ctsReadWriteIocpIoCompletionCallback(
             case ctsIoStatus::FailedIo:
                 // write out the error
                 ctsConfig::PrintErrorIfFailed(functionName, gle);
-                // protocol sees this as a failure - capture the error the protocol recorded
+            // protocol sees this as a failure - capture the error the protocol recorded
                 readwriteStatus = lockedPattern->GetLastPatternError();
                 break;
 
             default:
                 FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
-        }
-
-        gle = readwriteStatus;
-    }
-
-    // always decrement *after* attempting new IO - the prior IO is now formally "done"
-    if (sharedSocket->DecrementIo() == 0)
-    {
-        // if we have no more IO pended, complete the state
-        sharedSocket->CompleteState(gle);
-    }
-}
-
-// The registered function with ctsConfig
-void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
-{
-    // must get a reference to the socket and the IO pattern
-    const auto sharedSocket(weakSocket.lock());
-    if (!sharedSocket)
-    {
-        return;
-    }
-
-    // hold a reference on the socket
-    const auto lockedSocket = sharedSocket->AcquireSocketLock();
-    const auto lockedPattern = lockedSocket.GetPattern();
-    if (!lockedPattern)
-    {
-        return;
-    }
-
-    // can't initialize to zero - zero indicates to complete_state()
-    long ioCount = -1;
-    uint32_t ioError = NO_ERROR;
-
-    auto socket = lockedSocket.GetSocket();
-    if (socket != INVALID_SOCKET)
-    {
-        auto ioDone = false;
-        // loop until failure or initiate_io returns None
-        while (!ioDone && NO_ERROR == ioError)
-        {
-            // each loop requests the next task
-            ctsTask nextIo = lockedPattern->InitiateIo();
-            if (ctsTaskAction::None == nextIo.m_ioAction)
-            {
-                // nothing failed, just no more IO right now
-                ioDone = true;
-                continue;
             }
 
-            if (ctsTaskAction::GracefulShutdown == nextIo.m_ioAction)
+            gle = readwriteStatus;
+        }
+
+        // always decrement *after* attempting new IO - the prior IO is now formally "done"
+        if (sharedSocket->DecrementIo() == 0)
+        {
+            // if we have no more IO pended, complete the state
+            sharedSocket->CompleteState(gle);
+        }
+    }
+
+    // The registered function with ctsConfig
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+    {
+        // must get a reference to the socket and the IO pattern
+        const auto sharedSocket(weakSocket.lock());
+        if (!sharedSocket)
+        {
+            return;
+        }
+
+        // hold a reference on the socket
+        const auto lockedSocket = sharedSocket->AcquireSocketLock();
+        const auto lockedPattern = lockedSocket.GetPattern();
+        if (!lockedPattern)
+        {
+            return;
+        }
+
+        // can't initialize to zero - zero indicates to complete_state()
+        long ioCount = -1;
+        uint32_t ioError = NO_ERROR;
+
+        auto socket = lockedSocket.GetSocket();
+        if (socket != INVALID_SOCKET)
+        {
+            auto ioDone = false;
+            // loop until failure or initiate_io returns None
+            while (!ioDone && NO_ERROR == ioError)
             {
-                if (0 != shutdown(socket, SD_SEND))
+                // each loop requests the next task
+                ctsTask nextIo = lockedPattern->InitiateIo();
+                if (ctsTaskAction::None == nextIo.m_ioAction)
                 {
-                    ioError = WSAGetLastError();
-                    PRINT_DEBUG_INFO(L"\t\tIO Failed: shutdown(SD_SEND) (%u) [ctsReadWriteIocp]\n", ioError);
+                    // nothing failed, just no more IO right now
+                    ioDone = true;
+                    continue;
+                }
+
+                if (ctsTaskAction::GracefulShutdown == nextIo.m_ioAction)
+                {
+                    if (0 != shutdown(socket, SD_SEND))
+                    {
+                        ioError = WSAGetLastError();
+                        PRINT_DEBUG_INFO(L"\t\tIO Failed: shutdown(SD_SEND) (%u) [ctsReadWriteIocp]\n", ioError);
+                    }
+                    else
+                    {
+                        PRINT_DEBUG_INFO(L"\t\tIO successfully called shutdown(SD_SEND) [ctsReadWriteIocp]\n");
+                    }
+
+                    ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
+                    continue;
+                }
+
+                if (ctsTaskAction::HardShutdown == nextIo.m_ioAction)
+                {
+                    // pass through -1 to force an RST with the closesocket
+                    ioError = sharedSocket->CloseSocket(static_cast<uint32_t>(SOCKET_ERROR));
+                    socket = INVALID_SOCKET;
+
+                    ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
+                    continue;
+                }
+
+                // else we need to initiate another IO
+                // add-ref the IO about to start
+                ioCount = sharedSocket->IncrementIo();
+
+                std::shared_ptr<ctl::ctThreadIocp> ioThreadPool;
+                OVERLAPPED* pOverlapped = nullptr;
+                try
+                {
+                    // these are the only calls which can throw in this function
+                    ioThreadPool = sharedSocket->GetIocpThreadpool();
+                    pOverlapped = ioThreadPool->new_request(
+                        [weakSocket, nextIo](OVERLAPPED* pCallbackOverlapped) noexcept
+                        {
+                            ctsReadWriteIocpIoCompletionCallback(pCallbackOverlapped, weakSocket, nextIo);
+                        });
+                }
+                catch (...)
+                {
+                    ioError = ctsConfig::PrintThrownException();
+                }
+
+                // if an exception prevented this IO from initiating,
+                if (ioError != NO_ERROR)
+                {
+                    ioCount = sharedSocket->DecrementIo();
+                    ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
+                    continue;
+                }
+
+                char* ioBuffer = nextIo.m_buffer + nextIo.m_bufferOffset;
+                if (ctsTaskAction::Send == nextIo.m_ioAction)
+                {
+                    if (!WriteFile(reinterpret_cast<HANDLE>(socket),
+                                   ioBuffer,
+                                   nextIo.m_bufferLength,
+                                   nullptr,
+                                   pOverlapped)) // NOLINT(performance-no-int-to-ptr)
+                    {
+                        ioError = GetLastError();
+                    }
                 }
                 else
                 {
-                    PRINT_DEBUG_INFO(L"\t\tIO successfully called shutdown(SD_SEND) [ctsReadWriteIocp]\n");
+                    if (!ReadFile(reinterpret_cast<HANDLE>(socket),
+                                  ioBuffer,
+                                  nextIo.m_bufferLength,
+                                  nullptr,
+                                  pOverlapped)) // NOLINT(performance-no-int-to-ptr)
+                    {
+                        ioError = GetLastError();
+                    }
+                }
+                //
+                // not calling complete_io on success, since the IO completion will handle that in the callback
+                //
+                if (ERROR_IO_PENDING == ioError)
+                {
+                    ioError = NO_ERROR;
                 }
 
-                ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
-                continue;
-            }
-
-            if (ctsTaskAction::HardShutdown == nextIo.m_ioAction)
-            {
-                // pass through -1 to force an RST with the closesocket
-                ioError = sharedSocket->CloseSocket(static_cast<uint32_t>(SOCKET_ERROR));
-                socket = INVALID_SOCKET;
-
-                ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
-                continue;
-            }
-
-            // else we need to initiate another IO
-            // add-ref the IO about to start
-            ioCount = sharedSocket->IncrementIo();
-
-            std::shared_ptr<ctl::ctThreadIocp> ioThreadPool;
-            OVERLAPPED* pOverlapped = nullptr;
-            try
-            {
-                // these are the only calls which can throw in this function
-                ioThreadPool = sharedSocket->GetIocpThreadpool();
-                pOverlapped = ioThreadPool->new_request(
-                    [weakSocket, nextIo](OVERLAPPED* pCallbackOverlapped) noexcept { ctsReadWriteIocpIoCompletionCallback(pCallbackOverlapped, weakSocket, nextIo); });
-            }
-            catch (...)
-            {
-                ioError = ctsConfig::PrintThrownException();
-            }
-
-            // if an exception prevented this IO from initiating,
-            if (ioError != NO_ERROR)
-            {
-                ioCount = sharedSocket->DecrementIo();
-                ioDone = lockedPattern->CompleteIo(nextIo, 0, ioError) != ctsIoStatus::ContinueIo;
-                continue;
-            }
-
-            char* ioBuffer = nextIo.m_buffer + nextIo.m_bufferOffset;
-            if (ctsTaskAction::Send == nextIo.m_ioAction)
-            {
-                if (!WriteFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped)) // NOLINT(performance-no-int-to-ptr)
+                if (ioError != NO_ERROR)
                 {
-                    ioError = GetLastError();
-                }
-            }
-            else
-            {
-                if (!ReadFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped)) // NOLINT(performance-no-int-to-ptr)
-                {
-                    ioError = GetLastError();
-                }
-            }
-            //
-            // not calling complete_io on success, since the IO completion will handle that in the callback
-            //
-            if (ERROR_IO_PENDING == ioError)
-            {
-                ioError = NO_ERROR;
-            }
+                    // must cancel the IOCP TP if the IO call fails
+                    ioThreadPool->cancel_request(pOverlapped);
+                    // decrement the IO count since it was not pended
+                    ioCount = sharedSocket->DecrementIo();
 
-            if (ioError != NO_ERROR)
-            {
-                // must cancel the IOCP TP if the IO call fails
-                ioThreadPool->cancel_request(pOverlapped);
-                // decrement the IO count since it was not pended
-                ioCount = sharedSocket->DecrementIo();
+                    const char* functionName = ctsTaskAction::Send == nextIo.m_ioAction ? "WriteFile" : "ReadFile";
+                    PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, ioError);
 
-                const char* functionName = ctsTaskAction::Send == nextIo.m_ioAction ? "WriteFile" : "ReadFile";
-                PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, ioError);
-
-                // call back to the socket to inform it that the call failed to see if it wants to request more IO
-                switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(nextIo, 0, ioError))
-                {
+                    // call back to the socket to inform it that the call failed to see if it wants to request more IO
+                    switch (const ctsIoStatus protocolStatus = lockedPattern->CompleteIo(nextIo, 0, ioError))
+                    {
                     case ctsIoStatus::ContinueIo:
                         // the protocol wants to ignore the error and send more data
                         ioError = NO_ERROR;
@@ -256,19 +267,19 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
                     default:
                         FAIL_FAST_MSG("ctsReadWriteIocp: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
+                    }
                 }
             }
         }
-    }
-    else
-    {
-        ioError = WSAECONNABORTED;
-    }
+        else
+        {
+            ioError = WSAECONNABORTED;
+        }
 
-    if (0 == ioCount)
-    {
-        // complete the ctsSocket if we have no IO pended
-        sharedSocket->CompleteState(ioError);
+        if (0 == ioCount)
+        {
+            // complete the ctsSocket if we have no IO pended
+            sharedSocket->CompleteState(ioError);
+        }
     }
-}
 } // namespace

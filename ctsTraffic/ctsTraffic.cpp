@@ -61,7 +61,8 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     }
     catch (const invalid_argument& e)
     {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
+        ctsConfig::PrintErrorInfoOverride(
+            wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
         Shutdown(ctsConfig::ExitProcessType::Rude);
         err = ERROR_INVALID_DATA;
     }
@@ -105,22 +106,34 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
         wil::unique_threadpool_timer statusTimer;
         if (ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds > 0)
         {
-            statusTimer.reset(CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID, PTP_TIMER) { ctsConfig::PrintStatusUpdate(); }, nullptr, nullptr));
+            statusTimer.reset(CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID, PTP_TIMER)
+                                                    {
+                                                        ctsConfig::PrintStatusUpdate();
+                                                    },
+                                                    nullptr,
+                                                    nullptr));
             THROW_LAST_ERROR_IF(!statusTimer);
             FILETIME zeroFiletime{};
-            SetThreadpoolTimer(statusTimer.get(), &zeroFiletime, ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds, 0);
+            SetThreadpoolTimer(statusTimer.get(),
+                               &zeroFiletime,
+                               ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds,
+                               0);
         }
 
-        if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
+        if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0
+                              ? ctsConfig::g_configSettings->TimeLimit
+                              : INFINITE))
         {
-            ctsConfig::PrintSummary(L"\n  **** Time-limit of %lu reached ****\n", ctsConfig::g_configSettings->TimeLimit);
+            ctsConfig::PrintSummary(L"\n  **** Time-limit of %lu reached ****\n",
+                                    ctsConfig::g_configSettings->TimeLimit);
         }
 
         if (ctsConfig::g_configSettings->PauseAtEnd > 0)
         {
             // stop all status updates being printed to the console and pause before destroying the broker object
             statusTimer.reset();
-            ctsConfig::PrintSummary(L"\n  **** Pausing-At-End for %lu milliseconds ****\n", ctsConfig::g_configSettings->PauseAtEnd);
+            ctsConfig::PrintSummary(L"\n  **** Pausing-At-End for %lu milliseconds ****\n",
+                                    ctsConfig::g_configSettings->PauseAtEnd);
             Sleep(ctsConfig::g_configSettings->PauseAtEnd);
         }
     }
@@ -192,13 +205,21 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
                 L"  Total Error Frames : %lld (%f)\n",
                 ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.GetValue() / 8LL,
                 successfulFrames,
-                totalFrames > 0 ? static_cast<double>(successfulFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+                totalFrames > 0
+                    ? static_cast<double>(successfulFrames) / static_cast<double>(totalFrames) * 100.0
+                    : 0.0,
                 droppedFrames,
-                totalFrames > 0 ? static_cast<double>(droppedFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+                totalFrames > 0
+                    ? static_cast<double>(droppedFrames) / static_cast<double>(totalFrames) * 100.0
+                    : 0.0,
                 duplicateFrames,
-                totalFrames > 0 ? static_cast<double>(duplicateFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+                totalFrames > 0
+                    ? static_cast<double>(duplicateFrames) / static_cast<double>(totalFrames) * 100.0
+                    : 0.0,
                 errorFrames,
-                totalFrames > 0 ? static_cast<double>(errorFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0);
+                totalFrames > 0
+                    ? static_cast<double>(errorFrames) / static_cast<double>(totalFrames) * 100.0
+                    : 0.0);
         }
     }
     ctsConfig::PrintSummary(

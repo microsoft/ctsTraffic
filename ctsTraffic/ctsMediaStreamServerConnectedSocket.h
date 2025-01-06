@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"

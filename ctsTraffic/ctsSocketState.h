@@ -24,82 +24,82 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-//
-// forward declare ctsSocketBroker
-// - can't include ctsSocketBroker.h in this header to avoid circular declarations
-//
-class ctsSocketBroker;
+    //
+    // forward declare ctsSocketBroker
+    // - can't include ctsSocketBroker.h in this header to avoid circular declarations
+    //
+    class ctsSocketBroker;
 
-//
-// forward declare ctsSocket
-// - can't include ctsSocket.h in this header to avoid circular declarations
-//
-class ctsSocket;
+    //
+    // forward declare ctsSocket
+    // - can't include ctsSocket.h in this header to avoid circular declarations
+    //
+    class ctsSocket;
 
-//
-// ctsSocketState class
-//
-// Encapsulates a ctsSocket instance
-// - tracking socket state and corresponding statistics
-//
-class ctsSocketState : public std::enable_shared_from_this<ctsSocketState>
-{
-public:
-    enum class InternalState : std::uint8_t
+    //
+    // ctsSocketState class
+    //
+    // Encapsulates a ctsSocket instance
+    // - tracking socket state and corresponding statistics
+    //
+    class ctsSocketState : public std::enable_shared_from_this<ctsSocketState>
     {
-        Creating,
-        Created,
-        Connecting,
-        Connected,
-        InitiatingIo,
-        InitiatedIo,
-        Closing,
-        Closed
+    public:
+        enum class InternalState : std::uint8_t
+        {
+            Creating,
+            Created,
+            Connecting,
+            Connected,
+            InitiatingIo,
+            InitiatedIo,
+            Closing,
+            Closed
+        };
+
+        // constructor requires a parent ctsSocketBroker
+        explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker);
+
+        ~ctsSocketState() noexcept;
+
+        //
+        // explicit method to 'start' the state machine
+        // - this is required to ensure the object is fully instantiated before
+        //   it is passed to the threadpool thread
+        //
+        void Start() noexcept;
+
+        //
+        // Completes the current socket state
+        //
+        void CompleteState(DWORD error) noexcept;
+
+        //
+        // Accessor to current state information
+        //
+        InternalState GetCurrentState() const noexcept;
+
+        ctsSocketState(const ctsSocketState&) = delete;
+        ctsSocketState& operator=(const ctsSocketState&) = delete;
+        ctsSocketState(ctsSocketState&&) = delete;
+        ctsSocketState& operator=(ctsSocketState&&) = delete;
+
+    private:
+        //
+        // private members of ctsSocketState
+        // - CS's are mutable to allow taking a CS in a const function
+        //
+        wil::unique_threadpool_work m_threadPoolWorker;
+        mutable wil::critical_section m_stateGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        std::weak_ptr<ctsSocketBroker> m_broker{};
+        std::shared_ptr<ctsSocket> m_socket{};
+        InternalState m_state = InternalState::Creating;
+        uint32_t m_lastError = 0UL;
+        bool m_initiatedIo = false;
+
+        //
+        // static threadpool callback function
+        //
+        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context, PTP_WORK) noexcept;
     };
-
-    // constructor requires a parent ctsSocketBroker
-    explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker);
-
-    ~ctsSocketState() noexcept;
-
-    //
-    // explicit method to 'start' the state machine
-    // - this is required to ensure the object is fully instantiated before
-    //   it is passed to the threadpool thread
-    //
-    void Start() noexcept;
-
-    //
-    // Completes the current socket state
-    //
-    void CompleteState(DWORD error) noexcept;
-
-    //
-    // Accessor to current state information
-    //
-    InternalState GetCurrentState() const noexcept;
-
-    ctsSocketState(const ctsSocketState&) = delete;
-    ctsSocketState& operator=(const ctsSocketState&) = delete;
-    ctsSocketState(ctsSocketState&&) = delete;
-    ctsSocketState& operator=(ctsSocketState&&) = delete;
-
-private:
-    //
-    // private members of ctsSocketState
-    // - CS's are mutable to allow taking a CS in a const function
-    //
-    wil::unique_threadpool_work m_threadPoolWorker;
-    mutable wil::critical_section m_stateGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-    std::weak_ptr<ctsSocketBroker> m_broker{};
-    std::shared_ptr<ctsSocket> m_socket{};
-    InternalState m_state = InternalState::Creating;
-    uint32_t m_lastError = 0UL;
-    bool m_initiatedIo = false;
-
-    //
-    // static threadpool callback function
-    //
-    static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context, PTP_WORK) noexcept;
-};
 } // namespace

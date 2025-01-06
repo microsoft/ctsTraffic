@@ -25,24 +25,25 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-template <>
-inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(const ctsTraffic::ctsSocketState::InternalState& q)
-{
-{
-    switch (q)
+    template <>
+    inline std::wstring ToString<ctsTraffic::ctsSocketState::InternalState>(
+        const ctsTraffic::ctsSocketState::InternalState& q)
     {
-        case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIo";
-        case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
-        case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIo";
-        case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
-        case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
-        case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
-        case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
-        case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
-        default: return {};
+        {
+            switch (q)
+            {
+            case ctsTraffic::ctsSocketState::InternalState::InitiatingIo: return L"InitiatingIo";
+            case ctsTraffic::ctsSocketState::InternalState::Creating: return L"Creating";
+            case ctsTraffic::ctsSocketState::InternalState::InitiatedIo: return L"InitiatedIo";
+            case ctsTraffic::ctsSocketState::InternalState::Closed: return L"Closed";
+            case ctsTraffic::ctsSocketState::InternalState::Closing: return L"Closing";
+            case ctsTraffic::ctsSocketState::InternalState::Connected: return L"Connected";
+            case ctsTraffic::ctsSocketState::InternalState::Connecting: return L"Connecting";
+            case ctsTraffic::ctsSocketState::InternalState::Created: return L"Created";
+            default: return {};
+            }
+        }
     }
-}
-}
 }
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -54,113 +55,115 @@ using namespace std;
 
 namespace ctsTraffic
 {
-shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
-{
-    Logger::WriteMessage(L"ctsIOPattern::MakeIOPattern\n");
-    return nullptr;
-}
-
-wsIOResult ctsSetLingerToResetSocket(SOCKET) noexcept
-{
-    return wsIOResult();
-}
-
-namespace ctsConfig
-{
-    ctsConfigSettings* g_configSettings;
-
-    void PrintDebug(PCWSTR text, ...) noexcept
+    shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
     {
-        va_list args;
-        va_start(args, text);
-        std::wstring outputString;
-        wil::details::str_vprintf_nothrow<std::wstring>(outputString, text, args);
-        Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
-
-        va_end(args);
+        Logger::WriteMessage(L"ctsIOPattern::MakeIOPattern\n");
+        return nullptr;
     }
 
-    void PrintConnectionResults(const socket_address&, uint32_t) noexcept
+    wsIOResult ctsSetLingerToResetSocket(SOCKET) noexcept
     {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
+        return wsIOResult();
     }
 
-    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+    namespace ctsConfig
     {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
-    }
+        ctsConfigSettings* g_configSettings;
 
-    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
-    }
-
-    void PrintConnectionResults(uint32_t) noexcept
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
-    }
-
-    void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
-    {
-        Logger::WriteMessage(
-            wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
-    }
-
-    DWORD PrintThrownException() noexcept
-    {
-        try
+        void PrintDebug(PCWSTR text, ...) noexcept
         {
-            throw;
+            va_list args;
+            va_start(args, text);
+            std::wstring outputString;
+            wil::details::str_vprintf_nothrow<std::wstring>(outputString, text, args);
+            Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
+
+            va_end(args);
         }
-        catch (const wil::ResultException& e)
+
+        void PrintConnectionResults(const socket_address&, uint32_t) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
+        }
+
+        void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+                                    const ctsTcpStatistics&) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
+        }
+
+        void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+                                    const ctsUdpStatistics&) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
+        }
+
+        void PrintConnectionResults(uint32_t) noexcept
+        {
+            Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+        }
+
+        void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
         {
             Logger::WriteMessage(
-                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                    e.what()).c_str());
-            return Win32FromHresult(e.GetErrorCode());
+                wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
         }
-        catch (const std::exception& e)
+
+        DWORD PrintThrownException() noexcept
         {
-            Logger::WriteMessage(
-                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                    e.what()).c_str());
-            return WSAENOBUFS;
+            try
+            {
+                throw;
+            }
+            catch (const wil::ResultException& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                                                  e.what()).c_str());
+                return Win32FromHresult(e.GetErrorCode());
+            }
+            catch (const std::exception& e)
+            {
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
+                                                  e.what()).c_str());
+                return WSAENOBUFS;
+            }
+            catch (...)
+            {
+                FAIL_FAST();
+            }
         }
-        catch (...)
+
+        bool IsListening() noexcept
         {
-            FAIL_FAST();
+            return false;
+        }
+
+        bool ShutdownCalled() noexcept
+        {
+            return false;
+        }
+
+        uint32_t ConsoleVerbosity() noexcept
+        {
+            return 0;
         }
     }
 
-    bool IsListening() noexcept
+    /// ctsSocketBroker stubs - when ctsSocketState calls out to update the broker
+    void ctsSocketBroker::InitiatingIo() noexcept
     {
-        return false;
     }
 
-    bool ShutdownCalled() noexcept
+    void ctsSocketBroker::Closing(bool) noexcept
     {
-        return false;
     }
 
-    uint32_t ConsoleVerbosity() noexcept
+    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
     {
-        return 0;
+        return {};
     }
-}
-
-/// ctsSocketBroker stubs - when ctsSocketState calls out to update the broker
-void ctsSocketBroker::InitiatingIo() noexcept
-{
-}
-
-void ctsSocketBroker::Closing(bool) noexcept
-{
-}
-
-[[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
-{
-    return {};
-}
 }
 
 ///
@@ -177,7 +180,8 @@ static DWORD g_ConnectReturnCode = 0UL;
 static DWORD g_IOReturnCode = 0UL;
 static DWORD g_ShouldNeverHitErrorCode = 0xffffffffUL;
 
-void ResetStatics(DWORD _create = g_ShouldNeverHitErrorCode, DWORD _connect = g_ShouldNeverHitErrorCode, DWORD _io = g_ShouldNeverHitErrorCode)
+void ResetStatics(DWORD _create = g_ShouldNeverHitErrorCode, DWORD _connect = g_ShouldNeverHitErrorCode,
+                  DWORD _io = g_ShouldNeverHitErrorCode)
 {
     g_CallbackCount = 0L;
     g_CreateReturnCode = _create;
@@ -234,97 +238,97 @@ void IoFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 
 namespace ctsUnitTest
 {
-TEST_CLASS(ctsSocketStateUnitTest)
-{
-public:
-    TEST_CLASS_INITIALIZE(Setup)
+    TEST_CLASS(ctsSocketStateUnitTest)
     {
-        WSADATA wsadata;
-        const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
-        Assert::AreEqual(0, wsError);
-
-        ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
-        ctsConfig::g_configSettings->CreateFunction = CreateFunctionHook;
-        ctsConfig::g_configSettings->ConnectFunction = ConnectFunctionHook;
-        ctsConfig::g_configSettings->IoFunction = IoFunctionHook;
-    }
-
-    TEST_CLASS_CLEANUP(Cleanup)
-    {
-        delete ctsConfig::g_configSettings;
-        WSACleanup();
-    }
-
-    TEST_METHOD(AllIOSucceed)
-    {
-        // expect all to pass
-        ResetStatics(0, 0, 0);
-
-        const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-        test->Start();
-
-        for (auto count = 0; count < 1000; ++count)
+    public:
+        TEST_CLASS_INITIALIZE(Setup)
         {
-            Sleep(25);
-            if (test->GetCurrentState() == ctsSocketState::InternalState::Closed)
+            WSADATA wsadata;
+            const int wsError = WSAStartup(WINSOCK_VERSION, &wsadata);
+            Assert::AreEqual(0, wsError);
+
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->CreateFunction = CreateFunctionHook;
+            ctsConfig::g_configSettings->ConnectFunction = ConnectFunctionHook;
+            ctsConfig::g_configSettings->IoFunction = IoFunctionHook;
+        }
+
+        TEST_CLASS_CLEANUP(Cleanup)
+        {
+            delete ctsConfig::g_configSettings;
+            WSACleanup();
+        }
+
+        TEST_METHOD(AllIOSucceed)
+        {
+            // expect all to pass
+            ResetStatics(0, 0, 0);
+
+            const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            test->Start();
+
+            for (auto count = 0; count < 1000; ++count)
             {
-                break;
+                Sleep(25);
+                if (test->GetCurrentState() == ctsSocketState::InternalState::Closed)
+                {
+                    break;
+                }
             }
+            Assert::AreEqual(ctsSocketState::InternalState::Closed, test->GetCurrentState());
+
+            Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
         }
-        Assert::AreEqual(ctsSocketState::InternalState::Closed, test->GetCurrentState());
 
-        Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
-    }
-
-    TEST_METHOD(CreateFails)
-    {
-        // create should fail, the others never invoked
-        ResetStatics(1);
-
-        const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-        test->Start();
-
-        do
+        TEST_METHOD(CreateFails)
         {
-            Sleep(100);
+            // create should fail, the others never invoked
+            ResetStatics(1);
+
+            const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            test->Start();
+
+            do
+            {
+                Sleep(100);
+            }
+            while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
+
+            Assert::AreEqual(1L, ctl::ctMemoryGuardRead(&g_CallbackCount));
         }
-        while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
-        Assert::AreEqual(1L, ctl::ctMemoryGuardRead(&g_CallbackCount));
-    }
-
-    TEST_METHOD(ConnectFails)
-    {
-        // connect should fail, IO should never invoked
-        ResetStatics(0, 1);
-
-        const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-        test->Start();
-
-        do
+        TEST_METHOD(ConnectFails)
         {
-            Sleep(100);
+            // connect should fail, IO should never invoked
+            ResetStatics(0, 1);
+
+            const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            test->Start();
+
+            do
+            {
+                Sleep(100);
+            }
+            while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
+
+            Assert::AreEqual(2L, ctl::ctMemoryGuardRead(&g_CallbackCount));
         }
-        while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
-        Assert::AreEqual(2L, ctl::ctMemoryGuardRead(&g_CallbackCount));
-    }
-
-    TEST_METHOD(IOFails)
-    {
-        // IO should fail
-        ResetStatics(0, 0, 1);
-
-        const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-        test->Start();
-
-        do
+        TEST_METHOD(IOFails)
         {
-            Sleep(100);
-        }
-        while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
+            // IO should fail
+            ResetStatics(0, 0, 1);
 
-        Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
-    }
-};
+            const auto test(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+            test->Start();
+
+            do
+            {
+                Sleep(100);
+            }
+            while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
+
+            Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
+        }
+    };
 }

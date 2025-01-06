@@ -163,14 +163,14 @@ namespace ctl
                 return !(*this == iter);
             }
 
-            // preincrement
+            // pre-increment
             iterator& operator++()
             {
                 increment();
                 return *this;
             }
 
-            // postincrement
+            // post-increment
             iterator operator++(int)
             {
                 iterator temp(*this);
@@ -207,34 +207,34 @@ namespace ctl
                     throw std::out_of_range("ctWmiProperties::iterator - cannot increment: at the end");
                 }
 
-                CIMTYPE nextCimtype;
+                CIMTYPE nextCimType;
                 wil::shared_bstr nextName;
                 const auto hr = m_wbemClassObject->Next(
                     0,
                     nextName.addressof(),
                     nullptr,
-                    &nextCimtype,
+                    &nextCimType,
                     nullptr);
                 switch (hr)
                 {
                 case WBEM_S_NO_ERROR:
-                {
-                    // update the instance members
-                    ++m_index;
-                    using std::swap;
-                    swap(m_propertyName, nextName);
-                    swap(m_propertyType, nextCimtype);
-                    break;
-                }
+                    {
+                        // update the instance members
+                        ++m_index;
+                        using std::swap;
+                        swap(m_propertyName, nextName);
+                        swap(m_propertyType, nextCimType);
+                        break;
+                    }
 
                 case WBEM_S_NO_MORE_DATA:
-                {
-                    // at the end...
-                    m_index = m_endIteratorIndex;
-                    m_propertyName.reset();
-                    m_propertyType = 0;
-                    break;
-                }
+                    {
+                        // at the end...
+                        m_index = m_endIteratorIndex;
+                        m_propertyName.reset();
+                        m_propertyType = 0;
+                        break;
+                    }
 
                 default: THROW_IF_FAILED(hr);
                 }

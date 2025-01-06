@@ -20,9 +20,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-// The function that is registered to run Winsock IO using IO Completion Ports with the specified ctsSocket
-void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    // The function that is registered to run Winsock IO using IO Completion Ports with the specified ctsSocket
+    void ctsMediaStreamClient(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-// The function that is registered to 'connect' to the target server by sending a START command using IO Completion Ports
-void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    // The function that is registered to 'connect' to the target server by sending a START command using IO Completion Ports
+    void ctsMediaStreamClientConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 } // namespace

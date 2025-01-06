@@ -30,53 +30,53 @@ bool g_isListening = false;
 ///
 namespace ctsTraffic::ctsConfig
 {
-ctsConfigSettings* g_configSettings;
+    ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t) noexcept
-{
-}
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
+    {
+    }
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t,
-    const ctsTcpStatistics&) noexcept
-{
-}
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+                                const ctsTcpStatistics&) noexcept
+    {
+    }
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t,
-    const ctsUdpStatistics&) noexcept
-{
-}
+    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+                                const ctsUdpStatistics&) noexcept
+    {
+    }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
-{
-}
+    void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
 
-void PrintException(const std::exception&) noexcept
-{
-}
+    void PrintException(const std::exception&) noexcept
+    {
+    }
 
-void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
-{
-}
+    void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+    {
+    }
 
-bool IsListening() noexcept
-{
-    return g_isListening;
-}
+    bool IsListening() noexcept
+    {
+        return g_isListening;
+    }
 
-uint64_t GetTransferSize() noexcept
-{
-    return g_transferSize;
-}
+    uint64_t GetTransferSize() noexcept
+    {
+        return g_transferSize;
+    }
 
-bool ShutdownCalled() noexcept
-{
-    return false;
-}
+    bool ShutdownCalled() noexcept
+    {
+        return false;
+    }
 
-uint32_t ConsoleVerbosity() noexcept
-{
-    return 0;
-}
+    uint32_t ConsoleVerbosity() noexcept
+    {
+        return 0;
+    }
 }
 
 ///
@@ -87,40 +87,40 @@ using namespace ctsTraffic;
 
 namespace ctsUnitTest
 {
-TEST_CLASS(ctsStatisticsUnitTest)
-{
-private:
-    //
-    // The pattern state to use with each test
-    //
-    std::unique_ptr<ctsIoPatternState> pattern_state;
-
-    enum Role
+    TEST_CLASS(ctsStatisticsUnitTest)
     {
-        Client,
-        Server
+    private:
+        //
+        // The pattern state to use with each test
+        //
+        std::unique_ptr<ctsIoPatternState> pattern_state;
+
+        enum Role
+        {
+            Client,
+            Server
+        };
+
+    public:
+        TEST_CLASS_INITIALIZE(Setup)
+        {
+            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+            ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
+            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+        }
+
+        TEST_CLASS_CLEANUP(Cleanup)
+        {
+            delete ctsConfig::g_configSettings;
+        }
+
+        TEST_METHOD(Default)
+        {
+            g_isListening = true;
+
+            ctsTcpStatistics tcp_stats;
+            ctsUdpStatistics udp_stats;
+            ctsConnectionStatistics conn_stats;
+        }
     };
-
-public:
-    TEST_CLASS_INITIALIZE(Setup)
-    {
-        ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
-        ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
-    }
-
-    TEST_CLASS_CLEANUP(Cleanup)
-    {
-        delete ctsConfig::g_configSettings;
-    }
-
-    TEST_METHOD(Default)
-    {
-        g_isListening = true;
-
-        ctsTcpStatistics tcp_stats;
-        ctsUdpStatistics udp_stats;
-        ctsConnectionStatistics conn_stats;
-    }
-};
 }

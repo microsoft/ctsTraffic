@@ -17,94 +17,95 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
+    // Can concurrent-safely read from both const and non-const
+    inline long long ctMemoryGuardRead(const long long* value) noexcept
+    {
+        return ::InterlockedCompareExchange64(const_cast<long long*>(value), 0LL, 0LL);
+    }
 
-// Can concurrent-safely read from both const and non-const
-inline long long ctMemoryGuardRead(const long long* value) noexcept
-{
-    return ::InterlockedCompareExchange64(const_cast<long long*>(value), 0LL, 0LL);
-}
+    inline long ctMemoryGuardRead(const long* value) noexcept
+    {
+        return ::InterlockedCompareExchange(const_cast<long*>(value), 0LL, 0LL);
+    }
 
-inline long ctMemoryGuardRead(const long* value) noexcept
-{
-    return ::InterlockedCompareExchange(const_cast<long*>(value), 0LL, 0LL);
-}
+    inline long long ctMemoryGuardRead(_In_ long long* value) noexcept
+    {
+        return ::InterlockedCompareExchange64(value, 0LL, 0LL);
+    }
 
-inline long long ctMemoryGuardRead(_In_ long long* value) noexcept
-{
-    return ::InterlockedCompareExchange64(value, 0LL, 0LL);
-}
+    inline long ctMemoryGuardRead(_In_ long* value) noexcept
+    {
+        return ::InterlockedCompareExchange(value, 0LL, 0LL);
+    }
 
-inline long ctMemoryGuardRead(_In_ long* value) noexcept
-{
-    return ::InterlockedCompareExchange(value, 0LL, 0LL);
-}
+    // Can concurrent-safely update a long long or long value
+    // - *Write returns the *prior* value
+    // - *WriteConditionally returns the *prior* value
+    // - *Add returns the *prior* value
+    // - *Subtract returns the *prior* value
+    //   (Note subtraction is just the adding a negative long value)
+    //
+    // - *Increment returns the *new* value
+    // - *Decrement returns the *new* value
+    inline long long ctMemoryGuardWrite(_Inout_ long long* value, long long newValue) noexcept
+    {
+        return ::InterlockedExchange64(value, newValue);
+    }
 
-// Can concurrent-safely update a long long or long value
-// - *Write returns the *prior* value
-// - *WriteConditionally returns the *prior* value
-// - *Add returns the *prior* value
-// - *Subtract returns the *prior* value
-//   (Note subtraction is just the adding a negative long value)
-//
-// - *Increment returns the *new* value
-// - *Decrement returns the *new* value
-inline long long ctMemoryGuardWrite(_Inout_ long long* value, long long newValue) noexcept
-{
-    return ::InterlockedExchange64(value, newValue);
-}
+    inline long ctMemoryGuardWrite(_Inout_ long* value, long newValue) noexcept
+    {
+        return ::InterlockedExchange(value, newValue);
+    }
 
-inline long ctMemoryGuardWrite(_Inout_ long* value, long newValue) noexcept
-{
-    return ::InterlockedExchange(value, newValue);
-}
+    inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* value,
+                                                     long long newValue,
+                                                     long long ifEquals) noexcept
+    {
+        return ::InterlockedCompareExchange64(value, newValue, ifEquals);
+    }
 
-inline long long ctMemoryGuardWriteConditionally(_Inout_ long long* value, long long newValue, long long ifEquals) noexcept
-{
-    return ::InterlockedCompareExchange64(value, newValue, ifEquals);
-}
+    inline long ctMemoryGuardWriteConditionally(_Inout_ long* value, long newValue, long ifEquals) noexcept
+    {
+        return ::InterlockedCompareExchange(value, newValue, ifEquals);
+    }
 
-inline long ctMemoryGuardWriteConditionally(_Inout_ long* value, long newValue, long ifEquals) noexcept
-{
-    return ::InterlockedCompareExchange(value, newValue, ifEquals);
-}
+    inline long long ctMemoryGuardAdd(_Inout_ long long* value, long long addValue) noexcept
+    {
+        return ::InterlockedExchangeAdd64(value, addValue);
+    }
 
-inline long long ctMemoryGuardAdd(_Inout_ long long* value, long long addValue) noexcept
-{
-    return ::InterlockedExchangeAdd64(value, addValue);
-}
+    inline long ctMemoryGuardAdd(_Inout_ long* value, long addValue) noexcept
+    {
+        return ::InterlockedExchangeAdd(value, addValue);
+    }
 
-inline long ctMemoryGuardAdd(_Inout_ long* value, long addValue) noexcept
-{
-    return ::InterlockedExchangeAdd(value, addValue);
-}
+    inline long long ctMemoryGuardSubtract(_Inout_ long long* value, long long subtractValue) noexcept
+    {
+        return ::InterlockedExchangeAdd64(value, subtractValue * -1LL);
+    }
 
-inline long long ctMemoryGuardSubtract(_Inout_ long long* value, long long subtractValue) noexcept
-{
-    return ::InterlockedExchangeAdd64(value, subtractValue * -1LL);
-}
+    inline long ctMemoryGuardSubtract(_Inout_ long* value, long subtractValue) noexcept
+    {
+        return ::InterlockedExchangeAdd(value, subtractValue * -1L);
+    }
 
-inline long ctMemoryGuardSubtract(_Inout_ long* value, long subtractValue) noexcept
-{
-    return ::InterlockedExchangeAdd(value, subtractValue * -1L);
-}
+    inline long long ctMemoryGuardIncrement(_Inout_ long long* value) noexcept
+    {
+        return ::InterlockedIncrement64(value);
+    }
 
-inline long long ctMemoryGuardIncrement(_Inout_ long long* value) noexcept
-{
-    return ::InterlockedIncrement64(value);
-}
+    inline long ctMemoryGuardIncrement(_Inout_ long* value) noexcept
+    {
+        return ::InterlockedIncrement(value);
+    }
 
-inline long ctMemoryGuardIncrement(_Inout_ long* value) noexcept
-{
-    return ::InterlockedIncrement(value);
-}
+    inline long long ctMemoryGuardDecrement(_Inout_ long long* value) noexcept
+    {
+        return ::InterlockedDecrement64(value);
+    }
 
-inline long long ctMemoryGuardDecrement(_Inout_ long long* value) noexcept
-{
-    return ::InterlockedDecrement64(value);
-}
-
-inline long ctMemoryGuardDecrement(_Inout_ long* value) noexcept
-{
-    return ::InterlockedDecrement(value);
-}
+    inline long ctMemoryGuardDecrement(_Inout_ long* value) noexcept
+    {
+        return ::InterlockedDecrement(value);
+    }
 } // namespace

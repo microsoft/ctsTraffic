@@ -24,7 +24,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers
 #include <wil/stl.h>
 
-namespace ctsPerf { namespace Details
+namespace ctsPerf
+{
+    namespace Details
     {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///
@@ -112,8 +114,12 @@ namespace ctsPerf { namespace Details
 
             auto formattedData = Details::Write(static_cast<DWORD>(data.size())); // SampleCount
             formattedData += Details::Write(*data.begin(), *data.rbegin()); // Min,Max
-            formattedData += Details::Write(std::get<0>(stdTuple) - std::get<1>(stdTuple), std::get<0>(stdTuple), std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
-            formattedData += Details::Write(std::get<0>(interQuartileTuple), std::get<1>(interQuartileTuple), std::get<2>(interQuartileTuple)); // -1IQR,Median,+1IQR
+            formattedData += Details::Write(std::get<0>(stdTuple) - std::get<1>(stdTuple),
+                                            std::get<0>(stdTuple),
+                                            std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
+            formattedData += Details::Write(std::get<0>(interQuartileTuple),
+                                            std::get<1>(interQuartileTuple),
+                                            std::get<2>(interQuartileTuple)); // -1IQR,Median,+1IQR
             return formattedData;
         }
 

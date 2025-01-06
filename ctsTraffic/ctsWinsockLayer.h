@@ -18,7 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 
 // project headers
 #include "ctsIOTask.hpp"
@@ -39,121 +39,121 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-// this is only defined in the public header for Windows 10 RS2 and later
-enum TCPSTATE : std::uint8_t
-{
-    TCPSTATE_CLOSED,
-    TCPSTATE_LISTEN,
-    TCPSTATE_SYN_SENT,
-    TCPSTATE_SYN_RCVD,
-    TCPSTATE_ESTABLISHED,
-    TCPSTATE_FIN_WAIT_1,
-    TCPSTATE_FIN_WAIT_2,
-    TCPSTATE_CLOSE_WAIT,
-    TCPSTATE_CLOSING,
-    TCPSTATE_LAST_ACK,
-    TCPSTATE_TIME_WAIT,
-    TCPSTATE_MAX
-};
-
-// this is only defined in the public header for Windows 10 RS2 and later
-struct TCP_INFO_v0
-{
-    TCPSTATE State;
-    ULONG Mss;
-    ULONG64 ConnectionTimeMs;
-    BOOLEAN TimestampsEnabled;
-    ULONG RttUs;
-    ULONG MinRttUs;
-    ULONG BytesInFlight;
-    ULONG Cwnd;
-    ULONG SndWnd;
-    ULONG RcvWnd;
-    ULONG RcvBuf;
-    ULONG64 BytesOut;
-    ULONG64 BytesIn;
-    ULONG BytesReordered;
-    ULONG BytesRetrans;
-    ULONG FastRetrans;
-    ULONG DupAcksIn;
-    ULONG TimeoutEpisodes;
-    UCHAR SynRetrans;
-};
-
-// this is only defined in the public header for Windows 10 RS5 and later
-struct TCP_INFO_v1
-{
-    TCPSTATE State;
-    ULONG Mss;
-    ULONG64 ConnectionTimeMs;
-    BOOLEAN TimestampsEnabled;
-    ULONG RttUs;
-    ULONG MinRttUs;
-    ULONG BytesInFlight;
-    ULONG Cwnd;
-    ULONG SndWnd;
-    ULONG RcvWnd;
-    ULONG RcvBuf;
-    ULONG64 BytesOut;
-    ULONG64 BytesIn;
-    ULONG BytesReordered;
-    ULONG BytesRetrans;
-    ULONG FastRetrans;
-    ULONG DupAcksIn;
-    ULONG TimeoutEpisodes;
-    UCHAR SynRetrans;
-
-    //
-    // Info about the limiting factor in send throughput.
-    //
-    // States:
-    // -Rwin: peer's receive window.
-    // -Cwnd: congestion window.
-    // -Snd: app not writing enough data to its socket.
-    //
-    // Per-state statistics:
-    // -Trans: number of transitions into the state.
-    // -Time: time spent in the state in milliseconds.
-    // -Bytes: number of bytes sent while in the state.
-    //
-    // These fields match those in TCP_ESTATS_SND_CONG_ROD.
-    //
-    ULONG SndLimTransRwin;
-    ULONG SndLimTimeRwin;
-    ULONG64 SndLimBytesRwin;
-    ULONG SndLimTransCwnd;
-    ULONG SndLimTimeCwnd;
-    ULONG64 SndLimBytesCwnd;
-    ULONG SndLimTransSnd;
-    ULONG SndLimTimeSnd;
-    ULONG64 SndLimBytesSnd;
-};
-
-struct wsIOResult
-{
-    uint32_t m_errorCode = 0;
-    DWORD m_bytesTransferred = 0;
-
-    wsIOResult() noexcept = default;
-
-    explicit wsIOResult(uint32_t error) noexcept :
-        m_errorCode(error)
+    // this is only defined in the public header for Windows 10 RS2 and later
+    enum TCPSTATE : std::uint8_t
     {
-    }
-};
+        TCPSTATE_CLOSED,
+        TCPSTATE_LISTEN,
+        TCPSTATE_SYN_SENT,
+        TCPSTATE_SYN_RCVD,
+        TCPSTATE_ESTABLISHED,
+        TCPSTATE_FIN_WAIT_1,
+        TCPSTATE_FIN_WAIT_2,
+        TCPSTATE_CLOSE_WAIT,
+        TCPSTATE_CLOSING,
+        TCPSTATE_LAST_ACK,
+        TCPSTATE_TIME_WAIT,
+        TCPSTATE_MAX
+    };
 
-wsIOResult ctsWSARecvFrom(
-    const std::shared_ptr<ctsSocket>& sharedSocket,
-    SOCKET socket,
-    const ctsTask& task,
-    std::function<void(OVERLAPPED*)>&& callback) noexcept;
+    // this is only defined in the public header for Windows 10 RS2 and later
+    struct TCP_INFO_v0
+    {
+        TCPSTATE State;
+        ULONG Mss;
+        ULONG64 ConnectionTimeMs;
+        BOOLEAN TimestampsEnabled;
+        ULONG RttUs;
+        ULONG MinRttUs;
+        ULONG BytesInFlight;
+        ULONG Cwnd;
+        ULONG SndWnd;
+        ULONG RcvWnd;
+        ULONG RcvBuf;
+        ULONG64 BytesOut;
+        ULONG64 BytesIn;
+        ULONG BytesReordered;
+        ULONG BytesRetrans;
+        ULONG FastRetrans;
+        ULONG DupAcksIn;
+        ULONG TimeoutEpisodes;
+        UCHAR SynRetrans;
+    };
 
-wsIOResult ctsWSASendTo(
-    const std::shared_ptr<ctsSocket>& sharedSocket,
-    SOCKET socket,
-    const ctsTask& task,
-    std::function<void(OVERLAPPED*)>&& callback) noexcept;
+    // this is only defined in the public header for Windows 10 RS5 and later
+    struct TCP_INFO_v1
+    {
+        TCPSTATE State;
+        ULONG Mss;
+        ULONG64 ConnectionTimeMs;
+        BOOLEAN TimestampsEnabled;
+        ULONG RttUs;
+        ULONG MinRttUs;
+        ULONG BytesInFlight;
+        ULONG Cwnd;
+        ULONG SndWnd;
+        ULONG RcvWnd;
+        ULONG RcvBuf;
+        ULONG64 BytesOut;
+        ULONG64 BytesIn;
+        ULONG BytesReordered;
+        ULONG BytesRetrans;
+        ULONG FastRetrans;
+        ULONG DupAcksIn;
+        ULONG TimeoutEpisodes;
+        UCHAR SynRetrans;
 
-// Set LINGER options to force an RST when the socket is closed
-wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept;
+        //
+        // Info about the limiting factor in send throughput.
+        //
+        // States:
+        // -Rwin: peer's receive window.
+        // -Cwnd: congestion window.
+        // -Snd: app not writing enough data to its socket.
+        //
+        // Per-state statistics:
+        // -Trans: number of transitions into the state.
+        // -Time: time spent in the state in milliseconds.
+        // -Bytes: number of bytes sent while in the state.
+        //
+        // These fields match those in TCP_ESTATS_SND_CONG_ROD.
+        //
+        ULONG SndLimTransRwin;
+        ULONG SndLimTimeRwin;
+        ULONG64 SndLimBytesRwin;
+        ULONG SndLimTransCwnd;
+        ULONG SndLimTimeCwnd;
+        ULONG64 SndLimBytesCwnd;
+        ULONG SndLimTransSnd;
+        ULONG SndLimTimeSnd;
+        ULONG64 SndLimBytesSnd;
+    };
+
+    struct wsIOResult
+    {
+        uint32_t m_errorCode = 0;
+        DWORD m_bytesTransferred = 0;
+
+        wsIOResult() noexcept = default;
+
+        explicit wsIOResult(uint32_t error) noexcept :
+            m_errorCode(error)
+        {
+        }
+    };
+
+    wsIOResult ctsWSARecvFrom(
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        SOCKET socket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept;
+
+    wsIOResult ctsWSASendTo(
+        const std::shared_ptr<ctsSocket>& sharedSocket,
+        SOCKET socket,
+        const ctsTask& task,
+        std::function<void(OVERLAPPED*)>&& callback) noexcept;
+
+    // Set LINGER options to force an RST when the socket is closed
+    wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept;
 }

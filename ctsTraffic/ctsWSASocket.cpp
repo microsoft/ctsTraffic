@@ -15,7 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -42,7 +42,10 @@ namespace ctsTraffic
         if (ctsConfig::g_configSettings->LocalPortHigh != 0 && ctsConfig::g_configSettings->LocalPortLow != 0)
         {
             const auto portCounter = ctl::ctMemoryGuardIncrement(&g_portCounter);
-            nextPort = static_cast<uint16_t>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
+            nextPort =
+                static_cast<uint16_t>(portCounter %
+                    (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1))
+                + ctsConfig::g_configSettings->LocalPortLow;
         }
         else
         {
@@ -53,7 +56,8 @@ namespace ctsTraffic
         // Find a bind and target address by moving to the next address in the respective vectors
         //
         socket_address localAddr;
-        if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
+        if (ctsConfig::g_configSettings->ListenAddresses.empty() &&
+            !ctsConfig::g_configSettings->TargetAddressStrings.empty())
         {
             // if we are connecting by name, always bind to the ephemeral IPv6 address
             localAddr.reset(AF_INET6);
@@ -92,11 +96,17 @@ namespace ctsTraffic
             switch (ctsConfig::g_configSettings->Protocol)
             {
             case ctsConfig::ProtocolType::TCP:
-                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
+                socket = ctsConfig::CreateSocket(localAddr.family(),
+                                                 SOCK_STREAM,
+                                                 IPPROTO_TCP,
+                                                 ctsConfig::g_configSettings->SocketFlags);
                 break;
 
             case ctsConfig::ProtocolType::UDP:
-                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags);
+                socket = ctsConfig::CreateSocket(localAddr.family(),
+                                                 SOCK_DGRAM,
+                                                 IPPROTO_UDP,
+                                                 ctsConfig::g_configSettings->SocketFlags);
                 break;
 
             case ctsConfig::ProtocolType::NoProtocolSet:
@@ -127,11 +137,16 @@ namespace ctsTraffic
         {
             // setting the socket option to support dual-mode sockets must be done before calling bind
             // must enable dual-mode sockets before calling WSAConnectByName, so it can connect to either IPv4 or IPv6 addresses
-            if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
+            if (ctsConfig::g_configSettings->ListenAddresses.empty() &&
+                !ctsConfig::g_configSettings->TargetAddressStrings.empty())
             {
                 PRINT_DEBUG_INFO(L"\t\tEnabling Dual-mode sockets\n");
                 constexpr DWORD ipv6_only = FALSE;
-                if (0 != setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&ipv6_only), static_cast<int>(sizeof ipv6_only)))
+                if (0 != setsockopt(socket,
+                                    IPPROTO_IPV6,
+                                    IPV6_V6ONLY,
+                                    reinterpret_cast<const char*>(&ipv6_only),
+                                    static_cast<int>(sizeof ipv6_only)))
                 {
                     gle = WSAGetLastError();
                     ctsConfig::PrintErrorIfFailed("setsockopt(IPV6_V6ONLY)", gle);
@@ -162,7 +177,8 @@ namespace ctsTraffic
                         if (WSAEADDRINUSE == gle)
                         {
                             constexpr uint32_t bindRetrySleepMs = 1000;
-                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %d, sleeping %u ms.\n", bindRetry + 1, bindRetrySleepMs);
+                            PRINT_DEBUG_INFO(L"\t\tctsWSASocket : bind failed on attempt %d, sleeping %u ms.\n",
+                                             bindRetry + 1, bindRetrySleepMs);
                             Sleep(bindRetrySleepMs);
                         }
                     }

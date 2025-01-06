@@ -17,7 +17,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <algorithm>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -174,7 +174,7 @@ namespace ctsTraffic
                 throw std::exception("ctsMediaStreamServer invoked with no listening addresses specified");
             }
 
-            // initiate the recv's in the 'listening' sockets
+            // initiate calls to recv in the 'listening' sockets (recall, these are UDP sockets)
             for (const auto& listener : g_listeningSockets)
             {
                 listener->InitiateRecv();

@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -66,7 +66,9 @@ namespace ctsTraffic
                 DWORD localAddrLength = socket_address::length;
                 DWORD remoteAddrLength = socket_address::length;
 
-                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
+                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n",
+                                 targetAddr.c_str(),
+                                 ctsConfig::g_configSettings->Port);
                 if (!WSAConnectByNameW(
                     socket,
                     const_cast<LPWSTR>(targetAddr.c_str()),

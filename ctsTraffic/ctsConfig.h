@@ -22,7 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <stdexcept>
 #include <vector>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // ctl headers
 #include <ctTimer.hpp>
 //
@@ -46,11 +46,11 @@ namespace ctsTraffic
     class ctsSocket;
     using ctsSocketFunction = std::function<void (std::weak_ptr<ctsSocket>)>;
 
-    inline wil::networking::winsock_extension_function_table SocketFunctions = wil::networking::winsock_extension_function_table::load();
-    inline wil::networking::rio_extension_function_table RioFunctions = wil::networking::rio_extension_function_table::load();
-
     namespace ctsConfig
     {
+        const wil::networking::WINSOCK_EXTENSION_FUNCTION_TABLE& SocketFunctions() noexcept;
+        const RIO_EXTENSION_FUNCTION_TABLE& RioFunctions() noexcept;
+
         //
         // Declaring enum types in the ctsConfig namespace
         // - to be referenced by ctsConfig functions
@@ -243,6 +243,7 @@ namespace ctsTraffic
             const socket_address& remoteAddr,
             SOCKET socket,
             const ctsTcpStatistics& stats) noexcept;
+
         constexpr void PrintTcpDetails(
             const socket_address&,
             const socket_address&,

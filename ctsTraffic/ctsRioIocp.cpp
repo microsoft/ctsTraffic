@@ -18,7 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 
 // project headers
 #include "ctsConfig.h"
@@ -27,7 +27,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // wil headers always included last
 #include <wil/stl.h>
 
-namespace ctsTraffic { namespace Rioiocp
+namespace ctsTraffic
+{
+    namespace Rioiocp
     {
         //
         // constants for everything related to ctsRioIocp
@@ -54,7 +56,8 @@ namespace ctsTraffic { namespace Rioiocp
         static INIT_ONCE g_sharedBufferInitializer = INIT_ONCE_STATIC_INIT;
 
         // global CRITICAL_SECTION no deleting on exit - not racing during process exit
-        static CRITICAL_SECTION g_queueLock{}; // NOLINT(cppcoreguidelines-interfaces-global-init, clang-diagnostic-exit-time-destructors)
+        static CRITICAL_SECTION g_queueLock{};
+        // NOLINT(cppcoreguidelines-interfaces-global-init, clang-diagnostic-exit-time-destructors)
         static RIO_NOTIFICATION_COMPLETION g_rioNotifySettings;
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static RIO_CQ g_rioCompletionQueue = RIO_INVALID_CQ;
@@ -90,7 +93,7 @@ namespace ctsTraffic { namespace Rioiocp
                     g_rioCompletionQueueUsed,
                     newCqUsed);
 
-                if (!RioFunctions.f.RIOResizeCompletionQueue(g_rioCompletionQueue, newCqSize))
+                if (!ctsConfig::RioFunctions().RIOResizeCompletionQueue(g_rioCompletionQueue, newCqSize))
                 {
                     const auto gle = WSAGetLastError();
                     ctsConfig::PrintErrorIfFailed("RIOResizeCompletionQueue", gle);
@@ -132,7 +135,8 @@ namespace ctsTraffic { namespace Rioiocp
         {
             const auto lock = wil::EnterCriticalSection(&g_queueLock);
 
-            const auto dequeResultCount = RioFunctions.f.RIODequeueCompletion(g_rioCompletionQueue, rioResults, c_rioResultArrayLength);
+            const auto dequeResultCount = ctsConfig::RioFunctions().RIODequeueCompletion(
+                g_rioCompletionQueue, rioResults, c_rioResultArrayLength);
 
             // We were notified there were completions, but we can't dequeue any IO
             // - something has gone horribly wrong - likely our CQ is corrupt
@@ -144,7 +148,7 @@ namespace ctsTraffic { namespace Rioiocp
                 g_rioCompletionQueue, dequeResultCount);
 
             // Immediately after invoking Dequeue, post another Notify
-            const auto notifyResult = RioFunctions.f.RIONotify(g_rioCompletionQueue);
+            const auto notifyResult = ctsConfig::RioFunctions().RIONotify(g_rioCompletionQueue);
 
             // if notify fails, we can't reliably know when the next IO completes
             // - this will cause everything to come to a grinding halt
@@ -188,10 +192,10 @@ namespace ctsTraffic { namespace Rioiocp
             if (threadsAlive > 0)
             {
                 if (WaitForMultipleObjects(
-                        threadsAlive,
-                        &g_pRioWorkerThreads[0],
-                        TRUE,
-                        INFINITE) != WAIT_OBJECT_0)
+                    threadsAlive,
+                    &g_pRioWorkerThreads[0],
+                    TRUE,
+                    INFINITE) != WAIT_OBJECT_0)
                 {
                     // if we can't wait for the worker threads, kill the process to see why
                     FAIL_FAST_MSG(
@@ -209,14 +213,14 @@ namespace ctsTraffic { namespace Rioiocp
                 }
             }
 
-            free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+            free(g_pRioWorkerThreads); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
             g_pRioWorkerThreads = nullptr;
             g_rioWorkerThreadCount = 0;
 
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             if (g_rioCompletionQueue != RIO_INVALID_CQ)
             {
-                RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue);
+                ctsConfig::RioFunctions().RIOCloseCompletionQueue(g_rioCompletionQueue);
                 // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
                 g_rioCompletionQueue = RIO_INVALID_CQ;
             }
@@ -240,7 +244,8 @@ namespace ctsTraffic { namespace Rioiocp
         //
         static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept
         {
-            FAIL_FAST_IF(!InitializeCriticalSectionEx(&g_queueLock, ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock, 0));
+            FAIL_FAST_IF(
+                !InitializeCriticalSectionEx(&g_queueLock, ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock, 0));
 
             // delete all cq's on error
             auto deleteAllCqsOnError = wil::scope_exit([&]() noexcept { DeleteAllCompletionQueues(); });
@@ -260,7 +265,8 @@ namespace ctsTraffic { namespace Rioiocp
                 return FALSE;
             }
             // free the OVERLAPPED on error
-            auto freeOverlappedOnError = wil::scope_exit([&]() noexcept {
+            auto freeOverlappedOnError = wil::scope_exit([&]() noexcept
+            {
                 free(g_rioNotifySettings.Iocp.Overlapped);
                 g_rioNotifySettings.Iocp.Overlapped = nullptr;
             });
@@ -274,12 +280,15 @@ namespace ctsTraffic { namespace Rioiocp
                 return FALSE;
             }
             // close the IOCP handle on error
-            auto deleteIocpOnError = wil::scope_exit([&]() noexcept { CloseHandle(g_rioNotifySettings.Iocp.IocpHandle); });
+            auto deleteIocpOnError = wil::scope_exit([&]() noexcept
+            {
+                CloseHandle(g_rioNotifySettings.Iocp.IocpHandle);
+            });
 
             constexpr uint32_t rioDefaultCqSize = 1000;
             // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
             // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
-            g_rioCompletionQueue = RioFunctions.f.RIOCreateCompletionQueue(rioDefaultCqSize, &g_rioNotifySettings);
+            g_rioCompletionQueue = ctsConfig::RioFunctions().RIOCreateCompletionQueue(rioDefaultCqSize, &g_rioNotifySettings);
             // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
             if (RIO_INVALID_CQ == g_rioCompletionQueue)
             {
@@ -289,7 +298,10 @@ namespace ctsTraffic { namespace Rioiocp
                 return FALSE;
             }
             // close the RIO CQ on error
-            auto closeCompletionQueueOnError = wil::scope_exit([&]() noexcept { RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue); });
+            auto closeCompletionQueueOnError = wil::scope_exit([&]() noexcept
+            {
+                ctsConfig::RioFunctions().RIOCloseCompletionQueue(g_rioCompletionQueue);
+            });
 
             // now that the CQ is created, update info
             g_rioCompletionQueueSize = rioDefaultCqSize;
@@ -308,8 +320,9 @@ namespace ctsTraffic { namespace Rioiocp
                 return FALSE;
             }
             // free the handle array on error
-            auto freeHandleArrayOnError = wil::scope_exit([&]() noexcept {
-                free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+            auto freeHandleArrayOnError = wil::scope_exit([&]() noexcept
+            {
+                free(g_pRioWorkerThreads); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
                 g_pRioWorkerThreads = nullptr;
             });
 
@@ -328,7 +341,7 @@ namespace ctsTraffic { namespace Rioiocp
             // scopedDeleteAllCqs will take care of cleaning up these threads on failure
 
             // if everything succeeds, post a Notify to catch the first set of IO
-            const auto notify = RioFunctions.f.RIONotify(g_rioCompletionQueue);
+            const auto notify = ctsConfig::RioFunctions().RIONotify(g_rioCompletionQueue);
             if (notify != NO_ERROR)
             {
                 ctsConfig::PrintException(notify, L"RIONotify", L"ctsRioIocp");
@@ -380,20 +393,20 @@ namespace ctsTraffic { namespace Rioiocp
 
             switch (nextTask.m_ioAction)
             {
-                case ctsTaskAction::Send:
-                    if (m_outstandingSends >= m_requestQueueSendSize)
-                    {
-                        newSendSize = m_requestQueueSendSize + m_rioRqGrowthFactor;
-                    }
-                    break;
-                case ctsTaskAction::Recv:
-                    if (m_outstandingRecvs >= m_requestQueueRecvSize)
-                    {
-                        newRecvSize = m_requestQueueRecvSize + m_rioRqGrowthFactor;
-                    }
-                    break;
-                default:
-                    FAIL_FAST();
+            case ctsTaskAction::Send:
+                if (m_outstandingSends >= m_requestQueueSendSize)
+                {
+                    newSendSize = m_requestQueueSendSize + m_rioRqGrowthFactor;
+                }
+                break;
+            case ctsTaskAction::Recv:
+                if (m_outstandingRecvs >= m_requestQueueRecvSize)
+                {
+                    newRecvSize = m_requestQueueRecvSize + m_rioRqGrowthFactor;
+                }
+                break;
+            default:
+                FAIL_FAST();
             }
 
             // guarantee room in the RQ for this next IO
@@ -405,7 +418,7 @@ namespace ctsTraffic { namespace Rioiocp
                     return std::make_tuple(makeRoomError, nullptr);
                 }
 
-                if (!RioFunctions.f.RIOResizeRequestQueue(
+                if (!ctsConfig::RioFunctions().RIOResizeRequestQueue(
                     m_rioRequestQueue,
                     newRecvSize,
                     newSendSize))
@@ -423,14 +436,14 @@ namespace ctsTraffic { namespace Rioiocp
 
             switch (nextTask.m_ioAction)
             {
-                case ctsTaskAction::Send:
-                    ++m_outstandingSends;
-                    break;
-                case ctsTaskAction::Recv:
-                    ++m_outstandingRecvs;
-                    break;
-                default:
-                    FAIL_FAST();
+            case ctsTaskAction::Send:
+                ++m_outstandingSends;
+                break;
+            case ctsTaskAction::Recv:
+                ++m_outstandingRecvs;
+                break;
+            default:
+                FAIL_FAST();
             }
 
             if (m_tasks.empty())
@@ -443,7 +456,8 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 if (possibleTask.m_rioBufferid == RIO_INVALID_BUFFERID)
                 {
-                    FAIL_FAST_IF(nextTask.m_rioBufferid == RIO_INVALID_BUFFERID); // NOLINT(performance-no-int-to-ptr, cppcoreguidelines-pro-type-cstyle-cast)
+                    FAIL_FAST_IF(nextTask.m_rioBufferid == RIO_INVALID_BUFFERID);
+                    // NOLINT(performance-no-int-to-ptr, cppcoreguidelines-pro-type-cstyle-cast)
                     // populate the task with the new task value
                     possibleTask = nextTask;
                     // return to the caller the address of this task to use for the request context
@@ -463,14 +477,14 @@ namespace ctsTraffic { namespace Rioiocp
         {
             switch (pCompletedTask->m_ioAction)
             {
-                case ctsTaskAction::Send:
-                    --m_outstandingSends;
-                    break;
-                case ctsTaskAction::Recv:
-                    --m_outstandingRecvs;
-                    break;
-                default:
-                    FAIL_FAST();
+            case ctsTaskAction::Send:
+                --m_outstandingSends;
+                break;
+            case ctsTaskAction::Recv:
+                --m_outstandingRecvs;
+                break;
+            default:
+                FAIL_FAST();
             }
 
             // pCompletedTask is pointing to a ctsTask in m_tasks
@@ -514,12 +528,15 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 THROW_WIN32_MSG(WSAENOBUFS, "ctsRioIocp: failed to make room in the cq");
             }
-            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() noexcept { Rioiocp::ReleaseRoomInCompletionQueue(m_rioRqGrowthFactor); });
+            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() noexcept
+            {
+                Rioiocp::ReleaseRoomInCompletionQueue(m_rioRqGrowthFactor);
+            });
 
             constexpr uint32_t rioMaxDataBuffers = 1; // this is the only value accepted as of Win8
             // create the RQ for this socket
             // don't need a scope guard to close the RQ on error - the RQ is freed when the RIO socket is closed
-            m_rioRequestQueue = RioFunctions.f.RIOCreateRequestQueue(
+            m_rioRequestQueue = ctsConfig::RioFunctions().RIOCreateRequestQueue(
                 socket,
                 m_requestQueueRecvSize, rioMaxDataBuffers,
                 m_requestQueueSendSize, rioMaxDataBuffers,
@@ -538,7 +555,7 @@ namespace ctsTraffic { namespace Rioiocp
                 m_remoteSockaddr = sharedSocket->GetRemoteSockaddr();
                 m_rioRemoteAddress.Length = static_cast<ULONG>(sizeof SOCKADDR_INET);
                 m_rioRemoteAddress.BufferId =
-                    RioFunctions.f.RIORegisterBuffer(
+                    ctsConfig::RioFunctions().RIORegisterBuffer(
                         reinterpret_cast<PCHAR>(m_remoteSockaddr.sockaddr_inet()),
                         static_cast<DWORD>(sizeof SOCKADDR_INET));
                 if (RIO_INVALID_BUFFERID == m_rioRemoteAddress.BufferId)
@@ -558,7 +575,7 @@ namespace ctsTraffic { namespace Rioiocp
 
             if (m_rioRemoteAddress.BufferId != RIO_INVALID_BUFFERID)
             {
-                RioFunctions.f.RIODeregisterBuffer(m_rioRemoteAddress.BufferId);
+                ctsConfig::RioFunctions().RIODeregisterBuffer(m_rioRemoteAddress.BufferId);
             }
         }
 
@@ -598,8 +615,7 @@ namespace ctsTraffic { namespace Rioiocp
             const auto lock = m_lock.lock();
 
             // decrement the counter in our RQ for the completed IO
-            const auto* const functionName = pTask->m_ioAction == ctsTaskAction::Recv ?
-                                             "RIOReceive" : "RIOSend";
+            const auto* const functionName = pTask->m_ioAction == ctsTaskAction::Recv ? "RIOReceive" : "RIOSend";
 
             if (status != NO_ERROR)
             {
@@ -614,27 +630,27 @@ namespace ctsTraffic { namespace Rioiocp
             DWORD error{};
             switch (const auto protocolStatus = lockedPattern->CompleteIo(*pTask, transferred, status))
             {
-                case ctsIoStatus::ContinueIo:
-                    // more IO is requested from the protocol
-                    // launch the next IO while holding the socket lock in complete_io
-                    error = InitiateRequest();
-                    break;
+            case ctsIoStatus::ContinueIo:
+                // more IO is requested from the protocol
+                // launch the next IO while holding the socket lock in complete_io
+                error = InitiateRequest();
+                break;
 
-                case ctsIoStatus::CompletedIo:
-                    // no more IO is requested from the protocol
-                    error = NO_ERROR;
-                    break;
+            case ctsIoStatus::CompletedIo:
+                // no more IO is requested from the protocol
+                error = NO_ERROR;
+                break;
 
-                case ctsIoStatus::FailedIo:
-                    // write out the error
-                    ctsConfig::PrintErrorIfFailed(functionName, status);
+            case ctsIoStatus::FailedIo:
+                // write out the error
+                ctsConfig::PrintErrorIfFailed(functionName, status);
 
-                // protocol sees this as a failure - capture the error the protocol recorded
-                    error = lockedPattern->GetLastPatternError();
-                    break;
+            // protocol sees this as a failure - capture the error the protocol recorded
+                error = lockedPattern->GetLastPatternError();
+                break;
 
-                default:
-                    FAIL_FAST_MSG("ctsSendRecvIocp: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
+            default:
+                FAIL_FAST_MSG("ctsSendRecvIocp: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
             }
 
             // release the RQ and the ctsTask back to the RioSocketContext object before returning
@@ -658,7 +674,8 @@ namespace ctsTraffic { namespace Rioiocp
             const auto sharedSocket(m_weakSocket.lock());
             FAIL_FAST_IF_MSG(
                 !sharedSocket,
-                "RioSocketContext::execute_io (this == %p): the ctsSocket should always be valid - it's now null, get() should always return a valid ptr", this);
+                "RioSocketContext::execute_io (this == %p): the ctsSocket should always be valid - it's now null, get() should always return a valid ptr",
+                this);
 
             // hold onto the RIO socket lock while posting IO on it
             const auto lockedSocket(sharedSocket->AcquireSocketLock());
@@ -736,26 +753,28 @@ namespace ctsTraffic { namespace Rioiocp
                     // invoke the requested IO now that we have room in our queues
                     switch (pNextTask->m_ioAction)
                     {
-                        case ctsTaskAction::Recv:
+                    case ctsTaskAction::Recv:
                         {
                             pRioFunction = "RIOReceive";
-                            const DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? RIO_MSG_WAITALL : 0;
-                            if (!RioFunctions.f.RIOReceive(m_rioRequestQueue, &rioBuffer, 1, flags, pNextTask))
+                            const DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll
+                                                    ? RIO_MSG_WAITALL
+                                                    : 0;
+                            if (!ctsConfig::RioFunctions().RIOReceive(m_rioRequestQueue, &rioBuffer, 1, flags, pNextTask))
                             {
                                 error = WSAGetLastError();
                             }
                             break;
                         }
-                        case ctsTaskAction::Send:
+                    case ctsTaskAction::Send:
                         {
                             pRioFunction = "RIOSend";
-                            if (!RioFunctions.f.RIOSend(m_rioRequestQueue, &rioBuffer, 1, 0, pNextTask))
+                            if (!ctsConfig::RioFunctions().RIOSend(m_rioRequestQueue, &rioBuffer, 1, 0, pNextTask))
                             {
                                 error = WSAGetLastError();
                             }
                             break;
                         }
-                        default: FAIL_FAST();
+                    default: FAIL_FAST();
                     }
 
                     if (error != NO_ERROR)
@@ -841,8 +860,12 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 const auto bytesTransferred = rioResultArray[iterResults].BytesTransferred;
                 const auto status = rioResultArray[iterResults].Status;
-                auto* const requestContext = reinterpret_cast<ctsTask*>(rioResultArray[iterResults].RequestContext); // NOLINT(performance-no-int-to-ptr)
-                auto* const socketContext = reinterpret_cast<RioSocketContext*>(rioResultArray[iterResults].SocketContext); // NOLINT(performance-no-int-to-ptr)
+                auto* const requestContext = reinterpret_cast<ctsTask*>(
+                    rioResultArray[iterResults].RequestContext);
+                // NOLINT(performance-no-int-to-ptr)
+                auto* const socketContext =
+                    reinterpret_cast<RioSocketContext*>(rioResultArray[iterResults].SocketContext);
+                // NOLINT(performance-no-int-to-ptr)
 
                 // Complete the dequeued IO to track the IO
                 // - will kick off another IO if required

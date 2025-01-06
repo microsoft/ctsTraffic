@@ -14,7 +14,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -104,7 +104,7 @@ namespace ctsTraffic
             case ctsIoStatus::FailedIo:
                 // write out the error to the error log since the protocol sees this as a hard error
                 ctsConfig::PrintErrorIfFailed(functionName, gle);
-                // protocol sees this as a failure : capture the error the protocol recorded
+            // protocol sees this as a failure : capture the error the protocol recorded
                 gle = static_cast<int>(lockedPattern->GetLastPatternError());
                 break;
 
@@ -126,7 +126,10 @@ namespace ctsTraffic
     //
     // ** ctsSocket::increment_io must have been called before this function was invoked
     //
-    static ctsSendRecvStatus ctsSendRecvProcessTask(SOCKET socket, const std::shared_ptr<ctsSocket>& sharedSocket, const std::shared_ptr<ctsIoPattern>& sharedPattern, const ctsTask& nextIo) noexcept
+    static ctsSendRecvStatus ctsSendRecvProcessTask(SOCKET socket,
+                                                    const std::shared_ptr<ctsSocket>& sharedSocket,
+                                                    const std::shared_ptr<ctsIoPattern>& sharedPattern,
+                                                    const ctsTask& nextIo) noexcept
     {
         ctsSendRecvStatus returnStatus;
 
@@ -146,20 +149,24 @@ namespace ctsTraffic
             if (shutdown(socket, SD_SEND) != 0)
             {
                 returnStatus.m_ioErrorCode = WSAGetLastError();
-                PRINT_DEBUG_INFO(L"\t\tIO Failed: shutdown(SD_SEND) (%d) [ctsSendRecvIocp]\n", returnStatus.m_ioErrorCode);
+                PRINT_DEBUG_INFO(L"\t\tIO Failed: shutdown(SD_SEND) (%d) [ctsSendRecvIocp]\n",
+                                 returnStatus.m_ioErrorCode);
             }
             else
             {
-                PRINT_DEBUG_INFO(L"\t\tIO successfully called shutdown(SD_SEND) (%d) [ctsSendRecvIocp]\n", returnStatus.m_ioErrorCode);
+                PRINT_DEBUG_INFO(L"\t\tIO successfully called shutdown(SD_SEND) (%d) [ctsSendRecvIocp]\n",
+                                 returnStatus.m_ioErrorCode);
             }
-            returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
+            returnStatus.m_ioDone =
+                sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
             returnStatus.m_ioStarted = false;
         }
         else if (ctsTaskAction::HardShutdown == nextIo.m_ioAction)
         {
             // pass through -1 to force an RST with the closesocket
             returnStatus.m_ioErrorCode = sharedSocket->CloseSocket(static_cast<uint32_t>(SOCKET_ERROR));
-            returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
+            returnStatus.m_ioDone =
+                sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
             returnStatus.m_ioStarted = false;
         }
         else
@@ -169,7 +176,8 @@ namespace ctsTraffic
                 // attempt to allocate an IO thread-pool object
                 const std::shared_ptr<ctl::ctThreadIocp>& ioThreadPool(sharedSocket->GetIocpThreadpool());
                 OVERLAPPED* const pOverlapped = ioThreadPool->new_request(
-                    [weak_reference = std::weak_ptr(sharedSocket), nextIo](OVERLAPPED* pCallbackOverlapped) noexcept {
+                    [weak_reference = std::weak_ptr(sharedSocket), nextIo](OVERLAPPED* pCallbackOverlapped) noexcept
+                    {
                         ctsSendRecvCompletionCallback(pCallbackOverlapped, weak_reference, nextIo);
                     });
 
@@ -194,7 +202,9 @@ namespace ctsTraffic
                 else
                 {
                     functionName = "WSARecv";
-                    DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? MSG_WAITALL : 0;
+                    DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll
+                                      ? MSG_WAITALL
+                                      : 0;
                     if (WSARecv(socket, &wsaBuffer, 1, nullptr, &flags, pOverlapped, nullptr) != 0)
                     {
                         returnStatus.m_ioErrorCode = WSAGetLastError();
@@ -206,7 +216,8 @@ namespace ctsTraffic
                 //
                 if (WSA_IO_PENDING == returnStatus.m_ioErrorCode ||
                     // ReSharper disable once CppRedundantParentheses
-                    (NO_ERROR == returnStatus.m_ioErrorCode && !(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)))
+                    (NO_ERROR == returnStatus.m_ioErrorCode &&
+                        !(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)))
                 {
                     returnStatus.m_ioErrorCode = NO_ERROR;
                     returnStatus.m_ioStarted = true;
@@ -224,18 +235,21 @@ namespace ctsTraffic
                         if (!WSAGetOverlappedResult(socket, pOverlapped, &bytesTransferred, FALSE, &flags))
                         {
                             FAIL_FAST_MSG(
-                                "WSAGetOverlappedResult failed (%d) after the IO request (%hs) succeeded", WSAGetLastError(), functionName);
+                                "WSAGetOverlappedResult failed (%d) after the IO request (%hs) succeeded",
+                                WSAGetLastError(), functionName);
                         }
                     }
                     else
                     {
-                        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", functionName, returnStatus.m_ioErrorCode);
+                        PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%d) [ctsSendRecvIocp]\n", functionName,
+                                         returnStatus.m_ioErrorCode);
                     }
 
                     // must cancel the IOCP TP since IO is not pended
                     ioThreadPool->cancel_request(pOverlapped);
                     // call back to the socket to see if it wants more IO
-                    switch (const ctsIoStatus protocolStatus = sharedPattern->CompleteIo(nextIo, bytesTransferred, returnStatus.m_ioErrorCode))
+                    switch (const ctsIoStatus protocolStatus =
+                        sharedPattern->CompleteIo(nextIo, bytesTransferred, returnStatus.m_ioErrorCode))
                     {
                     case ctsIoStatus::ContinueIo:
                         // The protocol layer wants to transfer more data
@@ -254,7 +268,7 @@ namespace ctsTraffic
                     case ctsIoStatus::FailedIo:
                         // write out the error
                         ctsConfig::PrintErrorIfFailed(functionName, sharedPattern->GetLastPatternError());
-                        // the protocol acknowledged the failure - socket is done with IO
+                    // the protocol acknowledged the failure - socket is done with IO
                         returnStatus.m_ioErrorCode = sharedPattern->GetLastPatternError();
                         returnStatus.m_ioDone = true;
                         break;
@@ -267,7 +281,8 @@ namespace ctsTraffic
             catch (...)
             {
                 returnStatus.m_ioErrorCode = ctsConfig::PrintThrownException();
-                returnStatus.m_ioDone = sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
+                returnStatus.m_ioDone =
+                    sharedPattern->CompleteIo(nextIo, 0, returnStatus.m_ioErrorCode) != ctsIoStatus::ContinueIo;
                 returnStatus.m_ioStarted = false;
             }
         }
@@ -302,7 +317,8 @@ namespace ctsTraffic
         sharedSocket->IncrementIo();
 
         // run the ctsIOTask (next_io) that was scheduled through the TP timer
-        const ctsSendRecvStatus status = ctsSendRecvProcessTask(lockedSocket.GetSocket(), sharedSocket, lockedPattern, nextIo);
+        const ctsSendRecvStatus status =
+            ctsSendRecvProcessTask(lockedSocket.GetSocket(), sharedSocket, lockedPattern, nextIo);
         // if no IO was started, decrement the IO counter
         if (!status.m_ioStarted)
         {
@@ -310,7 +326,8 @@ namespace ctsTraffic
             {
                 // this should never be zero since we should be holding a ref-count for this callback
                 FAIL_FAST_MSG(
-                    "The ref-count of the ctsSocket object (%p) fell to zero during a scheduled callback", sharedSocket.get());
+                    "The ref-count of the ctsSocket object (%p) fell to zero during a scheduled callback",
+                    sharedSocket.get());
             }
         }
         // continue requesting IO if this connection still isn't done with all IO after scheduling the prior IO
@@ -398,7 +415,8 @@ namespace ctsTraffic
                 {
                     // this should never be zero as we are holding a reference outside the loop
                     FAIL_FAST_MSG(
-                        "The ctsSocket (%p) ref-count fell to zero while this function was holding a reference", sharedSocket.get());
+                        "The ctsSocket (%p) ref-count fell to zero while this function was holding a reference",
+                        sharedSocket.get());
                 }
             }
         }

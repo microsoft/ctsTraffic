@@ -16,7 +16,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 // project headers
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
@@ -30,7 +30,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 //   - it queues up IO to a central prioritized queue of work
 //     since all IO is triggered to occur at a future point, the queue is sorted by work that comes soonest
 
-namespace ctsTraffic { namespace ctsMediaStreamServerImpl
+namespace ctsTraffic
+{
+    namespace ctsMediaStreamServerImpl
     {
         void InitOnce();
 

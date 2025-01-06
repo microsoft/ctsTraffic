@@ -18,7 +18,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <algorithm>
 // using wil::networking to pull in all necessary networking headers
-#include "e:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+#include <wil/networking.h>
 
 // multimedia timer
 #include <mmsystem.h>
@@ -48,6 +48,19 @@ namespace ctsTraffic::ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
+    const auto g_socketFunctions = wil::networking::winsock_extension_function_table::load();
+
+    const wil::networking::WINSOCK_EXTENSION_FUNCTION_TABLE& SocketFunctions() noexcept
+    {
+        return g_socketFunctions.f;
+    }
+
+    const auto g_rioFunctions = wil::networking::rio_extension_function_table::load();
+    const RIO_EXTENSION_FUNCTION_TABLE& ctsConfig::RioFunctions() noexcept
+    {
+        return g_rioFunctions.f;
+    }
+        
     //
     // Hiding the details of the raw data in an unnamed namespace to make it completely private
     // Free functions below provide proper access to this information
@@ -109,7 +122,7 @@ namespace ctsTraffic::ctsConfig
     static shared_ptr<ctsLogger> g_tcpInfoLogger;
 
     static bool g_breakOnError = false;
-    static ExitProcessType g_processStatus = ExitProcessType::Running;
+    static auto g_processStatus = ExitProcessType::Running;
 
     static INIT_ONCE g_configInitImpl = INIT_ONCE_STATIC_INIT;
 
@@ -391,6 +404,7 @@ namespace ctsTraffic::ctsConfig
     {
         const wchar_t* paramEnd = inputArgument + wcslen(inputArgument);
         const wchar_t* paramDelimiter = find(inputArgument, paramEnd, L':');
+        // ReSharper disable once CppRedundantComplexityInComparison
         if (!(paramEnd > paramDelimiter + 1))
         {
             throw invalid_argument(ctString::convert_to_string(inputArgument));
@@ -420,7 +434,7 @@ namespace ctsTraffic::ctsConfig
     // 
     // NOTE:
     // - will *only* assume a string starting with "0x" to be converted as hexadecimal
-    //   if does not start with "0x", will assume as base-10
+    //   if it does not start with "0x", will assume as base-10
     // - if an unsigned type is specified in the template and a negative number is entered,
     //   will convert that to the "unsigned" version of that set of bits
     //   e.g.
@@ -1592,6 +1606,7 @@ namespace ctsTraffic::ctsConfig
             throw invalid_argument("range value [###,###]");
         }
         const auto* const commaDelimiter = find(value, valueEnd, L',');
+        // ReSharper disable once CppRedundantComplexityInComparison
         if (!(valueEnd > commaDelimiter + 1))
         {
             throw invalid_argument("range value [###,###]");
@@ -2199,7 +2214,7 @@ namespace ctsTraffic::ctsConfig
     //
     // Sets an IP Compartment (routing domain)
     //
-    // -Compartment:<ifalias>
+    // -Compartment:<ifAlias>
     //
     static void ParseForCompartment(vector<const wchar_t*>& args)
     {
@@ -2798,7 +2813,7 @@ namespace ctsTraffic::ctsConfig
                 L"     <default> == off\n"
                 L"     note : SO_REUSE_UNICASTPORT will be set instead of SO_PORT_SCALABILITY if the system is configured for it\n"
                 L"            SO_REUSE_UNICASTPORT will be used if AutoReusePortRangeNumberOfPorts is set in any MSFT_NetTCPSetting\n"
-                L"            This can be set in Powershell with the Set-NetTCPSetting Powershell command'let\n"
+                L"            This can be set in Powershell with the Set-NetTCPSetting Powershell command-let\n"
                 L"-PrePostRecvs:#####\n"
                 L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
                 L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
@@ -2971,9 +2986,12 @@ namespace ctsTraffic::ctsConfig
             {
                 uint32_t operationalStatus{};
                 setting.get(L"InterfaceOperationalStatus", &operationalStatus);
-                std::wstring adapterInfo =
-                    wil::str_printf<std::wstring>(L"Adapter %ws (%ws)\n\t", interfaceDescription.c_str(),
-                                                  operationalStatus == 1 ? L"Up" : L"NOT-UP");
+
+                auto adapterInfo =
+                    wil::str_printf<std::wstring>(
+                        L"Adapter %ws (%ws)\n\t",
+                        interfaceDescription.c_str(),
+                        operationalStatus == 1 ? L"UP" : L"NOT-UP");
 
                 const std::wstring comma_space{L", "};
                 adapterInfo += CheckOffloadRsc(interfaceDescription) + comma_space;
@@ -3290,9 +3308,9 @@ namespace ctsTraffic::ctsConfig
         // case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (g_printStatusInformation)
@@ -3532,9 +3550,9 @@ namespace ctsTraffic::ctsConfig
         case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (!writeToConsole && !g_errorLogger)
@@ -3598,9 +3616,9 @@ namespace ctsTraffic::ctsConfig
         // case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (!writeToConsole && !g_statusLogger)
@@ -3715,9 +3733,9 @@ namespace ctsTraffic::ctsConfig
         case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         const auto writeToLogFile = g_connectionLogger && !g_connectionLogger->IsCsvFormat();
@@ -3784,9 +3802,9 @@ namespace ctsTraffic::ctsConfig
         case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (!writeToConsole && !g_connectionLogger)
@@ -3927,9 +3945,9 @@ namespace ctsTraffic::ctsConfig
         case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (!writeToConsole && !g_connectionLogger)
@@ -4106,9 +4124,9 @@ namespace ctsTraffic::ctsConfig
         case 4: // connection info + error info
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
-        {
-            writeToConsole = true;
-        }
+            {
+                writeToConsole = true;
+            }
         }
 
         if (!writeToConsole && !g_connectionLogger)
@@ -4510,7 +4528,7 @@ namespace ctsTraffic::ctsConfig
 
         auto backlog = SOMAXCONN;
         // Starting in Win8 listen() supports a larger backlog
-        if (RioFunctions)
+        if (g_rioFunctions)
         {
             backlog = SOMAXCONN_HINT(SOMAXCONN);
         }
@@ -4566,12 +4584,12 @@ namespace ctsTraffic::ctsConfig
         }
         PRINT_DEBUG_INFO(L"\t\tSetProcessDefaultCpuSets: trying to find CPUs on Group %u\n", settingsGroupId);
 
-        typedef BOOL (__stdcall*pfn_SetProcessDefaultCpuSets)(
+        using pfn_SetProcessDefaultCpuSets = BOOL(__stdcall*)(
             HANDLE Process,
             _In_reads_(CpuSetIdCount) const DWORD* CpuSetIds,
             DWORD CpuSetIdCount);
 
-        typedef BOOL (__stdcall*pfn_GetSystemCpuSetInformation)(
+        using pfn_GetSystemCpuSetInformation = BOOL(__stdcall*)(
             PSYSTEM_CPU_SET_INFORMATION Info,
             ULONG Length,
             PULONG ReturnLength,
@@ -4937,8 +4955,6 @@ namespace ctsTraffic::ctsConfig
             break;
 
         case ProtocolType::NoProtocolSet:
-            [[fallthrough]];
-        default:
             FAIL_FAST_MSG("Unexpected Settings Protocol");
         }
         settingString.append(L"\n");
@@ -5019,8 +5035,6 @@ namespace ctsTraffic::ctsConfig
             break;
 
         case IoPatternType::NoIoSet:
-            [[fallthrough]];
-        default:
             FAIL_FAST_MSG("Unexpected Settings IoPattern");
         }
 
@@ -5271,9 +5285,9 @@ namespace ctsTraffic::ctsConfig
         case 5: // connection info + error info + status updates
         case 6: // above + debug info
         default:
-        {
-            (void)fwprintf_s(stdout, L"%ws", settingString.c_str());
-        }
+            {
+                (void)fwprintf_s(stdout, L"%ws", settingString.c_str());
+            }
         }
 
         // must manually convert all carriage returns to file-friendly carriage return/line feed

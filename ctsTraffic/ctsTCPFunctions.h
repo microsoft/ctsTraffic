@@ -20,18 +20,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-// ReSharper disable once CppInconsistentNaming
-void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    // ReSharper disable once CppInconsistentNaming
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-void ctsConnectByName(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsConnectByName(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
-void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
-void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 
-void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
-void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
-void ctsRioIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+    void ctsRioIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
 }
