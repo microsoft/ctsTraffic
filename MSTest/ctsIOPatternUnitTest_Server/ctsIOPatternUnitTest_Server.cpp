@@ -26,6 +26,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 
+#include <wil/networking.h>
+
+wil::networking::rio_extension_function_table g_rioTable = wil::networking::rio_extension_function_table::load();
+const RIO_EXTENSION_FUNCTION_TABLE& ctsTraffic::ctsConfig::RioFunctions() noexcept
+{
+    return g_rioTable.f;
+}
+
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
     // Test writer must define specialization of ToString<const Q& q> types used in Assert

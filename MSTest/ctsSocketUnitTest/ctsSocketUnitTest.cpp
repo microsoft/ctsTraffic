@@ -37,6 +37,10 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
     template <>
     inline std::wstring ToString<socket_address>(const socket_address& _addr)
     {
+        if (_addr.address_type() == NlatUnspecified)
+        {
+            return L"";
+        }
         return _addr.write_complete_address();
     }
 }

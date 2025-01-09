@@ -27,6 +27,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamServer.h"
 #include "ctsMediaStreamServerConnectedSocket.h"
 
+#include <wil/networking.h>
+
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
@@ -51,6 +54,14 @@ namespace ctsTraffic
     namespace ctsConfig
     {
         ctsConfigSettings* g_configSettings;
+
+        wil::networking::rio_extension_function_table g_rioTable =
+            wil::networking::rio_extension_function_table::load();
+
+        const RIO_EXTENSION_FUNCTION_TABLE& RioFunctions() noexcept
+        {
+            return g_rioTable.f;
+        }
 
         void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&,
                                     uint32_t) noexcept

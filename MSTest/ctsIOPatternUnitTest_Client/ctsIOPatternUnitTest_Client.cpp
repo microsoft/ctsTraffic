@@ -25,6 +25,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOPattern.h"
 
+#include <wil/networking.h>
+
+wil::networking::rio_extension_function_table g_rioTable = wil::networking::rio_extension_function_table::load();
+const RIO_EXTENSION_FUNCTION_TABLE& ctsTraffic::ctsConfig::RioFunctions() noexcept
+{
+    return g_rioTable.f;
+}
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 
