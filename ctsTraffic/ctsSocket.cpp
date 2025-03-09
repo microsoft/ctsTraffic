@@ -13,8 +13,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // parent header
 #include "ctsSocket.h"
-// OS headers
-#include <Windows.h>
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
@@ -157,22 +159,22 @@ namespace ctsTraffic
         }
     }
 
-    const socket_address& ctsSocket::GetLocalSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetLocalSockaddr() const noexcept
     {
         return m_localSockaddr;
     }
 
-    void ctsSocket::SetLocalSockaddr(const socket_address& localAddress) noexcept
+    void ctsSocket::SetLocalSockaddr(const wil::network::socket_address& localAddress) noexcept
     {
         m_localSockaddr = localAddress;
     }
 
-    const socket_address& ctsSocket::GetRemoteSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetRemoteSockaddr() const noexcept
     {
         return m_targetSockaddr;
     }
 
-    void ctsSocket::SetRemoteSockaddr(const socket_address& targetAddress) noexcept
+    void ctsSocket::SetRemoteSockaddr(const wil::network::socket_address& targetAddress) noexcept
     {
         m_targetSockaddr = targetAddress;
     }

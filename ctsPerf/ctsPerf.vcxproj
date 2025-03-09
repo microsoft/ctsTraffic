@@ -395,8 +395,6 @@
     <ClInclude Include="..\ctl\ctMemoryGuard.hpp" />
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp" />
     <ClInclude Include="..\ctl\ctRandom.hpp" />
-    <ClInclude Include="..\ctl\ctSockaddr.hpp" />
-    <ClInclude Include="..\ctl\ctSocketExtensions.hpp" />
     <ClInclude Include="..\ctl\ctString.hpp" />
     <ClInclude Include="..\ctl\ctThreadIocp.hpp" />
     <ClInclude Include="..\ctl\ctThreadPoolTimer.hpp" />

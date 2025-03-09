@@ -15,8 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -33,7 +33,7 @@ namespace ctsTraffic
     //
     // Its intended use is either for UDP sockets, or for very few concurrent connections
     //
-    void ctsConnectByName(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+    void ctsConnectByName(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
     {
         // attempt to get a reference to the socket
         const auto sharedSocket(weakSocket.lock());
@@ -61,10 +61,10 @@ namespace ctsTraffic
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
 
                 // read the local sockaddr - e.g. if we needed to bind locally
-                socket_address localAddr(sharedSocket->GetLocalSockaddr());
-                socket_address remoteAddr;
-                DWORD localAddrLength = socket_address::length;
-                DWORD remoteAddrLength = socket_address::length;
+                wil::network::socket_address localAddr(sharedSocket->GetLocalSockaddr());
+                wil::network::socket_address remoteAddr;
+                DWORD localAddrLength = localAddr.length();
+                DWORD remoteAddrLength = remoteAddr.length();
 
                 PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
                 if (!WSAConnectByNameW(

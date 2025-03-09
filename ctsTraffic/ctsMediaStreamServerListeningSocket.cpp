@@ -16,8 +16,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 #include <utility>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -30,7 +32,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, socket_address listeningAddr) :
+ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr) :
     m_threadIocp(std::make_shared<ctl::ctThreadIocp>(listeningSocket.get(), ctsConfig::g_configSettings->pTpEnvironment)),
     m_listeningSocket(std::move(listeningSocket)),
     m_listeningAddr(listeningAddr)
@@ -44,7 +46,7 @@ ctsMediaStreamServerListeningSocket::~ctsMediaStreamServerListeningSocket() noex
 {
     // close the socket, then end the TP
     {
-        const auto lock = m_listeningsocketLock.lock();
+        const auto lock = m_listeningSocketLock.lock();
         m_listeningSocket.reset();
     }
     m_threadIocp.reset();
@@ -52,11 +54,11 @@ ctsMediaStreamServerListeningSocket::~ctsMediaStreamServerListeningSocket() noex
 
 SOCKET ctsMediaStreamServerListeningSocket::GetSocket() const noexcept
 {
-    const auto lock = m_listeningsocketLock.lock();
+    const auto lock = m_listeningSocketLock.lock();
     return m_listeningSocket.get();
 }
 
-socket_address ctsMediaStreamServerListeningSocket::GetListeningAddress() const noexcept
+wil::network::socket_address ctsMediaStreamServerListeningSocket::GetListeningAddress() const noexcept
 {
     return m_listeningAddr;
 }
@@ -70,7 +72,7 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
     {
         try
         {
-            const auto lock = m_listeningsocketLock.lock();
+            const auto lock = m_listeningSocketLock.lock();
             if (m_listeningSocket)
             {
                 WSABUF wsabuffer;
@@ -80,7 +82,7 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
 
                 m_recvFlags = 0;
                 m_remoteAddr.reset(m_remoteAddr.family());
-                m_remoteAddrLen = socket_address::length;
+                m_remoteAddrLen = m_remoteAddr.length();
                 OVERLAPPED* pOverlapped = m_threadIocp->new_request(
                     [this](OVERLAPPED* pCallbackOverlapped) noexcept {
                         RecvCompletion(pCallbackOverlapped);
@@ -166,7 +168,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
         // scope to the object lock
         {
             // must take the object lock before touching socket
-            const auto lock = m_listeningsocketLock.lock();
+            const auto lock = m_listeningSocketLock.lock();
             if (!m_listeningSocket)
             {
                 // the listening socket was closed - just exit
@@ -179,25 +181,25 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                 // recvfrom failed
                 if (WSAECONNRESET == WSAGetLastError())
                 {
-                    if (!m_priorFailureWasConectionReset)
+                    if (!m_priorFailureWasConnectionReset)
                     {
                         ctsConfig::PrintErrorInfo(L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
                     }
-                    m_priorFailureWasConectionReset = true;
+                    m_priorFailureWasConnectionReset = true;
                 }
                 else
                 {
                     ctsConfig::PrintErrorInfo(
                         L"ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError());
                     ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
-                    m_priorFailureWasConectionReset = false;
+                    m_priorFailureWasConnectionReset = false;
                 }
                 // this receive-call failed - do nothing immediately in response
                 // - just attempt to post another recv at the end of this function
             }
             else
             {
-                m_priorFailureWasConectionReset = false;
+                m_priorFailureWasConnectionReset = false;
                 const ctsMediaStreamMessage message(ctsMediaStreamMessage::Extract(m_recvBuffer.data(), bytesReceived));
                 switch (message.m_action)
                 {

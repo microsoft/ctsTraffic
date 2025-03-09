@@ -14,8 +14,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <string>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -24,8 +26,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPattern.h"
 #include "ctsSocket.h"
 #include "ctsConfig.h"
-// wil headers always included last
-#include <wil/stl.h>
 
 namespace ctsTraffic
 {
@@ -51,7 +51,7 @@ namespace ctsTraffic
     static void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
-        const socket_address& targetAddress
+        const wil::network::socket_address& targetAddress
     ) noexcept;
 
     // The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
@@ -176,7 +176,7 @@ namespace ctsTraffic
             return;
         }
 
-        const socket_address targetAddress(sharedSocket->GetRemoteSockaddr());
+        const wil::network::socket_address targetAddress(sharedSocket->GetRemoteSockaddr());
         const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
         // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
@@ -192,8 +192,8 @@ namespace ctsTraffic
         if (NO_ERROR == response.m_errorCode)
         {
             // set the local and remote addresses on the socket object
-            socket_address localAddr;
-            auto localAddrLen = socket_address::length;
+            wil::network::socket_address localAddr;
+            auto localAddrLen = localAddr.length();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);
@@ -471,7 +471,7 @@ namespace ctsTraffic
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
-        const socket_address& targetAddress) noexcept
+        const wil::network::socket_address& targetAddress) noexcept
     {
         const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
@@ -503,8 +503,8 @@ namespace ctsTraffic
         if (NO_ERROR == gle)
         {
             // set the local and remote addresses
-            socket_address localAddr;
-            int localAddrLen = socket_address::length;
+            wil::network::socket_address localAddr;
+            int localAddrLen = localAddr.length();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

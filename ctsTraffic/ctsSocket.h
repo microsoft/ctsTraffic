@@ -18,8 +18,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 #include <type_traits>
 #include <utility>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -124,14 +126,14 @@ public:
     //
     // Gets/Sets the local address of the SOCKET
     //
-    const socket_address& GetLocalSockaddr() const noexcept;
-    void SetLocalSockaddr(const socket_address& localAddress) noexcept;
+    const wil::network::socket_address& GetLocalSockaddr() const noexcept;
+    void SetLocalSockaddr(const wil::network::socket_address& localAddress) noexcept;
 
     //
     // Gets/Sets the target address of the SOCKET, if there is one
     //
-    const socket_address& GetRemoteSockaddr() const noexcept;
-    void SetRemoteSockaddr(const socket_address& targetAddress) noexcept;
+    const wil::network::socket_address& GetRemoteSockaddr() const noexcept;
+    void SetRemoteSockaddr(const wil::network::socket_address& targetAddress) noexcept;
 
     //
     // Get/Set the ctsIOPattern
@@ -197,8 +199,8 @@ private:
     ctsTask m_timerTask{};
     std::function<void(std::weak_ptr<ctsSocket>, const ctsTask&)> m_timerCallback;
 
-    socket_address m_localSockaddr;
-    socket_address m_targetSockaddr;
+    wil::network::socket_address m_localSockaddr;
+    wil::network::socket_address m_targetSockaddr;
 
     long m_ioCount = 0L;
 

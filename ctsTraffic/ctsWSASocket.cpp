@@ -14,8 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -30,7 +30,7 @@ namespace ctsTraffic
     static int64_t g_portCounter = 0LL;
 
     // ReSharper disable once CppInconsistentNaming
-    void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+    void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
     {
         auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
@@ -52,7 +52,7 @@ namespace ctsTraffic
         //
         // Find a bind and target address by moving to the next address in the respective vectors
         //
-        socket_address localAddr;
+        wil::network::socket_address localAddr;
         if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
         {
             // if we are connecting by name, always bind to the ephemeral IPv6 address
@@ -67,7 +67,7 @@ namespace ctsTraffic
 
         localAddr.set_port(nextPort);
 
-        socket_address targetAddr;
+        wil::network::socket_address targetAddr;
         if (!ctsConfig::g_configSettings->TargetAddresses.empty())
         {
             //
@@ -145,7 +145,7 @@ namespace ctsTraffic
 
             if (0 == nextPort)
             {
-                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
                 {
                     gle = WSAGetLastError();
                 }
@@ -156,7 +156,7 @@ namespace ctsTraffic
                 constexpr auto bindRetryCount = 5;
                 for (auto bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
-                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), socket_address::length))
+                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
                     {
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)

@@ -14,8 +14,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <exception>
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -112,12 +114,12 @@ namespace ctsTraffic
             const auto& ioThreadPool = sharedSocket->GetIocpThreadpool();
             OVERLAPPED* pOverlapped = ioThreadPool->new_request(std::move(callback));
 
-            WSABUF wsabuffer;
-            wsabuffer.buf = task.m_buffer + task.m_bufferOffset;
-            wsabuffer.len = task.m_bufferLength;
+            WSABUF wsaBuffer{};
+            wsaBuffer.buf = task.m_buffer + task.m_bufferOffset;
+            wsaBuffer.len = task.m_bufferLength;
 
-            if (WSASendTo(socket, &wsabuffer, 1, nullptr, 0, targetAddress.sockaddr(),
-                          socket_address::length, pOverlapped, nullptr) != 0)
+            if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(),
+                          pOverlapped, nullptr) != 0)
             {
                 returnResult.m_errorCode = WSAGetLastError();
                 // IO pended == successfully initiating the IO

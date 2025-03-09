@@ -25,7 +25,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // local headers
 #include "ctWmiService.hpp"
 // wil headers
-#include <wil/stl.h>
 #include <wil/com.h>
 
 namespace ctl
@@ -140,7 +139,7 @@ public:
         // accessors:
         // - dereference operators to access the property name
         // - explicit type() method to expose its CIM type
-        BSTR operator*()
+        [[nodiscard]] BSTR operator*()
         {
             if (m_index == c_endIteratorIndex)
             {
@@ -149,7 +148,7 @@ public:
             return m_propertyName.get();
         }
 
-        BSTR operator*() const
+        [[nodiscard]] BSTR operator*() const
         {
             if (m_index == c_endIteratorIndex)
             {
@@ -158,7 +157,7 @@ public:
             return m_propertyName.get();
         }
 
-        BSTR* operator->()
+        [[nodiscard]] BSTR* operator->()
         {
             if (m_index == c_endIteratorIndex)
             {
@@ -176,7 +175,7 @@ public:
             return m_propertyType;
         }
 
-        bool operator==(const property_iterator& iter) const noexcept
+        [[nodiscard]] bool operator==(const property_iterator& iter) const noexcept
         {
             if (m_index != c_endIteratorIndex)
             {
@@ -186,19 +185,17 @@ public:
             return m_index == iter.m_index;
         }
 
-        bool operator!=(const property_iterator& iter) const noexcept
+        [[nodiscard]] bool operator!=(const property_iterator& iter) const noexcept
         {
             return !(*this == iter);
         }
 
-        // preincrement
         property_iterator& operator++()
         {
             increment();
             return *this;
         }
 
-        // postincrement
         property_iterator operator++(int)
         {
             property_iterator temp(*this);
@@ -206,7 +203,6 @@ public:
             return temp;
         }
 
-        // increment by integer
         property_iterator& operator+=(uint32_t inc)
         {
             for (auto loop = 0ul; loop < inc; ++loop)

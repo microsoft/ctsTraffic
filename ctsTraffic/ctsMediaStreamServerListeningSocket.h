@@ -16,8 +16,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <array>
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -32,28 +34,28 @@ private:
 
     std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
 
-    mutable wil::critical_section m_listeningsocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+    mutable wil::critical_section m_listeningSocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
 
-    const socket_address m_listeningAddr;
+    const wil::network::socket_address m_listeningAddr;
     std::array<char, c_recvBufferSize> m_recvBuffer{};
     DWORD m_recvFlags{};
-    socket_address m_remoteAddr;
+    wil::network::socket_address m_remoteAddr;
     int m_remoteAddrLen{};
-    bool m_priorFailureWasConectionReset = false;
+    bool m_priorFailureWasConnectionReset = false;
 
     void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
 
 public:
     ctsMediaStreamServerListeningSocket(
         wil::unique_socket&& listeningSocket,
-        socket_address listeningAddr);
+        const wil::network::socket_address& listeningAddr);
 
     ~ctsMediaStreamServerListeningSocket() noexcept;
 
     SOCKET GetSocket() const noexcept;
 
-    socket_address GetListeningAddress() const noexcept;
+    wil::network::socket_address GetListeningAddress() const noexcept;
 
     void InitiateRecv() noexcept;
 

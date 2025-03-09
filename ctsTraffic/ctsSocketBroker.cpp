@@ -11,14 +11,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-// parent header
-#include "ctsSocketBroker.h"
 // cpp headers
 #include <memory>
-#include <iterator>
 // os headers
 #include <Windows.h>
 // project headers
+#include "ctsSocketBroker.h"
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
 // wil headers

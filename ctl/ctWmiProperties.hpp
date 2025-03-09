@@ -27,7 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // local headers
 #include "ctWmiService.hpp"
 // wil headers
-#include <wil/stl.h>
 #include <wil/com.h>
 
 namespace ctl

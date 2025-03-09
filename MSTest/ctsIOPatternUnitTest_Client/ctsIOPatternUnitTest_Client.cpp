@@ -11,12 +11,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-#include <sdkddkver.h>
 #include "CppUnitTest.h"
 // cpp headers
 #include <memory>
 // OS headers
-#include <Windows.h>
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 // ctl headers
 #include <ctTimer.hpp>
 #include <ctString.hpp>
@@ -80,12 +80,12 @@ std::wstring ToString<ctsTraffic::ctsIoStatus>(const ctsTraffic::ctsIoStatus& st
 ///
 /// statics to return in the Fakes
 ///
-int64_t g_tcpBytesPerSecond = 0LL;
-uint32_t g_MaxBufferSize = 0UL;
-uint32_t g_BufferSize = 0UL;
-uint64_t g_transferSize = 0ULL;
-bool g_IsListening = false;
-ctsTraffic::ctsConfig::MediaStreamSettings g_MediaStreamSettings;
+static int64_t g_tcpBytesPerSecond = 0LL;
+static uint32_t g_MaxBufferSize = 0UL;
+static uint32_t g_BufferSize = 0UL;
+static uint64_t g_transferSize = 0ULL;
+static bool g_IsListening = false;
+static ctsTraffic::ctsConfig::MediaStreamSettings g_MediaStreamSettings;
 constexpr uint32_t g_TestRecvBufferLength = 1024;
 constexpr uint32_t g_TestBufferLength = 4;
 constexpr uint32_t g_TestErrorCode = 1;
@@ -101,19 +101,19 @@ void PrintConnectionResults(uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept
+void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -125,7 +125,7 @@ void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
-void PrintTcpDetails(const socket_address&, const socket_address&, SOCKET, const ctsTcpStatistics&) noexcept
+void PrintTcpDetails(const wil::network::socket_address&, const wil::network::socket_address&, SOCKET, const ctsTcpStatistics&) noexcept
 {
 }
 

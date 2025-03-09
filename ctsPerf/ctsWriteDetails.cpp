@@ -11,16 +11,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-// declaration header
-#include "ctsWriteDetails.h"
 // cpp headers
 #include <string>
-// os headers
-#include <Windows.h>
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/resource.h>
+
 // ctl headers
 #include <ctString.hpp>
-// wil headers always included last
-#include <wil/stl.h>
+// project headers
+#include "ctsWriteDetails.h"
 
 namespace ctsPerf
 {

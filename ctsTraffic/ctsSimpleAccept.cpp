@@ -16,8 +16,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 #include <exception>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -84,7 +86,7 @@ namespace details
                     THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                 }
 
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
                 {
                     THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
                 }
@@ -189,8 +191,8 @@ namespace details
 
             // increment the listening socket before calling accept on the blocking socket
             ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
-            socket_address remoteAddr;
-            auto remoteAddrLen = socket_address::length;
+            wil::network::socket_address remoteAddr;
+            auto remoteAddrLen = remoteAddr.length();
             const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
             auto gle = WSAGetLastError();
             ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
@@ -207,8 +209,8 @@ namespace details
             acceptSocket->SetSocket(newSocket);
             acceptSocket->SetRemoteSockaddr(remoteAddr);
 
-            socket_address localAddr;
-            auto localAddrLen = socket_address::length;
+            wil::network::socket_address localAddr;
+            auto localAddrLen = localAddr.length();
             if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
             {
                 acceptSocket->SetLocalSockaddr(localAddr);
@@ -255,7 +257,7 @@ namespace details
     }
 }
 
-void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     DWORD error = 0;
     if (!InitOnceExecuteOnce(&details::g_ctsSimpleAcceptImplInitOnce, details::ctsSimpleAcceptImplInitFn, &error, nullptr))

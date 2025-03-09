@@ -18,26 +18,25 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <memory>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 // ctl headers
 #include <ctString.hpp>
 #include <ctWmiInitialize.hpp>
 #include <ctWmiPerformance.hpp>
+
 // project headers
 #include "ctsWriteDetails.h"
 #include "ctsEstats.h"
-// wil headers always included last
-#include <wil/stl.h>
 
 using namespace std;
 using namespace ctl;
 
-HANDLE g_break = nullptr;
-const ctWmiService* g_wmi = nullptr;
+static HANDLE g_break = nullptr;
+const static ctWmiService* g_wmi = nullptr;
 
-BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
+static BOOL WINAPI BreakHandlerRoutine(DWORD) noexcept
 {
     // regardless of the break type, signal to exit
     SetEvent(g_break);
@@ -79,26 +78,26 @@ constexpr PCWSTR c_usageStatement =
 // 0 is a possible process ID
 constexpr DWORD c_uninitializedProcessId = 0xffffffff;
 
-ctWmiPerformance InstantiateProcessorCounters();
-ctWmiPerformance InstantiateMemoryCounters();
-ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInterfaceDescription);
-ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackInterfaceDescription);
-ctWmiPerformance InstantiateIPCounters();
-ctWmiPerformance InstantiateTCPCounters();
-ctWmiPerformance InstantiateUDPCounters();
-ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackProcess);
-ctWmiPerformance InstantiatePerProcessByPIDCounters(DWORD processId);
+static ctWmiPerformance InstantiateProcessorCounters();
+static ctWmiPerformance InstantiateMemoryCounters();
+static ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInterfaceDescription);
+static ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackInterfaceDescription);
+static ctWmiPerformance InstantiateIPCounters();
+static ctWmiPerformance InstantiateTCPCounters();
+static ctWmiPerformance InstantiateUDPCounters();
+static ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackProcess);
+static ctWmiPerformance InstantiatePerProcessByPIDCounters(DWORD processId);
 
-void DeleteProcessorCounters() noexcept;
-void DeleteMemoryCounters() noexcept;
-void DeleteNetworkAdapterCounters() noexcept;
-void DeleteNetworkInterfaceCounters() noexcept;
-void DeleteIPCounters() noexcept;
-void DeleteTCPCounters() noexcept;
-void DeleteUDPCounters() noexcept;
-void DeletePerProcessCounters() noexcept;
+static void DeleteProcessorCounters() noexcept;
+static void DeleteMemoryCounters() noexcept;
+static void DeleteNetworkAdapterCounters() noexcept;
+static void DeleteNetworkInterfaceCounters() noexcept;
+static void DeleteIPCounters() noexcept;
+static void DeleteTCPCounters() noexcept;
+static void DeleteUDPCounters() noexcept;
+static void DeletePerProcessCounters() noexcept;
 
-void DeleteAllCounters() noexcept
+static void DeleteAllCounters() noexcept
 {
     DeleteProcessorCounters();
     DeleteMemoryCounters();
@@ -110,25 +109,25 @@ void DeleteAllCounters() noexcept
     DeletePerProcessCounters();
 }
 
-void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer);
-void ProcessPerProcessCounters(const wstring& trackProcess, DWORD processId, ctsPerf::ctsWriteDetails& writer);
+static void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer);
+static void ProcessPerProcessCounters(const wstring& trackProcess, DWORD processId, ctsPerf::ctsWriteDetails& writer);
 
-PCWSTR g_fileName = L"ctsPerf.csv";
-PCWSTR g_networkingFilename = L"ctsNetworking.csv";
-PCWSTR g_processFilename = L"ctsPerProcess.csv";
+static PCWSTR g_fileName = L"ctsPerf.csv";
+static PCWSTR g_networkingFilename = L"ctsNetworking.csv";
+static PCWSTR g_processFilename = L"ctsPerProcess.csv";
 
-bool g_meanOnly = false;
+static bool g_meanOnly = false;
 
-int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
+int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)  // NOLINT(misc-use-internal-linkage)
 {
-    WSADATA wsadata;
-    if (const auto wsError = WSAStartup(WINSOCK_VERSION, &wsadata); wsError != 0)
+    WSADATA wsaData;
+    if (const auto wsError = WSAStartup(WINSOCK_VERSION, &wsaData); wsError != 0)
     {
         wprintf(L"ctsPerf failed at WSAStartup [%d]\n", wsError);
         return wsError;
@@ -367,12 +366,12 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)
 /****************************************************************************************************/
 /*                                         Processor                                                */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorTime;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_processorPercentOfMax;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentDpcTime;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_processorDpcsQueuedPerSecond;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentPrivilegedTime;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentUserTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_processorPercentOfMax;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentDpcTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_processorDpcsQueuedPerSecond;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentPrivilegedTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_processorPercentUserTime;
 
 ctWmiPerformance InstantiateProcessorCounters()
 {
@@ -574,8 +573,8 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
 /****************************************************************************************************/
 /*                                            Memory                                                */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_pagedPoolBytes;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_nonPagedPoolBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_pagedPoolBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_nonPagedPoolBytes;
 
 ctWmiPerformance InstantiateMemoryCounters()
 {
@@ -644,14 +643,14 @@ void ProcessMemoryCounters(ctsPerf::ctsWriteDetails& writer)
 /****************************************************************************************************/
 /*                                     NetworkAdapter                                               */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterTotalBytes;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterOffloadedConnections;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsOutboundDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsOutboundErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsPerSecond;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterActiveRscConnections;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterTotalBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterOffloadedConnections;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsOutboundDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsOutboundErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsReceivedErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterPacketsPerSecond;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkAdapterActiveRscConnections;
 
 ctWmiPerformance InstantiateNetworkAdapterCounters(const std::wstring& trackInterfaceDescription)
 {
@@ -890,12 +889,12 @@ void ProcessNetworkAdapterCounters(ctsPerf::ctsWriteDetails& writer)
 /****************************************************************************************************/
 /*                                     NetworkInterface                                             */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfaceTotalBytes;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsOutboundDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsOutboundErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedUnknown;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfaceTotalBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsOutboundDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsOutboundErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_networkInterfacePacketsReceivedUnknown;
 
 ctWmiPerformance InstantiateNetworkInterfaceCounters(const std::wstring& trackInterfaceDescription)
 {
@@ -1080,23 +1079,23 @@ void ProcessNetworkInterfaceCounters(ctsPerf::ctsWriteDetails& writer)
 /*                                        TCPIP IPv4                                                */
 /*                                        TCPIP IPv6                                                */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4OutboundDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4OutboundNoRoute;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedAddressErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedHeaderErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedUnknownProtocol;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4FragmentReassemblyFailures;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4FragmentationFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4OutboundDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4OutboundNoRoute;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedAddressErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedHeaderErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4ReceivedUnknownProtocol;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4FragmentReassemblyFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv4FragmentationFailures;
 
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6OutboundDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6OutboundNoRoute;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedAddressErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedDiscarded;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedHeaderErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedUnknownProtocol;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentReassemblyFailures;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentationFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6OutboundDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6OutboundNoRoute;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedAddressErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedDiscarded;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedHeaderErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6ReceivedUnknownProtocol;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentReassemblyFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipIpv6FragmentationFailures;
 
 ctWmiPerformance InstantiateIPCounters()
 {
@@ -1380,14 +1379,14 @@ void ProcessIPCounters(ctsPerf::ctsWriteDetails& writer)
 /*                                        TCPIP TCPv4                                                */
 /*                                        TCPIP TCPv6                                                */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionsEstablished;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionsEstablished;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionFailures;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionFailures;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionsReset;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionsReset;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnections;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnectionsPerSec;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionsEstablished;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionsEstablished;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionFailures;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv4ConnectionsReset;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipTcpv6ConnectionsReset;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnections;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspRejectedConnectionsPerSec;
 
 ctWmiPerformance InstantiateTCPCounters()
 {
@@ -1571,14 +1570,14 @@ void ProcessTCPCounters(ctsPerf::ctsWriteDetails& writer)
 /*                                        TCPIP UDPv4                                                */
 /*                                        TCPIP UDPv6                                                */
 /****************************************************************************************************/
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4NoportPerSec;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4ReceivedErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4DatagramsPerSec;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6NoportPerSec;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6ReceivedErrors;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6DatagramsPerSec;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagrams;
-shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagramsPerSecond;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4NoportPerSec;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4ReceivedErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv4DatagramsPerSec;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6NoportPerSec;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6ReceivedErrors;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_tcpipUdpv6DatagramsPerSec;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagrams;
+static shared_ptr<ctWmiPerformanceCounter<ULONG>> g_winsockBspDroppedDatagramsPerSecond;
 
 ctWmiPerformance InstantiateUDPCounters()
 {
@@ -1785,12 +1784,12 @@ void ProcessUDPCounters(ctsPerf::ctsWriteDetails& writer)
 }
 
 
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessPrivilegedTime;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessProcessorTime;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessUserTime;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessPrivateBytes;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessVirtualBytes;
-shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessWorkingSet;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessPrivilegedTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessProcessorTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessUserTime;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessPrivateBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessVirtualBytes;
+static shared_ptr<ctWmiPerformanceCounter<ULONGLONG>> g_perProcessWorkingSet;
 
 ctWmiPerformance InstantiatePerProcessByNameCounters(const std::wstring& trackProcess)
 {

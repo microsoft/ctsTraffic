@@ -11,18 +11,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 */
 
-// parent header
-#include "ctsMediaStreamServerConnectedSocket.h"
 // cpp headers
 #include <memory>
 #include <functional>
 #include <utility>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctString.hpp>
 #include <ctTimer.hpp>
 // project headers
+#include "ctsMediaStreamServerConnectedSocket.h"
 #include "ctsWinsockLayer.h"
 
 using namespace ctl;
@@ -32,12 +33,12 @@ namespace ctsTraffic
     ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
         std::weak_ptr<ctsSocket> weakSocket,
         SOCKET sendingSocket,
-        socket_address remoteAddr,
+        wil::network::socket_address remoteAddr,
         ctsMediaStreamConnectedSocketIoFunctor ioFunctor) :
         m_weakSocket(std::move(weakSocket)),
         m_ioFunctor(std::move(ioFunctor)),
         m_sendingSocket(sendingSocket),
-        m_remoteAddr(std::move(remoteAddr)),
+        m_remoteAddr(remoteAddr),
         m_connectTime(ctTimer::snap_qpc_as_msec())
     {
         m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback,
@@ -170,7 +171,7 @@ namespace ctsTraffic
                 returnedStatus = WSAECONNABORTED;
             }
 
-            socket_address_wstring remote_addr_string{};
+            wil::network::socket_address_wstring remote_addr_string{};
             thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
             ctsConfig::PrintErrorInfo(
                 L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
@@ -180,7 +181,7 @@ namespace ctsTraffic
         }
         else if (ctsIoStatus::CompletedIo == status)
         {
-            socket_address_wstring remote_addr_string{};
+            wil::network::socket_address_wstring remote_addr_string{};
             thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",

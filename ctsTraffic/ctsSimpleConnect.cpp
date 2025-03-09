@@ -13,8 +13,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -28,7 +30,7 @@ namespace ctsTraffic
 //
 // Its intended use is either for UDP sockets, or for very few concurrent connections
 //
-void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     // attempt to get a reference to the socket
     const auto sharedSocket(weakSocket.lock());
@@ -42,7 +44,7 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     const auto socket = socketReference.GetSocket();
     if (socket != INVALID_SOCKET)
     {
-        const socket_address& targetAddress = sharedSocket->GetRemoteSockaddr();
+        const wil::network::socket_address& targetAddress = sharedSocket->GetRemoteSockaddr();
 
         error = ctsConfig::SetPreConnectOptions(socket);
         if (error != NO_ERROR)
@@ -51,7 +53,7 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         }
         else
         {
-            if (0 != connect(socket, targetAddress.sockaddr(), socket_address::length))
+            if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
             {
                 error = WSAGetLastError();
                 ctsConfig::PrintErrorIfFailed("connect", error);
@@ -59,8 +61,8 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             else
             {
                 // set the local address
-                socket_address localAddr;
-                auto localAddrLen = socket_address::length;
+                wil::network::socket_address localAddr;
+                auto localAddrLen = localAddr.length();
                 if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
                 {
                     sharedSocket->SetLocalSockaddr(localAddr);

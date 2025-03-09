@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <atomic>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 #include <ctsConfig.h>
 #include "ctsSocket.h"
@@ -34,46 +34,43 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
     template <>
-    inline std::wstring ToString<socket_address>(const socket_address& _value)
+    inline std::wstring ToString<wil::network::socket_address>(const wil::network::socket_address& _value)
     {
         return _value.write_complete_address();
     }
 }
 
-uint64_t g_transferSize = 0ULL;
-bool g_isListening = false;
+static uint64_t g_transferSize = 0ULL;
+static bool g_isListening = false;
 
 ///
 /// Fakes
 ///
 namespace ctsTraffic
 {
-    int64_t g_tcpBytesPerSecond = 0LL;
+    static int64_t g_tcpBytesPerSecond = 0LL;
 
     namespace ctsConfig
     {
         ctsConfigSettings* g_configSettings;
 
-        void PrintConnectionResults(const socket_address&, const socket_address&,
-                                    uint32_t) noexcept
+        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
         {
         }
 
-        void PrintConnectionResults(const socket_address&, const socket_address&,
-                                    uint32_t, const ctsTcpStatistics&) noexcept
+        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
         {
         }
 
-        void PrintConnectionResults(const socket_address&, const socket_address&,
-                                    uint32_t, const ctsUdpStatistics&) noexcept
+        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
         {
         }
 
-        void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+        void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
         {
         }
 
-        void PrintException(const std::exception&) noexcept
+        void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
         {
         }
 
@@ -117,13 +114,13 @@ namespace ctsTraffic
         }
     }
 
-    HANDLE g_RemovedSocketEvent = nullptr;
-    std::atomic<uint32_t> g_IOCount = 0;
-    std::atomic<uint32_t> g_IOPended = 0;
-    uint32_t g_IOStatusCode = ERROR_SUCCESS;
-    uint32_t g_IOTimeOffset = 0;
-    ctsTaskAction g_TaskAction = ctsTaskAction::None;
-    ctsIoStatus g_IOStatus = ctsIoStatus::ContinueIo;
+    static HANDLE g_RemovedSocketEvent = nullptr;
+    static std::atomic<uint32_t> g_IOCount = 0;
+    static std::atomic<uint32_t> g_IOPended = 0;
+    static uint32_t g_IOStatusCode = ERROR_SUCCESS;
+    static uint32_t g_IOTimeOffset = 0;
+    static ctsTaskAction g_TaskAction = ctsTaskAction::None;
+    static ctsIoStatus g_IOStatus = ctsIoStatus::ContinueIo;
 
     ctsIoPattern::ctsIoPattern(uint32_t) :
         // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
@@ -183,8 +180,8 @@ namespace ctsTraffic
         }
 
         // none of these are called - required to be defined
-        void PrintStatistics(const socket_address&,
-                             const socket_address&) noexcept override
+        void PrintStatistics(const wil::network::socket_address&,
+                             const wil::network::socket_address&) noexcept override
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
             Assert::IsFalse(true);
@@ -223,7 +220,7 @@ namespace ctsTraffic
             return nullptr;
         }
 
-        void PrintTcpInfo(const socket_address&, const socket_address&,
+        void PrintTcpInfo(const wil::network::socket_address&, const wil::network::socket_address&,
                           SOCKET) noexcept override
         {
             Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::PrintTcpInfo\n");
@@ -265,7 +262,7 @@ namespace ctsTraffic
     }
 
     // one callout fake to ctsMediaStreamServerImpl
-    void ctsMediaStreamServerImpl::RemoveSocket(const socket_address&)
+    void ctsMediaStreamServerImpl::RemoveSocket(const wil::network::socket_address&)
     {
     }
 }
@@ -311,10 +308,14 @@ namespace ctsUnitTest
             g_IOTimeOffset = 0;
             ResetEvent(g_RemovedSocketEvent);
 
-            std::vector<socket_address> test_addr;
-            for (const auto& address : wil::networking::resolve_name_nothrow(L"1.1.1.1"))
+            std::vector<wil::network::socket_address> test_addr;
+            wil::unique_addrinfo resolved_addr;
+            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
             {
-                test_addr.emplace_back(address);
+                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+                {
+                    test_addr.emplace_back(address);
+                }
             }
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
@@ -327,7 +328,7 @@ namespace ctsUnitTest
                 std::weak_ptr(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
                 {
                     ++callback_invoked;
 
@@ -362,10 +363,14 @@ namespace ctsUnitTest
             g_IOTimeOffset = 0;
             ResetEvent(g_RemovedSocketEvent);
 
-            std::vector<socket_address> test_addr;
-            for (const auto& address : wil::networking::resolve_name_nothrow(L"1.1.1.1"))
+            std::vector<wil::network::socket_address> test_addr;
+            wil::unique_addrinfo resolved_addr;
+            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
             {
-                test_addr.emplace_back(address);
+                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+                {
+                    test_addr.emplace_back(address);
+                }
             }
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
@@ -378,7 +383,7 @@ namespace ctsUnitTest
                 std::weak_ptr(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
                 {
                     ++callback_invoked;
 
@@ -413,10 +418,14 @@ namespace ctsUnitTest
             g_IOTimeOffset = 100; // 100ms apart
             ResetEvent(g_RemovedSocketEvent);
 
-            std::vector<socket_address> test_addr;
-            for (const auto& address : wil::networking::resolve_name_nothrow(L"1.1.1.1"))
+            std::vector<wil::network::socket_address> test_addr;
+            wil::unique_addrinfo resolved_addr;
+            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
             {
-                test_addr.emplace_back(address);
+                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+                {
+                    test_addr.emplace_back(address);
+                }
             }
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
@@ -429,7 +438,7 @@ namespace ctsUnitTest
                 std::weak_ptr(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
                 {
                     ++callback_invoked;
 
@@ -468,10 +477,14 @@ namespace ctsUnitTest
             g_TaskAction = ctsTaskAction::None;
             ResetEvent(g_RemovedSocketEvent);
 
-            std::vector<socket_address> test_addr;
-            for (const auto& address : wil::networking::resolve_name_nothrow(L"1.1.1.1"))
+            std::vector<wil::network::socket_address> test_addr;
+            wil::unique_addrinfo resolved_addr;
+            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
             {
-                test_addr.emplace_back(address);
+                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+                {
+                    test_addr.emplace_back(address);
+                }
             }
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
@@ -484,7 +497,7 @@ namespace ctsUnitTest
                 std::weak_ptr(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
                 {
                     ++callback_invoked;
 
@@ -520,10 +533,14 @@ namespace ctsUnitTest
             g_IOTimeOffset = 100; // 100ms apart
             ResetEvent(g_RemovedSocketEvent);
 
-            std::vector<socket_address> test_addr;
-            for (const auto& address : wil::networking::resolve_name_nothrow(L"1.1.1.1"))
+            std::vector<wil::network::socket_address> test_addr;
+            wil::unique_addrinfo resolved_addr;
+            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
             {
-                test_addr.emplace_back(address);
+                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+                {
+                    test_addr.emplace_back(address);
+                }
             }
             Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
@@ -536,7 +553,7 @@ namespace ctsUnitTest
                 std::weak_ptr(test_socket),
                 INVALID_SOCKET,
                 test_addr[0],
-                [&](ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
                 {
                     ++callback_invoked;
 

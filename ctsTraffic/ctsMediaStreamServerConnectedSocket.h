@@ -15,8 +15,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
@@ -47,7 +49,7 @@ namespace ctsTraffic
         // that (potentially) many connected datagram sockets will send from
         // thus it's not owned by this class
         const SOCKET m_sendingSocket;
-        const socket_address m_remoteAddr;
+        const wil::network::socket_address m_remoteAddr;
 
         int64_t m_sequenceNumber = 0LL;
         const int64_t m_connectTime = 0LL;
@@ -56,12 +58,12 @@ namespace ctsTraffic
         ctsMediaStreamServerConnectedSocket(
             std::weak_ptr<ctsSocket> weakSocket,
             SOCKET sendingSocket,
-            socket_address remoteAddr,
+            wil::network::socket_address remoteAddr,
             ctsMediaStreamConnectedSocketIoFunctor ioFunctor);
 
         ~ctsMediaStreamServerConnectedSocket() noexcept;
 
-        const socket_address& GetRemoteAddress() const noexcept
+        const wil::network::socket_address& GetRemoteAddress() const noexcept
         {
             return m_remoteAddr;
         }

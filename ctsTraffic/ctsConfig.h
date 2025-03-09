@@ -21,8 +21,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <optional>
 #include <stdexcept>
 #include <vector>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctTimer.hpp>
 //
@@ -31,9 +33,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // - this header *can* be included here because it does not include any cts* headers
 //
 #include "ctsStatistics.hpp"
-
-using wil::networking::socket_address;
-using wil::networking::socket_address_wstring;
 
 namespace ctsTraffic
 {
@@ -45,9 +44,6 @@ namespace ctsTraffic
     //
     class ctsSocket;
     using ctsSocketFunction = std::function<void (std::weak_ptr<ctsSocket>)>;
-
-    inline wil::networking::winsock_extension_function_table SocketFunctions = wil::networking::winsock_extension_function_table::load();
-    inline wil::networking::rio_extension_function_table RioFunctions = wil::networking::rio_extension_function_table::load();
 
     namespace ctsConfig
     {
@@ -224,28 +220,28 @@ namespace ctsTraffic
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept;
 
-        void PrintNewConnection(const socket_address& localAddr, const socket_address& remoteAddr) noexcept;
+        void PrintNewConnection(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept;
 
         void PrintConnectionResults(uint32_t error) noexcept;
         void PrintConnectionResults(
-            const socket_address& localAddr,
-            const socket_address& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             uint32_t error,
             const ctsTcpStatistics& stats) noexcept;
         void PrintConnectionResults(
-            const socket_address& localAddr,
-            const socket_address& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             uint32_t error,
             const ctsUdpStatistics& stats) noexcept;
 
         void PrintTcpDetails(
-            const socket_address& localAddr,
-            const socket_address& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             SOCKET socket,
             const ctsTcpStatistics& stats) noexcept;
         constexpr void PrintTcpDetails(
-            const socket_address&,
-            const socket_address&,
+            const wil::network::socket_address&,
+            const wil::network::socket_address&,
             SOCKET,
             const ctsUdpStatistics&) noexcept
         {
@@ -267,7 +263,7 @@ namespace ctsTraffic
         TcpShutdownType GetShutdownType() noexcept;
 
         // Set* functions
-        int32_t SetPreBindOptions(SOCKET socket, const socket_address& localAddress) noexcept;
+        int32_t SetPreBindOptions(SOCKET socket, const wil::network::socket_address& localAddress) noexcept;
         int32_t SetPreConnectOptions(SOCKET) noexcept;
 
         // for the MediaStream pattern
@@ -374,6 +370,9 @@ namespace ctsTraffic
             HANDLE CtrlCHandle = nullptr;
             PTP_CALLBACK_ENVIRON pTpEnvironment = nullptr;
 
+            wil::network::winsock_extension_function_table SocketFunctions = wil::network::winsock_extension_function_table::load();
+            wil::network::rio_extension_function_table RioFunctions = wil::network::rio_extension_function_table::load();
+
             ctsSocketFunction CreateFunction;
             ctsSocketFunction ConnectFunction;
             ctsSocketFunction AcceptFunction;
@@ -393,9 +392,9 @@ namespace ctsTraffic
             uint32_t ConnectionLimit = 0;
             uint32_t ConnectionThrottleLimit = 0;
 
-            std::vector<socket_address> ListenAddresses{};
-            std::vector<socket_address> TargetAddresses{};
-            std::vector<socket_address> BindAddresses{};
+            std::vector<wil::network::socket_address> ListenAddresses{};
+            std::vector<wil::network::socket_address> TargetAddresses{};
+            std::vector<wil::network::socket_address> BindAddresses{};
             std::vector<std::wstring> TargetAddressStrings{};
 
             // stats for status updates and summaries

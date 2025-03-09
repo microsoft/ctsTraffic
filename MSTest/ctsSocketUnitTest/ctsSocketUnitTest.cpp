@@ -14,6 +14,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <sdkddkver.h>
 #include "CppUnitTest.h"
 
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 #include <ctString.hpp>
 
 #include "ctsSocket.h"
@@ -35,7 +38,7 @@ inline std::wstring ToString<shared_ptr<ctl::ctThreadIocp>>(const shared_ptr<ctl
 }
 
 template <>
-inline std::wstring ToString<socket_address>(const socket_address& _addr)
+inline std::wstring ToString<wil::network::socket_address>(const wil::network::socket_address& _addr)
 {
     return _addr.write_complete_address();
 }
@@ -72,7 +75,7 @@ namespace ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    void PrintDebug(PCWSTR _text, ...) noexcept
+    void PrintDebug(PCWSTR _text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
     {
         va_list args;
         va_start(args, _text);
@@ -83,17 +86,17 @@ namespace ctsConfig
         va_end(args);
     }
 
-    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
     }
 
-    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }
@@ -240,10 +243,10 @@ public:
 
         // since can't directly tell if the socket was closed, as the ctsSocket object is now destroyed
         // - trying to use it should fail with an invalid socket error
-        socket_address local_addr(AF_INET);
+        wil::network::socket_address local_addr(AF_INET);
         local_addr.set_address_loopback();
         local_addr.set_port(55555);
-        const auto error = ::bind(socket_value, local_addr.sockaddr(), socket_address::length);
+        const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.length());
         const auto gle = WSAGetLastError();
         Assert::AreEqual(SOCKET_ERROR, error);
         Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);
@@ -271,7 +274,7 @@ public:
         shared_ptr<ctsSocketState> default_socket_state_object;
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        socket_address test_address(AF_INET);
+        wil::network::socket_address test_address(AF_INET);
         test_address.set_address_loopback();
         test_address.set_port(55555);
 
@@ -285,7 +288,7 @@ public:
         shared_ptr<ctsSocketState> default_socket_state_object;
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
-        socket_address test_address(AF_INET);
+        wil::network::socket_address test_address(AF_INET);
         test_address.set_address_loopback();
         test_address.set_port(55555);
 

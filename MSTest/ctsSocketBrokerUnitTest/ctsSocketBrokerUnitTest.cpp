@@ -15,10 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 // cpp headers
+#include <algorithm>
 #include <vector>
 #include <memory>
 // os headers
-#include <Windows.h>
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 // project headers
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"
@@ -35,7 +37,7 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintDebug(PCWSTR text, ...) noexcept
+void PrintDebug(PCWSTR text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     va_list args;
     va_start(args, text);
@@ -52,17 +54,17 @@ unsigned long PrintThrownException() noexcept
     return 0;
 }
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
 }
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
 }
 
-void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
 }
@@ -344,7 +346,7 @@ private:
     } m_work{*this};
 };
 
-SocketStatePool* g_socketPool;
+static SocketStatePool* g_socketPool;
 
 
 ///

@@ -16,8 +16,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <vector>
 #include <algorithm>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -128,7 +130,7 @@ namespace ctsTraffic
         // NOLINT(clang-diagnostic-exit-time-destructors)
 
         // endpoints that have been received from clients not yet matched to ctsSockets
-        _Guarded_by_(g_socketVectorGuard) static std::vector<std::pair<SOCKET, socket_address>>
+        _Guarded_by_(g_socketVectorGuard) static std::vector<std::pair<SOCKET, wil::network::socket_address>>
         g_awaitingEndpoints; // NOLINT(clang-diagnostic-exit-time-destructors)
 
 
@@ -151,10 +153,10 @@ namespace ctsTraffic
                     THROW_WIN32_MSG(error, "SetPreBindOptions (ctsMediaStreamServer)");
                 }
 
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
                 {
                     error = WSAGetLastError();
-                    wil::networking::socket_address_string addrBuffer{};
+                    wil::network::socket_address_string addrBuffer{};
                     addr.write_address_nothrow(addrBuffer);
                     THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
                 }
@@ -222,7 +224,7 @@ namespace ctsTraffic
 
                 if (foundSocket == std::end(g_connectedSockets))
                 {
-                    socket_address_wstring remote_address{};
+                    wil::network::socket_address_wstring remote_address{};
                     sharedSocket->GetRemoteSockaddr().write_complete_address_nothrow(remote_address);
                     ctsConfig::PrintErrorInfo(
                         L"ctsMediaStreamServer - failed to find the socket with remote address %ws in our connected socket list to continue sending datagrams",
@@ -312,7 +314,7 @@ namespace ctsTraffic
 
         // Process the removal of a connected socket once it is completed
         // - remove_socket takes the remote address to find the socket
-        void RemoveSocket(const socket_address& targetAddr)
+        void RemoveSocket(const wil::network::socket_address& targetAddr)
         {
             const auto lockConnectedObject = g_socketVectorGuard.lock();
 
@@ -333,8 +335,8 @@ namespace ctsTraffic
         // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
         // - else we'll queue it to awaiting_endpoints
         void Start(SOCKET socket,
-                   const socket_address& localAddr,
-                   const socket_address& targetAddr)
+                   const wil::network::socket_address& localAddr,
+                   const wil::network::socket_address& targetAddr)
         {
             const auto lockAwaitingObject = g_socketVectorGuard.lock();
 
@@ -357,7 +359,7 @@ namespace ctsTraffic
 
             const auto awaitingEndpoint = std::ranges::find_if(
                 g_awaitingEndpoints,
-                [&targetAddr](const std::pair<SOCKET, socket_address>& endpoint) noexcept
+                [&targetAddr](const std::pair<SOCKET, wil::network::socket_address>& endpoint) noexcept
                 {
                     return targetAddr == endpoint.second;
                 });
@@ -422,7 +424,7 @@ namespace ctsTraffic
                 return wsIOResult(WSA_OPERATION_ABORTED);
             }
 
-            const socket_address& remoteAddr(connectedSocket->GetRemoteAddress());
+            const wil::network::socket_address& remoteAddr(connectedSocket->GetRemoteAddress());
             const ctsTask nextTask = connectedSocket->GetNextTask();
 
             wsIOResult returnResults;
@@ -440,7 +442,7 @@ namespace ctsTraffic
                     &returnResults.m_bytesTransferred,
                     0,
                     remoteAddr.sockaddr(),
-                    socket_address::length,
+                    remoteAddr.length(),
                     nullptr,
                     nullptr);
 
@@ -448,7 +450,7 @@ namespace ctsTraffic
                 {
                     const auto error = WSAGetLastError();
 
-                    socket_address_wstring remote_addr_string{};
+                    wil::network::socket_address_wstring remote_addr_string{};
                     remoteAddr.write_complete_address_nothrow(remote_addr_string);
                     ctsConfig::PrintErrorInfo(
                         L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
@@ -481,7 +483,7 @@ namespace ctsTraffic
                         &bytesSent,
                         0,
                         remoteAddr.sockaddr(),
-                        socket_address::length,
+                        remoteAddr.length(),
                         nullptr,
                         nullptr);
                     if (SOCKET_ERROR == sendResult)
@@ -496,7 +498,7 @@ namespace ctsTraffic
                                 bytesRequested += wsaBuffer.len;
                             }
 
-                            socket_address_wstring remote_addr_string{};
+                            wil::network::socket_address_wstring remote_addr_string{};
                             remoteAddr.write_complete_address_nothrow(remote_addr_string);
                             ctsConfig::PrintErrorInfo(
                                 L"WSASendTo(%Iu, seq %lld, %ws) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
@@ -507,7 +509,7 @@ namespace ctsTraffic
                         }
                         else
                         {
-                            socket_address_wstring remote_addr_string{};
+                            wil::network::socket_address_wstring remote_addr_string{};
                             remoteAddr.write_complete_address_nothrow(remote_addr_string);
                             ctsConfig::PrintErrorInfo(
                                 L"WSASendTo(%Iu, seq %lld, %ws) failed [%d]",

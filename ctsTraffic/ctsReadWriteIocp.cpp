@@ -13,8 +13,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -24,7 +26,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
+void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;  // NOLINT(misc-use-internal-linkage)
 
 // IO Threadpool completion callback 
 static void ctsReadWriteIocpIoCompletionCallback(

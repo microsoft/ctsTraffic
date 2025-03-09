@@ -13,10 +13,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #define CTSTRAFFIC_UNIT_TESTS
 
-#include <sdkddkver.h>
 #include "CppUnitTest.h"
 
 #include <memory>
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 #include <ctString.hpp>
 #include "ctsIOTask.hpp"
@@ -25,17 +26,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-int64_t g_QpcTime = 0LL;
+static int64_t g_QpcTime = 0LL;
 
-uint64_t g_TransferSize = 0ULL;
-int64_t g_TcpBytesPerSecond = 0LL;
+static uint64_t g_TransferSize = 0ULL;
+static int64_t g_TcpBytesPerSecond = 0LL;
 
 ///
 /// Fakes
 ///
 namespace ctl::ctTimer
 {
-int64_t ctsnap_qpc_as_msec() noexcept
+int64_t ctsnap_qpc_as_msec() noexcept  // NOLINT(misc-use-internal-linkage)
 {
     return g_QpcTime;
 }
@@ -45,21 +46,21 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t,
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsUdpStatistics&) noexcept
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     va_list va_args;
     va_start(va_args, _text);
@@ -69,11 +70,11 @@ void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept
     va_end(va_args);
 }
 
-void PrintException(const std::exception&) noexcept
+void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintErrorInfo(_In_ PCWSTR) noexcept
+void PrintErrorInfo(_In_ PCWSTR) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 

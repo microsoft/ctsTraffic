@@ -15,6 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 
 #include <memory>
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 #include "ctsIOPatternState.hpp"
 
@@ -73,8 +75,8 @@ inline std::wstring ToString<ctsTraffic::ctsIoPatternError>(const ctsTraffic::ct
 }
 }
 
-uint64_t g_transferSize = 0ULL;
-bool g_isListening = false;
+static uint64_t g_transferSize = 0ULL;
+static bool g_isListening = false;
 
 ///
 /// Fakes
@@ -83,23 +85,23 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const socket_address&, const socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept
+void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
 {
 }
 

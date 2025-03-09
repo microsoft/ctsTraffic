@@ -19,13 +19,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <set>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 #include <tcpestats.h>
 
 // wil headers always included last
-#include <wil/stl.h>
 #include <wil/win32_helpers.h>
 
 namespace ctsPerf { namespace Details
@@ -676,9 +675,9 @@ namespace ctsPerf { namespace Details
                 return EstatsDataTracking<TcpType>::PrintHeader();
             }
 
-            EstatsDataPoint(wil::networking::socket_address local_addr, wil::networking::socket_address remote_addr) noexcept :
-                m_localAddr(std::move(local_addr)),
-                m_remoteAddr(std::move(remote_addr))
+            EstatsDataPoint(wil::network::socket_address local_addr, wil::network::socket_address remote_addr) noexcept :
+                m_localAddr(local_addr),
+                m_remoteAddr(remote_addr)
             {
             }
 
@@ -738,9 +737,9 @@ namespace ctsPerf { namespace Details
 
             std::wstring PrintAddresses() const
             {
-                wil::networking::socket_address_wstring local_string{};
+                wil::network::socket_address_wstring local_string{};
                 m_localAddr.write_complete_address_nothrow(local_string);
-                wil::networking::socket_address_wstring remote_string{};
+                wil::network::socket_address_wstring remote_string{};
                 m_remoteAddr.write_complete_address_nothrow(remote_string);
 
                 return wil::str_printf<std::wstring>(
@@ -767,12 +766,12 @@ namespace ctsPerf { namespace Details
                 m_data.UpdateData(tcpRow);
             }
 
-            wil::networking::socket_address LocalAddr() const noexcept
+            wil::network::socket_address LocalAddr() const noexcept
             {
                 return m_localAddr;
             }
 
-            wil::networking::socket_address RemoteAddr() const noexcept
+            wil::network::socket_address RemoteAddr() const noexcept
             {
                 return m_remoteAddr;
             }
@@ -783,8 +782,8 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            wil::networking::socket_address m_localAddr;
-            wil::networking::socket_address m_remoteAddr;
+            wil::network::socket_address m_localAddr;
+            wil::network::socket_address m_remoteAddr;
             // the tracking object must be mutable because EstatsDataPoint instances
             // are stored in a std::set container, and access to objects in a std::set
             // must be const (since you are not allowed to modify std::set objects in-place)
@@ -1125,8 +1124,8 @@ namespace ctsPerf { namespace Details
 
             while (foundInstance != std::end(m_synOptsData))
             {
-                const wil::networking::socket_address localAddr(foundInstance->LocalAddr());
-                const wil::networking::socket_address remoteAddr(foundInstance->RemoteAddr());
+                const wil::network::socket_address localAddr(foundInstance->LocalAddr());
+                const wil::network::socket_address remoteAddr(foundInstance->RemoteAddr());
 
                 const auto synOptsInstance = foundInstance;
                 const auto byteTrackingInstance = m_byteTrackingData.find(

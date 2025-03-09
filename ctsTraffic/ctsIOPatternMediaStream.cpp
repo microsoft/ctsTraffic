@@ -15,8 +15,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <algorithm>
 #include <vector>
-// os headers
-#include <Windows.h>
+
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
+
 // ctl headers
 #include <ctTimer.hpp>
 // project headers
@@ -25,9 +27,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOTask.hpp"
 #include "ctsMediaStreamProtocol.hpp"
-// wil headers always included last
-#include <wil/stl.h>
-#include <wil/resource.h>
 
 using namespace ctl;
 using std::vector;

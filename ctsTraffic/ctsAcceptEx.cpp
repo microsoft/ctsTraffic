@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <vector>
 
-// using wil::networking to pull in all necessary networking headers
-#include "c:/users/kehor/source/repos/wil_keith_horton/include/wil/networking.h"
+// using wil/network.h to pull in all necessary networking headers
+#include <wil/network.h>
 
 // ctl headers
 #include <ctThreadIocp.hpp>
@@ -76,8 +76,8 @@ namespace details
     struct ctsAcceptedConnection
     {
         wil::unique_socket m_acceptSocket;
-        socket_address m_localAddr;
-        socket_address m_remoteAddr;
+        wil::network::socket_address m_localAddr;
+        wil::network::socket_address m_remoteAddr;
         DWORD m_lastError = 0;
     };
 
@@ -86,7 +86,7 @@ namespace details
     struct ctsListenSocketInfo
     {
         // constructor throws a wil::ResultException or bad_alloc on failure
-        explicit ctsListenSocketInfo(const socket_address& addr) :
+        explicit ctsListenSocketInfo(const wil::network::socket_address& addr) :
             m_sockaddr(addr)
         {
             wil::unique_socket tempSocket(
@@ -98,10 +98,10 @@ namespace details
                 THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
             }
 
-            if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), socket_address::length))
+            if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
             {
                 error = WSAGetLastError();
-                wil::networking::socket_address_string addrBuffer{};
+                wil::network::socket_address_string addrBuffer{};
                 m_sockaddr.write_complete_address_nothrow(addrBuffer);
                 THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
             }
@@ -131,7 +131,7 @@ namespace details
         ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
         wil::unique_socket m_listenSocket;
-        socket_address m_sockaddr;
+        wil::network::socket_address m_sockaddr;
         std::unique_ptr<ctl::ctThreadIocp> m_iocp;
         std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
     };
@@ -318,7 +318,7 @@ namespace details
 
         ::ZeroMemory(m_outputBuffer, c_singleOutputBufferSize * 2);
         DWORD bytesReceived{};
-        if (!SocketFunctions.f.AcceptEx(
+        if (!g_configSettings->SocketFunctions.f.AcceptEx(
             listeningSocketObject->m_listenSocket.get(),
             newAcceptedSocket.get(),
             m_outputBuffer,
@@ -404,7 +404,7 @@ namespace details
         SOCKADDR_INET* remoteAddr{};
         auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
 
-        SocketFunctions.f.GetAcceptExSockaddrs(
+        g_configSettings->SocketFunctions.f.GetAcceptExSockaddrs(
             m_outputBuffer,
             0,
             c_singleOutputBufferSize,
@@ -464,8 +464,8 @@ namespace details
                 if (0 == acceptedSocket.m_lastError)
                 {
                     // set the local addr
-                    socket_address localAddr;
-                    int localAddrLen = socket_address::length;
+                    wil::network::socket_address localAddr;
+                    int localAddrLen = localAddr.length();
                     if (0 == getsockname(acceptedSocket.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
                     {
                         sharedSocket->SetLocalSockaddr(localAddr);
@@ -516,7 +516,7 @@ namespace details
 // - else store the weak_ptr<ctsSocket> to be fulfilled later
 //
 //
-void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
+void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
 {
     DWORD error = 0;
     if (!InitOnceExecuteOnce(&details::g_acceptExImplInitOnce, details::ctsAcceptExImplInitFn, &error, nullptr))
@@ -576,8 +576,8 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)
     {
         // set the local addr
-        socket_address localAddr;
-        auto localAddrLen = socket_address::length;
+        wil::network::socket_address localAddr;
+        auto localAddrLen = localAddr.length();
         if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
         {
             sharedSocket->SetLocalSockaddr(localAddr);
