@@ -20,7 +20,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-// Wraps the somewhat unweildy STL random routines for common use cases
+// Wraps the somewhat unwieldy STL random routines for common use cases
 //
 // This random number generator makes several important assumptions:
 //   - Cryptographic-level randomness is unnecessary
@@ -31,7 +31,7 @@ namespace ctl
 // are invalid, use either the windows cryptographic-quality random generation
 // routines or STL <random> directly instead of this class.
 //
-// This class uses the STL's mersenne twister implementation internally, which means
+// This class uses the STL mersenne twister implementation internally, which means
 // that this class requires considerable space (~5kb heap space), but random number
 // generation is fast and provides fairly good random distributions (good
 // enough for just about anything non-cryptographic)

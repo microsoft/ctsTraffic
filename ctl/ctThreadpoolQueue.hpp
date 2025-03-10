@@ -178,11 +178,13 @@ public:
     }
 
     template <typename TReturn, typename FunctorType>
-    std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> submit_with_results(FunctorType&& functor) noexcept try
+    std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> submit_with_results(FunctorType&& functor) noexcept
+    try
     {
         FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
-        std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult{std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor))};
+        std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult{
+            std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor))};
         auto shouldSubmit = false;
 
         // scope to the queue lock
@@ -205,7 +207,8 @@ public:
     }
 
     template <typename FunctorType>
-    void submit(FunctorType&& functor) noexcept try
+    void submit(FunctorType&& functor) noexcept
+    try
     {
         FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
@@ -227,7 +230,8 @@ public:
 
     // functors must return type HRESULT
     template <typename FunctorType>
-    HRESULT submit_and_wait(FunctorType&& functor) noexcept try
+    HRESULT submit_and_wait(FunctorType&& functor) noexcept
+    try
     {
         if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Growable)
         {
@@ -249,7 +253,8 @@ public:
     CATCH_RETURN()
 
     // cancels anything queued to the TP - this ctThreadpoolQueue instance can no longer be used
-    void cancel() noexcept try
+    void cancel() noexcept
+    try
     {
         if (m_tpHandle)
         {
@@ -359,7 +364,8 @@ private:
         }
     }
 
-    static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, void* context, PTP_WORK) noexcept try
+    static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, void* context, PTP_WORK) noexcept
+    try
     {
         auto* pThis = static_cast<ctThreadpoolQueue*>(context);
 
@@ -380,7 +386,11 @@ private:
         }
 
         // run the tasks outside the ctThreadpoolQueue lock
-        const auto resetThreadIdOnExit = wil::scope_exit([pThis] { InterlockedExchange64(&pThis->m_threadpoolThreadId, 0ll); });
+        const auto resetThreadIdOnExit = wil::scope_exit(
+            [pThis]
+            {
+                InterlockedExchange64(&pThis->m_threadpoolThreadId, 0ll);
+            });
         if (work.index() == 0)
         {
             const auto& workItem = std::get<SimpleFunctionT>(work);

@@ -34,25 +34,27 @@ public:
     {
         m_wbemLocator = wil::CoCreateInstance<WbemLocator, IWbemLocator>();
 
-        THROW_IF_FAILED(m_wbemLocator->ConnectServer(
-            wil::make_bstr(path).get(), // Object path of WMI namespace
-            nullptr, // User name. NULL = current user
-            nullptr, // User password. NULL = current
-            nullptr, // Locale. NULL indicates current
-            0, // Security flags.
-            nullptr, // Authority (e.g. Kerberos)
-            nullptr, // Context object 
-            m_wbemServices.put())); // receive pointer to IWbemServices proxy
+        THROW_IF_FAILED(
+            m_wbemLocator->ConnectServer(
+                wil::make_bstr(path).get(), // Object path of WMI namespace
+                nullptr, // User name. NULL = current user
+                nullptr, // User password. NULL = current
+                nullptr, // Locale. NULL indicates current
+                0, // Security flags.
+                nullptr, // Authority (e.g. Kerberos)
+                nullptr, // Context object 
+                m_wbemServices.put())); // receive pointer to IWbemServices proxy
 
-        THROW_IF_FAILED(CoSetProxyBlanket(
-            m_wbemServices.get(), // Indicates the proxy to set
-            RPC_C_AUTHN_WINNT, // RPC_C_AUTHN_xxx
-            RPC_C_AUTHZ_NONE, // RPC_C_AUTHZ_xxx
-            nullptr, // Server principal name 
-            RPC_C_AUTHN_LEVEL_CALL, // RPC_C_AUTHN_LEVEL_xxx 
-            RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
-            nullptr, // client identity
-            EOAC_NONE)); // proxy capabilities 
+        THROW_IF_FAILED(
+            CoSetProxyBlanket(
+                m_wbemServices.get(), // Indicates the proxy to set
+                RPC_C_AUTHN_WINNT, // RPC_C_AUTHN_xxx
+                RPC_C_AUTHZ_NONE, // RPC_C_AUTHZ_xxx
+                nullptr, // Server principal name 
+                RPC_C_AUTHN_LEVEL_CALL, // RPC_C_AUTHN_LEVEL_xxx 
+                RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
+                nullptr, // client identity
+                EOAC_NONE)); // proxy capabilities 
     }
 
     ~ctWmiService() = default;
@@ -74,7 +76,7 @@ public:
     bool operator ==(const ctWmiService& service) const noexcept
     {
         return m_wbemLocator == service.m_wbemLocator &&
-               m_wbemServices == service.m_wbemServices;
+            m_wbemServices == service.m_wbemServices;
     }
 
     bool operator !=(const ctWmiService& service) const noexcept
@@ -95,13 +97,14 @@ public:
     void delete_path(_In_ PCWSTR objPath, const wil::com_ptr<IWbemContext>& context) const
     {
         wil::com_ptr<IWbemCallResult> result;
-        THROW_IF_FAILED(m_wbemServices->DeleteInstance(
-            wil::make_bstr(objPath).get(),
-            WBEM_FLAG_RETURN_IMMEDIATELY,
-            context.get(),
-            result.addressof()));
+        THROW_IF_FAILED(
+            m_wbemServices->DeleteInstance(
+                wil::make_bstr(objPath).get(),
+                WBEM_FLAG_RETURN_IMMEDIATELY,
+                context.get(),
+                result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
@@ -111,8 +114,8 @@ public:
     //    MyClass.MyProperty1='33',MyProperty2='value'
     void delete_path(_In_ PCWSTR objPath) const
     {
-        const wil::com_ptr<IWbemContext> nullcontext;
-        delete_path(objPath, nullcontext.get());
+        const wil::com_ptr<IWbemContext> null_context;
+        delete_path(objPath, null_context.get());
     }
 
 private:

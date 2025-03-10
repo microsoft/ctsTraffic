@@ -76,7 +76,7 @@ public:
             }
 
             return m_buffer == iter.m_buffer &&
-                   m_current == iter.m_current;
+                m_current == iter.m_current;
         }
 
         bool operator!=(const iterator& iter) const noexcept
@@ -154,7 +154,7 @@ public:
             nullptr, // Reserved
             reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&m_buffer->at(0)),
             &byteSize
-        );
+            );
         if (err == ERROR_BUFFER_OVERFLOW)
         {
             m_buffer->resize(byteSize);
@@ -164,7 +164,7 @@ public:
                 nullptr, // Reserved
                 reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&m_buffer->at(0)),
                 &byteSize
-            );
+                );
         }
         if (err != NO_ERROR)
         {

@@ -118,23 +118,25 @@ public:
     // Assumes the query of the WQL query language.
     const ctWmiEnumerate& query(_In_ PCWSTR query)
     {
-        THROW_IF_FAILED(m_wbemServices->ExecQuery(
-            wil::make_bstr(L"WQL").get(),
-            wil::make_bstr(query).get(),
-            WBEM_FLAG_BIDIRECTIONAL,
-            nullptr,
-            m_wbemEnumerator.put()));
+        THROW_IF_FAILED(
+            m_wbemServices->ExecQuery(
+                wil::make_bstr(L"WQL").get(),
+                wil::make_bstr(query).get(),
+                WBEM_FLAG_BIDIRECTIONAL,
+                nullptr,
+                m_wbemEnumerator.put()));
         return *this;
     }
 
     const ctWmiEnumerate& query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
     {
-        THROW_IF_FAILED(m_wbemServices->ExecQuery(
-            wil::make_bstr(L"WQL").get(),
-            wil::make_bstr(query).get(),
-            WBEM_FLAG_BIDIRECTIONAL,
-            context.get(),
-            m_wbemEnumerator.put()));
+        THROW_IF_FAILED(
+            m_wbemServices->ExecQuery(
+                wil::make_bstr(L"WQL").get(),
+                wil::make_bstr(query).get(),
+                WBEM_FLAG_BIDIRECTIONAL,
+                context.get(),
+                m_wbemEnumerator.put()));
         return *this;
     }
 
@@ -180,12 +182,12 @@ inline bool ctWmiEnumerate::iterator::operator==(const iterator& iter) const noe
     if (m_index != c_endIteratorIndex)
     {
         return m_index == iter.m_index &&
-               m_wbemServices == iter.m_wbemServices &&
-               m_wbemEnumerator == iter.m_wbemEnumerator &&
-               m_wmiInstance == iter.m_wmiInstance;
+            m_wbemServices == iter.m_wbemServices &&
+            m_wbemEnumerator == iter.m_wbemEnumerator &&
+            m_wmiInstance == iter.m_wmiInstance;
     }
     return m_index == iter.m_index &&
-           m_wbemServices == iter.m_wbemServices;
+        m_wbemServices == iter.m_wbemServices;
 }
 
 inline bool ctWmiEnumerate::iterator::operator!=(const iterator& iter) const noexcept
@@ -226,13 +228,14 @@ inline void ctWmiEnumerate::iterator::increment()
         throw std::out_of_range("ctWmiEnumerate::iterator::increment at the end");
     }
 
-    ULONG uReturn;
+    ULONG uReturn{};
     wil::com_ptr<IWbemClassObject> wbemTarget;
-    THROW_IF_FAILED(m_wbemEnumerator->Next(
-        WBEM_INFINITE,
-        1,
-        wbemTarget.put(),
-        &uReturn));
+    THROW_IF_FAILED(
+        m_wbemEnumerator->Next(
+            WBEM_INFINITE,
+            1,
+            wbemTarget.put(),
+            &uReturn));
 
     if (0 == uReturn)
     {

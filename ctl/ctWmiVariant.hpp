@@ -321,7 +321,8 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned lon
         return false;
     }
     THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
-    *value = _wcstoui64(V_BSTR(variant), nullptr, 10);
+    constexpr int base_ten = 10;
+    *value = _wcstoui64(V_BSTR(variant), nullptr, base_ten);
     return true;
 }
 
@@ -343,7 +344,8 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long long* v
         return false;
     }
     THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BSTR);
-    *value = _wcstoi64(V_BSTR(variant), nullptr, 10);
+    constexpr int base_ten = 10;
+    *value = _wcstoi64(V_BSTR(variant), nullptr, base_ten);
     return true;
 }
 
@@ -379,9 +381,13 @@ bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<wil::
     }
     THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UNKNOWN | VT_ARRAY));
 
-    IUnknown** iUnknownArray;
+    IUnknown** iUnknownArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&iUnknownArray)));
-    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayUnaccessData(variant->parray);
+        });
 
     std::vector<wil::com_ptr<T>> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -398,7 +404,11 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<std::wstring>& dat
 {
     auto* const tempSafeArray = SafeArrayCreateVector(VT_BSTR, 0, static_cast<ULONG>(data.size()));
     THROW_IF_NULL_ALLOC(tempSafeArray);
-    auto guardArray = wil::scope_exit([&]() noexcept { SafeArrayDestroy(tempSafeArray); });
+    auto guardArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayDestroy(tempSafeArray);
+        });
 
     for (size_t loop = 0; loop < data.size(); ++loop)
     {
@@ -430,7 +440,11 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     BSTR* stringArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&stringArray)));
-    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayUnaccessData(variant->parray);
+        });
 
     std::vector<std::wstring> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -445,7 +459,11 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<uint32_t>& data)
 {
     auto* const tempSafeArray = SafeArrayCreateVector(VT_UI4, 0, static_cast<ULONG>(data.size()));
     THROW_IF_NULL_ALLOC(tempSafeArray);
-    auto guardArray = wil::scope_exit([&]() noexcept { SafeArrayDestroy(tempSafeArray); });
+    auto guardArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayDestroy(tempSafeArray);
+        });
 
     for (size_t loop = 0; loop < data.size(); ++loop)
     {
@@ -476,7 +494,11 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     uint32_t* intArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayUnaccessData(variant->parray);
+        });
 
     std::vector<uint32_t> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -492,7 +514,11 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& d
     // WMI marshaller complains type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
     auto* const tempSafeArray = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
     THROW_IF_NULL_ALLOC(tempSafeArray);
-    auto guardArray = wil::scope_exit([&]() noexcept { SafeArrayDestroy(tempSafeArray); });
+    auto guardArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayDestroy(tempSafeArray);
+        });
 
     for (size_t loop = 0; loop < data.size(); ++loop)
     {
@@ -525,7 +551,11 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     long* intArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayUnaccessData(variant->parray);
+        });
 
     std::vector<unsigned short> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -541,7 +571,11 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned char>& da
 {
     auto* const tempSafeArray = SafeArrayCreateVector(VT_UI1, 0, static_cast<ULONG>(data.size()));
     THROW_IF_NULL_ALLOC(tempSafeArray);
-    auto guardArray = wil::scope_exit([&]() noexcept { SafeArrayDestroy(tempSafeArray); });
+    auto guardArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayDestroy(tempSafeArray);
+        });
 
     for (size_t loop = 0; loop < data.size(); ++loop)
     {
@@ -572,7 +606,11 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     unsigned char* charArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&charArray)));
-    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit(
+        [&]() noexcept
+        {
+            SafeArrayUnaccessData(variant->parray);
+        });
 
     std::vector<unsigned char> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)

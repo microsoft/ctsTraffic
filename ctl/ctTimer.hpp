@@ -20,19 +20,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ctTimer namespace contains useful functions when working with QPC/QPF
 namespace ctl {namespace ctTimer { namespace Details
         {
-            ///
-            /// InitOnce the QPF value as it won't change after the OS has booted
-            /// - hiding within an unnamed namespace
-            ///
-            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;
-            static LARGE_INTEGER g_qpf;
+        ///
+        /// InitOnce the QPF value as it won't change after the OS has booted
+        /// - hiding within an unnamed namespace
+        ///
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        static INIT_ONCE g_qpfInitOnce = INIT_ONCE_STATIC_INIT;
+        static LARGE_INTEGER g_qpf;
 
-            static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
-            {
-                QueryPerformanceFrequency(&g_qpf);
-                return TRUE;
-            }
+        static BOOL CALLBACK QpfInitOnceCallback(_In_ PINIT_ONCE, _In_ PVOID, _In_ PVOID*) noexcept
+        {
+            QueryPerformanceFrequency(&g_qpf);
+            return TRUE;
+        }
         }
 
         // Create a negative FILETIME, which for some timer APIs indicate a 'relative' time
@@ -60,7 +60,8 @@ namespace ctl {namespace ctTimer { namespace Details
             LARGE_INTEGER qpc;
             QueryPerformanceCounter(&qpc);
             // multiplying by 1000 as (qpc / qpf) == seconds
-            return qpc.QuadPart * 1000LL / Details::g_qpf.QuadPart;
+            constexpr LONGLONG seconds_to_milliseconds = 1000;
+            return qpc.QuadPart * seconds_to_milliseconds / Details::g_qpf.QuadPart;
         }
 #endif
     } // namespace ctTimer

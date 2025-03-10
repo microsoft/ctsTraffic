@@ -120,67 +120,67 @@ inline std::wstring convert_to_wstring(const std::string& str)
 //
 namespace Detail
 {
-    inline bool OrdinalEquals(
-        _In_NLS_string_(lhs_size) const wchar_t* lhs,
-        size_t lhs_size,
-        _In_NLS_string_(rhs_size) const wchar_t* rhs,
-        size_t rhs_size,
-        BOOL case_insensitive)
+inline bool OrdinalEquals(
+    _In_NLS_string_(lhs_size) const wchar_t* lhs,
+    size_t lhs_size,
+    _In_NLS_string_(rhs_size) const wchar_t* rhs,
+    size_t rhs_size,
+    BOOL case_insensitive)
+{
+    switch (CompareStringOrdinal(
+        lhs,
+        static_cast<int>(lhs_size),
+        rhs,
+        static_cast<int>(rhs_size),
+        case_insensitive))
     {
-        switch (CompareStringOrdinal(
-            lhs,
-            static_cast<int>(lhs_size),
-            rhs,
-            static_cast<int>(rhs_size),
-            case_insensitive))
+        case CSTR_EQUAL:
+            return true;
+
+        case CSTR_LESS_THAN:
+            [[fallthrough]];
+        case CSTR_GREATER_THAN:
+            return false;
+
+        default:
         {
-            case CSTR_EQUAL:
-                return true;
-
-            case CSTR_LESS_THAN:
-                [[fallthrough]];
-            case CSTR_GREATER_THAN:
-                return false;
-
-            default:
-            {
-                THROW_WIN32_MSG(GetLastError(), "CompareStringOrdinal");
-            }
+            THROW_WIN32_MSG(GetLastError(), "CompareStringOrdinal");
         }
     }
+}
 
 #pragma region Desktop Family
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    // CompareStringA is not available for Modern Apps
-    inline bool OrdinalEquals(
-        _In_reads_z_(lhs_size) const char* lhs,
-        size_t lhs_size,
-        _In_reads_z_(rhs_size) const char* rhs,
-        size_t rhs_size,
-        BOOL case_insensitive)
+// CompareStringA is not available for Modern Apps
+inline bool OrdinalEquals(
+    _In_reads_z_(lhs_size) const char* lhs,
+    size_t lhs_size,
+    _In_reads_z_(rhs_size) const char* rhs,
+    size_t rhs_size,
+    BOOL case_insensitive)
+{
+    switch (CompareStringA(
+        LOCALE_INVARIANT,
+        case_insensitive ? NORM_IGNORECASE : 0,
+        lhs,
+        static_cast<int>(lhs_size),
+        rhs,
+        static_cast<int>(rhs_size)))
     {
-        switch (CompareStringA(
-            LOCALE_INVARIANT,
-            case_insensitive ? NORM_IGNORECASE : 0,
-            lhs,
-            static_cast<int>(lhs_size),
-            rhs,
-            static_cast<int>(rhs_size)))
+        case CSTR_EQUAL:
+            return true;
+
+        case CSTR_LESS_THAN:
+            [[fallthrough]];
+        case CSTR_GREATER_THAN:
+            return false;
+
+        default:
         {
-            case CSTR_EQUAL:
-                return true;
-
-            case CSTR_LESS_THAN:
-                [[fallthrough]];
-            case CSTR_GREATER_THAN:
-                return false;
-
-            default:
-            {
-                THROW_WIN32_MSG(GetLastError(), "CompareStringA");
-            }
+            THROW_WIN32_MSG(GetLastError(), "CompareStringA");
         }
     }
+}
 #else
         inline bool OrdinalEquals(
             _In_reads_z_(lhs_size) const char* lhs,
@@ -200,45 +200,45 @@ namespace Detail
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
 #pragma endregion
 
-    inline _Ret_z_ const wchar_t* ConvertToPtr(const std::wstring& source) noexcept
-    {
-        return source.c_str();
-    }
+inline _Ret_z_ const wchar_t* ConvertToPtr(const std::wstring& source) noexcept
+{
+    return source.c_str();
+}
 
-    inline size_t GetStringLength(const std::wstring& source) noexcept
-    {
-        return source.length();
-    }
+inline size_t GetStringLength(const std::wstring& source) noexcept
+{
+    return source.length();
+}
 
-    inline _Ret_z_ const wchar_t* ConvertToPtr(_In_z_ const wchar_t* source) noexcept
-    {
-        return source;
-    }
+inline _Ret_z_ const wchar_t* ConvertToPtr(_In_z_ const wchar_t* source) noexcept
+{
+    return source;
+}
 
-    inline size_t GetStringLength(_In_z_ const wchar_t* source) noexcept
-    {
-        return wcslen(source);
-    }
+inline size_t GetStringLength(_In_z_ const wchar_t* source) noexcept
+{
+    return wcslen(source);
+}
 
-    inline _Ret_z_ const char* ConvertToPtr(const std::string& source) noexcept
-    {
-        return source.c_str();
-    }
+inline _Ret_z_ const char* ConvertToPtr(const std::string& source) noexcept
+{
+    return source.c_str();
+}
 
-    inline size_t GetStringLength(const std::string& source) noexcept
-    {
-        return source.length();
-    }
+inline size_t GetStringLength(const std::string& source) noexcept
+{
+    return source.length();
+}
 
-    inline _Ret_z_ const char* ConvertToPtr(_In_z_ const char* source) noexcept
-    {
-        return source;
-    }
+inline _Ret_z_ const char* ConvertToPtr(_In_z_ const char* source) noexcept
+{
+    return source;
+}
 
-    inline size_t GetStringLength(_In_z_ const char* source) noexcept
-    {
-        return strlen(source);
-    }
+inline size_t GetStringLength(_In_z_ const char* source) noexcept
+{
+    return strlen(source);
+}
 }
 
 template <typename LeftStringT, typename RightStringT>
@@ -350,13 +350,13 @@ inline std::wstring format_message(DWORD messageId)
         FORMAT_MESSAGE_MAX_WIDTH_MASK;
 
     if (FormatMessageW(
-            formatMsgFlags,
-            nullptr, // just search the system
-            messageId,
-            0, // allow for proper MUI language fallback
-            stringBuffer,
-            cchBuffer,
-            nullptr) == 0)
+        formatMsgFlags,
+        nullptr, // just search the system
+        messageId,
+        0, // allow for proper MUI language fallback
+        stringBuffer,
+        cchBuffer,
+        nullptr) == 0)
     {
         return {};
     }
@@ -373,7 +373,7 @@ inline std::wstring format_message(DWORD messageId)
 //
 // *Note key differences between the 2 functions:
 //
-// - replace_all takes an original string as an std::wstring reference.
+// - replace_all takes an original string as a std::wstring reference.
 //   Meaning an implicit std::wstring object cannot be created.
 //
 //   This is not valid:
@@ -404,7 +404,7 @@ inline std::wstring format_message(DWORD messageId)
 //
 // Can throw a std::exception under low-resources
 //
-inline void replace_all(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString) // NOLINT(google-runtime-references)
+inline void replace_all(std::wstring& originalString, const std::wstring& searchString, const std::wstring& replacementString)
 {
     const auto searchSize = searchString.size();
     const auto replacementSize = replacementString.size();
@@ -423,7 +423,7 @@ std::wstring replace_all_copy(std::wstring originalString, const std::wstring& s
     return originalString;
 }
 
-inline void replace_all(std::string& originalString, const std::string& searchString, const std::string& replacementString) // NOLINT(google-runtime-references)
+inline void replace_all(std::string& originalString, const std::string& searchString, const std::string& replacementString)
 {
     const auto searchSize = searchString.size();
     const auto replacementSize = replacementString.size();
@@ -448,7 +448,7 @@ inline std::string replace_all_copy(std::string originalString, const std::strin
 // Escapes characters that are 'special' in the context of a WMI WQL query which could
 //  inadvertently affect the result of the query.
 //
-// - escape_wmi_query takes an original string as an std::wstring reference.
+// - escape_wmi_query takes an original string as a std::wstring reference.
 //   Meaning an implicit std::wstring object cannot be created.
 //
 // - escape_wmi_query_copy takes an original string by value into std::wstring.
@@ -487,7 +487,7 @@ inline
 std::wstring __cdecl format_string(_In_ _Printf_format_string_ PCWSTR pszFormat, ...)
 {
     std::wstring formattedString;
-    va_list args;
+    va_list args{};
     va_start(args, pszFormat);
     const auto hr = wil::details::str_vprintf_nothrow<std::wstring>(formattedString, pszFormat, args);
     va_end(args);

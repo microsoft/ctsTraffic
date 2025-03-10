@@ -53,23 +53,25 @@ public:
     ctWmiClassObject(ctWmiService wbemServices, _In_ PCWSTR className) :
         m_wbemServices(std::move(wbemServices))
     {
-        THROW_IF_FAILED(m_wbemServices->GetObject(
-            wil::make_bstr(className).get(),
-            0,
-            nullptr,
-            m_wbemClassObject.put(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_wbemServices->GetObject(
+                wil::make_bstr(className).get(),
+                0,
+                nullptr,
+                m_wbemClassObject.put(),
+                nullptr));
     }
 
     ctWmiClassObject(ctWmiService wbemServices, BSTR className) :
         m_wbemServices(std::move(wbemServices))
     {
-        THROW_IF_FAILED(m_wbemServices->GetObjectW(
-            className,
-            0,
-            nullptr,
-            m_wbemClassObject.put(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_wbemServices->GetObjectW(
+                className,
+                0,
+                nullptr,
+                m_wbemClassObject.put(),
+                nullptr));
     }
 
     [[nodiscard]] wil::com_ptr<IWbemClassObject> get_class_object() const noexcept
@@ -180,7 +182,7 @@ public:
             if (m_index != c_endIteratorIndex)
             {
                 return m_index == iter.m_index &&
-                       m_wbemClassObj == iter.m_wbemClassObj;
+                    m_wbemClassObj == iter.m_wbemClassObj;
             }
             return m_index == iter.m_index;
         }
@@ -232,13 +234,13 @@ public:
                 throw std::out_of_range("ctWmiClassObject::property_iterator - cannot increment: at the end");
             }
 
-            CIMTYPE nextCimtype{};
+            CIMTYPE nextCimType{};
             wil::shared_bstr nextName;
             switch (const auto hr = m_wbemClassObj->Next(
                 0,
                 nextName.put(),
                 nullptr,
-                &nextCimtype,
+                &nextCimType,
                 nullptr))
             {
                 case WBEM_S_NO_ERROR:
@@ -247,7 +249,7 @@ public:
                     ++m_index;
                     using std::swap;
                     swap(m_propertyName, nextName);
-                    swap(m_propertyType, nextCimtype);
+                    swap(m_propertyType, nextCimType);
                     break;
                 }
                 case WBEM_S_NO_MORE_DATA:

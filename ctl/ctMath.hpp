@@ -42,15 +42,15 @@ std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterato
 
     const double sum = std::accumulate(begin, end, 0.0);
     const double mean = sum / static_cast<double>(size);
-    auto accum = 0.0;
+    auto accumulate = 0.0;
     for (auto iter = begin; iter != end; ++iter)
     {
         auto& value = *iter;
-        accum += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
+        accumulate += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
     }
 
-    const auto stdev = std::sqrt(accum / (static_cast<double>(size) - 1.0));
-    return std::make_tuple(mean, stdev);
+    const auto standard_deviation = std::sqrt(accumulate / (static_cast<double>(size) - 1.0));
+    return std::make_tuple(mean, standard_deviation);
 }
 
 ///
@@ -59,7 +59,7 @@ std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterato
 /// 2. determine the median of these 2 groups
 ////   - median is either the number splitting the group evenly, or the average between the middle 2 values
 ///
-/// ** Requires input to be sorted **
+/// ** Requires parameter input to be sorted **
 ///
 /// Returns a tuple of doubles recording the results:
 ///   get<0> : quartile 1 (median of the lower half - at the 25% mark)
@@ -86,8 +86,10 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
             static_cast<double>(*(begin + 2)));
     }
 
-    const auto splitSection = [](const BidirectionalIterator& splitBegin, const BidirectionalIterator& splitEnd)
-    -> std::tuple<BidirectionalIterator, BidirectionalIterator> {
+    const auto splitSection = [](
+        const BidirectionalIterator& splitBegin, const BidirectionalIterator& splitEnd)
+        -> std::tuple<BidirectionalIterator, BidirectionalIterator>
+    {
         const size_t numericCount = splitEnd - splitBegin + 1; // this is the N + 1 value
 
         // if begin and end are already right next to each other, immediately return the same values
@@ -119,7 +121,8 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
         return std::make_tuple(lhs, rhs);
     };
 
-    const auto findMedian = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double {
+    const auto findMedian = [](const std::tuple<BidirectionalIterator, BidirectionalIterator>& split) -> double
+    {
         const BidirectionalIterator& lhs = std::get<0>(split);
         const BidirectionalIterator& rhs = std::get<1>(split);
         FAIL_FAST_IF_MSG(rhs < lhs, "ctInterquartileRange internal error - the rhs iterator is less than the lhs iterator");
@@ -129,6 +132,7 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
         {
             case 1:
             {
+                constexpr double divide_by_two = 2.0;
                 // next to each other: take the average for the median
                 // must guard against overflow
                 const auto lhsValue{static_cast<double>(*lhs)};
@@ -137,12 +141,12 @@ std::tuple<double, double, double> ctInterquartileRange(const BidirectionalItera
                 if (sum < lhsValue || sum < rhsValue)
                 {
                     // overflow - divide first, then add
-                    medianValue = lhsValue / 2.0;
-                    medianValue += rhsValue / 2.0;
+                    medianValue = lhsValue / divide_by_two;
+                    medianValue += rhsValue / divide_by_two;
                 }
                 else
                 {
-                    medianValue = sum / 2.0;
+                    medianValue = sum / divide_by_two;
                 }
                 break;
             }

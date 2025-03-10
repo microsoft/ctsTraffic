@@ -46,16 +46,18 @@ public:
     {
         // get the object from the WMI service
         wil::com_ptr<IWbemClassObject> classObject;
-        THROW_IF_FAILED(m_wbemServices->GetObject(
-            wil::make_bstr(className).get(),
-            0,
-            nullptr,
-            classObject.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_wbemServices->GetObject(
+                wil::make_bstr(className).get(),
+                0,
+                nullptr,
+                classObject.addressof(),
+                nullptr));
         // spawn an instance of this object
-        THROW_IF_FAILED(classObject->SpawnInstance(
-            0,
-            m_instanceObject.put()));
+        THROW_IF_FAILED(
+            classObject->SpawnInstance(
+                0,
+                m_instanceObject.put()));
     }
 
     ctWmiInstance(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) noexcept :
@@ -67,7 +69,7 @@ public:
     bool operator ==(const ctWmiInstance& obj) const noexcept
     {
         return m_wbemServices == obj.m_wbemServices &&
-               m_instanceObject == obj.m_instanceObject;
+            m_instanceObject == obj.m_instanceObject;
     }
 
     bool operator !=(const ctWmiInstance& obj) const noexcept
@@ -135,13 +137,14 @@ public:
     void write_instance(_In_opt_ IWbemContext* context, const LONG wbemFlags = WBEM_FLAG_CREATE_OR_UPDATE)
     {
         wil::com_ptr<IWbemCallResult> result;
-        THROW_IF_FAILED(m_wbemServices->PutInstance(
-            m_instanceObject.get(),
-            wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
-            context,
-            result.addressof()));
+        THROW_IF_FAILED(
+            m_wbemServices->PutInstance(
+                m_instanceObject.get(),
+                wbemFlags | WBEM_FLAG_RETURN_IMMEDIATELY,
+                context,
+                result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
@@ -155,20 +158,21 @@ public:
     {
         // delete the instance based off the __REPATH property
         wil::com_ptr<IWbemCallResult> result;
-        THROW_IF_FAILED(m_wbemServices->DeleteInstance(
-            get_path().get(),
-            WBEM_FLAG_RETURN_IMMEDIATELY,
-            nullptr,
-            result.addressof()));
+        THROW_IF_FAILED(
+            m_wbemServices->DeleteInstance(
+                get_path().get(),
+                WBEM_FLAG_RETURN_IMMEDIATELY,
+                nullptr,
+                result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
 
 
     // Invokes an instance method with zero -> 5 arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
+    // Returns a ctWmiInstance containing the [out] parameters from the method call
     // (the property "ReturnValue" contains the return value)
     ctWmiInstance execute_method(_In_ PCWSTR method)
     {
@@ -180,11 +184,12 @@ public:
     {
         // establish the class object for the [in] params to the method
         wil::com_ptr<IWbemClassObject> inParamsDefinition;
-        THROW_IF_FAILED(m_instanceObject->GetMethod(
-            method,
-            0,
-            inParamsDefinition.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_instanceObject->GetMethod(
+                method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
         // spawn an instance to store the params
         wil::com_ptr<IWbemClassObject> inParamsInstance;
@@ -192,11 +197,11 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write the property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -207,11 +212,12 @@ public:
     {
         // establish the class object for the [in] params to the method
         wil::com_ptr<IWbemClassObject> inParamsDefinition;
-        THROW_IF_FAILED(m_instanceObject->GetMethod(
-            method,
-            0,
-            inParamsDefinition.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_instanceObject->GetMethod(
+                method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
         // spawn an instance to store the params
         wil::com_ptr<IWbemClassObject> inParamsInstance;
@@ -219,13 +225,13 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg2);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -236,11 +242,12 @@ public:
     {
         // establish the class object for the [in] params to the method
         wil::com_ptr<IWbemClassObject> inParamsDefinition;
-        THROW_IF_FAILED(m_instanceObject->GetMethod(
-            method,
-            0,
-            inParamsDefinition.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_instanceObject->GetMethod(
+                method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
         // spawn an instance to store the params
         wil::com_ptr<IWbemClassObject> inParamsInstance;
@@ -248,15 +255,15 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg3);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -267,11 +274,12 @@ public:
     {
         // establish the class object for the [in] params to the method
         wil::com_ptr<IWbemClassObject> inParamsDefinition;
-        THROW_IF_FAILED(m_instanceObject->GetMethod(
-            method,
-            0,
-            inParamsDefinition.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_instanceObject->GetMethod(
+                method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
         // spawn an instance to store the params
         wil::com_ptr<IWbemClassObject> inParamsInstance;
@@ -279,17 +287,17 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg4);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg3);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg4);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -300,11 +308,12 @@ public:
     {
         // establish the class object for the [in] params to the method
         wil::com_ptr<IWbemClassObject> inParamsDefinition;
-        THROW_IF_FAILED(m_instanceObject->GetMethod(
-            method,
-            0,
-            inParamsDefinition.addressof(),
-            nullptr));
+        THROW_IF_FAILED(
+            m_instanceObject->GetMethod(
+                method,
+                0,
+                inParamsDefinition.addressof(),
+                nullptr));
 
         // spawn an instance to store the params
         wil::com_ptr<IWbemClassObject> inParamsInstance;
@@ -312,29 +321,29 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
         //
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg4);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg5);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg3);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg4);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg5);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    bool is_null(_In_ PCWSTR propname) const
+    bool is_null(_In_ PCWSTR property_name) const
     {
         wil::unique_variant variant;
-        get_property(propname, variant.addressof());
+        get_property(property_name, variant.addressof());
         return V_VT(&variant) == VT_NULL;
     }
 
@@ -347,7 +356,7 @@ public:
     //   See the MSDN documentation for WMI MOF Data Types (Numbers):
     //   http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
     //
-    //   Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
+    //   Even though VARIANT supports 16- and 32-bit unsigned integers, WMI passes them both 
     //   around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
     //   correctly through WMI directly.
     //
@@ -355,71 +364,74 @@ public:
     //       returns true if retrieved the matching type
 
 
-    bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
+    bool get(_In_ PCWSTR property_name, _Inout_ VARIANT* value) const
     {
         VariantClear(value);
-        get_property(propname, value);
+        get_property(property_name, value);
         return !IsVariantEmptyOrNull(value);
     }
 
     template <typename T>
-    bool get(_In_ PCWSTR propname, _Out_ T* value) const
+    bool get(_In_ PCWSTR property_name, _Out_ T* value) const
     {
         wil::unique_variant variant;
-        get_property(propname, variant.addressof());
+        get_property(property_name, variant.addressof());
         return ctWmiReadFromVariant(variant.addressof(), value);
     }
 
-    void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
+    void set(_In_ PCWSTR property_name, _In_ const VARIANT* value) const
     {
-        set_property(propname, value);
+        set_property(property_name, value);
     }
 
     template <typename T>
-    void set(_In_ PCWSTR propname, const T value) const
+    void set(_In_ PCWSTR property_name, const T value) const
     {
-        set_property(propname, ctWmiMakeVariant(value).addressof());
+        set_property(property_name, ctWmiMakeVariant(value).addressof());
     }
 
     // Calling IWbemClassObject::Delete on a property of an instance resets to the default value.
-    void set_default(_In_ PCWSTR propname) const
+    void set_default(_In_ PCWSTR property_name) const
     {
-        THROW_IF_FAILED(m_instanceObject->Delete(propname));
+        THROW_IF_FAILED(m_instanceObject->Delete(property_name));
     }
 
 private:
     void get_property(_In_ PCWSTR propertyName, _Inout_ VARIANT* pVariant) const
     {
         auto* pInstance = m_instanceObject.get();
-        THROW_IF_FAILED(pInstance->Get(
-            propertyName,
-            0,
-            pVariant,
-            nullptr,
-            nullptr));
+        THROW_IF_FAILED(
+            pInstance->Get(
+                propertyName,
+                0,
+                pVariant,
+                nullptr,
+                nullptr));
     }
 
-    void set_property(_In_ PCWSTR propname, _In_ const VARIANT* pVariant) const
+    void set_property(_In_ PCWSTR property_name, _In_ const VARIANT* pVariant) const
     {
-        THROW_IF_FAILED(m_instanceObject->Put(
-            propname,
-            0,
-            const_cast<VARIANT*>(pVariant), // COM is not const-correct
-            0));
+        THROW_IF_FAILED(
+            m_instanceObject->Put(
+                property_name,
+                0,
+                const_cast<VARIANT*>(pVariant), // COM is not const-correct
+                0));
     }
 
     ctWmiInstance execute_method_impl(_In_ PCWSTR method, _In_opt_ IWbemClassObject* pParams)
     {
         // exec the method semi-synchronously from this instance based off the __REPATH property
         wil::com_ptr<IWbemCallResult> result;
-        THROW_IF_FAILED(m_wbemServices->ExecMethod(
-            get_path().get(),
-            wil::make_bstr(method).get(),
-            WBEM_FLAG_RETURN_IMMEDIATELY,
-            nullptr,
-            pParams,
-            nullptr,
-            result.addressof()));
+        THROW_IF_FAILED(
+            m_wbemServices->ExecMethod(
+                get_path().get(),
+                wil::make_bstr(method).get(),
+                WBEM_FLAG_RETURN_IMMEDIATELY,
+                nullptr,
+                pParams,
+                nullptr,
+                result.addressof()));
 
         // wait for the call to complete - and get the [out] param object
         wil::com_ptr<IWbemClassObject> outParamsInstance;

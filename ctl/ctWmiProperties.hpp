@@ -31,198 +31,198 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-    // class ctWmiProperties
-    //
-    // Exposes enumerating properties of a WMI Provider through an iterator interface.
-    class ctWmiProperties
+// class ctWmiProperties
+//
+// Exposes enumerating properties of a WMI Provider through an iterator interface.
+class ctWmiProperties
+{
+private:
+    ctWmiService m_wbemServices;
+    wil::com_ptr<IWbemClassObject> m_wbemClass{};
+
+public:
+    class iterator;
+
+    ctWmiProperties(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) noexcept :
+        m_wbemServices(std::move(service)),
+        m_wbemClass(std::move(classObject))
     {
-    private:
-        ctWmiService m_wbemServices;
-        wil::com_ptr<IWbemClassObject> m_wbemClass{};
+    }
 
-    public:
-        class iterator;
-
-        ctWmiProperties(ctWmiService service, wil::com_ptr<IWbemClassObject> classObject) noexcept :
-            m_wbemServices(std::move(service)),
-            m_wbemClass(std::move(classObject))
-        {
-        }
-
-        ctWmiProperties(ctWmiService service, _In_ PCWSTR className) :
-            m_wbemServices(std::move(service))
-        {
-            THROW_IF_FAILED(m_wbemServices->GetObjectW(
+    ctWmiProperties(ctWmiService service, _In_ PCWSTR className) :
+        m_wbemServices(std::move(service))
+    {
+        THROW_IF_FAILED(
+            m_wbemServices->GetObjectW(
                 wil::make_bstr(className).get(),
                 0,
                 nullptr,
                 m_wbemClass.put(),
                 nullptr));
-        }
+    }
 
-        ctWmiProperties(ctWmiService service, _In_ BSTR className) :
-            m_wbemServices(std::move(service))
-        {
-            THROW_IF_FAILED(m_wbemServices->GetObjectW(
+    ctWmiProperties(ctWmiService service, _In_ BSTR className) :
+        m_wbemServices(std::move(service))
+    {
+        THROW_IF_FAILED(
+            m_wbemServices->GetObjectW(
                 className,
                 0,
                 nullptr,
                 m_wbemClass.put(),
                 nullptr));
+    }
+
+    [[nodiscard]] iterator begin(const bool nonSystemPropertiesOnly = true) const
+    {
+        return {m_wbemClass, nonSystemPropertiesOnly};
+    }
+
+    [[nodiscard]] static iterator end() noexcept
+    {
+        return {};
+    }
+
+    // A forward iterator to enable forward-traversing instances of the queried WMI provider
+
+    class iterator
+    {
+        constexpr uint32_t m_endIteratorIndex = ULONG_MAX;
+
+        wil::com_ptr<IWbemClassObject> m_wbemClassObject{};
+        wil::shared_bstr m_propertyName{};
+        CIMTYPE m_propertyType = 0;
+        uint32_t m_index = m_endIteratorIndex;
+
+    public:
+        // Iterator requires the caller's IWbemServices interface and class name
+        iterator() noexcept = default;
+
+        iterator(wil::com_ptr<IWbemClassObject> classObject, bool nonSystemPropertiesOnly) :
+            m_wbemClassObject(std::move(classObject)), m_index(0)
+        {
+            THROW_IF_FAILED(
+                m_wbemClassObject->BeginEnumeration(nonSystemPropertiesOnly ? WBEM_FLAG_NONSYSTEM_ONLY : 0));
+            increment();
         }
 
-        [[nodiscard]] iterator begin(const bool nonSystemPropertiesOnly = true) const
+        ~iterator() noexcept = default;
+        iterator(const iterator&) noexcept = default;
+        iterator(iterator&&) noexcept = default;
+
+        iterator& operator =(const iterator&) noexcept = delete;
+        iterator& operator =(iterator&&) noexcept = delete;
+
+        void swap(_Inout_ iterator& rhs) noexcept
         {
-            return {m_wbemClass, nonSystemPropertiesOnly};
+            using std::swap;
+            swap(m_index, rhs.m_index);
+            swap(m_wbemClassObject, rhs.m_wbemClassObject);
+            swap(m_propertyName, rhs.m_propertyName);
+            swap(m_propertyType, rhs.m_propertyType);
         }
 
-        [[nodiscard]] static iterator end() noexcept
+        wil::shared_bstr operator*() const
         {
-            return {};
+            if (m_index == m_endIteratorIndex)
+            {
+                throw std::out_of_range("ctWmiProperties::iterator::operator - invalid subscript");
+            }
+            return m_propertyName;
         }
 
-        // A forward iterator to enable forward-traversing instances of the queried WMI provider
-
-        class iterator
+        const wil::shared_bstr* operator->() const
         {
-            constexpr uint32_t m_endIteratorIndex = ULONG_MAX;
-
-            wil::com_ptr<IWbemClassObject> m_wbemClassObject{};
-            wil::shared_bstr m_propertyName{};
-            CIMTYPE m_propertyType = 0;
-            uint32_t m_index = m_endIteratorIndex;
-
-        public:
-            // Iterator requires the caller's IWbemServices interface and class name
-            iterator() noexcept = default;
-
-            iterator(wil::com_ptr<IWbemClassObject> classObject, bool nonSystemPropertiesOnly) :
-                m_wbemClassObject(std::move(classObject)), m_index(0)
+            if (m_index == m_endIteratorIndex)
             {
-                THROW_IF_FAILED(
-                    m_wbemClassObject->BeginEnumeration(nonSystemPropertiesOnly ? WBEM_FLAG_NONSYSTEM_ONLY : 0));
-                increment();
+                throw std::out_of_range("ctWmiProperties::iterator::operator-> - invalid subscript");
             }
+            return &m_propertyName;
+        }
 
-            ~iterator() noexcept = default;
-            iterator(const iterator&) noexcept = default;
-            iterator(iterator&&) noexcept = default;
-
-            iterator& operator =(const iterator&) noexcept = delete;
-            iterator& operator =(iterator&&) noexcept = delete;
-
-            void swap(_Inout_ iterator& rhs) noexcept
+        [[nodiscard]] CIMTYPE type() const
+        {
+            if (m_index == m_endIteratorIndex)
             {
-                using std::swap;
-                swap(m_index, rhs.m_index);
-                swap(m_wbemClassObject, rhs.m_wbemClassObject);
-                swap(m_propertyName, rhs.m_propertyName);
-                swap(m_propertyType, rhs.m_propertyType);
+                throw std::out_of_range("ctWmiProperties::iterator::type - invalid subscript");
             }
+            return m_propertyType;
+        }
 
-            wil::shared_bstr operator*() const
+        bool operator==(const iterator& iter) const noexcept
+        {
+            if (m_index != m_endIteratorIndex)
             {
-                if (m_index == m_endIteratorIndex)
-                {
-                    throw std::out_of_range("ctWmiProperties::iterator::operator - invalid subscript");
-                }
-                return m_propertyName;
+                return m_index == iter.m_index &&
+                    m_wbemClassObject == iter.m_wbemClassObject;
             }
+            return m_index == iter.m_index;
+        }
 
-            const wil::shared_bstr* operator->() const
-            {
-                if (m_index == m_endIteratorIndex)
-                {
-                    throw std::out_of_range("ctWmiProperties::iterator::operator-> - invalid subscript");
-                }
-                return &m_propertyName;
-            }
+        bool operator!=(const iterator& iter) const noexcept
+        {
+            return !(*this == iter);
+        }
 
-            [[nodiscard]] CIMTYPE type() const
-            {
-                if (m_index == m_endIteratorIndex)
-                {
-                    throw std::out_of_range("ctWmiProperties::iterator::type - invalid subscript");
-                }
-                return m_propertyType;
-            }
+        iterator& operator++()
+        {
+            increment();
+            return *this;
+        }
 
-            bool operator==(const iterator& iter) const noexcept
-            {
-                if (m_index != m_endIteratorIndex)
-                {
-                    return m_index == iter.m_index &&
-                        m_wbemClassObject == iter.m_wbemClassObject;
-                }
-                return m_index == iter.m_index;
-            }
+        iterator operator++(int)
+        {
+            iterator temp(*this);
+            increment();
+            return temp;
+        }
 
-            bool operator!=(const iterator& iter) const noexcept
-            {
-                return !(*this == iter);
-            }
-
-            // preincrement
-            iterator& operator++()
+        // increment by integer
+        iterator& operator+=(uint32_t _inc)
+        {
+            for (auto loop = 0ul; loop < _inc; ++loop)
             {
                 increment();
-                return *this;
-            }
-
-            // postincrement
-            iterator operator++(int)
-            {
-                iterator temp(*this);
-                increment();
-                return temp;
-            }
-
-            // increment by integer
-            iterator& operator+=(uint32_t _inc)
-            {
-                for (auto loop = 0ul; loop < _inc; ++loop)
-                {
-                    increment();
-                    if (m_index == m_endIteratorIndex)
-                    {
-                        throw std::out_of_range("ctWmiProperties::iterator::operator+= - invalid subscript");
-                    }
-                }
-                return *this;
-            }
-
-            // iterator_traits (allows <algorithm> functions to be used)
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = wil::shared_bstr;
-            using difference_type = int;
-            using pointer = BSTR;
-            using reference = wil::shared_bstr&;
-
-        private:
-            void increment()
-            {
                 if (m_index == m_endIteratorIndex)
                 {
-                    throw std::out_of_range("ctWmiProperties::iterator - cannot increment: at the end");
+                    throw std::out_of_range("ctWmiProperties::iterator::operator+= - invalid subscript");
                 }
+            }
+            return *this;
+        }
 
-                CIMTYPE nextCimtype;
-                wil::shared_bstr nextName;
-                const auto hr = m_wbemClassObject->Next(
-                    0,
-                    nextName.addressof(),
-                    nullptr,
-                    &nextCimtype,
-                    nullptr);
-                switch (hr)
-                {
+        // iterator_traits (allows <algorithm> functions to be used)
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = wil::shared_bstr;
+        using difference_type = int;
+        using pointer = BSTR;
+        using reference = wil::shared_bstr&;
+
+    private:
+        void increment()
+        {
+            if (m_index == m_endIteratorIndex)
+            {
+                throw std::out_of_range("ctWmiProperties::iterator - cannot increment: at the end");
+            }
+
+            CIMTYPE nextCimType{};
+            wil::shared_bstr nextName;
+            const auto hr = m_wbemClassObject->Next(
+                0,
+                nextName.addressof(),
+                nullptr,
+                &nextCimType,
+                nullptr);
+            switch (hr)
+            {
                 case WBEM_S_NO_ERROR:
                 {
                     // update the instance members
                     ++m_index;
                     using std::swap;
                     swap(m_propertyName, nextName);
-                    swap(m_propertyType, nextCimtype);
+                    swap(m_propertyType, nextCimType);
                     break;
                 }
 
@@ -236,8 +236,8 @@ namespace ctl
                 }
 
                 default: THROW_IF_FAILED(hr);
-                }
             }
-        };
+        }
     };
+};
 } // namespace ctl
