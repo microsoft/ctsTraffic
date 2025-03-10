@@ -76,8 +76,8 @@ class ctsIoPatternState
     uint64_t m_inFlightBytes = 0UL;
     // ideal send backlog value
     uint32_t m_idealSendBacklog = ctsConfig::g_configSettings->PrePostSends == 0 ?
-                                  ctsConfig::GetMaxBufferSize() :
-                                  ctsConfig::GetMaxBufferSize() * ctsConfig::g_configSettings->PrePostSends;
+        ctsConfig::GetMaxBufferSize() :
+        ctsConfig::GetMaxBufferSize() * ctsConfig::g_configSettings->PrePostSends;
 
     InternalPatternState m_internalState = InternalPatternState::Initialized;
     // track if waiting for the prior state to complete
@@ -203,8 +203,8 @@ inline ctsIoPatternType ctsIoPatternState::GetNextPatternType() noexcept
         case InternalPatternState::MoreIo:
             // ReSharper disable once CppRedundantParentheses
             return (m_confirmedBytes + m_inFlightBytes) < m_maxTransfer ?
-                   ctsIoPatternType::MoreIo :
-                   ctsIoPatternType::NoIo;
+                ctsIoPatternType::MoreIo :
+                ctsIoPatternType::NoIo;
 
         case InternalPatternState::ServerSendCompletion:
             PRINT_DEBUG_INFO(L"\t\tctsIOPatternState::GetNextPatternType : SendCompletion\n");

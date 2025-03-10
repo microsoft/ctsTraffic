@@ -83,8 +83,10 @@ public:
     virtual ~ctsIoPattern() noexcept = default;
 
     // Exposing statistics members publicly to ctsSocket
-    virtual void PrintStatistics(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept = 0;
-    virtual void PrintTcpInfo(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, SOCKET socket) noexcept = 0;
+    virtual void PrintStatistics(
+        const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept = 0;
+    virtual void PrintTcpInfo(
+        const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, SOCKET socket) noexcept = 0;
 
     //
     // These are public functions exposed to ctsSocket and the derived types
@@ -180,7 +182,7 @@ private:
     //   - ctsIOTask argument: the ctsIOTask which it previously returned from GetNextTask()
     //   - uint32_t argument:  the # of bytes actually transferred
     // - cannot throw [if it fails, it must RaiseException to debug]
-    // - returns a uint32_t back to the base class to indicate errors
+    // - returns uint32_t back to the base class to indicate errors
     //
     virtual ctsTask GetNextTaskFromPattern() = 0;
     virtual ctsIoPatternError CompleteTaskBackToPattern(const ctsTask&, uint32_t currentTransfer) noexcept = 0;
@@ -304,7 +306,7 @@ protected:
 
     // Exposing to the derived class the # of bytes to be transferred as tracked in the base class
     // Make it possible for the derived type to also override the total transfer 
-    //  - to meet its requirements (e.g. must be an even total # for balanced send & recv's)
+    //  - to meet its requirements (e.g. must be an even total # for balanced send & recv)
     [[nodiscard]] uint64_t GetTotalTransfer() const noexcept
     {
         return m_patternState.GetMaxTransfer();
@@ -433,7 +435,7 @@ public:
     ~ctsIoPatternStatistics() noexcept override
     {
         // guarantee that end_pattern has been called at least once
-        ctsIoPatternStatistics<S>::EndStatistics();
+        ctsIoPatternStatistics::EndStatistics();
     }
 
     ctsIoPatternStatistics(const ctsIoPatternStatistics&) = delete;

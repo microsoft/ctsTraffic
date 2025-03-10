@@ -124,7 +124,7 @@ static PCWSTR g_processFilename = L"ctsPerProcess.csv";
 
 static bool g_meanOnly = false;
 
-int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)  // NOLINT(misc-use-internal-linkage)
+int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv) // NOLINT(misc-use-internal-linkage)
 {
     WSADATA wsaData;
     if (const auto wsError = WSAStartup(WINSOCK_VERSION, &wsaData); wsError != 0)
@@ -272,10 +272,14 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)  // NO
         const ctWmiService wmi(L"root\\cimv2");
         g_wmi = &wmi;
 
-        auto deleteAllCounters = wil::scope_exit([&]() noexcept { DeleteAllCounters(); });
+        auto deleteAllCounters = wil::scope_exit(
+            [&]() noexcept
+            {
+                DeleteAllCounters();
+            });
 
-        ctsPerf::ctsWriteDetails cpuwriter(g_fileName);
-        cpuwriter.CreateFile(g_meanOnly);
+        ctsPerf::ctsWriteDetails cpu_writer(g_fileName);
+        cpu_writer.CreateFile(g_meanOnly);
 
         ctsPerf::ctsWriteDetails networkWriter(g_networkingFilename);
         if (trackNetworking)
@@ -329,8 +333,8 @@ int __cdecl wmain(_In_ int argc, _In_reads_z_(argc) const wchar_t** argv)  // NO
             perfObject.stop_all_counters();
         }
 
-        ProcessProcessorCounters(cpuwriter);
-        ProcessMemoryCounters(cpuwriter);
+        ProcessProcessorCounters(cpu_writer);
+        ProcessMemoryCounters(cpu_writer);
 
         if (trackNetworking)
         {
@@ -445,7 +449,8 @@ void ProcessProcessorCounters(ctsPerf::ctsWriteDetails& writer)
     enumProcessors.query(L"SELECT * FROM Win32_PerfFormattedData_Counters_ProcessorInformation");
     if (enumProcessors.begin() == enumProcessors.end())
     {
-        throw exception("Unable to find any processors to report on - querying Win32_PerfFormattedData_Counters_ProcessorInformation returned nothing");
+        throw exception(
+            "Unable to find any processors to report on - querying Win32_PerfFormattedData_Counters_ProcessorInformation returned nothing");
     }
     vector<ULONGLONG> ullData;
     vector<ULONG> ulData;

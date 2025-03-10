@@ -26,57 +26,57 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsPerf { namespace Details
     {
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// write( ... )
-        /// - overloads for ULONG and ULONGLONG data types
-        /// - overloads for 1, 2, or 3 data points
-        ///
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        inline std::wstring Write(ULONGLONG firstValue)
-        {
-            return wil::str_printf<std::wstring>(L",%llu", firstValue);
-        }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// write( ... )
+    /// - overloads for ULONG and ULONGLONG data types
+    /// - overloads for 1, 2, or 3 data points
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline std::wstring Write(ULONGLONG firstValue)
+    {
+        return wil::str_printf<std::wstring>(L",%llu", firstValue);
+    }
 
-        inline std::wstring Write(ULONG firstValue)
-        {
-            return wil::str_printf<std::wstring>(L",%lu", firstValue);
-        }
+    inline std::wstring Write(ULONG firstValue)
+    {
+        return wil::str_printf<std::wstring>(L",%lu", firstValue);
+    }
 
-        inline std::wstring Write(double firstValue)
-        {
-            return wil::str_printf<std::wstring>(L",%.3f", firstValue);
-        }
+    inline std::wstring Write(double firstValue)
+    {
+        return wil::str_printf<std::wstring>(L",%.3f", firstValue);
+    }
 
-        inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue)
-        {
-            return wil::str_printf<std::wstring>(L",%llu,%llu", firstValue, secondValue);
-        }
+    inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue)
+    {
+        return wil::str_printf<std::wstring>(L",%llu,%llu", firstValue, secondValue);
+    }
 
-        inline std::wstring Write(ULONG firstValue, ULONG secondValue)
-        {
-            return wil::str_printf<std::wstring>(L",%lu,%lu", firstValue, secondValue);
-        }
+    inline std::wstring Write(ULONG firstValue, ULONG secondValue)
+    {
+        return wil::str_printf<std::wstring>(L",%lu,%lu", firstValue, secondValue);
+    }
 
-        inline std::wstring Write(double firstValue, double secondValue)
-        {
-            return wil::str_printf<std::wstring>(L",%.3f,%.3f", firstValue, secondValue);
-        }
+    inline std::wstring Write(double firstValue, double secondValue)
+    {
+        return wil::str_printf<std::wstring>(L",%.3f,%.3f", firstValue, secondValue);
+    }
 
-        inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue, ULONGLONG thirdValue)
-        {
-            return wil::str_printf<std::wstring>(L",%llu,%llu,%llu", firstValue, secondValue, thirdValue);
-        }
+    inline std::wstring Write(ULONGLONG firstValue, ULONGLONG secondValue, ULONGLONG thirdValue)
+    {
+        return wil::str_printf<std::wstring>(L",%llu,%llu,%llu", firstValue, secondValue, thirdValue);
+    }
 
-        inline std::wstring Write(ULONG firstValue, ULONG secondValue, ULONG thirdValue)
-        {
-            return wil::str_printf<std::wstring>(L",%lu,%lu,%lu", firstValue, secondValue, thirdValue);
-        }
+    inline std::wstring Write(ULONG firstValue, ULONG secondValue, ULONG thirdValue)
+    {
+        return wil::str_printf<std::wstring>(L",%lu,%lu,%lu", firstValue, secondValue, thirdValue);
+    }
 
-        inline std::wstring Write(double firstValue, double secondValue, double thirdValue)
-        {
-            return wil::str_printf<std::wstring>(L",%.3f,%.3f,%.3f", firstValue, secondValue, thirdValue);
-        }
+    inline std::wstring Write(double firstValue, double secondValue, double thirdValue)
+    {
+        return wil::str_printf<std::wstring>(L",%.3f,%.3f,%.3f", firstValue, secondValue, thirdValue);
+    }
     }
 
     class ctsWriteDetails
@@ -112,8 +112,14 @@ namespace ctsPerf { namespace Details
 
             auto formattedData = Details::Write(static_cast<DWORD>(data.size())); // SampleCount
             formattedData += Details::Write(*data.begin(), *data.rbegin()); // Min,Max
-            formattedData += Details::Write(std::get<0>(stdTuple) - std::get<1>(stdTuple), std::get<0>(stdTuple), std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
-            formattedData += Details::Write(std::get<0>(interQuartileTuple), std::get<1>(interQuartileTuple), std::get<2>(interQuartileTuple)); // -1IQR,Median,+1IQR
+            formattedData += Details::Write(
+                std::get<0>(stdTuple) - std::get<1>(stdTuple),
+                std::get<0>(stdTuple),
+                std::get<0>(stdTuple) + std::get<1>(stdTuple)); // -1Std,Mean,+1Std
+            formattedData += Details::Write(
+                std::get<0>(interQuartileTuple),
+                std::get<1>(interQuartileTuple),
+                std::get<2>(interQuartileTuple)); // -1IQR,Median,+1IQR
             return formattedData;
         }
 

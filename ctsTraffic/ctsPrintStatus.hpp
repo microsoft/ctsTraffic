@@ -63,8 +63,8 @@ public:
     PCWSTR PrintLegend(const ctsConfig::StatusFormatting& format) noexcept
     {
         return ctsConfig::StatusFormatting::Csv == format ?
-               nullptr :
-               FormatLegend(format);
+            nullptr :
+            FormatLegend(format);
     }
 
     PCWSTR PrintHeader(const ctsConfig::StatusFormatting& format) noexcept
@@ -269,7 +269,8 @@ protected:
 
         FAIL_FAST_IF_MSG(
             converted > c_outputBufferSize - offset,
-            "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset, this);
+            "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset,
+            this);
         FAIL_FAST_IF_MSG(
             converted > valueLength,
             "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", valueLength, this);
@@ -304,7 +305,8 @@ protected:
 
         FAIL_FAST_IF_MSG(
             converted > c_outputBufferSize - offset,
-            "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset, this);
+            "Counting the string built by _ui64tow_s overflowed - converted (%u) _offset (%u) : ctsUdpStatusInformation (%p)\n", converted, offset,
+            this);
         FAIL_FAST_IF_MSG(
             converted > valueLength,
             "Counting the string built by _ui64tow_s was greater than _value_length (%u) : ctsUdpStatusInformation (%p)\n", valueLength, this);
@@ -422,7 +424,8 @@ public:
             charactersWritten += AppendCsvOutput(charactersWritten, c_competedFramesLength, udpData.m_successfulFrames.GetValueNoLock());
             charactersWritten += AppendCsvOutput(charactersWritten, c_droppedFramesLength, udpData.m_droppedFrames.GetValueNoLock());
             charactersWritten += AppendCsvOutput(charactersWritten, c_duplicatedFramesLength, udpData.m_duplicateFrames.GetValueNoLock());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_errorFramesLength, udpData.m_errorFrames.GetValueNoLock(), false); // no comma at the end
+            // no comma at the end
+            charactersWritten += AppendCsvOutput(charactersWritten, c_errorFramesLength, udpData.m_errorFrames.GetValueNoLock(), false);
             TerminateFileString(charactersWritten);
         }
         else
@@ -452,7 +455,6 @@ public:
         }
         return PrintingStatus::PrintComplete;
     }
-
 
 private:
     // constant offsets for each numeric value to print
@@ -517,10 +519,14 @@ public:
                 c_recvBytesPerSecondLength,
                 timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            charactersWritten += AppendCsvOutput(charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
-            charactersWritten += AppendCsvOutput(charactersWritten, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock(), false); // no comma at the end
+            charactersWritten += AppendCsvOutput(
+                charactersWritten, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(
+                charactersWritten, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(
+                charactersWritten, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
+            charactersWritten += AppendCsvOutput(
+                charactersWritten, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock(), false); // no comma at the end
             TerminateFileString(charactersWritten);
         }
         else
@@ -539,10 +545,14 @@ public:
                 c_recvBytesPerSecondLength,
                 timeElapsed > 0LL ? tcpData.m_bytesRecv.GetValueNoLock() * 1000LL / timeElapsed : 0LL);
 
-            RightJustifyOutput(c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
-            RightJustifyOutput(c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
-            RightJustifyOutput(c_connectionErrorsOffset, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
-            RightJustifyOutput(c_protocolErrorsOffset, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock());
+            RightJustifyOutput(
+                c_currentTransactionsOffset, c_currentTransactionsLength, connectionData.m_activeConnectionCount.GetValueNoLock());
+            RightJustifyOutput(
+                c_completedTransactionsOffset, c_completedTransactionsLength, connectionData.m_successfulCompletionCount.GetValueNoLock());
+            RightJustifyOutput(
+                c_connectionErrorsOffset, c_connectionErrorsLength, connectionData.m_connectionErrorCount.GetValueNoLock());
+            RightJustifyOutput(
+                c_protocolErrorsOffset, c_protocolErrorsLength, connectionData.m_protocolErrorCount.GetValueNoLock());
             if (format == ctsConfig::StatusFormatting::ConsoleOutput)
             {
                 TerminateString(c_protocolErrorsOffset);

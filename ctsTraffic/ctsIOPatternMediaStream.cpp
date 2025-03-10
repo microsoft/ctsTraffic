@@ -86,11 +86,13 @@ ctsIoPatternMediaStreamClient::ctsIoPatternMediaStreamClient() :
     m_rendererTimer = CreateThreadpoolTimer(TimerCallback, this, nullptr);
     THROW_LAST_ERROR_IF(!m_rendererTimer);
 
-    auto deleteTimerCallbackOnError = wil::scope_exit([&]() noexcept {
-        SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
-        WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
-        CloseThreadpoolTimer(m_rendererTimer);
-    });
+    auto deleteTimerCallbackOnError = wil::scope_exit(
+        [&]() noexcept
+        {
+            SetThreadpoolTimer(m_rendererTimer, nullptr, 0, 0);
+            WaitForThreadpoolTimerCallbacks(m_rendererTimer, FALSE);
+            CloseThreadpoolTimer(m_rendererTimer);
+        });
 
     m_startTimer = CreateThreadpoolTimer(StartCallback, this, nullptr);
     THROW_LAST_ERROR_IF(!m_startTimer);
@@ -153,7 +155,8 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
         // the stream should now be done
         FAIL_FAST_IF_MSG(
             !m_finishedStream,
-            "ctsIOPatternMediaStreamClient (dt %p ctsTraffic!ctsTraffic::ctsIOPatternMediaStreamClient) processed an Abort before the stream was finished", this);
+            "ctsIOPatternMediaStreamClient (dt %p ctsTraffic!ctsTraffic::ctsIOPatternMediaStreamClient) processed an Abort before the stream was finished",
+            this);
         return ctsIoPatternError::SuccessfullyCompleted;
     }
 
@@ -325,7 +328,11 @@ bool ctsIoPatternMediaStreamClient::ReceivedBufferedFrames() noexcept
         return true;
     }
 
-    return std::ranges::any_of(m_frameEntries, [](const auto udpFrame) { return udpFrame.m_bytesReceived > 0UL; });
+    return std::ranges::any_of(
+        m_frameEntries, [](const auto udpFrame)
+        {
+            return udpFrame.m_bytesReceived > 0UL;
+        });
 }
 
 // _Requires_lock_held_(m_lock)
@@ -509,7 +516,8 @@ VOID CALLBACK ctsIoPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE
             // if we haven't yet received *anything* from the server, abort this connection
             if (!thisPtr->ReceivedBufferedFrames())
             {
-                ctsConfig::PrintErrorInfo(L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
+                ctsConfig::PrintErrorInfo(
+                    L"ctsIOPatternMediaStreamClient - issuing a FATALABORT to close the connection - have received nothing from the server");
 
                 // indicate all frames were dropped
                 ctsConfig::g_configSettings->UdpStatusDetails.m_droppedFrames.Add(thisPtr->m_finalFrame);

@@ -32,7 +32,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr) :
+ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(
+    wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr) :
     m_threadIocp(std::make_shared<ctl::ctThreadIocp>(listeningSocket.get(), ctsConfig::g_configSettings->pTpEnvironment)),
     m_listeningSocket(std::move(listeningSocket)),
     m_listeningAddr(listeningAddr)
@@ -75,22 +76,23 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
             const auto lock = m_listeningSocketLock.lock();
             if (m_listeningSocket)
             {
-                WSABUF wsabuffer;
-                wsabuffer.buf = m_recvBuffer.data();
-                wsabuffer.len = static_cast<ULONG>(m_recvBuffer.size());
+                WSABUF wsa_buffer;
+                wsa_buffer.buf = m_recvBuffer.data();
+                wsa_buffer.len = static_cast<ULONG>(m_recvBuffer.size());
                 ::ZeroMemory(m_recvBuffer.data(), m_recvBuffer.size());
 
                 m_recvFlags = 0;
                 m_remoteAddr.reset(m_remoteAddr.family());
                 m_remoteAddrLen = m_remoteAddr.length();
                 OVERLAPPED* pOverlapped = m_threadIocp->new_request(
-                    [this](OVERLAPPED* pCallbackOverlapped) noexcept {
+                    [this](OVERLAPPED* pCallbackOverlapped) noexcept
+                    {
                         RecvCompletion(pCallbackOverlapped);
                     });
 
                 error = WSARecvFrom(
                     m_listeningSocket.get(),
-                    &wsabuffer,
+                    &wsa_buffer,
                     1,
                     nullptr,
                     &m_recvFlags,
@@ -175,7 +177,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                 return;
             }
 
-            DWORD bytesReceived;
+            DWORD bytesReceived{};
             if (!WSAGetOverlappedResult(m_listeningSocket.get(), pOverlapped, &bytesReceived, FALSE, &m_recvFlags))
             {
                 // recvfrom failed
@@ -183,7 +185,8 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                 {
                     if (!m_priorFailureWasConnectionReset)
                     {
-                        ctsConfig::PrintErrorInfo(L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
+                        ctsConfig::PrintErrorInfo(
+                            L"ctsMediaStreamServer - WSARecvFrom failed as a prior WSASendTo from this socket silently failed with port unreachable");
                     }
                     m_priorFailureWasConnectionReset = true;
                 }
@@ -209,7 +212,8 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                             m_remoteAddr.write_complete_address().c_str());
 #ifndef TESTING_IGNORE_START
                     // Cannot be holding the object_guard when calling into any pimpl-> methods
-                        pimplOperation = [this] {
+                        pimplOperation = [this]
+                        {
                             ctsMediaStreamServerImpl::Start(m_listeningSocket.get(), m_listeningAddr, m_remoteAddr);
                         };
 #endif

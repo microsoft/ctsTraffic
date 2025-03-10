@@ -47,17 +47,18 @@ constexpr uint32_t c_udpDatagramConnectionIdHeaderLength = c_udpDatagramProtocol
 constexpr uint32_t c_udpDatagramSequenceNumberLength = 8; // 64-bit value
 constexpr uint32_t c_udpDatagramQpcLength = 8; // 64-bit value
 constexpr uint32_t c_udpDatagramQpfLength = 8; // 64-bit value
-constexpr uint32_t c_udpDatagramDataHeaderLength = c_udpDatagramProtocolHeaderFlagLength + c_udpDatagramSequenceNumberLength + c_udpDatagramQpcLength + c_udpDatagramQpfLength;
+constexpr uint32_t c_udpDatagramDataHeaderLength =
+    c_udpDatagramProtocolHeaderFlagLength +
+    c_udpDatagramSequenceNumberLength +
+    c_udpDatagramQpcLength +
+    c_udpDatagramQpfLength;
 
 constexpr uint32_t c_udpDatagramMaximumSizeBytes = 64000UL;
 
 static auto* g_udpDatagramStartString = "START";
 constexpr uint32_t c_udpDatagramStartStringLength = 5;
 
-enum class MediaStreamAction : char
-{
-    START
-};
+enum class MediaStreamAction : char { START };
 
 class ctsMediaStreamSendRequests
 {
@@ -120,7 +121,7 @@ public:
         bool operator ==(const iterator& comparand) const noexcept
         {
             return m_qpcAddress == comparand.m_qpcAddress &&
-                   m_bytesToSend == comparand.m_bytesToSend;
+                m_bytesToSend == comparand.m_bytesToSend;
         }
 
         bool operator !=(const iterator& comparand) const noexcept
@@ -251,7 +252,6 @@ public:
         return {nullptr, 0, m_wsaBuffer};
     }
 
-
 private:
     std::array<WSABUF, c_bufferArraySize> m_wsaBuffer{};
     LARGE_INTEGER m_qpcValue{};
@@ -344,7 +344,7 @@ struct ctsMediaStreamMessage
 
     static int64_t GetSequenceNumberFromTask(const ctsTask& task) noexcept
     {
-        int64_t returnValue;
+        int64_t returnValue{};
         const auto copyError = memcpy_s(
             &returnValue,
             c_udpDatagramSequenceNumberLength,
@@ -360,8 +360,12 @@ struct ctsMediaStreamMessage
 
     static int64_t GetQueryPerfCounterFromTask(const ctsTask& task) noexcept
     {
-        int64_t returnValue;
-        const auto copyError = memcpy_s(&returnValue, c_udpDatagramSequenceNumberLength, task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength, c_udpDatagramSequenceNumberLength);
+        int64_t returnValue{};
+        const auto copyError = memcpy_s(
+            &returnValue,
+            c_udpDatagramSequenceNumberLength,
+            task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength,
+            c_udpDatagramSequenceNumberLength);
         FAIL_FAST_IF_MSG(
             copyError != 0,
             "ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",
@@ -372,8 +376,12 @@ struct ctsMediaStreamMessage
 
     static int64_t GetQueryPerfFrequencyFromTask(const ctsTask& task) noexcept
     {
-        int64_t returnValue;
-        const auto copyError = memcpy_s(&returnValue, c_udpDatagramSequenceNumberLength, task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength, c_udpDatagramSequenceNumberLength);
+        int64_t returnValue{};
+        const auto copyError = memcpy_s(
+            &returnValue,
+            c_udpDatagramSequenceNumberLength,
+            task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength,
+            c_udpDatagramSequenceNumberLength);
         FAIL_FAST_IF_MSG(
             copyError != 0,
             "ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - target buffer (%p) ctsIOTask (%p) (error : %d)",
@@ -391,8 +399,16 @@ struct ctsMediaStreamMessage
 
         ctsTask returnTask{rawTask};
         // populate the buffer with the ConnectionId and protocol field
-        memcpy_s(returnTask.m_buffer, c_udpDatagramProtocolHeaderFlagLength, &c_udpDatagramProtocolHeaderFlagId, c_udpDatagramProtocolHeaderFlagLength);
-        memcpy_s(returnTask.m_buffer + c_udpDatagramProtocolHeaderFlagLength, ctsStatistics::ConnectionIdLength, connectionId, ctsStatistics::ConnectionIdLength);
+        memcpy_s(
+            returnTask.m_buffer,
+            c_udpDatagramProtocolHeaderFlagLength,
+            &c_udpDatagramProtocolHeaderFlagId,
+            c_udpDatagramProtocolHeaderFlagLength);
+        memcpy_s(
+            returnTask.m_buffer + c_udpDatagramProtocolHeaderFlagLength,
+            ctsStatistics::ConnectionIdLength,
+            connectionId,
+            ctsStatistics::ConnectionIdLength);
 
         returnTask.m_ioAction = ctsTaskAction::Send;
         returnTask.m_bufferType = ctsTask::BufferType::UdpConnectionId;
@@ -431,7 +447,8 @@ struct ctsMediaStreamMessage
             }
         }
 
-        THROW_HR_MSG(HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+        THROW_HR_MSG(
+            HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
             "Invalid MediaStream message: %hs",
             std::string(inputBuffer, inputLength).c_str());
     }

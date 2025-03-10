@@ -30,97 +30,99 @@ using namespace ctl;
 
 namespace ctsTraffic
 {
-    ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
-        std::weak_ptr<ctsSocket> weakSocket,
-        SOCKET sendingSocket,
-        wil::network::socket_address remoteAddr,
-        ctsMediaStreamConnectedSocketIoFunctor ioFunctor) :
-        m_weakSocket(std::move(weakSocket)),
-        m_ioFunctor(std::move(ioFunctor)),
-        m_sendingSocket(sendingSocket),
-        m_remoteAddr(remoteAddr),
-        m_connectTime(ctTimer::snap_qpc_as_msec())
+ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
+    std::weak_ptr<ctsSocket> weakSocket,
+    SOCKET sendingSocket,
+    wil::network::socket_address remoteAddr,
+    ctsMediaStreamConnectedSocketIoFunctor ioFunctor) :
+    m_weakSocket(std::move(weakSocket)),
+    m_ioFunctor(std::move(ioFunctor)),
+    m_sendingSocket(sendingSocket),
+    m_remoteAddr(remoteAddr),
+    m_connectTime(ctTimer::snap_qpc_as_msec())
+{
+    m_taskTimer.reset(
+        CreateThreadpoolTimer(
+            MediaStreamTimerCallback,
+            this,
+            ctsConfig::g_configSettings->pTpEnvironment));
+    THROW_LAST_ERROR_IF(!m_taskTimer);
+}
+
+ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() noexcept
+{
+    // stop the TP before letting the destructor delete any member objects
+    m_taskTimer.reset();
+}
+
+void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noexcept
+{
+    if (const auto sharedSocket = m_weakSocket.lock())
     {
-        m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback,
-                                                this,
-                                                ctsConfig::g_configSettings->pTpEnvironment));
-        THROW_LAST_ERROR_IF(!m_taskTimer);
+        const auto lock = m_objectGuard.lock();
+        _Analysis_assume_lock_acquired_(m_objectGuard);
+        if (task.m_timeOffsetMilliseconds < 2)
+        {
+            // in this case, immediately schedule the WSASendTo
+            m_nextTask = task;
+            MediaStreamTimerCallback(nullptr, this, nullptr);
+        }
+        else
+        {
+            FILETIME ftDueTime(ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds));
+            // assign the next task *and* schedule the timer while in *this object lock
+            m_nextTask = task;
+            SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);
+        }
+        _Analysis_assume_lock_released_(m_objectGuard);
+    }
+}
+
+void ctsMediaStreamServerConnectedSocket::CompleteState(uint32_t errorCode) const noexcept
+{
+    if (const auto sharedSocket = m_weakSocket.lock())
+    {
+        sharedSocket->CompleteState(errorCode);
+    }
+}
+
+VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(
+    PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER) noexcept
+{
+    auto* thisPtr = static_cast<ctsMediaStreamServerConnectedSocket*>(context);
+
+    // take a lock on the ctsSocket for this 'connection'
+    const auto sharedSocket = thisPtr->m_weakSocket.lock();
+    if (!sharedSocket)
+    {
+        return;
     }
 
-    ctsMediaStreamServerConnectedSocket::~ctsMediaStreamServerConnectedSocket() noexcept
+    // hold a reference on the socket
+    const auto lockedSocket = sharedSocket->AcquireSocketLock();
+    const auto lockedPattern = lockedSocket.GetPattern();
+    if (!lockedPattern)
     {
-        // stop the TP before letting the destructor delete any member objects
-        m_taskTimer.reset();
+        return;
     }
 
-    void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noexcept
+    const auto lock = thisPtr->m_objectGuard.lock();
+    _Analysis_assume_lock_acquired_(thisPtr->m_objectGuard);
+
+    // post the queued IO, then loop sending/scheduling as necessary
+    auto sendResults = thisPtr->m_ioFunctor(thisPtr);
+    auto status = lockedPattern->CompleteIo(
+        thisPtr->m_nextTask,
+        sendResults.m_bytesTransferred,
+        sendResults.m_errorCode);
+
+    ctsTask currentTask = thisPtr->m_nextTask;
+    while (ctsIoStatus::ContinueIo == status && currentTask.m_ioAction != ctsTaskAction::None)
     {
-        if (const auto sharedSocket = m_weakSocket.lock())
+        currentTask = lockedPattern->InitiateIo();
+
+        switch (currentTask.m_ioAction)
         {
-            const auto lock = m_objectGuard.lock();
-            _Analysis_assume_lock_acquired_(m_objectGuard);
-            if (task.m_timeOffsetMilliseconds < 2)
-            {
-                // in this case, immediately schedule the WSASendTo
-                m_nextTask = task;
-                MediaStreamTimerCallback(nullptr, this, nullptr);
-            }
-            else
-            {
-                FILETIME ftDueTime(ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds));
-                // assign the next task *and* schedule the timer while in *this object lock
-                m_nextTask = task;
-                SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);
-            }
-            _Analysis_assume_lock_released_(m_objectGuard);
-        }
-    }
-
-    void ctsMediaStreamServerConnectedSocket::CompleteState(uint32_t errorCode) const noexcept
-    {
-        if (const auto sharedSocket = m_weakSocket.lock())
-        {
-            sharedSocket->CompleteState(errorCode);
-        }
-    }
-
-    VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(
-        PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER) noexcept
-    {
-        auto* thisPtr = static_cast<ctsMediaStreamServerConnectedSocket*>(context);
-
-        // take a lock on the ctsSocket for this 'connection'
-        const auto sharedSocket = thisPtr->m_weakSocket.lock();
-        if (!sharedSocket)
-        {
-            return;
-        }
-
-        // hold a reference on the socket
-        const auto lockedSocket = sharedSocket->AcquireSocketLock();
-        const auto lockedPattern = lockedSocket.GetPattern();
-        if (!lockedPattern)
-        {
-            return;
-        }
-
-        const auto lock = thisPtr->m_objectGuard.lock();
-        _Analysis_assume_lock_acquired_(thisPtr->m_objectGuard);
-
-        // post the queued IO, then loop sending/scheduling as necessary
-        auto sendResults = thisPtr->m_ioFunctor(thisPtr);
-        auto status = lockedPattern->CompleteIo(
-            thisPtr->m_nextTask,
-            sendResults.m_bytesTransferred,
-            sendResults.m_errorCode);
-
-        ctsTask currentTask = thisPtr->m_nextTask;
-        while (ctsIoStatus::ContinueIo == status && currentTask.m_ioAction != ctsTaskAction::None)
-        {
-            currentTask = lockedPattern->InitiateIo();
-
-            switch (currentTask.m_ioAction)
-            {
             case ctsTaskAction::Send:
                 thisPtr->m_nextTask = currentTask;
             // if the time is less than two ms., we need to catch up on sends
@@ -157,37 +159,37 @@ namespace ctsTraffic
                 FAIL_FAST_MSG(
                     "Unexpected task action returned from initiate_io - %d (dt %p ctsTraffic::ctsIOTask)",
                     currentTask.m_ioAction, &currentTask);
-            }
         }
-
-        if (ctsIoStatus::FailedIo == status)
-        {
-            // if IO has failed, we won't have anymore scheduled in the future
-            // - deliberately stop processing now
-            // must guarantee a failed error code is returned
-            uint32_t returnedStatus = sendResults.m_errorCode;
-            if (0 == returnedStatus)
-            {
-                returnedStatus = WSAECONNABORTED;
-            }
-
-            wil::network::socket_address_wstring remote_addr_string{};
-            thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
-            ctsConfig::PrintErrorInfo(
-                L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-                remote_addr_string);
-
-            thisPtr->CompleteState(returnedStatus);
-        }
-        else if (ctsIoStatus::CompletedIo == status)
-        {
-            wil::network::socket_address_wstring remote_addr_string{};
-            thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
-            PRINT_DEBUG_INFO(
-                L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-                remote_addr_string);
-            thisPtr->CompleteState(sendResults.m_errorCode);
-        }
-        _Analysis_assume_lock_released_(thisPtr->m_objectGuard);
     }
+
+    if (ctsIoStatus::FailedIo == status)
+    {
+        // if IO has failed, we won't have anymore scheduled in the future
+        // - deliberately stop processing now
+        // must guarantee a failed error code is returned
+        uint32_t returnedStatus = sendResults.m_errorCode;
+        if (0 == returnedStatus)
+        {
+            returnedStatus = WSAECONNABORTED;
+        }
+
+        wil::network::socket_address_wstring remote_addr_string{};
+        thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
+        ctsConfig::PrintErrorInfo(
+            L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
+            remote_addr_string);
+
+        thisPtr->CompleteState(returnedStatus);
+    }
+    else if (ctsIoStatus::CompletedIo == status)
+    {
+        wil::network::socket_address_wstring remote_addr_string{};
+        thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
+        PRINT_DEBUG_INFO(
+            L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
+            remote_addr_string);
+        thisPtr->CompleteState(sendResults.m_errorCode);
+    }
+    _Analysis_assume_lock_released_(thisPtr->m_objectGuard);
+}
 } // namespace

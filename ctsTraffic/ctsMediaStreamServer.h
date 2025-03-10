@@ -34,27 +34,27 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic { namespace ctsMediaStreamServerImpl
     {
-        void InitOnce();
+    void InitOnce();
 
-        // Schedule the first IO on the specified ctsSocket
-        void ScheduleIo(const std::weak_ptr<ctsSocket>& weakSocket, const ctsTask& task);
+    // Schedule the first IO on the specified ctsSocket
+    void ScheduleIo(const std::weak_ptr<ctsSocket>& weakSocket, const ctsTask& task);
 
-        // Process a new ctsSocket from the ctsSocketBroker
-        // - accept_socket takes the ctsSocket to create a new entry
-        //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
-        void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket);
+    // Process a new ctsSocket from the ctsSocketBroker
+    // - accept_socket takes the ctsSocket to create a new entry
+    //   which will create a corresponding ctsMediaStreamServerConnectedSocket in the process
+    void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket);
 
-        // Process the removal of a connected socket once it is completed
-        // - remove_socket takes the remote address to find the socket
-        // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
-        //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
-        //   (which will wait for all TP threads to complete in the destructor)
-        void RemoveSocket(const wil::network::socket_address& targetAddr);
+    // Process the removal of a connected socket once it is completed
+    // - remove_socket takes the remote address to find the socket
+    // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
+    //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
+    //   (which will wait for all TP threads to complete in the destructor)
+    void RemoveSocket(const wil::network::socket_address& targetAddr);
 
-        // Processes the incoming START request from the client
-        // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
-        // - else we'll queue it to awaiting_endpoints
-        void Start(SOCKET socket, const wil::network::socket_address& localAddr, const wil::network::socket_address& targetAddr);
+    // Processes the incoming START request from the client
+    // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
+    // - else we'll queue it to awaiting_endpoints
+    void Start(SOCKET socket, const wil::network::socket_address& localAddr, const wil::network::socket_address& targetAddr);
     }
 
     // Called to 'accept' incoming connections

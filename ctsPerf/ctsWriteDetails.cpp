@@ -26,20 +26,21 @@ namespace ctsPerf
 {
 void ctsWriteDetails::CreateFile(bool meanOnly)
 {
-    m_fileHandle.reset(::CreateFileW(
-        m_fileName.c_str(),
-        GENERIC_WRITE,
-        FILE_SHARE_READ, // allow others to read the file while we write to it
-        nullptr,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr));
+    m_fileHandle.reset(
+        ::CreateFileW(
+            m_fileName.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ, // allow others to read the file while we write to it
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr));
     THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
     // write the UTF16 Byte order mark
     constexpr WCHAR bomUtf16 = 0xFEFF;
     DWORD length = sizeof(WCHAR);
-    DWORD written;
+    DWORD written{};
     THROW_LAST_ERROR_IF(!::WriteFile(m_fileHandle.get(), &bomUtf16, length, &written, nullptr));
 
     if (meanOnly)
@@ -58,14 +59,15 @@ void ctsWriteDetails::CreateFile(bool meanOnly)
 
 void ctsWriteDetails::CreateFile(const std::wstring& bannerText)
 {
-    m_fileHandle.reset(::CreateFileW(
-        m_fileName.c_str(),
-        GENERIC_WRITE,
-        FILE_SHARE_READ, // allow others to read the file while we write to it
-        nullptr,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr));
+    m_fileHandle.reset(
+        ::CreateFileW(
+            m_fileName.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ, // allow others to read the file while we write to it
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr));
     THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
     // write the UTF16 Byte order mark
@@ -98,10 +100,12 @@ void ctsWriteDetails::WriteEmptyRow() const noexcept
     EndRow();
 }
 
-void ctsWriteDetails::StartRow(_In_ PCWSTR className, _In_ PCWSTR counterName) const noexcept try
+void ctsWriteDetails::StartRow(_In_ PCWSTR className, _In_ PCWSTR counterName) const noexcept
+try
 {
-    auto formattedString(wil::str_printf<std::wstring>(
-        L"%ws (%ws)", className, counterName));
+    auto formattedString(
+        wil::str_printf<std::wstring>(
+            L"%ws (%ws)", className, counterName));
     // since writing to csv, can't embed a comma in the data
     ctl::ctString::replace_all(formattedString, L",", L"-");
 

@@ -101,25 +101,27 @@ public:
     ctsTextLogger(_In_ PCWSTR file_name, ctsConfig::StatusFormatting format) :
         ctsLogger(format)
     {
-        m_fileHandle.reset(CreateFileW(
-            file_name,
-            GENERIC_WRITE,
-            FILE_SHARE_READ, // allow others to read the file while we write to it
-            nullptr,
-            CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr));
+        m_fileHandle.reset(
+            CreateFileW(
+                file_name,
+                GENERIC_WRITE,
+                FILE_SHARE_READ, // allow others to read the file while we write to it
+                nullptr,
+                CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,
+                nullptr));
         THROW_LAST_ERROR_IF_NULL(m_fileHandle.get());
 
         // write the UTF16 Byte order mark
         constexpr WCHAR bomUtf16 = 0xFEFF;
         DWORD bytesWritten{};
-        THROW_LAST_ERROR_IF(!WriteFile(
-            m_fileHandle.get(),
-            &bomUtf16,
-            sizeof WCHAR,
-            &bytesWritten,
-            nullptr));
+        THROW_LAST_ERROR_IF(
+            !WriteFile(
+                m_fileHandle.get(),
+                &bomUtf16,
+                sizeof WCHAR,
+                &bytesWritten,
+                nullptr));
     }
 
     ~ctsTextLogger() noexcept override = default;
@@ -147,12 +149,13 @@ private:
     {
         const auto lock = m_fileLock.lock();
         DWORD bytesWritten{};
-        LOG_LAST_ERROR_IF(!WriteFile(
-            m_fileHandle.get(),
-            message,
-            static_cast<DWORD>(wcslen(message) * sizeof(WCHAR)),
-            &bytesWritten,
-            nullptr));
+        LOG_LAST_ERROR_IF(
+            !WriteFile(
+                m_fileHandle.get(),
+                message,
+                static_cast<DWORD>(wcslen(message) * sizeof(WCHAR)),
+                &bytesWritten,
+                nullptr));
     }
 };
 } // namespace

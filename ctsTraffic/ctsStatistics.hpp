@@ -24,56 +24,56 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic { namespace ctsStatistics
     {
-        constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
+    constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
-        template <typename T>
-        void GenerateConnectionId(_In_ T& statisticsObject)
+    template <typename T>
+    void GenerateConnectionId(_In_ T& statisticsObject)
+    {
+        UUID connectionId;
+        RPC_STATUS status = UuidCreate(&connectionId);
+        if (status != RPC_S_OK)
         {
-            UUID connectionId;
-            RPC_STATUS status = UuidCreate(&connectionId);
-            if (status != RPC_S_OK)
-            {
-                THROW_WIN32_MSG(status, "UuidCreate (ctsStatistics)");
-            }
-
-            RPC_CSTR connectionIdString = nullptr;
-            status = UuidToStringA(&connectionId, &connectionIdString);
-            if (status != RPC_S_OK)
-            {
-                THROW_WIN32_MSG(status, "UuidToStringA (ctsStatistics)");
-            }
-            FAIL_FAST_IF_MSG(
-                // ReSharper disable once CppRedundantParentheses
-                strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (ConnectionIdLength - 1),
-                "UuidToString returned a string not 36 characters long (%zu)",
-                strlen(reinterpret_cast<LPSTR>(connectionIdString)));
-
-            const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
-            FAIL_FAST_IF_MSG(
-                copyError != 0,
-                "memcpy_s failed trying to copy a UUID string (%d)", copyError);
-
-            RpcStringFreeA(&connectionIdString);
-            statisticsObject.m_connectionIdentifier[ConnectionIdLength - 1] = '\0';
+            THROW_WIN32_MSG(status, "UuidCreate (ctsStatistics)");
         }
 
-        template <typename T>
-        void Start(_In_ T& statisticsObject) noexcept
+        RPC_CSTR connectionIdString = nullptr;
+        status = UuidToStringA(&connectionId, &connectionIdString);
+        if (status != RPC_S_OK)
         {
-            // only calculate the QPC the first time
-            // - willing to take the cost of 2 interlocked operations the first time this is initialized
-            //   versus taking a QPC hit on every IO request
-            if (0LL == statisticsObject.start_time.get())
-            {
-                statisticsObject.m_startTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
-            }
+            THROW_WIN32_MSG(status, "UuidToStringA (ctsStatistics)");
         }
+        FAIL_FAST_IF_MSG(
+            // ReSharper disable once CppRedundantParentheses
+            strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (ConnectionIdLength - 1),
+            "UuidToString returned a string not 36 characters long (%zu)",
+            strlen(reinterpret_cast<LPSTR>(connectionIdString)));
 
-        template <typename T>
-        void End(_In_ T& statisticsObject) noexcept
+        const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
+        FAIL_FAST_IF_MSG(
+            copyError != 0,
+            "memcpy_s failed trying to copy a UUID string (%d)", copyError);
+
+        RpcStringFreeA(&connectionIdString);
+        statisticsObject.m_connectionIdentifier[ConnectionIdLength - 1] = '\0';
+    }
+
+    template <typename T>
+    void Start(_In_ T& statisticsObject) noexcept
+    {
+        // only calculate the QPC the first time
+        // - willing to take the cost of 2 interlocked operations the first time this is initialized
+        //   versus taking a QPC hit on every IO request
+        if (0LL == statisticsObject.start_time.get())
         {
-            statisticsObject.m_endTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+            statisticsObject.m_startTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
         }
+    }
+
+    template <typename T>
+    void End(_In_ T& statisticsObject) noexcept
+    {
+        statisticsObject.m_endTime.set_conditionally(ctl::ctTimer::snap_qpc_as_msec(), 0LL);
+    }
     }
 
     struct ctsStatsTracking
@@ -260,8 +260,8 @@ namespace ctsTraffic { namespace ctsStatistics
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
             // all writes to the local variable do not require Interlocked* semantics
             ctsConnectionStatistics returnStats(priorTimeRead);
@@ -315,8 +315,8 @@ namespace ctsTraffic { namespace ctsStatistics
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
             // all writes to the local variable do not require Interlocked* semantics
             ctsUdpStatistics returnStats(priorTimeRead);
@@ -382,8 +382,8 @@ namespace ctsTraffic { namespace ctsStatistics
         {
             const int64_t currentTime = ctl::ctTimer::snap_qpc_as_msec();
             const int64_t priorTimeRead = clear_settings ?
-                                          m_startTime.SetPriorValue(currentTime) :
-                                          m_startTime.GetPriorValue();
+                m_startTime.SetPriorValue(currentTime) :
+                m_startTime.GetPriorValue();
 
             ctsTcpStatistics returnStats(priorTimeRead);
             returnStats.m_endTime.SetValue(currentTime);
