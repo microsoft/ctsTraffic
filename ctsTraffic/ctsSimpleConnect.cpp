@@ -30,7 +30,7 @@ namespace ctsTraffic
 //
 // Its intended use is either for UDP sockets, or for very few concurrent connections
 //
-void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
+void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept // NOLINT(misc-use-internal-linkage)
 {
     // attempt to get a reference to the socket
     const auto sharedSocket(weakSocket.lock());

@@ -85,7 +85,8 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -97,11 +98,11 @@ void PrintConnectionResults(const wil::network::socket_address&, const wil::netw
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -1118,7 +1119,6 @@ public:
         Assert::IsTrue(m_ioPatternState->IsCompleted());
         Assert::AreEqual(static_cast<uint64_t>(0), m_ioPatternState->GetRemainingTransfer());
         this->VerifyNoMoreIo();
-
 
         this->InitHardShutdownTest(100 * 3);
         testTask = this->RequestConnectionId();

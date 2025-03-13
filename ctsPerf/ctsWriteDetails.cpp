@@ -117,6 +117,7 @@ try
         wprintf(L"\t[ctsWriteDetails::start_row] WriteFile failed (%u)\n", gle);
     }
 }
+
 CATCH_LOG()
 
 void ctsWriteDetails::EndRow() const noexcept

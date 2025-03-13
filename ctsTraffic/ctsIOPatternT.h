@@ -83,8 +83,8 @@ public:
 
 
 template <typename Stats,
-    typename ProtocolPolicy,
-    typename RateLimitPolicy>
+          typename ProtocolPolicy,
+          typename RateLimitPolicy>
 class ctsIoPatternT : public ctsIoPattern
 {
 public:

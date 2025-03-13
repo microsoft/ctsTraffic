@@ -41,223 +41,224 @@ namespace ctsTraffic
 //
 namespace details
 {
-    class ctsSimpleAcceptImpl
+class ctsSimpleAcceptImpl
+{
+private:
+    PTP_WORK m_threadPoolWorker = nullptr;
+    TP_CALLBACK_ENVIRON m_threadPoolEnvironment{};
+    // CS guards access to the accepting_sockets vector
+    wil::critical_section m_acceptingCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+
+    std::vector<LONG> m_listeningSocketsRefCount{};
+
+    _Guarded_by_(m_acceptingCs) std::vector<SOCKET> m_listeningSockets{};
+    _Guarded_by_(m_acceptingCs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
+
+public:
+    ctsSimpleAcceptImpl()
     {
-    private:
-        PTP_WORK m_threadPoolWorker = nullptr;
-        TP_CALLBACK_ENVIRON m_threadPoolEnvironment{};
-        // CS guards access to the accepting_sockets vector
-        wil::critical_section m_acceptingCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+        // will use the global threadpool, but will mark these work-items as running long
+        ::ZeroMemory(&m_threadPoolEnvironment, sizeof m_threadPoolEnvironment);
+        InitializeThreadpoolEnvironment(&m_threadPoolEnvironment);
+        SetThreadpoolCallbackRunsLong(&m_threadPoolEnvironment);
 
-        std::vector<LONG> m_listeningSocketsRefCount{};
-
-        _Guarded_by_(m_acceptingCs) std::vector<SOCKET> m_listeningSockets{};
-        _Guarded_by_(m_acceptingCs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
-
-    public:
-        ctsSimpleAcceptImpl()
+        // can *not* pass the 'this' ptr to the threadpool, since this object can be copied
+        m_threadPoolWorker = CreateThreadpoolWork(ThreadPoolWorker, this, &m_threadPoolEnvironment);
+        if (nullptr == m_threadPoolWorker)
         {
-            // will use the global threadpool, but will mark these work-items as running long
-            ::ZeroMemory(&m_threadPoolEnvironment, sizeof m_threadPoolEnvironment);
-            InitializeThreadpoolEnvironment(&m_threadPoolEnvironment);
-            SetThreadpoolCallbackRunsLong(&m_threadPoolEnvironment);
-
-            // can *not* pass the 'this' ptr to the threadpool, since this object can be copied
-            m_threadPoolWorker = CreateThreadpoolWork(ThreadPoolWorker, this, &m_threadPoolEnvironment);
-            if (nullptr == m_threadPoolWorker)
-            {
-                THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolWork (ctsSimpleAccept)");
-            }
-
-            // listen to each address
-            for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
-            {
-                wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags)};
-
-                auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
-                if (error != NO_ERROR)
-                {
-                    THROW_WIN32_MSG(error, "SetPreBindOptions (ctsSimpleAccept)");
-                }
-
-                error = ctsConfig::SetPreConnectOptions(listening.get());
-                if (error != NO_ERROR)
-                {
-                    THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
-                }
-
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
-                {
-                    THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
-                }
-
-                if (SOCKET_ERROR == listen(listening.get(), ctsConfig::GetListenBacklog()))
-                {
-                    THROW_WIN32_MSG(WSAGetLastError(), "listen (ctsSimpleAccept)");
-                }
-
-                m_listeningSockets.push_back(listening.get());
-                // socket is now being tracked in listening_sockets, release ownership
-                listening.release();
-
-                PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.write_complete_address().c_str());
-            }
-
-            if (m_listeningSockets.empty())
-            {
-                throw std::exception("ctsSimpleAccept invoked with no listening addresses specified");
-            }
-            m_listeningSocketsRefCount.resize(m_listeningSockets.size(), 0L);
+            THROW_WIN32_MSG(GetLastError(), "CreateThreadpoolWork (ctsSimpleAccept)");
         }
 
-        ~ctsSimpleAcceptImpl()
+        // listen to each address
+        for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
         {
-            auto lock = m_acceptingCs.lock();
-            /// close all listening sockets to release any pended accept's
-            for (auto& listeningSocket : m_listeningSockets)
-            {
-                if (listeningSocket != INVALID_SOCKET)
-                {
-                    closesocket(listeningSocket);
-                    listeningSocket = INVALID_SOCKET;
-                }
-            }
-            lock.reset();
+            wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags)};
 
-            if (m_threadPoolWorker != nullptr)
+            auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
+            if (error != NO_ERROR)
             {
-                // ctsSimpleAccept object was initialized
-                WaitForThreadpoolWorkCallbacks(m_threadPoolWorker, TRUE);
-                CloseThreadpoolWork(m_threadPoolWorker);
+                THROW_WIN32_MSG(error, "SetPreBindOptions (ctsSimpleAccept)");
             }
+
+            error = ctsConfig::SetPreConnectOptions(listening.get());
+            if (error != NO_ERROR)
+            {
+                THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
+            }
+
+            if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.length()))
+            {
+                THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
+            }
+
+            if (SOCKET_ERROR == listen(listening.get(), ctsConfig::GetListenBacklog()))
+            {
+                THROW_WIN32_MSG(WSAGetLastError(), "listen (ctsSimpleAccept)");
+            }
+
+            m_listeningSockets.push_back(listening.get());
+            // socket is now being tracked in listening_sockets, release ownership
+            listening.release();
+
+            PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.write_complete_address().c_str());
         }
 
-        //
-        // Needs to not block ctsSocketState - will just schedule work on its own TP
-        //
-        void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket)
+        if (m_listeningSockets.empty())
         {
-            const auto lock = m_acceptingCs.lock();
-            m_acceptingSockets.push_back(weakSocket);
-            SubmitThreadpoolWork(m_threadPoolWorker);
+            throw std::exception("ctsSimpleAccept invoked with no listening addresses specified");
         }
-
-        // non-copyable
-        ctsSimpleAcceptImpl(const ctsSimpleAcceptImpl&) = delete;
-        ctsSimpleAcceptImpl& operator=(const ctsSimpleAcceptImpl&) = delete;
-        ctsSimpleAcceptImpl(ctsSimpleAcceptImpl&&) = delete;
-        ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
-
-    private:
-        static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_WORK) noexcept
-        {
-            auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(pContext);
-
-            // get an accept-socket off the vector (protected with its cs)
-            auto lock = pimpl->m_acceptingCs.lock();
-
-            const std::weak_ptr weakSocket(*pimpl->m_acceptingSockets.rbegin());
-            pimpl->m_acceptingSockets.pop_back();
-
-            const auto acceptSocket(weakSocket.lock());
-            if (!acceptSocket)
-            {
-                return;
-            }
-
-            // based off of the ref-count, choose a socket that's least used
-            // - not taking a lock: it doesn't have to be that precise
-            auto lowestRefCount = pimpl->m_listeningSocketsRefCount[0];
-            uint32_t listenerCounter = 0;
-            uint32_t listenerPosition = 0;
-            for (const auto& refCount : pimpl->m_listeningSocketsRefCount)
-            {
-                if (refCount < lowestRefCount)
-                {
-                    lowestRefCount = refCount;
-                    listenerPosition = listenerCounter;
-                }
-                ++listenerCounter;
-            }
-
-            const SOCKET listener = pimpl->m_listeningSockets[listenerPosition];
-            if (INVALID_SOCKET == listener)
-            {
-                return;
-            }
-
-            // now leave the CS before making the blocking call to accept()
-            lock.reset();
-
-            // increment the listening socket before calling accept on the blocking socket
-            ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
-            wil::network::socket_address remoteAddr;
-            auto remoteAddrLen = remoteAddr.length();
-            const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
-            auto gle = WSAGetLastError();
-            ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
-
-            // if failed complete the ctsSocket and return
-            if (newSocket == INVALID_SOCKET)
-            {
-                ctsConfig::PrintErrorIfFailed("accept", gle);
-                acceptSocket->CompleteState(gle);
-                return;
-            }
-
-            // successfully accepted a connection
-            acceptSocket->SetSocket(newSocket);
-            acceptSocket->SetRemoteSockaddr(remoteAddr);
-
-            wil::network::socket_address localAddr;
-            auto localAddrLen = localAddr.length();
-            if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
-            {
-                acceptSocket->SetLocalSockaddr(localAddr);
-            }
-            else if (0 == getsockname(listener, localAddr.sockaddr(), &localAddrLen))
-            {
-                acceptSocket->SetLocalSockaddr(localAddr);
-            }
-
-            gle = ctsConfig::SetPreBindOptions(newSocket, localAddr);
-            if (gle != NO_ERROR)
-            {
-                ctsConfig::PrintErrorIfFailed("SetPreBindOptions", gle);
-                acceptSocket->CompleteState(gle);
-                return;
-            }
-
-            gle = ctsConfig::SetPreConnectOptions(newSocket);
-            if (gle != NO_ERROR)
-            {
-                ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", gle);
-                acceptSocket->CompleteState(gle);
-                return;
-            }
-
-            acceptSocket->CompleteState(0);
-            ctsConfig::PrintNewConnection(localAddr, remoteAddr);
-        }
-    };
-
-    static std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
-    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-    static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
-
-    static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID pError, PVOID*) noexcept try
-    {
-        g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
-        return TRUE;
+        m_listeningSocketsRefCount.resize(m_listeningSockets.size(), 0L);
     }
-    catch (...)
+
+    ~ctsSimpleAcceptImpl()
     {
-        *static_cast<DWORD*>(pError) = ctsConfig::PrintThrownException();
-        return FALSE;
+        auto lock = m_acceptingCs.lock();
+        /// close all listening sockets to release any pended accept's
+        for (auto& listeningSocket : m_listeningSockets)
+        {
+            if (listeningSocket != INVALID_SOCKET)
+            {
+                closesocket(listeningSocket);
+                listeningSocket = INVALID_SOCKET;
+            }
+        }
+        lock.reset();
+
+        if (m_threadPoolWorker != nullptr)
+        {
+            // ctsSimpleAccept object was initialized
+            WaitForThreadpoolWorkCallbacks(m_threadPoolWorker, TRUE);
+            CloseThreadpoolWork(m_threadPoolWorker);
+        }
     }
+
+    //
+    // Needs to not block ctsSocketState - will just schedule work on its own TP
+    //
+    void AcceptSocket(const std::weak_ptr<ctsSocket>& weakSocket)
+    {
+        const auto lock = m_acceptingCs.lock();
+        m_acceptingSockets.push_back(weakSocket);
+        SubmitThreadpoolWork(m_threadPoolWorker);
+    }
+
+    // non-copyable
+    ctsSimpleAcceptImpl(const ctsSimpleAcceptImpl&) = delete;
+    ctsSimpleAcceptImpl& operator=(const ctsSimpleAcceptImpl&) = delete;
+    ctsSimpleAcceptImpl(ctsSimpleAcceptImpl&&) = delete;
+    ctsSimpleAcceptImpl& operator=(ctsSimpleAcceptImpl&&) = delete;
+
+private:
+    static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_WORK) noexcept
+    {
+        auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(pContext);
+
+        // get an accept-socket off the vector (protected with its cs)
+        auto lock = pimpl->m_acceptingCs.lock();
+
+        const std::weak_ptr weakSocket(*pimpl->m_acceptingSockets.rbegin());
+        pimpl->m_acceptingSockets.pop_back();
+
+        const auto acceptSocket(weakSocket.lock());
+        if (!acceptSocket)
+        {
+            return;
+        }
+
+        // based off of the ref-count, choose a socket that's least used
+        // - not taking a lock: it doesn't have to be that precise
+        auto lowestRefCount = pimpl->m_listeningSocketsRefCount[0];
+        uint32_t listenerCounter = 0;
+        uint32_t listenerPosition = 0;
+        for (const auto& refCount : pimpl->m_listeningSocketsRefCount)
+        {
+            if (refCount < lowestRefCount)
+            {
+                lowestRefCount = refCount;
+                listenerPosition = listenerCounter;
+            }
+            ++listenerCounter;
+        }
+
+        const SOCKET listener = pimpl->m_listeningSockets[listenerPosition];
+        if (INVALID_SOCKET == listener)
+        {
+            return;
+        }
+
+        // now leave the CS before making the blocking call to accept()
+        lock.reset();
+
+        // increment the listening socket before calling accept on the blocking socket
+        ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
+        wil::network::socket_address remoteAddr;
+        auto remoteAddrLen = remoteAddr.length();
+        const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
+        auto gle = WSAGetLastError();
+        ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
+
+        // if failed complete the ctsSocket and return
+        if (newSocket == INVALID_SOCKET)
+        {
+            ctsConfig::PrintErrorIfFailed("accept", gle);
+            acceptSocket->CompleteState(gle);
+            return;
+        }
+
+        // successfully accepted a connection
+        acceptSocket->SetSocket(newSocket);
+        acceptSocket->SetRemoteSockaddr(remoteAddr);
+
+        wil::network::socket_address localAddr;
+        auto localAddrLen = localAddr.length();
+        if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
+        {
+            acceptSocket->SetLocalSockaddr(localAddr);
+        }
+        else if (0 == getsockname(listener, localAddr.sockaddr(), &localAddrLen))
+        {
+            acceptSocket->SetLocalSockaddr(localAddr);
+        }
+
+        gle = ctsConfig::SetPreBindOptions(newSocket, localAddr);
+        if (gle != NO_ERROR)
+        {
+            ctsConfig::PrintErrorIfFailed("SetPreBindOptions", gle);
+            acceptSocket->CompleteState(gle);
+            return;
+        }
+
+        gle = ctsConfig::SetPreConnectOptions(newSocket);
+        if (gle != NO_ERROR)
+        {
+            ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", gle);
+            acceptSocket->CompleteState(gle);
+            return;
+        }
+
+        acceptSocket->CompleteState(0);
+        ctsConfig::PrintNewConnection(localAddr, remoteAddr);
+    }
+};
+
+static std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
+// ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
+
+static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID pError, PVOID*) noexcept
+try
+{
+    g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
+    return TRUE;
+}
+catch (...)
+{
+    *static_cast<DWORD*>(pError) = ctsConfig::PrintThrownException();
+    return FALSE;
+}
 }
 
-void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
+void ctsSimpleAccept(const std::weak_ptr<ctsSocket>& weakSocket) noexcept // NOLINT(misc-use-internal-linkage)
 {
     DWORD error = 0;
     if (!InitOnceExecuteOnce(&details::g_ctsSimpleAcceptImplInitOnce, details::ctsSimpleAcceptImplInitFn, &error, nullptr))

@@ -33,25 +33,28 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
+void PrintConnectionResults(
+    const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
+void PrintConnectionResults(
+    const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsUdpStatistics&) noexcept
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 

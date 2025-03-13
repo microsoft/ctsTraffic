@@ -36,7 +36,7 @@ static int64_t g_TcpBytesPerSecond = 0LL;
 ///
 namespace ctl::ctTimer
 {
-int64_t ctsnap_qpc_as_msec() noexcept  // NOLINT(misc-use-internal-linkage)
+int64_t ctsnap_qpc_as_msec() noexcept // NOLINT(misc-use-internal-linkage)
 {
     return g_QpcTime;
 }
@@ -46,21 +46,24 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
+void PrintConnectionResults(
+    const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
+void PrintConnectionResults(
+    const wil::network::socket_address&, const wil::network::socket_address&, uint32_t,
     const ctsUdpStatistics&) noexcept
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
     va_list va_args;
     va_start(va_args, _text);
@@ -70,11 +73,11 @@ void PrintDebug(_In_ _Printf_format_string_ PCWSTR _text, ...) noexcept  // NOLI
     va_end(va_args);
 }
 
-void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintErrorInfo(_In_ PCWSTR) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintErrorInfo(_In_ PCWSTR) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -574,9 +577,10 @@ public:
         // send #5 : qpc_time 4 : time_offset 0 (sent 10 bytes) ** filled the quantum
         for (uint32_t counter = 0; counter < 5; ++counter)
         {
-            Logger::WriteMessage(wil::str_printf<std::wstring>(
-                L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
-                g_QpcTime, TestBytes, 0LL).c_str());
+            Logger::WriteMessage(
+                wil::str_printf<std::wstring>(
+                    L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
+                    g_QpcTime, TestBytes, 0LL).c_str());
             test_timer->update_time_offset(test_task, TestBytes);
             Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             // starting at zero, so increment afterwards in this loop
@@ -600,9 +604,10 @@ public:
             if (counter % 5 == 0)
             {
                 ++g_QpcTime;
-                Logger::WriteMessage(wil::str_printf<std::wstring>(
-                    L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
-                    g_QpcTime, TestBytes, 95LL).c_str());
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(
+                        L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
+                        g_QpcTime, TestBytes, 95LL).c_str());
                 test_timer->update_time_offset(test_task, TestBytes);
                 Assert::AreEqual(95LL, test_task.m_timeOffsetMilliseconds);
             }
@@ -610,18 +615,20 @@ public:
             {
                 // the 2nd send should offset by 96ms to start 1m into the next quantum
                 g_QpcTime += 96;
-                Logger::WriteMessage(wil::str_printf<std::wstring>(
-                    L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
-                    g_QpcTime, TestBytes, 0LL).c_str());
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(
+                        L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
+                        g_QpcTime, TestBytes, 0LL).c_str());
                 test_timer->update_time_offset(test_task, TestBytes);
                 Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }
             else
             {
                 ++g_QpcTime;
-                Logger::WriteMessage(wil::str_printf<std::wstring>(
-                    L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
-                    g_QpcTime, TestBytes, 0LL).c_str());
+                Logger::WriteMessage(
+                    wil::str_printf<std::wstring>(
+                        L"QpcTime %lld : sending %lld bytes : expect offset %lld\n",
+                        g_QpcTime, TestBytes, 0LL).c_str());
                 test_timer->update_time_offset(test_task, TestBytes);
                 Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
             }

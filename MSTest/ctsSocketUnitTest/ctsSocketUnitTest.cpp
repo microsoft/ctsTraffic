@@ -73,80 +73,83 @@ wsIOResult ctsSetLingerToResetSocket(SOCKET) noexcept
 
 namespace ctsConfig
 {
-    ctsConfigSettings* g_configSettings;
+ctsConfigSettings* g_configSettings;
 
-    void PrintDebug(PCWSTR _text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(PCWSTR _text, ...) noexcept // NOLINT(misc-use-internal-linkage)
+{
+    va_list args;
+    va_start(args, _text);
+    std::wstring outputString;
+    wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
+    Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
+
+    va_end(args);
+}
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
+{
+    Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
+}
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+{
+    Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
+}
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+{
+    Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
+}
+
+void PrintConnectionResults(uint32_t) noexcept
+{
+    Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
+}
+
+void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
+{
+    Logger::WriteMessage(
+        wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+}
+
+DWORD PrintThrownException() noexcept
+{
+    try
     {
-        va_list args;
-        va_start(args, _text);
-        std::wstring outputString;
-        wil::details::str_vprintf_nothrow<std::wstring>(outputString, _text, args);
-        Logger::WriteMessage(wil::str_printf<std::wstring>(L"PrintDebug: %ws\n", outputString.c_str()).c_str());
-
-        va_end(args);
+        throw;
     }
-
-    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
-    }
-
-    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
-    }
-
-    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
-    }
-
-    void PrintConnectionResults(uint32_t) noexcept
-    {
-        Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
-    }
-
-    void PrintErrorIfFailed(_In_ PCSTR _text, uint32_t _why) noexcept
+    catch (const wil::ResultException& e)
     {
         Logger::WriteMessage(
-            wil::str_printf<std::wstring>(L"ctsConfig::PrintErrorIfFailed(%hs, %u)", _text, _why).c_str());
+            wil::str_printf<std::wstring>(
+                L"ctsConfig::PrintException(%hs)",
+                e.what()).c_str());
+        return Win32FromHresult(e.GetErrorCode());
     }
-
-    DWORD PrintThrownException() noexcept
+    catch (const std::exception& e)
     {
-        try
-        {
-            throw;
-        }
-        catch (const wil::ResultException& e)
-        {
-            Logger::WriteMessage(
-                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                    e.what()).c_str());
-            return Win32FromHresult(e.GetErrorCode());
-        }
-        catch (const std::exception& e)
-        {
-            Logger::WriteMessage(
-                wil::str_printf<std::wstring>(L"ctsConfig::PrintException(%hs)",
-                    e.what()).c_str());
-            return WSAENOBUFS;
-        }
-        catch (...)
-        {
-            FAIL_FAST();
-        }
+        Logger::WriteMessage(
+            wil::str_printf<std::wstring>(
+                L"ctsConfig::PrintException(%hs)",
+                e.what()).c_str());
+        return WSAENOBUFS;
     }
-
-    bool ShutdownCalled() noexcept
+    catch (...)
     {
-        return false;
+        FAIL_FAST();
     }
+}
 
-    uint32_t ConsoleVerbosity() noexcept
-    {
-        return 0;
-    }
+bool ShutdownCalled() noexcept
+{
+    return false;
+}
+
+uint32_t ConsoleVerbosity() noexcept
+{
+    return 0;
+}
 }}
 
 ///

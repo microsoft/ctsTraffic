@@ -49,8 +49,8 @@ static void ctsConnectExIoCompletionCallback(
         // a null OVERLAPPED means this is called directly when completed inline
         if (overlapped)
         {
-            DWORD transferred;
-            DWORD flags;
+            DWORD transferred{};
+            DWORD flags{};
             if (!WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
             {
                 gle = WSAGetLastError();
@@ -88,7 +88,7 @@ static void ctsConnectExIoCompletionCallback(
     }
 }
 
-void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
+void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept // NOLINT(misc-use-internal-linkage)
 {
     const auto sharedSocket(weakSocket.lock());
     if (!sharedSocket)
@@ -111,9 +111,13 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLIN
             const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
 
             OVERLAPPED* pOverlapped = connectIocp->new_request(
-                [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
+                [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept
+                {
+                    ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress);
+                });
 
-            if (!ctsConfig::g_configSettings->SocketFunctions.f.ConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))
+            if (!ctsConfig::g_configSettings->SocketFunctions.f.ConnectEx(
+                socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))
             {
                 error = WSAGetLastError();
                 if (ERROR_IO_PENDING == error)

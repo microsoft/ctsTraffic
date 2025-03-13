@@ -37,7 +37,7 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintDebug(PCWSTR text, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(PCWSTR text, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
     va_list args;
     va_start(args, text);
@@ -54,7 +54,8 @@ unsigned long PrintThrownException() noexcept
     return 0;
 }
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
 }
@@ -117,45 +118,55 @@ public:
     {
         const auto holdLock = m_lock.lock();
 
-        std::erase_if(m_stateObjects, [&](const std::weak_ptr<ctsSocketState>& weakPtr) {
-            return weakPtr.expired();
-        });
+        std::erase_if(
+            m_stateObjects, [&](const std::weak_ptr<ctsSocketState>& weakPtr)
+            {
+                return weakPtr.expired();
+            });
     }
 
     void print_objects() noexcept
     {
         const auto holdLock = m_lock.lock();
 
-        const auto creatingObjects = std::ranges::count_if(m_stateObjects, [](const auto& object) {
-            if (const auto sharedState = object.lock(); sharedState)
+        const auto creatingObjects = std::ranges::count_if(
+            m_stateObjects, [](const auto& object)
             {
-                return sharedState->GetCurrentState() == ctsSocketState::InternalState::Creating;
-            }
-            return false;
-        });
+                if (const auto sharedState = object.lock(); sharedState)
+                {
+                    return sharedState->GetCurrentState() == ctsSocketState::InternalState::Creating;
+                }
+                return false;
+            });
         Logger::WriteMessage(wil::str_printf<std::wstring>(L"\tSocketStatePool Creating objects : %ld\n", creatingObjects).c_str());
 
-        const auto initiatingIoObjects = std::ranges::count_if(m_stateObjects, [](const auto& object) {
-            if (const auto sharedState = object.lock(); sharedState)
+        const auto initiatingIoObjects = std::ranges::count_if(
+            m_stateObjects, [](const auto& object)
             {
-                return sharedState->GetCurrentState() == ctsSocketState::InternalState::InitiatingIo;
-            }
-            return false;
-        });
+                if (const auto sharedState = object.lock(); sharedState)
+                {
+                    return sharedState->GetCurrentState() == ctsSocketState::InternalState::InitiatingIo;
+                }
+                return false;
+            });
         Logger::WriteMessage(wil::str_printf<std::wstring>(L"\tSocketStatePool InitiatingIo objects : %ld\n", initiatingIoObjects).c_str());
 
-        const auto closedObjects = std::ranges::count_if(m_stateObjects, [](const auto& object) {
-            if (const auto sharedState = object.lock(); sharedState)
+        const auto closedObjects = std::ranges::count_if(
+            m_stateObjects, [](const auto& object)
             {
-                return sharedState->GetCurrentState() == ctsSocketState::InternalState::Closed;
-            }
-            return false;
-        });
+                if (const auto sharedState = object.lock(); sharedState)
+                {
+                    return sharedState->GetCurrentState() == ctsSocketState::InternalState::Closed;
+                }
+                return false;
+            });
         Logger::WriteMessage(wil::str_printf<std::wstring>(L"\tSocketStatePool Closed objects : %ld\n", closedObjects).c_str());
 
-        const auto nullObjects = std::ranges::count_if(m_stateObjects, [](const auto& object) {
-            return object.expired();
-        });
+        const auto nullObjects = std::ranges::count_if(
+            m_stateObjects, [](const auto& object)
+            {
+                return object.expired();
+            });
         Logger::WriteMessage(wil::str_printf<std::wstring>(L"\tSocketStatePool null objects : %ld\n", nullObjects).c_str());
     }
 
@@ -228,14 +239,14 @@ public:
                         ++matchedState;
                     }
                 }
-                    else
+                else
+                {
+                    if (state == ctsSocketState::InternalState::Closed)
                     {
-                        if (state == ctsSocketState::InternalState::Closed)
-                        {
-                            // closed objects get removed in the threadpool thread - treat them equivalent
-                            ++matchedState;
-                        }
+                        // closed objects get removed in the threadpool thread - treat them equivalent
+                        ++matchedState;
                     }
+                }
             }
 
             if (count == matchedState)
@@ -460,7 +471,6 @@ public:
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
 
-
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
         // wait for all to be started as this is async
@@ -493,7 +503,6 @@ public:
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
 
-
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
         // wait for all to be started as this is async
@@ -520,7 +529,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 1;
         ctsConfig::g_configSettings->Iterations = 1;
@@ -528,7 +538,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -554,7 +563,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 100;
         ctsConfig::g_configSettings->Iterations = 100;
@@ -562,7 +572,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -588,7 +597,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = MAXULONGLONG;
         ctsConfig::g_configSettings->Iterations = 1;
@@ -596,7 +606,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -625,7 +634,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = MAXULONGLONG;
         ctsConfig::g_configSettings->Iterations = 100;
@@ -690,7 +700,6 @@ public:
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
 
-
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
         // wait for all to be started as this is async
@@ -719,7 +728,6 @@ public:
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
 
-
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
         // wait for all to be started as this is async
@@ -739,7 +747,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 1;
         ctsConfig::g_configSettings->Iterations = 1;
@@ -747,7 +756,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -769,7 +777,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 100;
         ctsConfig::g_configSettings->Iterations = 100;
@@ -777,7 +786,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -805,7 +813,6 @@ public:
         // these are not applicable to client
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -838,7 +845,6 @@ public:
         ctsConfig::g_configSettings->ServerExitLimit = 0;
         ctsConfig::g_configSettings->AcceptLimit = 0;
 
-
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
         // wait for all to be started as this is async
@@ -862,7 +868,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 1;
         ctsConfig::g_configSettings->Iterations = 1;
@@ -870,7 +877,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -895,7 +901,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 100;
         ctsConfig::g_configSettings->Iterations = 100;
@@ -903,7 +910,6 @@ public:
         // these are not applicable to server
         ctsConfig::g_configSettings->ConnectionLimit = 0;
         ctsConfig::g_configSettings->ConnectionThrottleLimit = 0;
-
 
         const auto testBroker(std::make_shared<ctsSocketBroker>());
         testBroker->Start();
@@ -1060,7 +1066,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 15;
         ctsConfig::g_configSettings->Iterations = 15;
@@ -1109,7 +1116,8 @@ public:
 
         // Initialize config for this test
         // not a client (connecting), a server (accepting)
-        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>) {
+        ctsConfig::g_configSettings->AcceptFunction = [](std::weak_ptr<ctsSocket>)
+        {
         };
         ctsConfig::g_configSettings->ServerExitLimit = 1;
         ctsConfig::g_configSettings->Iterations = 15;

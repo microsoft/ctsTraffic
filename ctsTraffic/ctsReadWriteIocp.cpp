@@ -26,7 +26,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;  // NOLINT(misc-use-internal-linkage)
+void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept; // NOLINT(misc-use-internal-linkage)
 
 // IO Threadpool completion callback 
 static void ctsReadWriteIocpIoCompletionCallback(
@@ -58,7 +58,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
     }
     else
     {
-        DWORD flags;
+        DWORD flags{};
         if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
         {
             gle = WSAGetLastError();
@@ -91,7 +91,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
             case ctsIoStatus::FailedIo:
                 // write out the error
                 ctsConfig::PrintErrorIfFailed(functionName, gle);
-                // protocol sees this as a failure - capture the error the protocol recorded
+            // protocol sees this as a failure - capture the error the protocol recorded
                 readwriteStatus = lockedPattern->GetLastPatternError();
                 break;
 
@@ -185,7 +185,10 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                 // these are the only calls which can throw in this function
                 ioThreadPool = sharedSocket->GetIocpThreadpool();
                 pOverlapped = ioThreadPool->new_request(
-                    [weakSocket, nextIo](OVERLAPPED* pCallbackOverlapped) noexcept { ctsReadWriteIocpIoCompletionCallback(pCallbackOverlapped, weakSocket, nextIo); });
+                    [weakSocket, nextIo](OVERLAPPED* pCallbackOverlapped) noexcept
+                    {
+                        ctsReadWriteIocpIoCompletionCallback(pCallbackOverlapped, weakSocket, nextIo);
+                    });
             }
             catch (...)
             {
@@ -203,14 +206,16 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             char* ioBuffer = nextIo.m_buffer + nextIo.m_bufferOffset;
             if (ctsTaskAction::Send == nextIo.m_ioAction)
             {
-                if (!WriteFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped)) // NOLINT(performance-no-int-to-ptr)
+                if (!WriteFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped))
+                // NOLINT(performance-no-int-to-ptr)
                 {
                     ioError = GetLastError();
                 }
             }
             else
             {
-                if (!ReadFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped)) // NOLINT(performance-no-int-to-ptr)
+                if (!ReadFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped))
+                // NOLINT(performance-no-int-to-ptr)
                 {
                     ioError = GetLastError();
                 }

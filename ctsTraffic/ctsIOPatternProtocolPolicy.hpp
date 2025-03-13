@@ -179,7 +179,7 @@ public:
     bool IsCompleted() const noexcept
     {
         return m_internalState == InternalPatternState::CompletedTransfer ||
-               m_internalState == InternalPatternState::ErrorIoFailed;
+            m_internalState == InternalPatternState::ErrorIoFailed;
     }
 
     uint32_t UpdateProtocolError(ctsIoPatternError protocolError) noexcept
@@ -297,7 +297,7 @@ ctsIoPatternType ctsIoPatternProtocolPolicy<Protocol>::GetNextPatternType() cons
         return ctsIoPatternType::NoIo;
     }
 
-    ctsIoPatternType nextType;
+    ctsIoPatternType nextType{};
     switch (m_internalState)
     {
         case InternalPatternState::Initialized:
@@ -538,7 +538,8 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolUdp>::CompletedTaskPe
 }
 
 template <>
-inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::CompletedTaskPerProtocol(const ctsTask& completedTask, uint32_t completedTransferredBytes) noexcept
+inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::CompletedTaskPerProtocol(
+    const ctsTask& completedTask, uint32_t completedTransferredBytes) noexcept
 {
     const auto alreadyTransferred = m_confirmedBytes + m_inFlightBytes;
     //
@@ -641,7 +642,8 @@ inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>::Completed
 }
 
 template <>
-inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::CompletedTaskPerProtocol(const ctsTask&, uint32_t completedTransferredBytes) noexcept
+inline void ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>::CompletedTaskPerProtocol(
+    const ctsTask&, uint32_t completedTransferredBytes) noexcept
 {
     const auto alreadyTransferred = m_confirmedBytes + m_inFlightBytes;
     //

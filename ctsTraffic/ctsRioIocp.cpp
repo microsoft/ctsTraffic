@@ -29,321 +29,341 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic { namespace Rioiocp
     {
-        //
-        // constants for everything related to ctsRioIocp
-        //
-        constexpr uint32_t c_rioResultArrayLength = 20;
-        constexpr ULONG_PTR c_exitCompletionKey = 0xffffffff;
-        //
-        // forward-declaring CQ-functions leveraging the below variables
-        //
-        static uint32_t MakeRoomInCq(uint32_t newSlots) noexcept;
-        static void ReleaseRoomInCompletionQueue(uint32_t slots) noexcept;
-        static uint32_t DequeFromCompletionQueue(_Out_writes_(c_rioResultArrayLength) RIORESULT* rioResults) noexcept;
-        static void DeleteAllCompletionQueues() noexcept;
-        //
-        // Forward-declaring the IOCP threadpool function
-        //
-        static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept; // NOLINT(bugprone-exception-escape)
-        //
-        // Management of the CQ and its corresponding threadpool implemented in this unnamed namespace
-        // - initialized with InitOneExecuteOnce
-        // 
-        static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept;
-        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        static INIT_ONCE g_sharedBufferInitializer = INIT_ONCE_STATIC_INIT;
+    //
+    // constants for everything related to ctsRioIocp
+    //
+    constexpr uint32_t c_rioResultArrayLength = 20;
+    constexpr ULONG_PTR c_exitCompletionKey = 0xffffffff;
+    //
+    // forward-declaring CQ-functions leveraging the below variables
+    //
+    static uint32_t MakeRoomInCq(uint32_t newSlots) noexcept;
+    static void ReleaseRoomInCompletionQueue(uint32_t slots) noexcept;
+    static uint32_t DequeFromCompletionQueue(_Out_writes_(c_rioResultArrayLength) RIORESULT* rioResults) noexcept;
+    static void DeleteAllCompletionQueues() noexcept;
+    //
+    // Forward-declaring the IOCP threadpool function
+    //
+    static DWORD WINAPI RioIocpThreadProc(LPVOID) noexcept; // NOLINT(bugprone-exception-escape)
+    //
+    // Management of the CQ and its corresponding threadpool implemented in this unnamed namespace
+    // - initialized with InitOneExecuteOnce
+    // 
+    static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept;
+    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+    static INIT_ONCE g_sharedBufferInitializer = INIT_ONCE_STATIC_INIT;
 
-        // global CRITICAL_SECTION no deleting on exit - not racing during process exit
-        static CRITICAL_SECTION g_queueLock{}; // NOLINT(cppcoreguidelines-interfaces-global-init, clang-diagnostic-exit-time-destructors)
-        static RIO_NOTIFICATION_COMPLETION g_rioNotifySettings;
-        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        static RIO_CQ g_rioCompletionQueue = RIO_INVALID_CQ;
-        static uint32_t g_rioCompletionQueueSize = 0;
-        static uint32_t g_rioCompletionQueueUsed = 0;
-        static HANDLE* g_pRioWorkerThreads = nullptr;
-        static uint32_t g_rioWorkerThreadCount = 0;
+    // global CRITICAL_SECTION no deleting on exit - not racing during process exit
+    static CRITICAL_SECTION g_queueLock{}; // NOLINT(cppcoreguidelines-interfaces-global-init, clang-diagnostic-exit-time-destructors)
+    static RIO_NOTIFICATION_COMPLETION g_rioNotifySettings;
+    // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+    static auto g_rioCompletionQueue = RIO_INVALID_CQ;
+    static uint32_t g_rioCompletionQueueSize = 0;
+    static uint32_t g_rioCompletionQueueUsed = 0;
+    static HANDLE* g_pRioWorkerThreads = nullptr;
+    static uint32_t g_rioWorkerThreadCount = 0;
 
-        static uint32_t MakeRoomInCq(uint32_t newSlots) noexcept
+    static uint32_t MakeRoomInCq(uint32_t newSlots) noexcept
+    {
+        const auto lock = wil::EnterCriticalSection(&g_queueLock);
+
+        const ULONG newCqUsed = g_rioCompletionQueueUsed + newSlots;
+        if (g_rioCompletionQueueSize < newCqUsed)
         {
-            const auto lock = wil::EnterCriticalSection(&g_queueLock);
-
-            const ULONG newCqUsed = g_rioCompletionQueueUsed + newSlots;
-            if (g_rioCompletionQueueSize < newCqUsed)
-            {
-                // fail hard if we are already at the max CQ size and can't grow it for more IO
-                FAIL_FAST_IF_MSG(
-                    (RIO_MAX_CQ_SIZE == g_rioCompletionQueueSize) || (newCqUsed > RIO_MAX_CQ_SIZE),
-                    "ctsRioIocp: attempting to grow the CQ beyond RIO_MAX_CQ_SIZE");
-
-                // multiply new_cq_used by 1.25 for better growth patterns
-                auto newCqSize = static_cast<ULONG>(newCqUsed * 1.25);
-                if (newCqSize > RIO_MAX_CQ_SIZE)
-                {
-                    static_assert(MAXLONG / 1.5 > RIO_MAX_CQ_SIZE, "rio_cq_size can overflow");
-                    newCqSize = RIO_MAX_CQ_SIZE;
-                }
-
-                PRINT_DEBUG_INFO(
-                    L"\t\tctsRioIocp: Resizing the CQ from %u to %lu (used slots = %u increasing used slots to %lu)\n",
-                    g_rioCompletionQueueSize,
-                    newCqSize,
-                    g_rioCompletionQueueUsed,
-                    newCqUsed);
-
-                if (!ctsConfig::g_configSettings->RioFunctions.f.RIOResizeCompletionQueue(g_rioCompletionQueue, newCqSize))
-                {
-                    const auto gle = WSAGetLastError();
-                    ctsConfig::PrintErrorIfFailed("RIOResizeCompletionQueue", gle);
-                    return gle;
-                }
-
-                g_rioCompletionQueueSize = newCqSize;
-            }
-
-            g_rioCompletionQueueUsed = newCqUsed;
-            return ERROR_SUCCESS;
-        }
-
-        //
-        // Release slots in the CQ
-        //
-        static void ReleaseRoomInCompletionQueue(uint32_t slots) noexcept
-        {
-            const auto lock = wil::EnterCriticalSection(&g_queueLock);
-
+            // fail hard if we are already at the max CQ size and can't grow it for more IO
             FAIL_FAST_IF_MSG(
-                g_rioCompletionQueueUsed < slots,
-                "ctsRioIocp::release_room_in_cq(%u): underflow - current rio_cq_used value (%u)",
-                slots, g_rioCompletionQueueUsed);
+                (RIO_MAX_CQ_SIZE == g_rioCompletionQueueSize) || (newCqUsed > RIO_MAX_CQ_SIZE),
+                "ctsRioIocp: attempting to grow the CQ beyond RIO_MAX_CQ_SIZE");
+
+            // multiply new_cq_used by 1.25 for better growth patterns
+            auto newCqSize = static_cast<ULONG>(newCqUsed * 1.25);
+            if (newCqSize > RIO_MAX_CQ_SIZE)
+            {
+                static_assert(MAXLONG / 1.5 > RIO_MAX_CQ_SIZE, "rio_cq_size can overflow");
+                newCqSize = RIO_MAX_CQ_SIZE;
+            }
 
             PRINT_DEBUG_INFO(
-                L"\t\tctsRioIocp: Reducing the CQ used slots from %u to %u\n",
+                L"\t\tctsRioIocp: Resizing the CQ from %u to %lu (used slots = %u increasing used slots to %lu)\n",
+                g_rioCompletionQueueSize,
+                newCqSize,
                 g_rioCompletionQueueUsed,
-                g_rioCompletionQueueUsed - slots);
+                newCqUsed);
 
-            g_rioCompletionQueueUsed -= slots;
-        }
-
-        //
-        // Safely dequeues from the CQ into the supplied RIORESULT vector
-        // - will always post a Notify with proper synchronization
-        //
-        static uint32_t DequeFromCompletionQueue(_Out_writes_(c_rioResultArrayLength) RIORESULT* rioResults) noexcept
-        {
-            const auto lock = wil::EnterCriticalSection(&g_queueLock);
-
-            const auto dequeResultCount = ctsConfig::g_configSettings->RioFunctions.f.RIODequeueCompletion(g_rioCompletionQueue, rioResults, c_rioResultArrayLength);
-
-            // We were notified there were completions, but we can't dequeue any IO
-            // - something has gone horribly wrong - likely our CQ is corrupt
-            // Will kill the test into the debugger to investigate
-            FAIL_FAST_IF_MSG(
-                // ReSharper disable once CppRedundantParentheses
-                (0 == dequeResultCount) || (RIO_CORRUPT_CQ == dequeResultCount),
-                "RIODequeueCompletion on(%p) returned [%lu] : expected to have dequeued IO after being signaled",
-                g_rioCompletionQueue, dequeResultCount);
-
-            // Immediately after invoking Dequeue, post another Notify
-            const auto notifyResult = ctsConfig::g_configSettings->RioFunctions.f.RIONotify(g_rioCompletionQueue);
-
-            // if notify fails, we can't reliably know when the next IO completes
-            // - this will cause everything to come to a grinding halt
-            // Will kill the test into the debugger to investigate
-            FAIL_FAST_IF_MSG(
-                notifyResult != 0,
-                "RIONotify(%p) failed [%d]", g_rioCompletionQueue, notifyResult);
-
-            return dequeResultCount;
-        }
-
-        //
-        // Shutdown all IOCP threads and close the CQ
-        //
-        static void DeleteAllCompletionQueues() noexcept
-        {
-            uint32_t threadsAlive = 0;
-
-            // send an exit key to all threads, then wait on all threads to exit
-            for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
+            if (!ctsConfig::g_configSettings->RioFunctions.f.RIOResizeCompletionQueue(g_rioCompletionQueue, newCqSize))
             {
-                // queue an exit key to the worker thread
-                if (g_pRioWorkerThreads[loopWorkers] != nullptr)
-                {
-                    ++threadsAlive;
-                    if (!PostQueuedCompletionStatus(
-                        g_rioNotifySettings.Iocp.IocpHandle,
-                        0,
-                        c_exitCompletionKey,
-                        static_cast<OVERLAPPED*>(g_rioNotifySettings.Iocp.Overlapped)))
-                    {
-                        // if we can't indicate to exit, kill the process to see why
-                        FAIL_FAST_MSG(
-                            "PostQueuedCompletionStatus(%p) failed [%lu] to tear down the threadpool",
-                            g_rioNotifySettings.Iocp.IocpHandle, GetLastError());
-                    }
-                }
+                const auto gle = WSAGetLastError();
+                ctsConfig::PrintErrorIfFailed("RIOResizeCompletionQueue", gle);
+                return gle;
             }
 
-            // wait for threads to exit
-            if (threadsAlive > 0)
+            g_rioCompletionQueueSize = newCqSize;
+        }
+
+        g_rioCompletionQueueUsed = newCqUsed;
+        return ERROR_SUCCESS;
+    }
+
+    //
+    // Release slots in the CQ
+    //
+    static void ReleaseRoomInCompletionQueue(uint32_t slots) noexcept
+    {
+        const auto lock = wil::EnterCriticalSection(&g_queueLock);
+
+        FAIL_FAST_IF_MSG(
+            g_rioCompletionQueueUsed < slots,
+            "ctsRioIocp::release_room_in_cq(%u): underflow - current rio_cq_used value (%u)",
+            slots, g_rioCompletionQueueUsed);
+
+        PRINT_DEBUG_INFO(
+            L"\t\tctsRioIocp: Reducing the CQ used slots from %u to %u\n",
+            g_rioCompletionQueueUsed,
+            g_rioCompletionQueueUsed - slots);
+
+        g_rioCompletionQueueUsed -= slots;
+    }
+
+    //
+    // Safely dequeues from the CQ into the supplied RIORESULT vector
+    // - will always post a Notify with proper synchronization
+    //
+    static uint32_t DequeFromCompletionQueue(_Out_writes_(c_rioResultArrayLength) RIORESULT* rioResults) noexcept
+    {
+        const auto lock = wil::EnterCriticalSection(&g_queueLock);
+
+        const auto dequeResultCount =
+            ctsConfig::g_configSettings->RioFunctions.f.RIODequeueCompletion(
+                g_rioCompletionQueue,
+                rioResults,
+                c_rioResultArrayLength);
+
+        // We were notified there were completions, but we can't dequeue any IO
+        // - something has gone horribly wrong - likely our CQ is corrupt
+        // Will kill the test into the debugger to investigate
+        FAIL_FAST_IF_MSG(
+            // ReSharper disable once CppRedundantParentheses
+            (0 == dequeResultCount) || (RIO_CORRUPT_CQ == dequeResultCount),
+            "RIODequeueCompletion on(%p) returned [%lu] : expected to have dequeued IO after being signaled",
+            g_rioCompletionQueue, dequeResultCount);
+
+        // Immediately after invoking Dequeue, post another Notify
+        const auto notifyResult = ctsConfig::g_configSettings->RioFunctions.f.RIONotify(g_rioCompletionQueue);
+
+        // if notify fails, we can't reliably know when the next IO completes
+        // - this will cause everything to come to a grinding halt
+        // Will kill the test into the debugger to investigate
+        FAIL_FAST_IF_MSG(
+            notifyResult != 0,
+            "RIONotify(%p) failed [%d]", g_rioCompletionQueue, notifyResult);
+
+        return dequeResultCount;
+    }
+
+    //
+    // Shutdown all IOCP threads and close the CQ
+    //
+    static void DeleteAllCompletionQueues() noexcept
+    {
+        uint32_t threadsAlive = 0;
+
+        // send an exit key to all threads, then wait on all threads to exit
+        for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
+        {
+            // queue an exit key to the worker thread
+            if (g_pRioWorkerThreads[loopWorkers] != nullptr)
             {
-                if (WaitForMultipleObjects(
-                        threadsAlive,
-                        &g_pRioWorkerThreads[0],
-                        TRUE,
-                        INFINITE) != WAIT_OBJECT_0)
+                ++threadsAlive;
+                if (!PostQueuedCompletionStatus(
+                    g_rioNotifySettings.Iocp.IocpHandle,
+                    0,
+                    c_exitCompletionKey,
+                    static_cast<OVERLAPPED*>(g_rioNotifySettings.Iocp.Overlapped)))
                 {
-                    // if we can't wait for the worker threads, kill the process to see why
+                    // if we can't indicate to exit, kill the process to see why
                     FAIL_FAST_MSG(
-                        "WaitForMultipleObjects(%p) failed [%lu] to wait on the threadpool",
-                        &g_pRioWorkerThreads[0], GetLastError());
+                        "PostQueuedCompletionStatus(%p) failed [%lu] to tear down the threadpool",
+                        g_rioNotifySettings.Iocp.IocpHandle, GetLastError());
                 }
             }
-
-            // now can close the thread handles
-            for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
-            {
-                if (g_pRioWorkerThreads[loopWorkers] != nullptr)
-                {
-                    CloseHandle(g_pRioWorkerThreads[loopWorkers]);
-                }
-            }
-
-            free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
-            g_pRioWorkerThreads = nullptr;
-            g_rioWorkerThreadCount = 0;
-
-            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            if (g_rioCompletionQueue != RIO_INVALID_CQ)
-            {
-                ctsConfig::g_configSettings->RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue);
-                // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-                g_rioCompletionQueue = RIO_INVALID_CQ;
-            }
-
-            if (g_rioNotifySettings.Iocp.IocpHandle != nullptr)
-            {
-                CloseHandle(g_rioNotifySettings.Iocp.IocpHandle);
-                g_rioNotifySettings.Iocp.IocpHandle = nullptr;
-            }
-
-            free(g_rioNotifySettings.Iocp.Overlapped);
-            g_rioNotifySettings.Iocp.Overlapped = nullptr;
-
-            g_rioCompletionQueueSize = 0;
-            g_rioCompletionQueueUsed = 0;
         }
 
-
-        //
-        // Singleton initialization routine for the global CQ and its corresponding IOCP thread pool
-        //
-        static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept
+        // wait for threads to exit
+        if (threadsAlive > 0)
         {
-            FAIL_FAST_IF(!InitializeCriticalSectionEx(&g_queueLock, ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock, 0));
-
-            // delete all cq's on error
-            auto deleteAllCqsOnError = wil::scope_exit([&]() noexcept { DeleteAllCompletionQueues(); });
-
-            ::ZeroMemory(&g_rioNotifySettings, sizeof g_rioNotifySettings);
-            // completion key for RioNotify IOCP is the ctsRioIocpImpl*
-            g_rioNotifySettings.Type = RIO_IOCP_COMPLETION;
-            g_rioNotifySettings.Iocp.CompletionKey = nullptr;
-            g_rioNotifySettings.Iocp.Overlapped = nullptr;
-            g_rioNotifySettings.Iocp.IocpHandle = nullptr;
-
-            g_rioNotifySettings.Iocp.Overlapped = calloc(1, sizeof OVERLAPPED);
-            if (!g_rioNotifySettings.Iocp.Overlapped)
+            if (WaitForMultipleObjects(
+                threadsAlive,
+                &g_pRioWorkerThreads[0],
+                TRUE,
+                INFINITE) != WAIT_OBJECT_0)
             {
-                ctsConfig::PrintException(WSAENOBUFS, L"calloc (OVERLAPPED)", L"ctsRioIocp");
-                SetLastError(WSAENOBUFS);
-                return FALSE;
+                // if we can't wait for the worker threads, kill the process to see why
+                FAIL_FAST_MSG(
+                    "WaitForMultipleObjects(%p) failed [%lu] to wait on the threadpool",
+                    &g_pRioWorkerThreads[0], GetLastError());
             }
-            // free the OVERLAPPED on error
-            auto freeOverlappedOnError = wil::scope_exit([&]() noexcept {
+        }
+
+        // now can close the thread handles
+        for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
+        {
+            if (g_pRioWorkerThreads[loopWorkers] != nullptr)
+            {
+                CloseHandle(g_pRioWorkerThreads[loopWorkers]);
+            }
+        }
+
+        free(g_pRioWorkerThreads); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+        g_pRioWorkerThreads = nullptr;
+        g_rioWorkerThreadCount = 0;
+
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        if (g_rioCompletionQueue != RIO_INVALID_CQ)
+        {
+            ctsConfig::g_configSettings->RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue);
+            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+            g_rioCompletionQueue = RIO_INVALID_CQ;
+        }
+
+        if (g_rioNotifySettings.Iocp.IocpHandle != nullptr)
+        {
+            CloseHandle(g_rioNotifySettings.Iocp.IocpHandle);
+            g_rioNotifySettings.Iocp.IocpHandle = nullptr;
+        }
+
+        free(g_rioNotifySettings.Iocp.Overlapped);
+        g_rioNotifySettings.Iocp.Overlapped = nullptr;
+
+        g_rioCompletionQueueSize = 0;
+        g_rioCompletionQueueUsed = 0;
+    }
+
+
+    //
+    // Singleton initialization routine for the global CQ and its corresponding IOCP thread pool
+    //
+    static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept
+    {
+        FAIL_FAST_IF(!InitializeCriticalSectionEx(&g_queueLock, ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock, 0));
+
+        // delete all cq's on error
+        auto deleteAllCqsOnError = wil::scope_exit(
+            [&]() noexcept
+            {
+                DeleteAllCompletionQueues();
+            });
+
+        ::ZeroMemory(&g_rioNotifySettings, sizeof g_rioNotifySettings);
+        // completion key for RioNotify IOCP is the ctsRioIocpImpl*
+        g_rioNotifySettings.Type = RIO_IOCP_COMPLETION;
+        g_rioNotifySettings.Iocp.CompletionKey = nullptr;
+        g_rioNotifySettings.Iocp.Overlapped = nullptr;
+        g_rioNotifySettings.Iocp.IocpHandle = nullptr;
+
+        g_rioNotifySettings.Iocp.Overlapped = calloc(1, sizeof OVERLAPPED);
+        if (!g_rioNotifySettings.Iocp.Overlapped)
+        {
+            ctsConfig::PrintException(WSAENOBUFS, L"calloc (OVERLAPPED)", L"ctsRioIocp");
+            SetLastError(WSAENOBUFS);
+            return FALSE;
+        }
+        // free the OVERLAPPED on error
+        auto freeOverlappedOnError = wil::scope_exit(
+            [&]() noexcept
+            {
                 free(g_rioNotifySettings.Iocp.Overlapped);
                 g_rioNotifySettings.Iocp.Overlapped = nullptr;
             });
 
-            g_rioNotifySettings.Iocp.IocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
-            if (!g_rioNotifySettings.Iocp.IocpHandle)
+        g_rioNotifySettings.Iocp.IocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+        if (!g_rioNotifySettings.Iocp.IocpHandle)
+        {
+            const auto gle = GetLastError();
+            ctsConfig::PrintException(gle, L"CreateIoCompletionPort", L"ctsRioIocp");
+            SetLastError(gle);
+            return FALSE;
+        }
+        // close the IOCP handle on error
+        auto deleteIocpOnError = wil::scope_exit(
+            [&]() noexcept
             {
-                const auto gle = GetLastError();
-                ctsConfig::PrintException(gle, L"CreateIoCompletionPort", L"ctsRioIocp");
-                SetLastError(gle);
-                return FALSE;
-            }
-            // close the IOCP handle on error
-            auto deleteIocpOnError = wil::scope_exit([&]() noexcept { CloseHandle(g_rioNotifySettings.Iocp.IocpHandle); });
+                CloseHandle(g_rioNotifySettings.Iocp.IocpHandle);
+            });
 
-            constexpr uint32_t rioDefaultCqSize = 1000;
-            // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
-            // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
-            g_rioCompletionQueue = ctsConfig::g_configSettings->RioFunctions.f.RIOCreateCompletionQueue(rioDefaultCqSize, &g_rioNotifySettings);
-            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            if (RIO_INVALID_CQ == g_rioCompletionQueue)
+        constexpr uint32_t rioDefaultCqSize = 1000;
+        // with RIO, we don't associate the IOCP handle with the socket like 'typical' sockets
+        // - instead we directly pass the IOCP handle through RIOCreateCompletionQueue
+        g_rioCompletionQueue = ctsConfig::g_configSettings->RioFunctions.f.RIOCreateCompletionQueue(rioDefaultCqSize, &g_rioNotifySettings);
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        if (RIO_INVALID_CQ == g_rioCompletionQueue)
+        {
+            const auto gle = WSAGetLastError();
+            ctsConfig::PrintException(gle, L"RIOCreateCompletionQueue", L"ctsRioIocp");
+            SetLastError(gle);
+            return FALSE;
+        }
+        // close the RIO CQ on error
+        auto closeCompletionQueueOnError = wil::scope_exit(
+            [&]() noexcept
             {
-                const auto gle = WSAGetLastError();
-                ctsConfig::PrintException(gle, L"RIOCreateCompletionQueue", L"ctsRioIocp");
-                SetLastError(gle);
-                return FALSE;
-            }
-            // close the RIO CQ on error
-            auto closeCompletionQueueOnError = wil::scope_exit([&]() noexcept { ctsConfig::g_configSettings->RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue); });
+                ctsConfig::g_configSettings->RioFunctions.f.RIOCloseCompletionQueue(g_rioCompletionQueue);
+            });
 
-            // now that the CQ is created, update info
-            g_rioCompletionQueueSize = rioDefaultCqSize;
-            g_rioCompletionQueueUsed = 0;
+        // now that the CQ is created, update info
+        g_rioCompletionQueueSize = rioDefaultCqSize;
+        g_rioCompletionQueueUsed = 0;
 
-            // reserve space for handles
-            SYSTEM_INFO systemInfo;
-            GetSystemInfo(&systemInfo);
-            g_rioWorkerThreadCount = systemInfo.dwNumberOfProcessors;
+        // reserve space for handles
+        SYSTEM_INFO systemInfo;
+        GetSystemInfo(&systemInfo);
+        g_rioWorkerThreadCount = systemInfo.dwNumberOfProcessors;
 
-            g_pRioWorkerThreads = static_cast<HANDLE*>(calloc(g_rioWorkerThreadCount, sizeof HANDLE));
-            if (!g_pRioWorkerThreads)
+        g_pRioWorkerThreads = static_cast<HANDLE*>(calloc(g_rioWorkerThreadCount, sizeof HANDLE));
+        if (!g_pRioWorkerThreads)
+        {
+            ctsConfig::PrintException(ERROR_OUTOFMEMORY, L"calloc", L"ctsRioIocp");
+            SetLastError(WSAENOBUFS);
+            return FALSE;
+        }
+        // free the handle array on error
+        auto freeHandleArrayOnError = wil::scope_exit(
+            [&]() noexcept
             {
-                ctsConfig::PrintException(ERROR_OUTOFMEMORY, L"calloc", L"ctsRioIocp");
-                SetLastError(WSAENOBUFS);
-                return FALSE;
-            }
-            // free the handle array on error
-            auto freeHandleArrayOnError = wil::scope_exit([&]() noexcept {
-                free(g_pRioWorkerThreads);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+                free(g_pRioWorkerThreads); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
                 g_pRioWorkerThreads = nullptr;
             });
 
-            // now that we are ready to go, kick off our thread-pool
-            for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
+        // now that we are ready to go, kick off our thread-pool
+        for (auto loopWorkers = 0ul; loopWorkers < g_rioWorkerThreadCount; ++loopWorkers)
+        {
+            g_pRioWorkerThreads[loopWorkers] = CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
+            if (!g_pRioWorkerThreads[loopWorkers])
             {
-                g_pRioWorkerThreads[loopWorkers] = CreateThread(nullptr, 0, RioIocpThreadProc, nullptr, 0, nullptr);
-                if (!g_pRioWorkerThreads[loopWorkers])
-                {
-                    const auto gle = GetLastError();
-                    ctsConfig::PrintException(gle, L"CreateThread", L"ctsRioIocp");
-                    SetLastError(gle);
-                    return FALSE;
-                }
-            }
-            // scopedDeleteAllCqs will take care of cleaning up these threads on failure
-
-            // if everything succeeds, post a Notify to catch the first set of IO
-            const auto notify = ctsConfig::g_configSettings->RioFunctions.f.RIONotify(g_rioCompletionQueue);
-            if (notify != NO_ERROR)
-            {
-                ctsConfig::PrintException(notify, L"RIONotify", L"ctsRioIocp");
-                SetLastError(notify);
+                const auto gle = GetLastError();
+                ctsConfig::PrintException(gle, L"CreateThread", L"ctsRioIocp");
+                SetLastError(gle);
                 return FALSE;
             }
-
-            // dismiss all scope guards - successfully initialized
-            freeHandleArrayOnError.release();
-            closeCompletionQueueOnError.release();
-            deleteIocpOnError.release();
-            freeOverlappedOnError.release();
-            deleteAllCqsOnError.release();
-            return TRUE;
         }
+        // scopedDeleteAllCqs will take care of cleaning up these threads on failure
+
+        // if everything succeeds, post a Notify to catch the first set of IO
+        const auto notify = ctsConfig::g_configSettings->RioFunctions.f.RIONotify(g_rioCompletionQueue);
+        if (notify != NO_ERROR)
+        {
+            ctsConfig::PrintException(notify, L"RIONotify", L"ctsRioIocp");
+            SetLastError(notify);
+            return FALSE;
+        }
+
+        // dismiss all scope guards - successfully initialized
+        freeHandleArrayOnError.release();
+        closeCompletionQueueOnError.release();
+        deleteIocpOnError.release();
+        freeOverlappedOnError.release();
+        deleteAllCqsOnError.release();
+        return TRUE;
+    }
     }
 
     //
@@ -443,7 +463,8 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 if (possibleTask.m_rioBufferid == RIO_INVALID_BUFFERID)
                 {
-                    FAIL_FAST_IF(nextTask.m_rioBufferid == RIO_INVALID_BUFFERID); // NOLINT(performance-no-int-to-ptr, cppcoreguidelines-pro-type-cstyle-cast)
+                    FAIL_FAST_IF(nextTask.m_rioBufferid == RIO_INVALID_BUFFERID);
+                    // NOLINT(performance-no-int-to-ptr, cppcoreguidelines-pro-type-cstyle-cast)
                     // populate the task with the new task value
                     possibleTask = nextTask;
                     // return to the caller the address of this task to use for the request context
@@ -514,7 +535,11 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 THROW_WIN32_MSG(WSAENOBUFS, "ctsRioIocp: failed to make room in the cq");
             }
-            auto releaseRoomInCqOnFailure = wil::scope_exit([&]() noexcept { Rioiocp::ReleaseRoomInCompletionQueue(m_rioRqGrowthFactor); });
+            auto releaseRoomInCqOnFailure = wil::scope_exit(
+                [&]() noexcept
+                {
+                    Rioiocp::ReleaseRoomInCompletionQueue(m_rioRqGrowthFactor);
+                });
 
             constexpr uint32_t rioMaxDataBuffers = 1; // this is the only value accepted as of Win8
             // create the RQ for this socket
@@ -598,8 +623,10 @@ namespace ctsTraffic { namespace Rioiocp
             const auto lock = m_lock.lock();
 
             // decrement the counter in our RQ for the completed IO
-            const auto* const functionName = pTask->m_ioAction == ctsTaskAction::Recv ?
-                                             "RIOReceive" : "RIOSend";
+            const auto* const functionName =
+                pTask->m_ioAction == ctsTaskAction::Recv ?
+                "RIOReceive" :
+                "RIOSend";
 
             if (status != NO_ERROR)
             {
@@ -658,7 +685,8 @@ namespace ctsTraffic { namespace Rioiocp
             const auto sharedSocket(m_weakSocket.lock());
             FAIL_FAST_IF_MSG(
                 !sharedSocket,
-                "RioSocketContext::execute_io (this == %p): the ctsSocket should always be valid - it's now null, get() should always return a valid ptr", this);
+                "RioSocketContext::execute_io (this == %p): the ctsSocket should always be valid - it's now null, get() should always return a valid ptr",
+                this);
 
             // hold onto the RIO socket lock while posting IO on it
             const auto lockedSocket(sharedSocket->AcquireSocketLock());
@@ -841,8 +869,10 @@ namespace ctsTraffic { namespace Rioiocp
             {
                 const auto bytesTransferred = rioResultArray[iterResults].BytesTransferred;
                 const auto status = rioResultArray[iterResults].Status;
-                auto* const requestContext = reinterpret_cast<ctsTask*>(rioResultArray[iterResults].RequestContext); // NOLINT(performance-no-int-to-ptr)
-                auto* const socketContext = reinterpret_cast<RioSocketContext*>(rioResultArray[iterResults].SocketContext); // NOLINT(performance-no-int-to-ptr)
+                auto* const requestContext = reinterpret_cast<ctsTask*>(rioResultArray[iterResults].RequestContext);
+                // NOLINT(performance-no-int-to-ptr)
+                auto* const socketContext = reinterpret_cast<RioSocketContext*>(rioResultArray[iterResults].SocketContext);
+                // NOLINT(performance-no-int-to-ptr)
 
                 // Complete the dequeued IO to track the IO
                 // - will kick off another IO if required
@@ -859,7 +889,7 @@ namespace ctsTraffic { namespace Rioiocp
     } // RioIocpThreadProc
 
 
-    void ctsRioIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept  // NOLINT(misc-use-internal-linkage)
+    void ctsRioIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept // NOLINT(misc-use-internal-linkage)
     {
         // attempt to get a reference to the socket
         const auto sharedSocket(weakSocket.lock());

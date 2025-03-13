@@ -33,11 +33,11 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
-    template <>
-    inline std::wstring ToString<wil::network::socket_address>(const wil::network::socket_address& _value)
-    {
-        return _value.write_complete_address();
-    }
+template <>
+inline std::wstring ToString<wil::network::socket_address>(const wil::network::socket_address& _value)
+{
+    return _value.write_complete_address();
+}
 }
 
 static uint64_t g_transferSize = 0ULL;
@@ -48,223 +48,226 @@ static bool g_isListening = false;
 ///
 namespace ctsTraffic
 {
-    static int64_t g_tcpBytesPerSecond = 0LL;
+static int64_t g_tcpBytesPerSecond = 0LL;
 
-    namespace ctsConfig
+namespace ctsConfig
+{
+ctsConfigSettings* g_configSettings;
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
+{
+}
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
+{
+}
+
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
+{
+}
+
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept // NOLINT(misc-use-internal-linkage)
+{
+}
+
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
+{
+}
+
+void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
+{
+}
+
+bool IsListening() noexcept
+{
+    return g_isListening;
+}
+
+uint64_t GetTransferSize() noexcept
+{
+    return g_transferSize;
+}
+
+uint32_t GetMaxBufferSize() noexcept
+{
+    return static_cast<uint32_t>(g_transferSize);
+}
+
+float GetStatusTimeStamp() noexcept
+{
+    return 0.0f;
+}
+
+bool ShutdownCalled() noexcept
+{
+    return false;
+}
+
+uint32_t ConsoleVerbosity() noexcept
+{
+    return 0;
+}
+
+int64_t GetTcpBytesPerSecond() noexcept
+{
+    return g_tcpBytesPerSecond;
+}
+}
+
+static HANDLE g_RemovedSocketEvent = nullptr;
+static std::atomic<uint32_t> g_IOCount = 0;
+static std::atomic<uint32_t> g_IOPended = 0;
+static uint32_t g_IOStatusCode = ERROR_SUCCESS;
+static uint32_t g_IOTimeOffset = 0;
+static ctsTaskAction g_TaskAction = ctsTaskAction::None;
+static ctsIoStatus g_IOStatus = ctsIoStatus::ContinueIo;
+
+ctsIoPattern::ctsIoPattern(uint32_t) :
+    // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
+    m_bytesSendingPerQuantum(
+        ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
+    m_quantumStartTimeMs(ctl::ctTimer::snap_qpc_as_msec())
+{
+    Logger::WriteMessage(L"ctsIOPattern::ctsIOPattern\n");
+}
+
+ctsTask ctsIoPattern::InitiateIo() noexcept
+{
+    Logger::WriteMessage(L"ctsIOPattern::initiate_io\n");
+
+    const uint32_t pended_io = g_IOPended.load();
+    const uint32_t remaining_io = g_IOCount.load();
+
+    ctsTask return_task;
+    if (pended_io == 0 && remaining_io > 0)
     {
-        ctsConfigSettings* g_configSettings;
+        return_task.m_ioAction = ctsTaskAction::Send;
+        return_task.m_timeOffsetMilliseconds = g_IOTimeOffset;
+        ++g_IOPended;
+    }
+    else
+    {
+        return_task.m_ioAction = ctsTaskAction::None;
+        return_task.m_timeOffsetMilliseconds = 0;
+    }
+    return return_task;
+}
 
-        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
-        {
-        }
+ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask&, uint32_t, uint32_t _status_code) noexcept
+{
+    Assert::AreEqual(g_IOStatusCode, _status_code);
+    Logger::WriteMessage(L"ctsIOPattern::complete_io\n");
+    --g_IOPended;
+    --g_IOCount;
 
-        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
-        {
-        }
+    return g_IOStatus;
+}
 
-        void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
-        {
-        }
+[[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+{
+    return {};
+}
 
-        void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
-        {
-        }
-
-        void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
-        {
-        }
-
-        void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
-        {
-        }
-
-        bool IsListening() noexcept
-        {
-            return g_isListening;
-        }
-
-        uint64_t GetTransferSize() noexcept
-        {
-            return g_transferSize;
-        }
-
-        uint32_t GetMaxBufferSize() noexcept
-        {
-            return static_cast<uint32_t>(g_transferSize);
-        }
-
-        float GetStatusTimeStamp() noexcept
-        {
-            return 0.0f;
-        }
-
-        bool ShutdownCalled() noexcept
-        {
-            return false;
-        }
-
-        uint32_t ConsoleVerbosity() noexcept
-        {
-            return 0;
-        }
-
-        int64_t GetTcpBytesPerSecond() noexcept
-        {
-            return g_tcpBytesPerSecond;
-        }
+// test IO pattern for fakes for this test
+class ctsMediaStreamServerUnitTestIOPattern : public ctsIoPattern
+{
+public:
+    // default the base class 1 recv buffer
+    ctsMediaStreamServerUnitTestIOPattern() :
+        ctsIoPattern(1)
+    {
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::ctsMediaStreamServerUnitTestIOPattern\n");
     }
 
-    static HANDLE g_RemovedSocketEvent = nullptr;
-    static std::atomic<uint32_t> g_IOCount = 0;
-    static std::atomic<uint32_t> g_IOPended = 0;
-    static uint32_t g_IOStatusCode = ERROR_SUCCESS;
-    static uint32_t g_IOTimeOffset = 0;
-    static ctsTaskAction g_TaskAction = ctsTaskAction::None;
-    static ctsIoStatus g_IOStatus = ctsIoStatus::ContinueIo;
-
-    ctsIoPattern::ctsIoPattern(uint32_t) :
-        // (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
-        m_bytesSendingPerQuantum(
-            ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL),
-        m_quantumStartTimeMs(ctl::ctTimer::snap_qpc_as_msec())
+    // none of these are called - required to be defined
+    void PrintStatistics(
+        const wil::network::socket_address&,
+        const wil::network::socket_address&) noexcept override
     {
-        Logger::WriteMessage(L"ctsIOPattern::ctsIOPattern\n");
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
+        Assert::IsFalse(true);
     }
 
-    ctsTask ctsIoPattern::InitiateIo() noexcept
+    ctsTask GetNextTaskFromPattern() override
     {
-        Logger::WriteMessage(L"ctsIOPattern::initiate_io\n");
-
-        const uint32_t pended_io = g_IOPended.load();
-        const uint32_t remaining_io = g_IOCount.load();
-
-        ctsTask return_task;
-        if (pended_io == 0 && remaining_io > 0)
-        {
-            return_task.m_ioAction = ctsTaskAction::Send;
-            return_task.m_timeOffsetMilliseconds = g_IOTimeOffset;
-            ++g_IOPended;
-        }
-        else
-        {
-            return_task.m_ioAction = ctsTaskAction::None;
-            return_task.m_timeOffsetMilliseconds = 0;
-        }
-        return return_task;
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::next_task\n");
+        Assert::IsFalse(true);
+        return ctsTask();
     }
 
-    ctsIoStatus ctsIoPattern::CompleteIo(const ctsTask&, uint32_t, uint32_t _status_code) noexcept
+    ctsIoPatternError CompleteTaskBackToPattern(const ctsTask&, uint32_t) noexcept override
     {
-        Assert::AreEqual(g_IOStatusCode, _status_code);
-        Logger::WriteMessage(L"ctsIOPattern::complete_io\n");
-        --g_IOPended;
-        --g_IOCount;
-
-        return g_IOStatus;
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::completed_task\n");
+        Assert::IsFalse(true);
+        return ctsIoPatternError::NoError;
     }
 
-    [[nodiscard]] wil::cs_leave_scope_exit ctsIoPattern::AcquireIoPatternLock() const noexcept
+    void StartStatistics() noexcept override
     {
-        return {};
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::start_stats\n");
+        Assert::IsFalse(true);
     }
 
-    // test IO pattern for fakes for this test
-    class ctsMediaStreamServerUnitTestIOPattern : public ctsIoPattern
+    void EndStatistics() noexcept override
     {
-    public:
-        // default the base class 1 recv buffer
-        ctsMediaStreamServerUnitTestIOPattern() :
-            ctsIoPattern(1)
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::ctsMediaStreamServerUnitTestIOPattern\n");
-        }
-
-        // none of these are called - required to be defined
-        void PrintStatistics(const wil::network::socket_address&,
-                             const wil::network::socket_address&) noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::print_stats\n");
-            Assert::IsFalse(true);
-        }
-
-        ctsTask GetNextTaskFromPattern() override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::next_task\n");
-            Assert::IsFalse(true);
-            return ctsTask();
-        }
-
-        ctsIoPatternError CompleteTaskBackToPattern(const ctsTask&, uint32_t) noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::completed_task\n");
-            Assert::IsFalse(true);
-            return ctsIoPatternError::NoError;
-        }
-
-        void StartStatistics() noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::start_stats\n");
-            Assert::IsFalse(true);
-        }
-
-        void EndStatistics() noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::end_stats\n");
-            Assert::IsFalse(true);
-        }
-
-        char* GetConnectionIdentifier() noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::connection_id\n");
-            Assert::IsFalse(true);
-            return nullptr;
-        }
-
-        void PrintTcpInfo(const wil::network::socket_address&, const wil::network::socket_address&,
-                          SOCKET) noexcept override
-        {
-            Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::PrintTcpInfo\n");
-        }
-    };
-
-    // ctsSocketState fakes
-    ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker>)
-    {
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::end_stats\n");
+        Assert::IsFalse(true);
     }
 
-    ctsSocketState::~ctsSocketState() noexcept
+    char* GetConnectionIdentifier() noexcept override
     {
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::connection_id\n");
+        Assert::IsFalse(true);
+        return nullptr;
     }
 
-    // ctsSocket fakes
-    ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>) noexcept
+    void PrintTcpInfo(
+        const wil::network::socket_address&, const wil::network::socket_address&,
+        SOCKET) noexcept override
     {
-        m_pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
+        Logger::WriteMessage(L"ctsMediaStreamServerUnitTestIOPattern::PrintTcpInfo\n");
     }
+};
 
-    ctsSocket::~ctsSocket() noexcept
-    {
-    }
+// ctsSocketState fakes
+ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker>)
+{
+}
 
-    void ctsSocket::SetSocket(SOCKET _s) noexcept
-    {
-        m_socket.reset(_s);
-    }
+ctsSocketState::~ctsSocketState() noexcept
+{
+}
 
-    void ctsSocket::CompleteState(DWORD) const noexcept
-    {
-        SetEvent(g_RemovedSocketEvent);
-    }
+// ctsSocket fakes
+ctsSocket::ctsSocket(std::weak_ptr<ctsSocketState>) noexcept
+{
+    m_pattern = std::make_shared<ctsMediaStreamServerUnitTestIOPattern>();
+}
 
-    ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
-    {
-        return SocketReference({}, m_socket.get(), m_pattern);
-    }
+ctsSocket::~ctsSocket() noexcept
+{
+}
 
-    // one callout fake to ctsMediaStreamServerImpl
-    void ctsMediaStreamServerImpl::RemoveSocket(const wil::network::socket_address&)
-    {
-    }
+void ctsSocket::SetSocket(SOCKET _s) noexcept
+{
+    m_socket.reset(_s);
+}
+
+void ctsSocket::CompleteState(DWORD) const noexcept
+{
+    SetEvent(g_RemovedSocketEvent);
+}
+
+ctsSocket::SocketReference ctsSocket::AcquireSocketLock() const noexcept
+{
+    return SocketReference({}, m_socket.get(), m_pattern);
+}
+
+// one callout fake to ctsMediaStreamServerImpl
+void ctsMediaStreamServerImpl::RemoveSocket(const wil::network::socket_address&)
+{
+}
 }
 
 ///
@@ -275,312 +278,312 @@ using namespace ctsTraffic;
 
 namespace ctsUnitTest
 {
-    TEST_CLASS(ctsMediaStreamServerConnectedSocketUnitTest)
+TEST_CLASS(ctsMediaStreamServerConnectedSocketUnitTest)
+{
+public:
+    TEST_CLASS_INITIALIZE(Setup)
     {
-    public:
-        TEST_CLASS_INITIALIZE(Setup)
+        WSADATA wsadata;
+        const auto startup = WSAStartup(WINSOCK_VERSION, &wsadata);
+        Assert::AreEqual(0, startup);
+
+        g_RemovedSocketEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        Assert::IsNotNull(g_RemovedSocketEvent);
+
+        ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
+        ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
+        ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
+    }
+
+    TEST_CLASS_CLEANUP(Cleanup)
+    {
+        CloseHandle(g_RemovedSocketEvent);
+        WSACleanup();
+        delete ctsConfig::g_configSettings;
+    }
+
+    TEST_METHOD(SingleIO)
+    {
+        g_IOCount = 1;
+        g_IOStatus = ctsIoStatus::ContinueIo;
+        g_IOStatusCode = ERROR_SUCCESS;
+        g_TaskAction = ctsTaskAction::None;
+        g_IOTimeOffset = 0;
+        ResetEvent(g_RemovedSocketEvent);
+
+        std::vector<wil::network::socket_address> test_addr;
+        wil::unique_addrinfo resolved_addr;
+        if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
         {
-            WSADATA wsadata;
-            const auto startup = WSAStartup(WINSOCK_VERSION, &wsadata);
-            Assert::AreEqual(0, startup);
-
-            g_RemovedSocketEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-            Assert::IsNotNull(g_RemovedSocketEvent);
-
-            ctsConfig::g_configSettings = new ctsConfig::ctsConfigSettings;
-            ctsConfig::g_configSettings->Protocol = ctsConfig::ProtocolType::TCP;
-            ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
-        }
-
-        TEST_CLASS_CLEANUP(Cleanup)
-        {
-            CloseHandle(g_RemovedSocketEvent);
-            WSACleanup();
-            delete ctsConfig::g_configSettings;
-        }
-
-        TEST_METHOD(SingleIO)
-        {
-            g_IOCount = 1;
-            g_IOStatus = ctsIoStatus::ContinueIo;
-            g_IOStatusCode = ERROR_SUCCESS;
-            g_TaskAction = ctsTaskAction::None;
-            g_IOTimeOffset = 0;
-            ResetEvent(g_RemovedSocketEvent);
-
-            std::vector<wil::network::socket_address> test_addr;
-            wil::unique_addrinfo resolved_addr;
-            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+            for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
             {
-                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
-                {
-                    test_addr.emplace_back(address);
-                }
+                test_addr.emplace_back(address);
             }
-            Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
-
-            auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-            const auto test_socket(std::make_shared<ctsSocket>(socket_state));
-            test_socket->SetSocket(INVALID_SOCKET);
-
-            uint32_t callback_invoked = 0;
-            ctsMediaStreamServerConnectedSocket test_connected_socket(
-                std::weak_ptr(test_socket),
-                INVALID_SOCKET,
-                test_addr[0],
-                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
-                {
-                    ++callback_invoked;
-
-                    const auto socket_guard(test_socket->AcquireSocketLock());
-                    const SOCKET cts_socket = socket_guard.GetSocket();
-                    const SOCKET connected_socket = _socket_object->GetSendingSocket();
-
-                    Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
-                    Assert::AreEqual(cts_socket, connected_socket);
-
-                    g_IOStatusCode = WSAENOBUFS;
-                    return wsIOResult(WSAENOBUFS);
-                });
-
-            ctsTask test_task;
-            test_task.m_ioAction = ctsTaskAction::Send;
-            // directly scheduling the first task
-            g_IOPended = 1;
-            test_connected_socket.ScheduleTask(test_task);
-            // not 'done' yet, just stopped sending for the time-being
-            Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
-            constexpr uint32_t ExpectedCallbacks = 1;
-            Assert::AreEqual(ExpectedCallbacks, callback_invoked);
         }
+        Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-        TEST_METHOD(MultipleIO)
-        {
-            g_IOCount = 10;
-            g_IOStatus = ctsIoStatus::ContinueIo;
-            g_IOStatusCode = ERROR_SUCCESS;
-            g_TaskAction = ctsTaskAction::None;
-            g_IOTimeOffset = 0;
-            ResetEvent(g_RemovedSocketEvent);
+        auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+        const auto test_socket(std::make_shared<ctsSocket>(socket_state));
+        test_socket->SetSocket(INVALID_SOCKET);
 
-            std::vector<wil::network::socket_address> test_addr;
-            wil::unique_addrinfo resolved_addr;
-            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+        uint32_t callback_invoked = 0;
+        ctsMediaStreamServerConnectedSocket test_connected_socket(
+            std::weak_ptr(test_socket),
+            INVALID_SOCKET,
+            test_addr[0],
+            [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
             {
-                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
-                {
-                    test_addr.emplace_back(address);
-                }
-            }
-            Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
+                ++callback_invoked;
 
-            auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-            const auto test_socket(std::make_shared<ctsSocket>(socket_state));
-            test_socket->SetSocket(INVALID_SOCKET);
+                const auto socket_guard(test_socket->AcquireSocketLock());
+                const SOCKET cts_socket = socket_guard.GetSocket();
+                const SOCKET connected_socket = _socket_object->GetSendingSocket();
 
-            uint32_t callback_invoked = 0;
-            ctsMediaStreamServerConnectedSocket test_connected_socket(
-                std::weak_ptr(test_socket),
-                INVALID_SOCKET,
-                test_addr[0],
-                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
-                {
-                    ++callback_invoked;
+                Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
+                Assert::AreEqual(cts_socket, connected_socket);
 
-                    const auto socket_guard(test_socket->AcquireSocketLock());
-                    const SOCKET cts_socket = socket_guard.GetSocket();
-                    const SOCKET connected_socket = _socket_object->GetSendingSocket();
+                g_IOStatusCode = WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
+            });
 
-                    Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
-                    Assert::AreEqual(cts_socket, connected_socket);
+        ctsTask test_task;
+        test_task.m_ioAction = ctsTaskAction::Send;
+        // directly scheduling the first task
+        g_IOPended = 1;
+        test_connected_socket.ScheduleTask(test_task);
+        // not 'done' yet, just stopped sending for the time-being
+        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
+        constexpr uint32_t ExpectedCallbacks = 1;
+        Assert::AreEqual(ExpectedCallbacks, callback_invoked);
+    }
 
-                    g_IOStatusCode = WSAENOBUFS;
-                    return wsIOResult(WSAENOBUFS);
-                });
+    TEST_METHOD(MultipleIO)
+    {
+        g_IOCount = 10;
+        g_IOStatus = ctsIoStatus::ContinueIo;
+        g_IOStatusCode = ERROR_SUCCESS;
+        g_TaskAction = ctsTaskAction::None;
+        g_IOTimeOffset = 0;
+        ResetEvent(g_RemovedSocketEvent);
 
-            ctsTask test_task;
-            test_task.m_ioAction = ctsTaskAction::Send;
-            // directly scheduling the first task
-            g_IOPended = 1;
-            test_connected_socket.ScheduleTask(test_task);
-            // not 'done' yet, just stopped sending for the time-being
-            Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
-            constexpr uint32_t ExpectedCallbacks = 10;
-            Assert::AreEqual(ExpectedCallbacks, callback_invoked);
-        }
-
-        TEST_METHOD(MultipleScheduledIO)
+        std::vector<wil::network::socket_address> test_addr;
+        wil::unique_addrinfo resolved_addr;
+        if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
         {
-            g_IOCount = 10;
-            g_IOStatus = ctsIoStatus::ContinueIo;
-            g_IOStatusCode = ERROR_SUCCESS;
-            g_TaskAction = ctsTaskAction::None;
-            g_IOTimeOffset = 100; // 100ms apart
-            ResetEvent(g_RemovedSocketEvent);
-
-            std::vector<wil::network::socket_address> test_addr;
-            wil::unique_addrinfo resolved_addr;
-            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+            for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
             {
-                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
-                {
-                    test_addr.emplace_back(address);
-                }
+                test_addr.emplace_back(address);
             }
-            Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
-
-            auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-            const auto test_socket(std::make_shared<ctsSocket>(socket_state));
-            test_socket->SetSocket(INVALID_SOCKET);
-
-            uint32_t callback_invoked = 0;
-            ctsMediaStreamServerConnectedSocket test_connected_socket(
-                std::weak_ptr(test_socket),
-                INVALID_SOCKET,
-                test_addr[0],
-                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
-                {
-                    ++callback_invoked;
-
-                    const auto socket_guard(test_socket->AcquireSocketLock());
-                    const SOCKET cts_socket = socket_guard.GetSocket();
-                    const SOCKET connected_socket = _socket_object->GetSendingSocket();
-
-                    Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
-                    Assert::AreEqual(cts_socket, connected_socket);
-
-                    if (callback_invoked == 10)
-                    {
-                        g_IOStatus = ctsIoStatus::CompletedIo;
-                    }
-                    g_IOStatusCode = WSAENOBUFS;
-                    return wsIOResult(WSAENOBUFS);
-                });
-
-            ctsTask test_task;
-            test_task.m_ioAction = ctsTaskAction::Send;
-            // directly scheduling the first task
-            g_IOPended = 1;
-            test_connected_socket.ScheduleTask(test_task);
-            // should complete within 1 second (a few ms after 900ms)
-            Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 1250));
-            constexpr uint32_t ExpectedCallbacks = 10;
-            Assert::AreEqual(ExpectedCallbacks, callback_invoked);
         }
+        Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-        TEST_METHOD(FailSingleIO)
+        auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+        const auto test_socket(std::make_shared<ctsSocket>(socket_state));
+        test_socket->SetSocket(INVALID_SOCKET);
+
+        uint32_t callback_invoked = 0;
+        ctsMediaStreamServerConnectedSocket test_connected_socket(
+            std::weak_ptr(test_socket),
+            INVALID_SOCKET,
+            test_addr[0],
+            [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+            {
+                ++callback_invoked;
+
+                const auto socket_guard(test_socket->AcquireSocketLock());
+                const SOCKET cts_socket = socket_guard.GetSocket();
+                const SOCKET connected_socket = _socket_object->GetSendingSocket();
+
+                Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
+                Assert::AreEqual(cts_socket, connected_socket);
+
+                g_IOStatusCode = WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
+            });
+
+        ctsTask test_task;
+        test_task.m_ioAction = ctsTaskAction::Send;
+        // directly scheduling the first task
+        g_IOPended = 1;
+        test_connected_socket.ScheduleTask(test_task);
+        // not 'done' yet, just stopped sending for the time-being
+        Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
+        constexpr uint32_t ExpectedCallbacks = 10;
+        Assert::AreEqual(ExpectedCallbacks, callback_invoked);
+    }
+
+    TEST_METHOD(MultipleScheduledIO)
+    {
+        g_IOCount = 10;
+        g_IOStatus = ctsIoStatus::ContinueIo;
+        g_IOStatusCode = ERROR_SUCCESS;
+        g_TaskAction = ctsTaskAction::None;
+        g_IOTimeOffset = 100; // 100ms apart
+        ResetEvent(g_RemovedSocketEvent);
+
+        std::vector<wil::network::socket_address> test_addr;
+        wil::unique_addrinfo resolved_addr;
+        if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
         {
-            // should fail the first one
-            g_IOCount = 2;
-            g_IOStatus = ctsIoStatus::FailedIo;
-            g_IOStatusCode = ERROR_SUCCESS;
-            g_TaskAction = ctsTaskAction::None;
-            ResetEvent(g_RemovedSocketEvent);
-
-            std::vector<wil::network::socket_address> test_addr;
-            wil::unique_addrinfo resolved_addr;
-            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+            for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
             {
-                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
-                {
-                    test_addr.emplace_back(address);
-                }
+                test_addr.emplace_back(address);
             }
-            Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
-
-            auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-            const auto test_socket(std::make_shared<ctsSocket>(socket_state));
-            test_socket->SetSocket(INVALID_SOCKET);
-
-            uint32_t callback_invoked = 0;
-            ctsMediaStreamServerConnectedSocket test_connected_socket(
-                std::weak_ptr(test_socket),
-                INVALID_SOCKET,
-                test_addr[0],
-                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
-                {
-                    ++callback_invoked;
-
-                    const auto socket_guard(test_socket->AcquireSocketLock());
-                    const SOCKET cts_socket = socket_guard.GetSocket();
-                    const SOCKET connected_socket = _socket_object->GetSendingSocket();
-
-                    Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
-                    Assert::AreEqual(cts_socket, connected_socket);
-
-                    g_IOStatusCode = WSAENOBUFS;
-                    return wsIOResult(WSAENOBUFS);
-                });
-
-            ctsTask test_task;
-            test_task.m_ioAction = ctsTaskAction::Send;
-            // directly scheduling the first task
-            g_IOPended = 1;
-            test_connected_socket.ScheduleTask(test_task);
-            // 'done' since it failed
-            Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 0));
-            constexpr uint32_t ExpectedCallbacks = 1;
-            Assert::AreEqual(ExpectedCallbacks, callback_invoked);
         }
+        Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
 
-        TEST_METHOD(FailAfterMultipleIO)
+        auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+        const auto test_socket(std::make_shared<ctsSocket>(socket_state));
+        test_socket->SetSocket(INVALID_SOCKET);
+
+        uint32_t callback_invoked = 0;
+        ctsMediaStreamServerConnectedSocket test_connected_socket(
+            std::weak_ptr(test_socket),
+            INVALID_SOCKET,
+            test_addr[0],
+            [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+            {
+                ++callback_invoked;
+
+                const auto socket_guard(test_socket->AcquireSocketLock());
+                const SOCKET cts_socket = socket_guard.GetSocket();
+                const SOCKET connected_socket = _socket_object->GetSendingSocket();
+
+                Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
+                Assert::AreEqual(cts_socket, connected_socket);
+
+                if (callback_invoked == 10)
+                {
+                    g_IOStatus = ctsIoStatus::CompletedIo;
+                }
+                g_IOStatusCode = WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
+            });
+
+        ctsTask test_task;
+        test_task.m_ioAction = ctsTaskAction::Send;
+        // directly scheduling the first task
+        g_IOPended = 1;
+        test_connected_socket.ScheduleTask(test_task);
+        // should complete within 1 second (a few ms after 900ms)
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 1250));
+        constexpr uint32_t ExpectedCallbacks = 10;
+        Assert::AreEqual(ExpectedCallbacks, callback_invoked);
+    }
+
+    TEST_METHOD(FailSingleIO)
+    {
+        // should fail the first one
+        g_IOCount = 2;
+        g_IOStatus = ctsIoStatus::FailedIo;
+        g_IOStatusCode = ERROR_SUCCESS;
+        g_TaskAction = ctsTaskAction::None;
+        ResetEvent(g_RemovedSocketEvent);
+
+        std::vector<wil::network::socket_address> test_addr;
+        wil::unique_addrinfo resolved_addr;
+        if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
         {
-            // will fail after 5
-            g_IOCount = 10;
-            g_IOStatus = ctsIoStatus::ContinueIo;
-            g_IOStatusCode = ERROR_SUCCESS;
-            g_TaskAction = ctsTaskAction::None;
-            g_IOTimeOffset = 100; // 100ms apart
-            ResetEvent(g_RemovedSocketEvent);
-
-            std::vector<wil::network::socket_address> test_addr;
-            wil::unique_addrinfo resolved_addr;
-            if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+            for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
             {
-                for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
-                {
-                    test_addr.emplace_back(address);
-                }
+                test_addr.emplace_back(address);
             }
-            Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
-
-            auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
-            const auto test_socket(std::make_shared<ctsSocket>(socket_state));
-            test_socket->SetSocket(INVALID_SOCKET);
-
-            uint32_t callback_invoked = 0;
-            ctsMediaStreamServerConnectedSocket test_connected_socket(
-                std::weak_ptr(test_socket),
-                INVALID_SOCKET,
-                test_addr[0],
-                [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
-                {
-                    ++callback_invoked;
-
-                    const auto socket_guard(test_socket->AcquireSocketLock());
-                    const SOCKET cts_socket = socket_guard.GetSocket();
-                    const SOCKET connected_socket = _socket_object->GetSendingSocket();
-
-                    Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
-                    Assert::AreEqual(cts_socket, connected_socket);
-
-                    if (callback_invoked == 5)
-                    {
-                        g_IOStatus = ctsIoStatus::FailedIo;
-                    }
-                    g_IOStatusCode = WSAENOBUFS;
-                    return wsIOResult(WSAENOBUFS);
-                });
-
-            ctsTask test_task;
-            test_task.m_ioAction = ctsTaskAction::Send;
-            // directly scheduling the first task
-            g_IOPended = 1;
-            test_connected_socket.ScheduleTask(test_task);
-            // should complete within 500ms - failing after 5 IO
-            Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 500));
-            constexpr uint32_t ExpectedCallbacks = 5;
-            Assert::AreEqual(ExpectedCallbacks, callback_invoked);
         }
-    };
+        Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
+
+        auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+        const auto test_socket(std::make_shared<ctsSocket>(socket_state));
+        test_socket->SetSocket(INVALID_SOCKET);
+
+        uint32_t callback_invoked = 0;
+        ctsMediaStreamServerConnectedSocket test_connected_socket(
+            std::weak_ptr(test_socket),
+            INVALID_SOCKET,
+            test_addr[0],
+            [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+            {
+                ++callback_invoked;
+
+                const auto socket_guard(test_socket->AcquireSocketLock());
+                const SOCKET cts_socket = socket_guard.GetSocket();
+                const SOCKET connected_socket = _socket_object->GetSendingSocket();
+
+                Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
+                Assert::AreEqual(cts_socket, connected_socket);
+
+                g_IOStatusCode = WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
+            });
+
+        ctsTask test_task;
+        test_task.m_ioAction = ctsTaskAction::Send;
+        // directly scheduling the first task
+        g_IOPended = 1;
+        test_connected_socket.ScheduleTask(test_task);
+        // 'done' since it failed
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 0));
+        constexpr uint32_t ExpectedCallbacks = 1;
+        Assert::AreEqual(ExpectedCallbacks, callback_invoked);
+    }
+
+    TEST_METHOD(FailAfterMultipleIO)
+    {
+        // will fail after 5
+        g_IOCount = 10;
+        g_IOStatus = ctsIoStatus::ContinueIo;
+        g_IOStatusCode = ERROR_SUCCESS;
+        g_TaskAction = ctsTaskAction::None;
+        g_IOTimeOffset = 100; // 100ms apart
+        ResetEvent(g_RemovedSocketEvent);
+
+        std::vector<wil::network::socket_address> test_addr;
+        wil::unique_addrinfo resolved_addr;
+        if (0 == GetAddrInfoW(L"1.1.1.1", nullptr, nullptr, resolved_addr.addressof()))
+        {
+            for (const auto& address : wil::network::addr_info_iterator{resolved_addr.get()})
+            {
+                test_addr.emplace_back(address);
+            }
+        }
+        Assert::AreEqual(static_cast<size_t>(1), test_addr.size());
+
+        auto socket_state(std::make_shared<ctsSocketState>(std::weak_ptr<ctsSocketBroker>()));
+        const auto test_socket(std::make_shared<ctsSocket>(socket_state));
+        test_socket->SetSocket(INVALID_SOCKET);
+
+        uint32_t callback_invoked = 0;
+        ctsMediaStreamServerConnectedSocket test_connected_socket(
+            std::weak_ptr(test_socket),
+            INVALID_SOCKET,
+            test_addr[0],
+            [&](const ctsMediaStreamServerConnectedSocket* _socket_object) -> wsIOResult
+            {
+                ++callback_invoked;
+
+                const auto socket_guard(test_socket->AcquireSocketLock());
+                const SOCKET cts_socket = socket_guard.GetSocket();
+                const SOCKET connected_socket = _socket_object->GetSendingSocket();
+
+                Assert::AreEqual(test_addr[0], _socket_object->GetRemoteAddress());
+                Assert::AreEqual(cts_socket, connected_socket);
+
+                if (callback_invoked == 5)
+                {
+                    g_IOStatus = ctsIoStatus::FailedIo;
+                }
+                g_IOStatusCode = WSAENOBUFS;
+                return wsIOResult(WSAENOBUFS);
+            });
+
+        ctsTask test_task;
+        test_task.m_ioAction = ctsTaskAction::Send;
+        // directly scheduling the first task
+        g_IOPended = 1;
+        test_connected_socket.ScheduleTask(test_task);
+        // should complete within 500ms - failing after 5 IO
+        Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 500));
+        constexpr uint32_t ExpectedCallbacks = 5;
+        Assert::AreEqual(ExpectedCallbacks, callback_invoked);
+    }
+};
 }

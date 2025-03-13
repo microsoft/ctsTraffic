@@ -88,7 +88,8 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
+// NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -100,11 +101,11 @@ void PrintConnectionResults(const wil::network::socket_address&, const wil::netw
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -152,7 +153,8 @@ private:
     uint32_t m_zero = 0UL;
     uint32_t m_testError = 1UL;
 
-    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientGracefulShutdownTest(uint64_t testTransferSize) const
+    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientGracefulShutdownTest(
+        uint64_t testTransferSize) const
     {
         ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
         g_isListening = false;
@@ -165,7 +167,8 @@ private:
         return returnPattern;
     }
 
-    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>> InitServerGracefulShutdownTest(uint64_t testTransferSize) const
+    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpServer>> InitServerGracefulShutdownTest(
+        uint64_t testTransferSize) const
     {
         ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::GracefulShutdown;
         g_isListening = true;
@@ -178,7 +181,8 @@ private:
         return returnPattern;
     }
 
-    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientHardShutdownTest(uint64_t testTransferSize) const
+    [[nodiscard]] std::unique_ptr<ctsIoPatternProtocolPolicy<ctsIoPatternProtocolTcpClient>> InitClientHardShutdownTest(
+        uint64_t testTransferSize) const
     {
         ctsConfig::g_configSettings->TcpShutdown = ctsConfig::TcpShutdownType::HardShutdown;
         g_isListening = false; // client-only

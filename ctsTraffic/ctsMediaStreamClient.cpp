@@ -382,7 +382,7 @@ void ctsMediaStreamClientIoCompletionCallback(
     {
         if (socket != INVALID_SOCKET)
         {
-            DWORD flags;
+            DWORD flags{};
             if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
             {
                 gle = WSAGetLastError();
@@ -491,8 +491,8 @@ void ctsMediaStreamClientConnectionCompletionCallback(
     else
     {
         // unused
-        DWORD transferred;
-        DWORD flags;
+        DWORD transferred{};
+        DWORD flags{};
         if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
         {
             gle = WSAGetLastError();

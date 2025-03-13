@@ -110,11 +110,11 @@ void PrintConnectionResults(const wil::network::socket_address&, const wil::netw
 {
 }
 
-void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintDebug(_In_ _Printf_format_string_ PCWSTR, ...) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
-void PrintException(const std::exception&) noexcept  // NOLINT(misc-use-internal-linkage)
+void PrintException(const std::exception&) noexcept // NOLINT(misc-use-internal-linkage)
 {
 }
 
@@ -247,7 +247,9 @@ private:
         ctsConfig::g_configSettings->PrePostRecvs = 1;
         ctsConfig::g_configSettings->PrePostSends = 1;
         ctsConfig::g_configSettings->ConnectionLimit = 8;
-        ctsConfig::g_configSettings->TcpShutdown = (Graceful == _shutdown) ? ctsConfig::TcpShutdownType::GracefulShutdown : ctsConfig::TcpShutdownType::HardShutdown;
+        ctsConfig::g_configSettings->TcpShutdown = (Graceful == _shutdown) ?
+            ctsConfig::TcpShutdownType::GracefulShutdown :
+            ctsConfig::TcpShutdownType::HardShutdown;
 
         g_tcpBytesPerSecond = 0LL;
         g_MaxBufferSize = 1024;
