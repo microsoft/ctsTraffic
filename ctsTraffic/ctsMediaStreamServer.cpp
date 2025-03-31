@@ -527,6 +527,7 @@ wsIOResult ConnectedSocketIo(_In_ ctsMediaStreamServerConnectedSocket* connected
                 return wsIOResult(error);
             }
 
+            PRINT_DEBUG_INFO(L"WSASendTo(%lu) ", bytesSent);
             // successfully completed synchronously
             returnResults.m_bytesTransferred += bytesSent;
         }

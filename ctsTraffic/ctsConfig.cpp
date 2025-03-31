@@ -1316,7 +1316,8 @@ static void ParseForAddress(vector<const wchar_t*>& args)
             foundTarget = args.begin();
         }
     }
-    if (g_configSettings->TargetAddresses.empty())
+
+    if (!g_configSettings->TargetAddressStrings.empty() && g_configSettings->TargetAddresses.empty())
     {
         throw invalid_argument("All -target parameters failed to resolve to an IP address");
     }
