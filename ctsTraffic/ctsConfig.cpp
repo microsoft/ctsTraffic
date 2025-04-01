@@ -93,6 +93,8 @@ namespace ctsTraffic::ctsConfig
 	constexpr uint32_t c_defaultPushBytes = 0x100000;
 	constexpr uint32_t c_defaultPullBytes = 0x100000;
 
+    constexpr uint32_t c_udpDatagramMaximumSizeBytes = 1400UL;
+
 	static uint32_t g_timePeriodRefCount{};
 
 	static int64_t g_previousPrintTimeslice{};
@@ -1168,6 +1170,28 @@ namespace ctsTraffic::ctsConfig
 				ParseArgument(*foundArgument, L"-StreamLength"));
 			// always remove the arg from our vector
 			args.erase(foundArgument);
+		}
+
+		foundArgument = ranges::find_if(args, [](const wchar_t* parameter) -> bool
+			{
+				const auto* const value = ParseArgument(parameter, L"-DatagramByteSize");
+				return value != nullptr;
+			});
+		if (foundArgument != end(args))
+		{
+			if (g_configSettings->Protocol != ProtocolType::UDP)
+			{
+				throw invalid_argument("-DatagramByteSize requires -Protocol:UDP");
+			}
+			g_mediaStreamSettings.DatagramMaxSize = ConvertToIntegral<uint32_t>(
+				ParseArgument(*foundArgument, L"-DatagramByteSize"));
+			// always remove the arg from our vector
+			args.erase(foundArgument);
+		}
+		else
+		{
+			// else set the default value
+		    g_mediaStreamSettings.DatagramMaxSize = c_udpDatagramMaximumSizeBytes;
 		}
 
 		// validate and resolve the UDP protocol options
@@ -2477,6 +2501,8 @@ namespace ctsTraffic::ctsConfig
 				L"   -BitsPerSecond:######  (required for UDP)\n"
 				L"   -FrameRate:######  (required for UDP)\n"
 				L"   -StreamLength:######  (required for UDP)\n"
+				L"   -DatagramByteSize:###### (optional for UDP - but must match if supplied)\n"
+				L"                    : if set, the client side value must be >= server value\n"
 			);
 			break;
 
@@ -2601,6 +2627,14 @@ namespace ctsTraffic::ctsConfig
 				L"-Listen:<address or *> [-Listen:<addr> -Listen:<addr>]\n"
 				L"   - the specific IP Address for the server-side to listen, or '*' for all IP Addresses\n"
 				L"     note : can specify multiple addresses by providing -Listen for each address\n"
+				L"-DatagramByteSize:####\n"
+				L"   - (optional) the maximum size for each datagram to be sent\n"
+				L"     <default> = 1400 bytes\n"
+				L"     note : this affects how each Frame is split into individual calls to WSASendTo\n"
+				L"          : this may need to be made within one MTU for some network deployments\n"
+				L"     note : this is an optional parameter, but if specified on the server\n"
+				L"          : then the client must have a value set that is equal-to or greater-than that of the server\n"
+				L"     note : will generally have a ceiling around 65500 bytes\n"
 				L"-ServerExitLimit:####\n"
                 L"   - the total # of accepted connections before server gracefully exits\n"
                 L"     <default> == 0  (infinite)\n"
@@ -4274,7 +4308,7 @@ namespace ctsTraffic::ctsConfig
 				totalTime);
 
 			DWORD bytesReturned;
-			TCP_INFO_v1 tcpInfo1{};
+            TCP_INFO_v1 tcpInfo1{};
 			DWORD tcpInfoVersion = 1;
 			if (WSAIoctl(
 				socket,
@@ -4343,7 +4377,7 @@ namespace ctsTraffic::ctsConfig
 		// always write the summary, regardless of consoleVerbosity
 
 		va_list argptr;
-		va_start(argptr, text);
+        va_start(argptr, text);
 		try
 		{
 			wstring formattedString;
@@ -4396,7 +4430,7 @@ namespace ctsTraffic::ctsConfig
 		}
 
 		va_list argptr;
-		va_start(argptr, text);
+        va_start(argptr, text);
 		try
 		{
 			wstring formattedString;

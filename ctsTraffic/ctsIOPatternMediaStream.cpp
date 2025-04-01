@@ -53,7 +53,8 @@ namespace ctsTraffic
 
 ctsIoPatternMediaStreamClient::ctsIoPatternMediaStreamClient() :
     ctsIoPatternStatistics(ctsConfig::g_configSettings->PrePostRecvs),
-    m_frameRateMsPerFrame(1000.0 / static_cast<uint32_t>(ctsConfig::GetMediaStream().FramesPerSecond))
+    m_frameRateMsPerFrame(1000.0 / static_cast<uint32_t>(ctsConfig::GetMediaStream().FramesPerSecond)),
+    m_maxDatagramSize(ctsConfig::GetMediaStream().DatagramMaxSize)
 {
     // if the entire session fits in the initial buffer, update accordingly
     m_initialBufferFrames = std::min(m_finalFrame, m_initialBufferFrames);
@@ -125,18 +126,10 @@ ctsTask ctsIoPatternMediaStreamClient::GetNextTaskFromPattern() noexcept
     ctsTask returnTask;
     if (m_recvNeeded > 0)
     {
-        // don't try posting more than UdpDatagramMaximumSizeBytes at a time
-        uint32_t maxSizeBuffer{};
-        if (m_frameSizeBytes > c_udpDatagramMaximumSizeBytes)
-        {
-            maxSizeBuffer = c_udpDatagramMaximumSizeBytes;
-        }
-        else
-        {
-            maxSizeBuffer = m_frameSizeBytes;
-        }
-
-        returnTask = CreateUntrackedTask(ctsTaskAction::Recv, maxSizeBuffer);
+        // don't try posting more than m_maxDatagramSize at a time
+        returnTask = CreateUntrackedTask(
+            ctsTaskAction::Recv,
+            std::min(m_frameSizeBytes, m_maxDatagramSize));
         // always write in a zero for the seq number to initialize the buffer
         *reinterpret_cast<int64_t*>(returnTask.m_buffer) = 0LL;
         --m_recvNeeded;

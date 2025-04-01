@@ -50,8 +50,6 @@ constexpr uint32_t c_udpDatagramQpcLength = 8; // 64-bit value
 constexpr uint32_t c_udpDatagramQpfLength = 8; // 64-bit value
 constexpr uint32_t c_udpDatagramDataHeaderLength = c_udpDatagramProtocolHeaderFlagLength + c_udpDatagramSequenceNumberLength + c_udpDatagramQpcLength + c_udpDatagramQpfLength;
 
-constexpr uint32_t c_udpDatagramMaximumSizeBytes = 64000UL;
-
 static auto* g_udpDatagramStartString = "START";
 constexpr uint32_t c_udpDatagramStartStringLength = 5;
 
@@ -159,9 +157,10 @@ public:
         // constructor is only available to the begin() and end() methods of ctsMediaStreamSendRequests
         friend class ctsMediaStreamSendRequests;
 
-        iterator(_In_opt_ LARGE_INTEGER* qpcAddress, int64_t bytesToSend, const std::array<WSABUF, c_bufferArraySize>& wsaBufferArray) noexcept :
+        iterator(_In_opt_ LARGE_INTEGER* qpcAddress, int64_t bytesToSend, uint32_t maxDatagramSize, const std::array<WSABUF, c_bufferArraySize>& wsaBufferArray) noexcept :
             m_qpcAddress(qpcAddress),
             m_bytesToSend(bytesToSend),
+            m_maxDatagramSize(maxDatagramSize),
             m_wsaBufArray(wsaBufferArray)
         {
             // set the buffer length for the first iterator
@@ -173,9 +172,9 @@ public:
             // only update when not the end() iterator
             if (m_qpcAddress)
             {
-                if (m_bytesToSend > c_udpDatagramMaximumSizeBytes)
+                if (m_bytesToSend > m_maxDatagramSize)
                 {
-                    m_wsaBufArray[4].len = c_udpDatagramMaximumSizeBytes - c_udpDatagramDataHeaderLength;
+                    m_wsaBufArray[4].len = m_maxDatagramSize - c_udpDatagramDataHeaderLength;
                 }
                 else
                 {
@@ -206,6 +205,7 @@ public:
 
         LARGE_INTEGER* m_qpcAddress;
         int64_t m_bytesToSend;
+        uint32_t m_maxDatagramSize;
         std::array<WSABUF, c_bufferArraySize> m_wsaBufArray;
     };
 
@@ -218,7 +218,8 @@ public:
     ctsMediaStreamSendRequests(int64_t bytesToSend, int64_t sequenceNumber, const char* sendBuffer) noexcept :
         m_qpf(ctl::ctTimer::snap_qpf()),
         m_bytesToSend(bytesToSend),
-        m_sequenceNumber(sequenceNumber)
+        m_sequenceNumber(sequenceNumber),
+        m_maxDatagramSize(ctsConfig::GetMediaStream().DatagramMaxSize)
     {
         FAIL_FAST_IF_MSG(
             bytesToSend <= c_udpDatagramDataHeaderLength,
@@ -243,13 +244,13 @@ public:
 
     [[nodiscard]] iterator begin() noexcept
     {
-        return {&m_qpcValue, m_bytesToSend, m_wsaBuffer};
+        return {&m_qpcValue, m_bytesToSend, m_maxDatagramSize, m_wsaBuffer};
     }
 
     [[nodiscard]] iterator end() const noexcept
     {
         // end == null qpc + 0 byte length
-        return {nullptr, 0, m_wsaBuffer};
+        return {nullptr, 0, 0, m_wsaBuffer};
     }
 
 
@@ -259,6 +260,7 @@ private:
     int64_t m_qpf;
     int64_t m_bytesToSend;
     int64_t m_sequenceNumber;
+    uint32_t m_maxDatagramSize{};
 };
 
 
@@ -347,10 +349,10 @@ struct ctsMediaStreamMessage
     {
         int64_t returnValue;
         const auto copyError = memcpy_s(
-            &returnValue,
-            c_udpDatagramSequenceNumberLength,
-            task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength,
-            c_udpDatagramSequenceNumberLength);
+                                        &returnValue,
+                                        c_udpDatagramSequenceNumberLength,
+                                        task.m_buffer + task.m_bufferOffset + c_udpDatagramProtocolHeaderFlagLength,
+                                        c_udpDatagramSequenceNumberLength);
         FAIL_FAST_IF_MSG(
             copyError != 0,
             "ctsMediaStreamMessage::GetSequenceNumberFromTask : memcpy_s failed trying to copy the sequence number - ctsIOTask (%p) (error : %d)",

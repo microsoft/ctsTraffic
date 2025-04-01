@@ -403,9 +403,8 @@ namespace ctsTraffic
             // something truncated the datagram - don't treat it as a hard-error
             // pass the count to the protocol to track it at their layer
             ctsConfig::PrintErrorInfo(
-                L"MediaStream Client: %ws failed with WSAEMSGSIZE: received [%u bytes] - expected [%u bytes]",
-                task.m_ioAction == ctsTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo", transferred,
-                task.m_bufferLength);
+                L"MediaStream Client: %ws failed with WSAEMSGSIZE: received [%u bytes]",
+                task.m_ioAction == ctsTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo", transferred);
             gle = NO_ERROR;
         }
 

@@ -3,15 +3,30 @@ ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -buf
 ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -JitterFilename:simpletestjitter.csv
 
 
-100Gbps with lower bits/sec per connection, but higher connection count:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:400
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:data -connections:400
-expecting 0% loss rate (on my Ryzen 7 5800X)
+Verify failure case:
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -consoleverbosity:5 -statusupdate:500 -serverexitlimit:1
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:8000000 -framerate:30 -bufferdepth:10 -streamlength:30 -connections:1 -statusupdate:500 -iterations:1 -consoleverbosity:5 -DatagramByteSize:1399
 
-100Gbps with higher bits/sec per connection, but lower connection count:
-ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:100
-ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:100 
-expecting < 0.2% drop rate (on my Ryzen 7 5800X)
+
+7Gbps with default 1400 byte buffer, lower bits/sec per connection, but higher connection count: expecting 0% loss rate (on my Ryzen 7 5800X, Ryzen 9 7950x3D)
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:100
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:data -connections:100
+
+
+100Gbps with lower bits/sec per connection, but higher connection count: expecting 0% loss rate (on my Ryzen 7 5800X, Ryzen 9 7950x3D)
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:100000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:1000 -DatagramByteSize:65500
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:100000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:data -connections:1000  -DatagramByteSize:65500
+
+
+5Gbps with default 1400 bytes buffer, higher bits/sec per connection, but lower connection count: expecting < 0.2% drop rate (on my Ryzen 7 5800X, Ryzen 9 7950x3D)
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:5
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:5
+
+
+100Gbps with higher bits/sec per connection, but lower connection count: expecting < 0.2% drop rate (on my Ryzen 7 5800X, Ryzen 9 7950x3D)
+ctsTraffic.exe -listen:* -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -StreamLength:30 -ConsoleVerbosity:1 -ServerExitLimit:100 -DatagramByteSize:65500
+ctsTraffic.exe -target:localhost -protocol:udp -bitspersecond:1000000000 -FrameRate:100 -BufferDepth:3 -StreamLength:30 -iterations:1 -ConsoleVerbosity:1 -verify:connection -connections:100 -DatagramByteSize:65500
+
 
 Max TCP:
 ctsTraffic.exe -listen:* -consoleverbosity:1 -verify:connection -buffer:1048576 -transfer:0xffffffffffffffff -msgwaitall:on

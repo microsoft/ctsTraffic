@@ -273,6 +273,7 @@ namespace ctsTraffic
             uint32_t FramesPerSecond = 0;
             uint32_t BufferDepthSeconds = 0;
             uint32_t StreamLengthSeconds = 0;
+            uint32_t DatagramMaxSize = 0;
             // internally calculated
             uint32_t FrameSizeBytes = 0;
             uint32_t StreamLengthFrames = 0;

@@ -683,6 +683,7 @@ private:
     uint32_t m_initialBufferFrames = ctsConfig::GetMediaStream().BufferedFrames;
     uint32_t m_timerWheelOffsetFrames = 0UL;
     uint32_t m_recvNeeded = ctsConfig::g_configSettings->PrePostRecvs;
+    uint32_t m_maxDatagramSize = 0UL;
 
     // these must be protected by the base class cs
     // - the base lock is always taken before our virtual functions are called

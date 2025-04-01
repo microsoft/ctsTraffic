@@ -436,11 +436,6 @@ namespace ctsTraffic
             else
             {
                 const auto sequenceNumber = connectedSocket->IncrementSequence();
-                PRINT_DEBUG_INFO(
-                    L"\t\tctsMediaStreamServer sending seq number %lld (%u bytes)\n",
-                    sequenceNumber,
-                    nextTask.m_bufferLength);
-
                 ctsMediaStreamSendRequests sendingRequests(
                     nextTask.m_bufferLength, // total bytes to send
                     sequenceNumber,
@@ -491,6 +486,9 @@ namespace ctsTraffic
 
                     // successfully completed synchronously
                     returnResults.m_bytesTransferred += bytesSent;
+                    PRINT_DEBUG_INFO(
+                        L"\t\tctsMediaStreamServer sending seq number %lld (%u sent-bytes, %u frame-bytes)\n",
+                        sequenceNumber, bytesSent, returnResults.m_bytesTransferred);
                 }
             }
 
