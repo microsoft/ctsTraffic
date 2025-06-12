@@ -15,8 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // ctl headers
 #include <ctThreadIocp.hpp>
@@ -73,7 +73,7 @@ namespace ctsTraffic
         if (NO_ERROR == gle)
         {
             // store the local addr of the connection
-            int localAddrLen = socket_address::length;
+            int localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);
@@ -116,10 +116,10 @@ namespace ctsTraffic
                         ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress);
                     });
 
-                if (!ctsConfig::SocketFunctions().ConnectEx(
+                if (!ctsConfig::g_socketFunctions->ConnectEx(
                     socket,
                     targetAddress.sockaddr(),
-                    socket_address::length,
+                    targetAddress.size(),
                     nullptr,
                     0,
                     nullptr,
@@ -149,7 +149,7 @@ namespace ctsTraffic
                 ctsConfig::PrintErrorIfFailed("ConnectEx", error);
                 if (NO_ERROR == error)
                 {
-                    PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.write_complete_address().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tConnecting to %ws\n", targetAddress.format_complete_address().c_str());
                 }
             }
             else

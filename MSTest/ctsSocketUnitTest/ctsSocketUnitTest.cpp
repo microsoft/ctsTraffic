@@ -35,13 +35,13 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework
     }
 
     template <>
-    inline std::wstring ToString<socket_address>(const socket_address& _addr)
+    inline std::wstring ToString<wil::network::socket_address>(const wil::network::socket_address& _addr)
     {
         if (_addr.address_type() == NlatUnspecified)
         {
             return L"";
         }
-        return _addr.write_complete_address();
+        return _addr.format_complete_address();
     }
 }
 
@@ -250,7 +250,7 @@ namespace ctsUnitTest
             socket_address local_addr(AF_INET);
             local_addr.set_address_loopback();
             local_addr.set_port(55555);
-            const auto error = ::bind(socket_value, local_addr.sockaddr(), socket_address::length);
+            const auto error = ::bind(socket_value, local_addr.sockaddr(), local_addr.size());
             const auto gle = WSAGetLastError();
             Assert::AreEqual(SOCKET_ERROR, error);
             Assert::AreEqual(static_cast<int>(WSAENOTSOCK), gle);

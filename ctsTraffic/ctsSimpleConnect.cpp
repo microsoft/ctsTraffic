@@ -13,8 +13,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -51,7 +51,7 @@ namespace ctsTraffic
             }
             else
             {
-                if (0 != connect(socket, targetAddress.sockaddr(), socket_address::length))
+                if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.size()))
                 {
                     error = WSAGetLastError();
                     ctsConfig::PrintErrorIfFailed("connect", error);
@@ -60,7 +60,7 @@ namespace ctsTraffic
                 {
                     // set the local address
                     socket_address localAddr;
-                    auto localAddrLen = socket_address::length;
+                    auto localAddrLen = localAddr.size();
                     if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
                     {
                         sharedSocket->SetLocalSockaddr(localAddr);

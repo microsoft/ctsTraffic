@@ -14,8 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 #include <string>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -193,7 +193,7 @@ namespace ctsTraffic
         {
             // set the local and remote addresses on the socket object
             socket_address localAddr;
-            auto localAddrLen = socket_address::length;
+            auto localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);
@@ -204,7 +204,7 @@ namespace ctsTraffic
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamClient sent its START message to %ws\n",
-                targetAddress.write_complete_address().c_str());
+                targetAddress.format_complete_address().c_str());
         }
 
         // complete only on failure or successfully completed inline (otherwise will complete in the IOCP callback)
@@ -504,7 +504,7 @@ namespace ctsTraffic
         {
             // set the local and remote addresses
             socket_address localAddr;
-            int localAddrLen = socket_address::length;
+            int localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

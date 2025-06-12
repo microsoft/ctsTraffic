@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <memory>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // ctl headers
 #include <ctString.hpp>

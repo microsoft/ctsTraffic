@@ -15,8 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -63,8 +63,8 @@ namespace ctsTraffic
                 // read the local sockaddr - e.g. if we needed to bind locally
                 socket_address localAddr(sharedSocket->GetLocalSockaddr());
                 socket_address remoteAddr;
-                DWORD localAddrLength = socket_address::length;
-                DWORD remoteAddrLength = socket_address::length;
+                DWORD localAddrLength = localAddr.size();
+                DWORD remoteAddrLength = remoteAddr.size();
 
                 PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n",
                                  targetAddr.c_str(),
@@ -87,8 +87,8 @@ namespace ctsTraffic
 
                 PRINT_DEBUG_INFO(
                     L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n",
-                    localAddr.write_complete_address().c_str(),
-                    remoteAddr.write_complete_address().c_str());
+                    localAddr.format_complete_address().c_str(),
+                    remoteAddr.format_complete_address().c_str());
 
                 sharedSocket->SetLocalSockaddr(localAddr);
                 sharedSocket->SetRemoteSockaddr(remoteAddr);

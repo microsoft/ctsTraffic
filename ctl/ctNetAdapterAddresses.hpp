@@ -20,8 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <memory>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 namespace ctl
 {
@@ -193,7 +193,7 @@ namespace ctl
     // - to find the first interface that has the specified address assigned
     struct ctNetAdapterMatchingAddrPredicate
     {
-        explicit ctNetAdapterMatchingAddrPredicate(const wil::networking::socket_address& addr) noexcept :
+        explicit ctNetAdapterMatchingAddrPredicate(const wil::network::socket_address& addr) noexcept :
             m_targetAddr(addr)
         {
         }
@@ -204,7 +204,7 @@ namespace ctl
                  unicastAddress != nullptr;
                  unicastAddress = unicastAddress->Next)
             {
-                if (wil::networking::socket_address(&unicastAddress->Address) == m_targetAddr)
+                if (wil::network::socket_address(&unicastAddress->Address) == m_targetAddr)
                 {
                     return true;
                 }
@@ -213,6 +213,6 @@ namespace ctl
         }
 
     private:
-        const wil::networking::socket_address m_targetAddr;
+        const wil::network::socket_address m_targetAddr;
     };
 } // namespace ctl

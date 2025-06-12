@@ -16,8 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <vector>
 #include <algorithm>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
@@ -151,11 +151,11 @@ namespace ctsTraffic
                     THROW_WIN32_MSG(error, "SetPreBindOptions (ctsMediaStreamServer)");
                 }
 
-                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.size()))
                 {
                     error = WSAGetLastError();
-                    wil::networking::socket_address_string addrBuffer{};
-                    addr.write_address_nothrow(addrBuffer);
+                    wil::network::socket_address_string addrBuffer{};
+                    addr.format_address_nothrow(addrBuffer);
                     THROW_WIN32_MSG(error, "bind %hs (ctsMediaStreamServer)", addrBuffer);
                 }
 
@@ -165,7 +165,7 @@ namespace ctsTraffic
                     std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr));
                 PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServer - Receiving datagrams on %ws (%Iu)\n",
-                    addr.write_complete_address().c_str(),
+                    addr.format_complete_address().c_str(),
                     listeningSocketToPrint);
             }
 
@@ -223,7 +223,7 @@ namespace ctsTraffic
                 if (foundSocket == std::end(g_connectedSockets))
                 {
                     socket_address_wstring remote_address{};
-                    sharedSocket->GetRemoteSockaddr().write_complete_address_nothrow(remote_address);
+                    sharedSocket->GetRemoteSockaddr().format_complete_address_nothrow(remote_address);
                     ctsConfig::PrintErrorInfo(
                         L"ctsMediaStreamServer - failed to find the socket with remote address %ws in our connected socket list to continue sending datagrams",
                         remote_address);
@@ -269,7 +269,7 @@ namespace ctsTraffic
                         ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                         PRINT_DEBUG_INFO(
                             L"\t\tctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
-                            waitingEndpoint->second.write_complete_address().c_str());
+                            waitingEndpoint->second.format_complete_address().c_str());
                         // return early if this was a duplicate request: this can happen if there is latency or drops
                         // between the client and server as they attempt to negotiating starting a new stream
                         return;
@@ -284,7 +284,7 @@ namespace ctsTraffic
 
                     PRINT_DEBUG_INFO(
                         L"\t\tctsMediaStreamServer::accept_socket - socket with remote address %ws added to connected_sockets",
-                        waitingEndpoint->second.write_complete_address().c_str());
+                        waitingEndpoint->second.format_complete_address().c_str());
 
                     // now complete the ctsSocket 'Create' request
                     const auto foundSocket = std::ranges::find_if(
@@ -349,7 +349,7 @@ namespace ctsTraffic
                 ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
-                    targetAddr.write_complete_address().c_str());
+                    targetAddr.format_complete_address().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops
                 // between the client and server as they attempt to negotiating starting a new stream
                 return;
@@ -366,7 +366,7 @@ namespace ctsTraffic
                 ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
-                    targetAddr.write_complete_address().c_str());
+                    targetAddr.format_complete_address().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops
                 // between the client and server as they attempt to negotiating starting a new stream
                 return;
@@ -386,7 +386,7 @@ namespace ctsTraffic
 
                     PRINT_DEBUG_INFO(
                         L"\t\tctsMediaStreamServer::start - socket with remote address %ws added to connected_sockets",
-                        targetAddr.write_complete_address().c_str());
+                        targetAddr.format_complete_address().c_str());
 
                     // verify is successfully added to connected_sockets before popping off accepting_sockets
                     addToAwaiting = false;
@@ -407,7 +407,7 @@ namespace ctsTraffic
             {
                 PRINT_DEBUG_INFO(
                     L"\t\tctsMediaStreamServer::start - socket with remote address %ws added to awaiting_endpoints",
-                    targetAddr.write_complete_address().c_str());
+                    targetAddr.format_complete_address().c_str());
 
                 // only queue it if we aren't already waiting on this address
                 g_awaitingEndpoints.emplace_back(socket, targetAddr);
@@ -440,7 +440,7 @@ namespace ctsTraffic
                     &returnResults.m_bytesTransferred,
                     0,
                     remoteAddr.sockaddr(),
-                    socket_address::length,
+                    remoteAddr.size(),
                     nullptr,
                     nullptr);
 
@@ -449,7 +449,7 @@ namespace ctsTraffic
                     const auto error = WSAGetLastError();
 
                     socket_address_wstring remote_addr_string{};
-                    remoteAddr.write_complete_address_nothrow(remote_addr_string);
+                    remoteAddr.format_complete_address_nothrow(remote_addr_string);
                     ctsConfig::PrintErrorInfo(
                         L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
                         socket,
@@ -481,7 +481,7 @@ namespace ctsTraffic
                         &bytesSent,
                         0,
                         remoteAddr.sockaddr(),
-                        socket_address::length,
+                        remoteAddr.size(),
                         nullptr,
                         nullptr);
                     if (SOCKET_ERROR == sendResult)
@@ -497,7 +497,7 @@ namespace ctsTraffic
                             }
 
                             socket_address_wstring remote_addr_string{};
-                            remoteAddr.write_complete_address_nothrow(remote_addr_string);
+                            remoteAddr.format_complete_address_nothrow(remote_addr_string);
                             ctsConfig::PrintErrorInfo(
                                 L"WSASendTo(%Iu, seq %lld, %ws) failed with WSAEMSGSIZE : attempted to send datagram of size %u bytes",
                                 socket,
@@ -508,7 +508,7 @@ namespace ctsTraffic
                         else
                         {
                             socket_address_wstring remote_addr_string{};
-                            remoteAddr.write_complete_address_nothrow(remote_addr_string);
+                            remoteAddr.format_complete_address_nothrow(remote_addr_string);
                             ctsConfig::PrintErrorInfo(
                                 L"WSASendTo(%Iu, seq %lld, %ws) failed [%d]",
                                 socket,

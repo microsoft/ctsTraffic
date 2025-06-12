@@ -14,8 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <memory>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // project headers
 #include "ctsSocket.h"
@@ -160,7 +160,7 @@ namespace ctsTraffic
 
             if (0 == nextPort)
             {
-                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.size()))
                 {
                     gle = WSAGetLastError();
                 }
@@ -171,7 +171,7 @@ namespace ctsTraffic
                 constexpr auto bindRetryCount = 5;
                 for (auto bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
-                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), socket_address::length))
+                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.size()))
                     {
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)

@@ -16,8 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 #include <exception>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
@@ -89,7 +89,7 @@ namespace ctsTraffic
                         THROW_WIN32_MSG(error, "SetPreConnectOptions (ctsSimpleAccept)");
                     }
 
-                    if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), socket_address::length))
+                    if (SOCKET_ERROR == bind(listening.get(), addr.sockaddr(), addr.size()))
                     {
                         THROW_WIN32_MSG(WSAGetLastError(), "bind (ctsSimpleAccept)");
                     }
@@ -103,7 +103,7 @@ namespace ctsTraffic
                     // socket is now being tracked in listening_sockets, release ownership
                     listening.release();
 
-                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.write_complete_address().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.format_complete_address().c_str());
                 }
 
                 if (m_listeningSockets.empty())
@@ -195,7 +195,7 @@ namespace ctsTraffic
                 // increment the listening socket before calling accept on the blocking socket
                 ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
                 socket_address remoteAddr;
-                auto remoteAddrLen = socket_address::length;
+                auto remoteAddrLen = remoteAddr.size();
                 const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
                 auto gle = WSAGetLastError();
                 ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
@@ -213,7 +213,7 @@ namespace ctsTraffic
                 acceptSocket->SetRemoteSockaddr(remoteAddr);
 
                 socket_address localAddr;
-                auto localAddrLen = socket_address::length;
+                auto localAddrLen = localAddr.size();
                 if (0 == getsockname(newSocket, localAddr.sockaddr(), &localAddrLen))
                 {
                     acceptSocket->SetLocalSockaddr(localAddr);

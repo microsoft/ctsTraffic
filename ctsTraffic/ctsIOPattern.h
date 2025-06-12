@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <algorithm>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // project headers
 #include "ctsConfig.h"
@@ -234,7 +234,7 @@ namespace ctsTraffic
             {
                 if (m_bufferId != RIO_INVALID_BUFFERID)
                 {
-                    ctsConfig::RioFunctions().RIODeregisterBuffer(m_bufferId);
+                    ctsConfig::g_rioFunctions->RIODeregisterBuffer(m_bufferId);
                     m_bufferId = RIO_INVALID_BUFFERID;
                 }
             }

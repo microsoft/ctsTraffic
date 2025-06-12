@@ -16,8 +16,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <string>
 #include <utility>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -82,7 +82,7 @@ namespace ctsTraffic
 
                     m_recvFlags = 0;
                     m_remoteAddr.reset(m_remoteAddr.family());
-                    m_remoteAddrLen = socket_address::length;
+                    m_remoteAddrLen = m_remoteAddr.size();
                     OVERLAPPED* pOverlapped = m_threadIocp->new_request(
                         [this](OVERLAPPED* pCallbackOverlapped) noexcept
                         {
@@ -209,7 +209,7 @@ namespace ctsTraffic
                     case MediaStreamAction::START:
                         PRINT_DEBUG_INFO(
                             L"\t\tctsMediaStreamServer - processing START from %ws\n",
-                            m_remoteAddr.write_complete_address().c_str());
+                            m_remoteAddr.format_complete_address().c_str());
 #ifndef TESTING_IGNORE_START
                     // Cannot be holding the object_guard when calling into any pimpl-> methods
                         pimplOperation = [this]

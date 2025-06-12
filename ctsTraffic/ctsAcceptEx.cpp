@@ -18,8 +18,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 #include <vector>
 
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // ctl headers
 #include <ctThreadIocp.hpp>
@@ -101,11 +101,11 @@ namespace ctsTraffic
                     THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
                 }
 
-                if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), socket_address::length))
+                if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), m_sockaddr.size()))
                 {
                     error = WSAGetLastError();
-                    wil::networking::socket_address_string addrBuffer{};
-                    m_sockaddr.write_complete_address_nothrow(addrBuffer);
+                    wil::network::socket_address_string addrBuffer{};
+                    m_sockaddr.format_complete_address_nothrow(addrBuffer);
                     THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
                 }
 
@@ -214,7 +214,7 @@ namespace ctsTraffic
                     {
                         // Make the structures for the listener and its accept sockets
                         auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
-                        PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.write_address().c_str());
+                        PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.format_address().c_str());
                         //
                         // Add PendedAcceptRequests pended AcceptEx objects per listener
                         //
@@ -324,7 +324,7 @@ namespace ctsTraffic
 
             ::ZeroMemory(m_outputBuffer, c_singleOutputBufferSize * 2);
             DWORD bytesReceived{};
-            if (!ctsConfig::SocketFunctions().AcceptEx(
+            if (!ctsConfig::g_socketFunctions->AcceptEx(
                 listeningSocketObject->m_listenSocket.get(),
                 newAcceptedSocket.get(),
                 m_outputBuffer,
@@ -410,7 +410,7 @@ namespace ctsTraffic
             SOCKADDR_INET* remoteAddr{};
             auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
 
-            ctsConfig::SocketFunctions().GetAcceptExSockaddrs(
+            ctsConfig::g_socketFunctions->GetAcceptExSockaddrs(
                 m_outputBuffer,
                 0,
                 c_singleOutputBufferSize,
@@ -423,8 +423,8 @@ namespace ctsTraffic
             // transfer ownership of the SOCKET to the caller
             returnDetails.m_acceptSocket = std::move(m_acceptSocket);
             returnDetails.m_lastError = 0;
-            returnDetails.m_localAddr.set_sockaddr(localAddr);
-            returnDetails.m_remoteAddr.set_sockaddr(remoteAddr);
+            returnDetails.m_localAddr.reset(localAddr);
+            returnDetails.m_remoteAddr.reset(remoteAddr);
 
             return returnDetails;
         }
@@ -433,7 +433,7 @@ namespace ctsTraffic
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         static INIT_ONCE g_acceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
 
-        static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID pError, PVOID*) noexcept try
+        static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, [[not_null]] PVOID pError, PVOID*) noexcept try
         {
             g_acceptExImpl.Start();
             return TRUE;
@@ -444,7 +444,7 @@ namespace ctsTraffic
             return FALSE;
         }
 
-        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept try
+        static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ [[not_null]] ctsAcceptSocketInfo* acceptInfo) noexcept try
         {
             ctsAcceptedConnection acceptedSocket = acceptInfo->GetAcceptedSocket();
 
@@ -471,7 +471,7 @@ namespace ctsTraffic
                     {
                         // set the local addr
                         socket_address localAddr;
-                        int localAddrLen = socket_address::length;
+                        int localAddrLen = localAddr.size();
                         if (0 == getsockname(acceptedSocket.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
                         {
                             sharedSocket->SetLocalSockaddr(localAddr);
@@ -583,7 +583,7 @@ namespace ctsTraffic
         {
             // set the local addr
             socket_address localAddr;
-            auto localAddrLen = socket_address::length;
+            auto localAddrLen = localAddr.size();
             if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

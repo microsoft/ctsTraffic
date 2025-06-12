@@ -17,8 +17,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <vector>
 #include <string>
 #include <algorithm>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 
 // multimedia timer
 #include <mmsystem.h>
@@ -48,18 +48,8 @@ namespace ctsTraffic::ctsConfig
 {
     ctsConfigSettings* g_configSettings;
 
-    const auto g_socketFunctions = wil::networking::winsock_extension_function_table::load();
-
-    const wil::networking::WINSOCK_EXTENSION_FUNCTION_TABLE& SocketFunctions() noexcept
-    {
-        return g_socketFunctions.f;
-    }
-
-    const auto g_rioFunctions = wil::networking::rio_extension_function_table::load();
-    const RIO_EXTENSION_FUNCTION_TABLE& ctsConfig::RioFunctions() noexcept
-    {
-        return g_rioFunctions.f;
-    }
+    wil::network::winsock_extension_function_table g_socketFunctions;
+    wil::network::rio_extension_function_table g_rioFunctions;
         
     //
     // Hiding the details of the raw data in an unnamed namespace to make it completely private
@@ -713,6 +703,10 @@ namespace ctsTraffic::ctsConfig
             }
             else if (ctString::iordinal_equals(L"rioiocp", value))
             {
+                if (!g_rioFunctions)
+                {
+                    throw invalid_argument("-io:rioiocp (RIO not available on this system)");
+				}
                 g_configSettings->IoFunction = ctsRioIocp;
                 WI_SetFlag(g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO);
                 g_ioFunctionName = L"RioIocp (RIO using IOCP notifications)";
@@ -1245,7 +1239,8 @@ namespace ctsTraffic::ctsConfig
                 else
                 {
                     std::vector<socket_address> tempAddresses;
-                    for (const auto& address : wil::networking::resolve_name_nothrow(value))
+                    const auto addresses = wil::network::resolve_name(value);
+                    for (const auto& address : wil::network::addr_info_iterator(addresses.get()))
                     {
                         tempAddresses.emplace_back(address);
                     }
@@ -1284,7 +1279,8 @@ namespace ctsTraffic::ctsConfig
                 g_configSettings->TargetAddressStrings.emplace_back(value);
 
                 std::vector<socket_address> tempAddresses;
-                for (const auto& address : wil::networking::resolve_name_nothrow(value))
+                const auto addresses = wil::network::resolve_name(value);
+                for (const auto& address : wil::network::addr_info_iterator(addresses.get()))
                 {
                     tempAddresses.emplace_back(address);
                 }
@@ -1326,7 +1322,8 @@ namespace ctsTraffic::ctsConfig
                 else
                 {
                     std::vector<socket_address> tempAddresses;
-                    for (const auto& address : wil::networking::resolve_name_nothrow(value))
+                    const auto addresses = wil::network::resolve_name(value);
+                    for (const auto& address : wil::network::addr_info_iterator(addresses.get()))
                     {
                         tempAddresses.emplace_back(address);
                     }
@@ -2882,7 +2879,7 @@ namespace ctsTraffic::ctsConfig
             break;
         }
 
-        (void)fwprintf_s(stdout, L"%ws", usage.c_str());
+        std::ignore = fwprintf_s(stdout, L"%ws", usage.c_str());
     }
 
     // forward declare this function called by Startup, but implemented later in this function
@@ -3286,7 +3283,7 @@ namespace ctsTraffic::ctsConfig
 
         while (g_timePeriodRefCount > 0)
         {
-            (void)timeEndPeriod(1);
+            std::ignore = timeEndPeriod(1);
             --g_timePeriodRefCount;
         }
     }
@@ -3319,11 +3316,11 @@ namespace ctsTraffic::ctsConfig
             {
                 if (const auto* legend = g_printStatusInformation->PrintLegend(StatusFormatting::ConsoleOutput))
                 {
-                    (void)fwprintf_s(stdout, L"%ws\n", legend);
+                    std::ignore = fwprintf_s(stdout, L"%ws\n", legend);
                 }
                 if (const auto* header = g_printStatusInformation->PrintHeader(StatusFormatting::ConsoleOutput))
                 {
-                    (void)fwprintf_s(stdout, L"%ws\n", header);
+                    std::ignore = fwprintf_s(stdout, L"%ws\n", header);
                 }
             }
 
@@ -3376,7 +3373,7 @@ namespace ctsTraffic::ctsConfig
                     L"[%.3f] %hs",
                     GetStatusTimeStamp(),
                     exceptionText));
-            (void)fwprintf_s(stderr, L"%ws\n", formattedString.c_str());
+            std::ignore = fwprintf_s(stderr, L"%ws\n", formattedString.c_str());
 
             if (g_errorLogger)
             {
@@ -3386,7 +3383,7 @@ namespace ctsTraffic::ctsConfig
         }
         catch (...)
         {
-            (void)fwprintf_s(stderr, L"Error : failed to allocate memory\n");
+            std::ignore = fwprintf_s(stderr, L"Error : failed to allocate memory\n");
             if (g_errorLogger)
             {
                 g_errorLogger->LogError(L"Error : failed to allocate memory\r\n");
@@ -3450,7 +3447,7 @@ namespace ctsTraffic::ctsConfig
             case 4: // connection info + error info
             case 5: // connection info + error info + status updates
             case 6: // above + debug info
-                (void)fwprintf_s(stderr, L"[%.3f] Exception thrown: %hs\n", GetStatusTimeStamp(), e.what());
+                std::ignore = fwprintf_s(stderr, L"[%.3f] Exception thrown: %hs\n", GetStatusTimeStamp(), e.what());
             }
         }
     }
@@ -3506,7 +3503,7 @@ namespace ctsTraffic::ctsConfig
             FAIL_FAST_MSG("%ws", text);
         }
 
-        (void)fwprintf_s(stderr, L"%ws\n", text);
+        std::ignore = fwprintf_s(stderr, L"%ws\n", text);
 
         if (g_errorLogger)
         {
@@ -3580,7 +3577,7 @@ namespace ctsTraffic::ctsConfig
 
         if (writeToConsole)
         {
-            (void)fwprintf_s(stderr, L"%ws\n", errorString.c_str());
+            std::ignore = fwprintf_s(stderr, L"%ws\n", errorString.c_str());
         }
 
         if (g_errorLogger)
@@ -3642,7 +3639,7 @@ namespace ctsTraffic::ctsConfig
                         if (const auto* header = g_printStatusInformation->PrintHeader(
                             StatusFormatting::ConsoleOutput))
                         {
-                            (void)fwprintf_s(stdout, L"%ws", header);
+                            std::ignore = fwprintf_s(stdout, L"%ws", header);
                         }
                     }
                 }
@@ -3667,7 +3664,7 @@ namespace ctsTraffic::ctsConfig
                     if (const auto* printString = g_printStatusInformation->PrintStatus(
                         StatusFormatting::ConsoleOutput, lCurrentTimeslice, clearStatus))
                     {
-                        (void)fwprintf_s(stdout, L"%ws", printString);
+                        std::ignore = fwprintf_s(stdout, L"%ws", printString);
                     }
                 }
 
@@ -3745,9 +3742,9 @@ namespace ctsTraffic::ctsConfig
         }
 
         socket_address_wstring wsaLocalAddress{};
-        localAddr.write_complete_address_nothrow(wsaLocalAddress);
+        localAddr.format_complete_address_nothrow(wsaLocalAddress);
         socket_address_wstring wsaRemoteAddress{};
-        remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+        remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
         if (writeToConsole)
         {
             constexpr auto* const tcpConnectionString = L"[%.3f] TCP connection established [%ws - %ws]\n";
@@ -3756,7 +3753,7 @@ namespace ctsTraffic::ctsConfig
                                                      ? tcpConnectionString
                                                      : udpConnectionString;
 
-            (void)fwprintf_s(
+            std::ignore = fwprintf_s(
                 stdout,
                 connectionString,
                 GetStatusTimeStamp(),
@@ -3858,7 +3855,7 @@ namespace ctsTraffic::ctsConfig
         if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
         {
             socket_address_wstring empty_address_string{};
-            socket_address{}.write_complete_address_nothrow(empty_address_string);
+            socket_address{}.format_complete_address_nothrow(empty_address_string);
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
             static const auto* tcpResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
             csvString = wil::str_printf<std::wstring>(
@@ -3879,7 +3876,7 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole || (g_connectionLogger && !g_connectionLogger->IsCsvFormat()))
         {
             socket_address_wstring empty_address_string{};
-            socket_address{}.write_complete_address_nothrow(empty_address_string);
+            socket_address{}.format_complete_address_nothrow(empty_address_string);
 
             static const auto* tcpNetworkFailureResultTextFormat =
                 L"[%.3f] TCP connection failed with the error %ws : [%ws - %ws] [%hs] : SendBytes[%lld]  SendBps[%lld]  RecvBytes[%lld]  RecvBps[%lld]  Time[%lld ms]";
@@ -3900,7 +3897,7 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole)
         {
             // text strings always go to the console
-            (void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
+            std::ignore = fwprintf_s(stdout, L"%ws\n", textString.c_str());
         }
 
         if (g_connectionLogger)
@@ -4005,9 +4002,9 @@ namespace ctsTraffic::ctsConfig
         if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
         {
             socket_address_wstring wsaLocalAddress{};
-            localAddr.write_complete_address_nothrow(wsaLocalAddress);
+            localAddr.format_complete_address_nothrow(wsaLocalAddress);
             socket_address_wstring wsaRemoteAddress{};
-            remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+            remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
             // csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
             static const auto* tcpResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
@@ -4031,9 +4028,9 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole || (g_connectionLogger && !g_connectionLogger->IsCsvFormat()))
         {
             socket_address_wstring wsaLocalAddress{};
-            localAddr.write_complete_address_nothrow(wsaLocalAddress);
+            localAddr.format_complete_address_nothrow(wsaLocalAddress);
             socket_address_wstring wsaRemoteAddress{};
-            remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+            remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
             if (0 == error)
             {
@@ -4079,7 +4076,7 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole)
         {
             // text strings always go to the console
-            (void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
+            std::ignore = fwprintf_s(stdout, L"%ws\n", textString.c_str());
         }
 
         if (g_connectionLogger)
@@ -4184,9 +4181,9 @@ namespace ctsTraffic::ctsConfig
         if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
         {
             socket_address_wstring wsaLocalAddress{};
-            localAddr.write_complete_address_nothrow(wsaLocalAddress);
+            localAddr.format_complete_address_nothrow(wsaLocalAddress);
             socket_address_wstring wsaRemoteAddress{};
-            remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+            remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
             // csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
             static const auto* udpResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
@@ -4210,9 +4207,9 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole || g_connectionLogger && !g_connectionLogger->IsCsvFormat())
         {
             socket_address_wstring wsaLocalAddress{};
-            localAddr.write_complete_address_nothrow(wsaLocalAddress);
+            localAddr.format_complete_address_nothrow(wsaLocalAddress);
             socket_address_wstring wsaRemoteAddress{};
-            remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+            remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
             if (0 == error)
             {
@@ -4258,7 +4255,7 @@ namespace ctsTraffic::ctsConfig
         if (writeToConsole)
         {
             // text strings always go to the console
-            (void)fwprintf_s(stdout, L"%ws\n", textString.c_str());
+            std::ignore = fwprintf_s(stdout, L"%ws\n", textString.c_str());
         }
 
         if (g_connectionLogger)
@@ -4303,9 +4300,9 @@ namespace ctsTraffic::ctsConfig
         if (g_tcpInfoLogger)
         {
             socket_address_wstring wsaLocalAddress{};
-            localAddr.write_complete_address_nothrow(wsaLocalAddress);
+            localAddr.format_complete_address_nothrow(wsaLocalAddress);
             socket_address_wstring wsaRemoteAddress{};
-            remoteAddr.write_complete_address_nothrow(wsaRemoteAddress);
+            remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
             static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
             // the connection has ended - no locks needed
@@ -4397,7 +4394,7 @@ namespace ctsTraffic::ctsConfig
         {
             wstring formattedString;
             wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr);
-            (void)fwprintf_s(stdout, L"%ws", formattedString.c_str());
+            std::ignore = fwprintf_s(stdout, L"%ws", formattedString.c_str());
 
             if (g_connectionLogger && !g_connectionLogger->IsCsvFormat())
             {
@@ -4453,7 +4450,7 @@ namespace ctsTraffic::ctsConfig
             {
                 if (SUCCEEDED(wil::details::str_vprintf_nothrow<std::wstring>(formattedString, text, argptr)))
                 {
-                    (void)fwprintf_s(stdout, L"%ws\n", formattedString.c_str());
+                    std::ignore = fwprintf_s(stdout, L"%ws\n", formattedString.c_str());
                 }
             }
 
@@ -5148,7 +5145,7 @@ namespace ctsTraffic::ctsConfig
             socket_address_wstring address{};
             for (const auto& addr : g_configSettings->ListenAddresses)
             {
-                if (SUCCEEDED(addr.write_complete_address_nothrow(address)))
+                if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
                 {
                     settingString.append(L"\t\t");
                     settingString.append(address);
@@ -5169,7 +5166,7 @@ namespace ctsTraffic::ctsConfig
             socket_address_wstring address{};
             for (const auto& addr : g_configSettings->TargetAddresses)
             {
-                if (SUCCEEDED(addr.write_complete_address_nothrow(address)))
+                if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
                 {
                     settingString.append(L"\t\t");
                     settingString.append(address);
@@ -5180,7 +5177,7 @@ namespace ctsTraffic::ctsConfig
             settingString.append(L"\tBinding to local addresses for outgoing connections:\n");
             for (const auto& addr : g_configSettings->BindAddresses)
             {
-                if (SUCCEEDED(addr.write_complete_address_nothrow(address)))
+                if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
                 {
                     settingString.append(L"\t\t");
                     settingString.append(address);
@@ -5286,7 +5283,7 @@ namespace ctsTraffic::ctsConfig
         case 6: // above + debug info
         default:
             {
-                (void)fwprintf_s(stdout, L"%ws", settingString.c_str());
+                std::ignore = fwprintf_s(stdout, L"%ws", settingString.c_str());
             }
         }
 

@@ -55,19 +55,19 @@ namespace ctsTraffic::ctsConfig
         return 0;
     }
 
-    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&,
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&,
                                 uint32_t) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
     }
 
-    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&,
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&,
                                 uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    void PrintConnectionResults(const wil::networking::socket_address&, const wil::networking::socket_address&,
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&,
                                 uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");

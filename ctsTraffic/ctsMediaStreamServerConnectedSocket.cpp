@@ -17,8 +17,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 #include <functional>
 #include <utility>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // ctl headers
 #include <ctString.hpp>
 #include <ctTimer.hpp>
@@ -171,7 +171,7 @@ namespace ctsTraffic
             }
 
             socket_address_wstring remote_addr_string{};
-            thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
+            thisPtr->m_remoteAddr.format_complete_address_nothrow(remote_addr_string);
             ctsConfig::PrintErrorInfo(
                 L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
                 remote_addr_string);
@@ -181,7 +181,7 @@ namespace ctsTraffic
         else if (ctsIoStatus::CompletedIo == status)
         {
             socket_address_wstring remote_addr_string{};
-            thisPtr->m_remoteAddr.write_complete_address_nothrow(remote_addr_string);
+            thisPtr->m_remoteAddr.format_complete_address_nothrow(remote_addr_string);
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
                 remote_addr_string);

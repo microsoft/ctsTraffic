@@ -14,8 +14,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <exception>
 #include <memory>
-// using wil::networking to pull in all necessary networking headers
-#include <wil/networking.h>
+// using wil::network to pull in all necessary networking headers
+#include <wil/network.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 // project headers
@@ -117,7 +117,7 @@ namespace ctsTraffic
             wsaBuffer.len = task.m_bufferLength;
 
             if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(),
-                          socket_address::length, pOverlapped, nullptr) != 0)
+                          targetAddress.size(), pOverlapped, nullptr) != 0)
             {
                 returnResult.m_errorCode = WSAGetLastError();
                 // IO pended == successfully initiating the IO
