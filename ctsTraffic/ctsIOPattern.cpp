@@ -824,16 +824,14 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
-        // because this is called while holding the parent lock (which is the pattern lock)
-        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.AddNoLock(completedBytes);
+            m_statistics.m_bytesSent.Add(completedBytes);
             m_sendBytesInFlight -= completedBytes;
         }
         else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
+            m_statistics.m_bytesRecv.Add(completedBytes);
             ++m_recvNeeded;
         }
 
@@ -880,16 +878,14 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPush::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
-        // because this is called while holding the parent lock (which is the pattern lock)
-        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.AddNoLock(completedBytes);
+            m_statistics.m_bytesSent.Add(completedBytes);
             m_sendBytesInFlight -= completedBytes;
         }
         else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
+            m_statistics.m_bytesRecv.Add(completedBytes);
             ++m_recvNeeded;
         }
 
@@ -959,21 +955,19 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternPushPull::CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept
     {
-        // because this is called while holding the parent lock (which is the pattern lock)
-        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         if (ctsTaskAction::Send == task.m_ioAction)
         {
-            m_statistics.m_bytesSent.AddNoLock(currentTransfer);
+            m_statistics.m_bytesSent.Add(currentTransfer);
         }
         else if (ctsTaskAction::Recv == task.m_ioAction)
         {
-            m_statistics.m_bytesRecv.AddNoLock(currentTransfer);
+            m_statistics.m_bytesRecv.Add(currentTransfer);
         }
 
         m_ioNeeded = true;
         m_intraSegmentTransfer += currentTransfer;
 
-        uint32_t segmentSize;
+        uint32_t segmentSize{};
         if (m_listening)
         {
             // server role is opposite client
@@ -1071,13 +1065,11 @@ namespace ctsTraffic
 
     ctsIoPatternError ctsIoPatternDuplex::CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept
     {
-        // because this is called while holding the parent lock (which is the pattern lock)
-        // -- we don't need to use Interlocked* to write to m_statistics (no m_statistics requires Interlocked*)
         switch (task.m_ioAction)
         {
         case ctsTaskAction::Send:
         {
-            m_statistics.m_bytesSent.AddNoLock(completedBytes);
+            m_statistics.m_bytesSent.Add(completedBytes);
             m_sendBytesInFlight -= completedBytes;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
@@ -1088,7 +1080,7 @@ namespace ctsTraffic
         }
         case ctsTaskAction::Recv:
         {
-            m_statistics.m_bytesRecv.AddNoLock(completedBytes);
+            m_statistics.m_bytesRecv.Add(completedBytes);
             ++m_recvNeeded;
 
             // first, we need to adjust the total back from our over-subscription guard when this task was created
@@ -1167,8 +1159,7 @@ namespace ctsTraffic
             const int64_t currentTransferBits = static_cast<int64_t>(currentTransfer) * 8LL;
 
             ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(currentTransferBits);
-            // local updates are always under lock - not requiring Interlocked* calls
-            m_statistics.m_bitsReceived.AddNoLock(currentTransferBits);
+            m_statistics.m_bitsReceived.Add(currentTransferBits);
 
             m_currentFrameCompleted += currentTransfer;
             if (m_currentFrameCompleted == m_frameSizeBytes)

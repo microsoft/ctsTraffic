@@ -61,9 +61,6 @@
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ctl">

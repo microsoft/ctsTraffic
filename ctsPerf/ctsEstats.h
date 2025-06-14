@@ -117,7 +117,7 @@ namespace ctsPerf { namespace Details
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             if (const auto err = SetPerTcpConnectionEStats(
-                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof*pRw, 0); err != 0)
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof(*pRw), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
@@ -128,7 +128,7 @@ namespace ctsPerf { namespace Details
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             if (const auto err = SetPerTcp6ConnectionEStats(
-                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof *pRw), 0); err != 0)
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
@@ -141,7 +141,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof*pRos), // read-only static information
+                reinterpret_cast<PUCHAR>(pRos), 0, sizeof(*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
 
@@ -155,9 +155,9 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                static_cast<ULONG>(sizeof(*pRos)), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -176,7 +176,7 @@ namespace ctsPerf { namespace Details
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                sizeof(*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
 
@@ -190,9 +190,9 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                static_cast<ULONG>(sizeof(*pRos)), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -215,7 +215,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 nullptr, 0, 0, // read-only static information
                 reinterpret_cast<PUCHAR>(pRod), 0,
                 static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information
@@ -239,7 +239,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 nullptr, 0, 0, // read-only static information
                 reinterpret_cast<PUCHAR>(pRod), 0,
                 static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information

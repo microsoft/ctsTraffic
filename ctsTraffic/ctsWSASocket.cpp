@@ -25,9 +25,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-    static int64_t g_bindCounter = 0LL;
-    static int64_t g_targetCounter = 0LL;
-    static int64_t g_portCounter = 0LL;
+    static std::atomic_signed_lock_free g_bindCounter{};
+    static std::atomic_signed_lock_free g_targetCounter{};
+    static std::atomic_signed_lock_free g_portCounter{};
 
     // ReSharper disable once CppInconsistentNaming
     void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
@@ -41,7 +41,7 @@ namespace ctsTraffic
         USHORT nextPort = 0;
         if (ctsConfig::g_configSettings->LocalPortHigh != 0 && ctsConfig::g_configSettings->LocalPortLow != 0)
         {
-            const auto portCounter = ctl::ctMemoryGuardIncrement(&g_portCounter);
+            const auto portCounter = g_portCounter.fetch_add(1) + 1;
             nextPort = static_cast<uint16_t>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
         }
         else
@@ -61,7 +61,7 @@ namespace ctsTraffic
         else
         {
             const auto bindSize = ctsConfig::g_configSettings->BindAddresses.size();
-            auto socketCounter = ctl::ctMemoryGuardIncrement(&g_bindCounter);
+            auto socketCounter = g_bindCounter.fetch_add(1) + 1;
             localAddr = ctsConfig::g_configSettings->BindAddresses[socketCounter % bindSize];
         }
 
@@ -75,11 +75,11 @@ namespace ctsTraffic
             // - ctsConfig guarantees that at least address families will match with at least one address in bind and target vectors
             //
             const auto targetSize = ctsConfig::g_configSettings->TargetAddresses.size();
-            auto socketCounter = ctl::ctMemoryGuardIncrement(&g_targetCounter);
+            auto socketCounter = g_targetCounter.fetch_add(1) + 1;
             targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
             while (targetAddr.family() != localAddr.family())
             {
-                socketCounter = ctl::ctMemoryGuardIncrement(&g_targetCounter);
+                socketCounter = g_targetCounter.fetch_add(1) + 1;
                 targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
             }
         }
@@ -131,7 +131,7 @@ namespace ctsTraffic
             {
                 PRINT_DEBUG_INFO(L"\t\tEnabling Dual-mode sockets\n");
                 constexpr DWORD ipv6_only = FALSE;
-                if (0 != setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&ipv6_only), static_cast<int>(sizeof ipv6_only)))
+                if (0 != setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&ipv6_only), sizeof ipv6_only))
                 {
                     gle = WSAGetLastError();
                     ctsConfig::PrintErrorIfFailed("setsockopt(IPV6_V6ONLY)", gle);
