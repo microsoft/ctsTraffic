@@ -731,7 +731,7 @@ inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[FixedStringLength],
 // ReSharper disable once CppMemberFunctionMayBeStatic
 inline int ctSockaddr::length() const noexcept // NOLINT(readability-convert-member-functions-to-static)
 {
-    return static_cast<int>(c_sockaddrSize);
+    return c_sockaddrSize;
 }
 
 inline ADDRESS_FAMILY ctSockaddr::family() const noexcept

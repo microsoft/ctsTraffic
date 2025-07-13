@@ -226,9 +226,6 @@
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctThreadpoolQueue.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -254,5 +251,6 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
 </Project>

@@ -22,7 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 
-static int64_t g_targetCounter = 0LL;
+static std::atomic_signed_lock_free g_targetCounter{};
 
 namespace ctsTraffic
 {
@@ -57,7 +57,7 @@ namespace ctsTraffic
                 }
 
                 const auto targetSize = ctsConfig::g_configSettings->TargetAddressStrings.size();
-                const auto connectCounter = ctl::ctMemoryGuardIncrement(&g_targetCounter);
+                const auto connectCounter = g_targetCounter.fetch_add(1) + 1;
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
 
                 // read the local sockaddr - e.g. if we needed to bind locally

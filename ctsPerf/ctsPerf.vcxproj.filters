@@ -61,9 +61,6 @@
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctMemoryGuard.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ctl">
@@ -99,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -44,6 +44,7 @@ inline wil::unique_variant ctWmiMakeVariant(const bool value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ bool* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -63,6 +64,7 @@ inline wil::unique_variant ctWmiMakeVariant(const char value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ char* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -82,6 +84,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned char* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -101,6 +104,7 @@ inline wil::unique_variant ctWmiMakeVariant(const short value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ short* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -120,6 +124,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned short* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -139,6 +144,7 @@ inline wil::unique_variant ctWmiMakeVariant(const long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -158,6 +164,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -177,6 +184,7 @@ inline wil::unique_variant ctWmiMakeVariant(const int value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ int* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -196,6 +204,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned int* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -215,6 +224,7 @@ inline wil::unique_variant ctWmiMakeVariant(const float value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ float* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -234,6 +244,7 @@ inline wil::unique_variant ctWmiMakeVariant(const double value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ double* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -255,6 +266,7 @@ inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ SYSTEMTIME* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -275,6 +287,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ const BSTR value) // NOLINT(mis
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ BSTR* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -296,6 +309,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ PCWSTR value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::wstring* value)
 {
+    value->clear();
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -317,7 +331,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned long long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long long* value)
 {
-    *value = 0;
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -339,7 +353,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ const long long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long long* value)
 {
-    *value = 0;
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;

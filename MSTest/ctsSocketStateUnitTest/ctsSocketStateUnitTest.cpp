@@ -170,7 +170,7 @@ void ctsSocketBroker::Closing(bool) noexcept
 
 using namespace ctsTraffic;
 
-static long g_CallbackCount = 0L;
+static std::atomic<long> g_CallbackCount = 0L;
 
 static DWORD g_CreateReturnCode = 0UL;
 static DWORD g_ConnectReturnCode = 0UL;
@@ -192,7 +192,7 @@ void CreateFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 
     Assert::AreNotEqual(g_ShouldNeverHitErrorCode, g_CreateReturnCode);
 
-    ctl::ctMemoryGuardIncrement(&g_CallbackCount);
+    g_CallbackCount.fetch_add(1);
     if (sharedSocket)
     {
         sharedSocket->CompleteState(g_CreateReturnCode);
@@ -210,7 +210,7 @@ void ConnectFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
     Assert::AreNotEqual(INVALID_SOCKET, s);
     sharedSocket->SetSocket(s);
 
-    ctl::ctMemoryGuardIncrement(&g_CallbackCount);
+    g_CallbackCount.fetch_add(1);
     if (sharedSocket)
     {
         sharedSocket->CompleteState(g_ConnectReturnCode);
@@ -224,7 +224,7 @@ void IoFunctionHook(std::weak_ptr<ctsSocket> socket) noexcept
 
     Assert::AreNotEqual(g_ShouldNeverHitErrorCode, g_IOReturnCode);
 
-    ctl::ctMemoryGuardIncrement(&g_CallbackCount);
+    g_CallbackCount.fetch_add(1);
     if (sharedSocket)
     {
         sharedSocket->CompleteState(g_IOReturnCode);
@@ -273,7 +273,7 @@ public:
         }
         Assert::AreEqual(ctsSocketState::InternalState::Closed, test->GetCurrentState());
 
-        Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
+        Assert::AreEqual(3L, g_CallbackCount.load());
     }
 
     TEST_METHOD(CreateFails)
@@ -290,7 +290,7 @@ public:
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
-        Assert::AreEqual(1L, ctl::ctMemoryGuardRead(&g_CallbackCount));
+        Assert::AreEqual(1L, g_CallbackCount.load());
     }
 
     TEST_METHOD(ConnectFails)
@@ -307,7 +307,7 @@ public:
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
-        Assert::AreEqual(2L, ctl::ctMemoryGuardRead(&g_CallbackCount));
+        Assert::AreEqual(2L, g_CallbackCount.load());
     }
 
     TEST_METHOD(IOFails)
@@ -324,7 +324,7 @@ public:
         }
         while (ctsSocketState::InternalState::Closed != test->GetCurrentState());
 
-        Assert::AreEqual(3L, ctl::ctMemoryGuardRead(&g_CallbackCount));
+        Assert::AreEqual(3L, g_CallbackCount.load());
     }
 };
 }

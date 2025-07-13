@@ -444,9 +444,7 @@ public:
     void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept override
     {
         // before printing the final results, make sure the timers are stopped
-        // because this is called while holding the parent lock (which is the pattern lock)
-        // -- we don't need to use Interlocked* to read m_statistics (no m_statistics requires Interlocked*)
-        if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesTransferredNoLock())
+        if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesTransferred())
         {
             PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transferred zero bytes\n");
             UpdateLastPatternError(ctsIoPatternError::TooFewBytes);
