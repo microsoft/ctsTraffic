@@ -49,13 +49,6 @@ namespace ctsTraffic
         {
             try
             {
-                error = ctsConfig::SetPreConnectOptions(socket);
-                if (error != NO_ERROR)
-                {
-                    ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
-                    THROW_WIN32(error);
-                }
-
                 const auto targetSize = ctsConfig::g_configSettings->TargetAddressStrings.size();
                 const auto connectCounter = g_targetCounter.fetch_add(1) + 1;
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];

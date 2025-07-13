@@ -4933,11 +4933,6 @@ static void ParseForKeepAlive(vector<const wchar_t*>& args)
 		return NO_ERROR;
 	}
 
-	int SetPreConnectOptions(SOCKET) noexcept
-	{
-		ctsConfigInitOnce();
-		return 0;
-	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	///
 	/// SetPostConnectOptions
