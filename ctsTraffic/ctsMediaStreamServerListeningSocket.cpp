@@ -18,9 +18,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
@@ -29,6 +26,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsMediaStreamServer.h"
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -194,7 +194,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                     ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
                     m_priorFailureWasConectionReset = false;
                 }
-                // this receive failed - do nothing immediately in response
+                // this receive-call failed - do nothing immediately in response
                 // - just attempt to post another recv at the end of this function
             }
             else

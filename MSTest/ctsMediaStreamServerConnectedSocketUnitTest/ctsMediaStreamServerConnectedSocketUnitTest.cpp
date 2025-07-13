@@ -248,7 +248,7 @@ void ctsSocket::SetSocket(SOCKET _s) noexcept
     m_socket.reset(_s);
 }
 
-void ctsSocket::CompleteState(DWORD) noexcept
+void ctsSocket::CompleteState(DWORD) const noexcept
 {
     SetEvent(g_RemovedSocketEvent);
 }

@@ -25,10 +25,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include "ctSockaddr.hpp"
+// wil headers always included last
+#include <wil/resource.h>
 
 namespace ctl
 {
@@ -122,12 +122,8 @@ public:
             return *this;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// iterator_traits
-        /// - allows <algorithm> functions to be used
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
+        // iterator_traits
+        // - allows <algorithm> functions to be used
         using iterator_category = std::forward_iterator_tag;
         using value_type = IP_ADAPTER_ADDRESSES;
         using difference_type = int;
@@ -139,35 +135,22 @@ public:
         PIP_ADAPTER_ADDRESSES m_current = nullptr;
     };
 
-    ////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// c'tor
-    ///
-    /// - default d'tor, copy c'tor, and copy assignment
-    /// - Takes an optional _gaaFlags argument which is passed through directly to
-    ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
-    ///
-    ////////////////////////////////////////////////////////////////////////////////
     explicit ctNetAdapterAddresses(unsigned family = AF_UNSPEC, DWORD gaaFlags = 0) :
         m_buffer(std::make_shared<std::vector<BYTE>>(16384))
     {
         this->refresh(family, gaaFlags);
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// refresh
-    ///
-    /// - retrieves the current set of adapter address information
-    /// - Takes an optional _gaaFlags argument which is passed through directly to
-    ///   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
-    ///
-    /// NOTE: this will invalidate any iterators from this instance
-    /// NOTE: this only implements the Basic exception guarantee
-    ///       if this fails, an exception is thrown, and any prior
-    ///       information is lost. This is still safe to call after errors.
-    ///
-    ////////////////////////////////////////////////////////////////////////////////
+    // refresh
+    //
+    // - retrieves the current set of adapter address information
+    // - Takes an optional _gaaFlags argument which is passed through directly to
+    //   GetAdapterAddresses internally - use standard GAA_FLAG_* constants
+    //
+    // NOTE: this will invalidate any iterators from this instance
+    // NOTE: this only implements the Basic exception guarantee
+    //       if this fails, an exception is thrown, and any prior
+    //       information is lost. This is still safe to call after errors.
     void refresh(unsigned family = AF_UNSPEC, DWORD gaaFlags = 0) const
     {
         // get both v4 and v6 adapter info
@@ -211,10 +194,10 @@ private:
     std::shared_ptr<std::vector<BYTE>> m_buffer{};
 };
 
-/// functor ctNetAdapterMatchingAddrPredicate
-///
-/// Created to leverage STL algorigthms to parse a ctNetAdapterAddresses set of iterators
-/// - to find the first interface that has the specified address assigned
+// functor ctNetAdapterMatchingAddrPredicate
+//
+// Created to leverage STL algorithms to parse a ctNetAdapterAddresses set of iterators
+// - to find the first interface that has the specified address assigned
 struct ctNetAdapterMatchingAddrPredicate
 {
     explicit ctNetAdapterMatchingAddrPredicate(ctSockaddr addr) noexcept :

@@ -27,7 +27,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
 ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker) :
-    m_broker(move(pBroker))
+    m_broker(std::move(pBroker))
 {
     m_threadPoolWorker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::g_configSettings->pTpEnvironment));
     THROW_LAST_ERROR_IF_NULL(m_threadPoolWorker.get());

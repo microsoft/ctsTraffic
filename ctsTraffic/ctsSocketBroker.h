@@ -39,7 +39,7 @@ public:
     // - create new sockets
     static uint32_t m_timerCallbackTimeoutMs;
 
-    // only the c'tor can throw
+    // only the constructor can throw
     ctsSocketBroker();
     ~ctsSocketBroker() noexcept;
 
@@ -67,7 +67,7 @@ private:
     wil::unique_event_nothrow m_doneEvent;
     // vector of currently active sockets
     // must be shared_ptr since ctsSocketState derives from enable_shared_from_this
-    // - and thus there must be at least one refcount on that object to call shared_from_this()
+    // - and thus there must be at least one ref-count on that object to call shared_from_this()
     std::vector<std::shared_ptr<ctsSocketState>> m_socketPool{};
     // keep a burn-down count as connections are made to know when to be 'done'
     ULONGLONG m_totalConnectionsRemaining = 0ULL;

@@ -26,7 +26,7 @@ namespace ctsTraffic
 class ctsStatusInformation
 {
 protected:
-    enum class PrintingStatus
+    enum class PrintingStatus : std::uint8_t
     {
         PrintComplete,
         NoPrint
@@ -119,8 +119,8 @@ protected:
 
     void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, float value) noexcept
     {
-        constexpr uint32_t coversionBufferLength = 16;
-        wchar_t conversionBuffer[coversionBufferLength]{};
+        constexpr uint32_t conversionBufferLength = 16;
+        wchar_t conversionBuffer[conversionBufferLength]{};
 
         FAIL_FAST_IF_MSG(
             rightJustifiedOffset > c_outputBufferSize,
@@ -129,14 +129,14 @@ protected:
         _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
         FAIL_FAST_IF_MSG(
-            maxLength > coversionBufferLength - 1, // minus one for the null terminator
+            maxLength > conversionBufferLength - 1, // minus one for the null terminator
             "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-            coversionBufferLength - 1, maxLength);
-        _Analysis_assume_(maxLength <= coversionBufferLength - 1);
+            conversionBufferLength - 1, maxLength);
+        _Analysis_assume_(maxLength <= conversionBufferLength - 1);
 
         const auto converted = _snwprintf_s(
             conversionBuffer,
-            coversionBufferLength,
+            conversionBufferLength,
             L"%.3f",
             value);
         FAIL_FAST_IF(-1 == converted);
@@ -151,8 +151,8 @@ protected:
 
     void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, uint32_t value) noexcept
     {
-        constexpr uint32_t coversionBufferLength = 12;
-        wchar_t conversionBuffer[coversionBufferLength]{};
+        constexpr uint32_t conversionBufferLength = 12;
+        wchar_t conversionBuffer[conversionBufferLength]{};
 
         FAIL_FAST_IF_MSG(
             rightJustifiedOffset > c_outputBufferSize,
@@ -161,14 +161,14 @@ protected:
         _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
         FAIL_FAST_IF_MSG(
-            maxLength > coversionBufferLength - 1, // minus one for the null terminator
+            maxLength > conversionBufferLength - 1, // minus one for the null terminator
             "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-            coversionBufferLength - 1, maxLength);
-        _Analysis_assume_(maxLength > coversionBufferLength - 1);
+            conversionBufferLength - 1, maxLength);
+        _Analysis_assume_(maxLength > conversionBufferLength - 1);
 
         const auto converted = _snwprintf_s(
             conversionBuffer,
-            coversionBufferLength,
+            conversionBufferLength,
             L"%u",
             value);
         FAIL_FAST_IF(-1 == converted);
@@ -183,8 +183,8 @@ protected:
 
     void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, int64_t value) noexcept
     {
-        constexpr uint32_t coversionBufferLength = 20;
-        wchar_t conversionBuffer[coversionBufferLength]{};
+        constexpr uint32_t conversionBufferLength = 20;
+        wchar_t conversionBuffer[conversionBufferLength]{};
 
         FAIL_FAST_IF_MSG(
             value < 0LL,
@@ -199,14 +199,14 @@ protected:
         _Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
         FAIL_FAST_IF_MSG(
-            maxLength > coversionBufferLength - 1, // minus one for the null terminator
+            maxLength > conversionBufferLength - 1, // minus one for the null terminator
             "ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-            coversionBufferLength - 1, maxLength);
-        _Analysis_assume_(maxLength <= coversionBufferLength - 1);
+            conversionBufferLength - 1, maxLength);
+        _Analysis_assume_(maxLength <= conversionBufferLength - 1);
 
         const auto converted = _snwprintf_s(
             conversionBuffer,
-            coversionBufferLength,
+            conversionBufferLength,
             L"%lld",
             value);
         FAIL_FAST_IF(-1 == converted);
@@ -232,11 +232,9 @@ protected:
         m_outputBuffer[offset + 2] = L'\0';
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Functions to write to the output buffer in CSV formatting
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Functions to write to the output buffer in CSV formatting
+    //
     uint32_t AppendCsvOutput(uint32_t offset, uint32_t valueLength, float value, bool addComma = true) noexcept
     {
         const auto converted = _snwprintf_s(
@@ -332,18 +330,14 @@ protected:
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// All variables are updated with Interlocked* operations
-///   as it's more important to remain responsive than to guarantee 
-///   all information is reflected in the precise printed line
-/// - note that *no* information will be lost 
-///   all data will be accounted for in either the current printed line
-///   or in the next printed line
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// All variables are updated with Interlocked* operations
+//   as it's more important to remain responsive than to guarantee 
+//   all information is reflected in the precise printed line
+// - note that *no* information will be lost 
+//   all data will be accounted for in either the current printed line
+//   or in the next printed line
+//
 class ctsUdpStatusInformation final : public ctsStatusInformation
 {
 public:
@@ -483,14 +477,10 @@ private:
     static constexpr uint32_t c_errorFramesLength = 7;
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-/// Print function for TCP connections
-/// - allows an option for 'detailed' status
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Print function for TCP connections
+// - allows an option for 'detailed' status
+//
 class ctsTcpStatusInformation final : public ctsStatusInformation
 {
 public:
@@ -505,7 +495,6 @@ public:
     {
         const ctsTcpStatistics tcpData(ctsConfig::g_configSettings->TcpStatusDetails.SnapView(clearStatus));
         const ctsConnectionStatistics connectionData(ctsConfig::g_configSettings->ConnectionStatusDetails.SnapView(clearStatus));
-
         const int64_t timeElapsed = tcpData.m_endTime.GetValue() - tcpData.m_startTime.GetValue();
 
         if (format == ctsConfig::StatusFormatting::Csv)

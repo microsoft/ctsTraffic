@@ -24,7 +24,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctsTraffic
 {
-enum class ctsIoStatus
+enum class ctsIoStatus : std::uint8_t
 {
     ContinueIo,
     CompletedIo,
@@ -116,7 +116,6 @@ public:
         return m_protocolPolicy.get_last_error();
     }
 
-    /// no copy c'tor or copy assignment
     ctsIoPatternT(const ctsIoPatternT&) = delete;
     ctsIoPatternT& operator=(const ctsIoPatternT&) = delete;
     ctsIoPatternT(ctsIoPatternT&&) = delete;

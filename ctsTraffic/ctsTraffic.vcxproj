@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
@@ -49,6 +49,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <OutputPath>bin\Debug\arm64</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -70,6 +71,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <OutputPath>bin\Release\arm64</OutputPath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -118,7 +120,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <LinkIncremental>false</LinkIncremental>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -136,13 +137,14 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /permissive-</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /permissive-</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <CallingConvention>StdCall</CallingConvention>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -180,7 +182,7 @@
       </PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /permissive-</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /permissive-</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <CallingConvention>StdCall</CallingConvention>
       <OmitFramePointers>false</OmitFramePointers>
@@ -188,6 +190,7 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -225,7 +228,7 @@
       </PrecompiledHeaderOutputFile>
       <AdditionalIncludeDirectories>..\ctl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /permissive-</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN10" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /permissive-</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <OmitFramePointers>false</OmitFramePointers>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -233,6 +236,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <CallingConvention>StdCall</CallingConvention>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -265,7 +269,7 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS"  /Qvec-report:2 /Zc:strictStrings /Gw /permissive-</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /Qvec-report:2 /Zc:strictStrings /Gw /permissive-</AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <CallingConvention>StdCall</CallingConvention>
@@ -278,6 +282,7 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -314,7 +319,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /Zc:strictStrings  /Gw /permissive- /Qfast_transcendentals /volatile:iso</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /Zc:strictStrings /Gw /permissive- /Qfast_transcendentals /volatile:iso</AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <BrowseInformation>true</BrowseInformation>
@@ -326,6 +331,7 @@
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -367,7 +373,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /Zc:strictStrings  /Gw /permissive- /Qfast_transcendentals /volatile:iso</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN10" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX" /Zc:strictStrings  /Gw /permissive- /Qfast_transcendentals /volatile:iso</AdditionalOptions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <BrowseInformation>true</BrowseInformation>
@@ -379,6 +385,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <TreatSpecificWarningsAsErrors>%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <CallingConvention>StdCall</CallingConvention>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -402,6 +409,7 @@
   <ItemGroup>
     <ClCompile Include="ctsAcceptEx.cpp" />
     <ClCompile Include="ctsConfig.cpp" />
+    <ClCompile Include="ctsConnectByName.cpp" />
     <ClCompile Include="ctsConnectEx.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
@@ -425,7 +433,6 @@
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ctl\ctMemoryGuard.hpp" />
     <ClInclude Include="..\ctl\ctMath.hpp" />
     <ClInclude Include="..\ctl\ctNetAdapterAddresses.hpp" />
     <ClInclude Include="..\ctl\ctThreadpoolQueue.hpp" />
@@ -481,12 +488,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
+    <Import Project="..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets'))" />
   </Target>
 </Project>

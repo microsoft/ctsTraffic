@@ -20,11 +20,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace ctsTraffic;
+#define c_udpDatagramMaximumSizeBytes 1400
 
-template <>
-std::wstring __cdecl Microsoft::VisualStudio::CppUnitTestFramework::ToString<unsigned short>(const unsigned short& _value)
+const ctsConfig::MediaStreamSettings& ctsConfig::GetMediaStream() noexcept
 {
-    return std::to_wstring(_value);
+    static MediaStreamSettings returnSettings{};
+    returnSettings.DatagramMaxSize = 1400;
+    return returnSettings;
 }
 
 template <>
@@ -155,13 +157,13 @@ public:
         this->verify_protocol_header(testbuffer);
         const auto dgrams_returned = this->verify_byte_count(testbuffer, buffer_size);
 
-        static const uint32_t expected_datagram_count = 1930;
+        static const uint32_t expected_datagram_count = 88184; // 123456789 / 1400 (+ 1)
         Assert::AreEqual(expected_datagram_count, dgrams_returned);
     }
 
     TEST_METHOD(ConstructStart)
     {
-        Assert::AreEqual(c_udpDatagramStartStringLength, strlen(g_udpDatagramStartString));
+        Assert::AreEqual(c_udpDatagramStartStringLength, static_cast<uint32_t>(strlen(g_udpDatagramStartString)));
 
         const ctsTask test_task(ctsMediaStreamMessage::Construct(MediaStreamAction::START));
         Assert::AreEqual(c_udpDatagramStartStringLength, test_task.m_bufferLength);

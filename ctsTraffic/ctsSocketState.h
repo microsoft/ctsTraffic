@@ -45,7 +45,7 @@ class ctsSocket;
 class ctsSocketState : public std::enable_shared_from_this<ctsSocketState>
 {
 public:
-    enum class InternalState
+    enum class InternalState : std::uint8_t
     {
         Creating,
         Created,
@@ -57,16 +57,14 @@ public:
         Closed
     };
 
-    //
-    // c'tor requiring a parent ctsSocketBroker
-    //
+    // constructor requires a parent ctsSocketBroker
     explicit ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker);
 
     ~ctsSocketState() noexcept;
 
     //
     // explicit method to 'start' the state machine
-    // - this is required to ensure the object is fully instatiated before
+    // - this is required to ensure the object is fully instantiated before
     //   it is passed to the threadpool thread
     //
     void Start() noexcept;
@@ -81,9 +79,6 @@ public:
     //
     InternalState GetCurrentState() const noexcept;
 
-    //
-    // copy c'tor and assignment
-    //
     ctsSocketState(const ctsSocketState&) = delete;
     ctsSocketState& operator=(const ctsSocketState&) = delete;
     ctsSocketState(ctsSocketState&&) = delete;

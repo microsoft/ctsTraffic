@@ -173,7 +173,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -197,7 +197,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -219,7 +219,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -243,7 +243,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -267,7 +267,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -295,7 +295,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -321,7 +321,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -349,7 +349,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/D "_WINSOCK_DEPRECATED_NO_WARNINGS"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -373,12 +373,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
+    <Import Project="..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.220201.1\build\native\Microsoft.Windows.ImplementationLibrary.targets'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets'))" />
   </Target>
 </Project>

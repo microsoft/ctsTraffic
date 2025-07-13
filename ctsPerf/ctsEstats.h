@@ -26,12 +26,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
 #include <tcpestats.h>
-// wil headers
+// ctl headers
+#include <ctSockaddr.hpp>
+// wil headers always included last
 #include <wil/stl.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
-// ctl headers
-#include <ctSockaddr.hpp>
 
 namespace ctsPerf { namespace Details
     {
@@ -117,7 +117,7 @@ namespace ctsPerf { namespace Details
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             if (const auto err = SetPerTcpConnectionEStats(
-                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof*pRw, 0); err != 0)
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, sizeof(*pRw), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
@@ -128,7 +128,7 @@ namespace ctsPerf { namespace Details
             typename EstatsTypeConverter<TcpType>::read_write_type* pRw)
         {
             if (const auto err = SetPerTcp6ConnectionEStats(
-                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof *pRw), 0); err != 0)
+                tcpRow, TcpType, reinterpret_cast<PUCHAR>(pRw), 0, static_cast<ULONG>(sizeof(*pRw)), 0); err != 0)
             {
                 THROW_WIN32_MSG(err, "SetPerTcpConnectionEStats");
             }
@@ -141,7 +141,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
-                reinterpret_cast<PUCHAR>(pRos), 0, static_cast<ULONG>(sizeof*pRos), // read-only static information
+                reinterpret_cast<PUCHAR>(pRos), 0, sizeof(*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
 
@@ -155,9 +155,9 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                static_cast<ULONG>(sizeof(*pRos)), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -176,7 +176,7 @@ namespace ctsPerf { namespace Details
                 TcpConnectionEstatsSynOpts,
                 nullptr, 0, 0, // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                sizeof(*pRos), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
         }
 
@@ -190,9 +190,9 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 reinterpret_cast<PUCHAR>(pRos), 0,
-                static_cast<ULONG>(sizeof*pRos), // read-only static information
+                static_cast<ULONG>(sizeof(*pRos)), // read-only static information
                 nullptr, 0, 0); // read-only dynamic information
             // only return success if the read-only dynamic struct returned that this was enabled
             // else the read-only static information is not populated
@@ -215,7 +215,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 nullptr, 0, 0, // read-only static information
                 reinterpret_cast<PUCHAR>(pRod), 0,
                 static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information
@@ -239,7 +239,7 @@ namespace ctsPerf { namespace Details
                 tcpRow,
                 TcpType,
                 reinterpret_cast<PUCHAR>(&rw), 0,
-                static_cast<ULONG>(sizeof rw), // read-write information
+                static_cast<ULONG>(sizeof(rw)), // read-write information
                 nullptr, 0, 0, // read-only static information
                 reinterpret_cast<PUCHAR>(pRod), 0,
                 static_cast<ULONG>(sizeof *pRod)); // read-only dynamic information
@@ -968,7 +968,7 @@ namespace ctsPerf { namespace Details
             {
                 // IPv4
                 RefreshIPv4Data();
-                auto* const pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]);
+                auto* const pIpv4TcpTable = reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data());
                 for (auto count = 0ul; count < pIpv4TcpTable->dwNumEntries; ++count)
                 {
                     auto* const tableEntry = &pIpv4TcpTable->table[count];
@@ -1000,7 +1000,7 @@ namespace ctsPerf { namespace Details
 
                 // IPv6
                 RefreshIPv6Data();
-                auto* const pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]);
+                auto* const pIpv6TcpTable = reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data());
                 for (auto count = 0ul; count < pIpv6TcpTable->dwNumEntries; ++count)
                 {
                     auto* const tableEntry = &pIpv6TcpTable->table[count];
@@ -1064,17 +1064,17 @@ namespace ctsPerf { namespace Details
         {
             m_tcpTable.resize(m_tcpTable.capacity());
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
-            ZeroMemory(&m_tcpTable[0], table_size);
+            ZeroMemory(m_tcpTable.data(), table_size);
 
             ULONG error = GetTcpTable(
-                reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
+                reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data()),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
                 error = GetTcpTable(
-                    reinterpret_cast<PMIB_TCPTABLE>(&m_tcpTable[0]),
+                    reinterpret_cast<PMIB_TCPTABLE>(m_tcpTable.data()),
                     &table_size,
                     FALSE); // no need to sort them
             }
@@ -1088,17 +1088,17 @@ namespace ctsPerf { namespace Details
         {
             m_tcpTable.resize(m_tcpTable.capacity());
             auto table_size = static_cast<DWORD>(m_tcpTable.size());
-            ZeroMemory(&m_tcpTable[0], table_size);
+            ZeroMemory(m_tcpTable.data(), table_size);
 
             ULONG error = GetTcp6Table(
-                reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
+                reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data()),
                 &table_size,
                 FALSE); // no need to sort them
             if (ERROR_INSUFFICIENT_BUFFER == error)
             {
                 m_tcpTable.resize(table_size);
                 error = GetTcp6Table(
-                    reinterpret_cast<PMIB_TCP6TABLE>(&m_tcpTable[0]),
+                    reinterpret_cast<PMIB_TCP6TABLE>(m_tcpTable.data()),
                     &table_size,
                     FALSE); // no need to sort them
             }

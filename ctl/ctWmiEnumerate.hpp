@@ -86,8 +86,8 @@ public:
         bool operator==(const iterator&) const noexcept;
         bool operator!=(const iterator&) const noexcept;
 
-        iterator& operator++(); // preincrement
-        iterator operator++(int); // postincrement
+        iterator& operator++(); // pre-increment
+        iterator operator++(int); // post-increment
         iterator& operator+=(uint32_t); // increment by integer
 
         // iterator_traits
@@ -115,8 +115,8 @@ public:
     }
 
     // Allows for executing a WMI query against the WMI service for an enumeration of WMI objects.
-    // Assumes the query of of the WQL query language.
-    void query(_In_ PCWSTR query)
+    // Assumes the query of the WQL query language.
+    const ctWmiEnumerate& query(_In_ PCWSTR query)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),
@@ -124,9 +124,10 @@ public:
             WBEM_FLAG_BIDIRECTIONAL,
             nullptr,
             m_wbemEnumerator.put()));
+        return *this;
     }
 
-    void query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
+    const ctWmiEnumerate& query(_In_ PCWSTR query, const wil::com_ptr<IWbemContext>& context)
     {
         THROW_IF_FAILED(m_wbemServices->ExecQuery(
             wil::make_bstr(L"WQL").get(),
@@ -134,6 +135,7 @@ public:
             WBEM_FLAG_BIDIRECTIONAL,
             context.get(),
             m_wbemEnumerator.put()));
+        return *this;
     }
 
     iterator begin() const
@@ -143,7 +145,7 @@ public:
             return end();
         }
         THROW_IF_FAILED(m_wbemEnumerator->Reset());
-        return iterator(m_wbemServices, m_wbemEnumerator);
+        return {m_wbemServices, m_wbemEnumerator};
     }
 
     iterator end() const noexcept
@@ -158,7 +160,7 @@ public:
             return cend();
         }
         THROW_IF_FAILED(m_wbemEnumerator->Reset());
-        return iterator(m_wbemServices, m_wbemEnumerator);
+        return {m_wbemServices, m_wbemEnumerator};
     }
 
     iterator cend() const noexcept
@@ -168,8 +170,8 @@ public:
 
 private:
     ctWmiService m_wbemServices;
-    // Marking wbemEnumerator mutabale to allow for const correctness of begin() and end()
-    //   specifically, invoking Reset() is an implementation detail and should not affect external contracts
+    // Marking wbemEnumerator mutable to allow for const correctness of begin() and end()
+    // specifically, invoking Reset() is an implementation detail and should not affect external contracts
     mutable wil::com_ptr<IEnumWbemClassObject> m_wbemEnumerator;
 };
 
@@ -191,14 +193,12 @@ inline bool ctWmiEnumerate::iterator::operator!=(const iterator& iter) const noe
     return !(*this == iter);
 }
 
-// preincrement
 inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator++()
 {
     increment();
     return *this;
 }
 
-// postincrement
 inline ctWmiEnumerate::iterator ctWmiEnumerate::iterator::operator++(int)
 {
     auto temp(*this);
@@ -206,7 +206,6 @@ inline ctWmiEnumerate::iterator ctWmiEnumerate::iterator::operator++(int)
     return temp;
 }
 
-// increment by integer
 inline ctWmiEnumerate::iterator& ctWmiEnumerate::iterator::operator+=(uint32_t inc)
 {
     for (auto loop = 0ul; loop < inc; ++loop)

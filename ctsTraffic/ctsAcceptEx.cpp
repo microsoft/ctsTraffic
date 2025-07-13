@@ -20,15 +20,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <Windows.h>
 #include <WinSock2.h>
 #include <MSWSock.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 using ctsTraffic::ctsConfig::g_configSettings;
 
@@ -45,7 +45,7 @@ namespace ctsTraffic
 // --- operator()
 // --- the IOCP callback function
 //
-// The 'accept handler' manages the interation between returning connections and posting more AcceptEx calls:
+// The 'accept handler' manages the interaction between returning connections and posting more AcceptEx calls:
 //
 // - if operator() is called and a connection is ready,
 // --- set_socket() and complete() are invoked
@@ -64,7 +64,7 @@ namespace ctsTraffic
 namespace details
 {
     //
-    // constant defining how many acceptex requests we want maintained per listener
+    // constant defining how many AcceptEx requests we want maintained per listener
     //
     constexpr uint32_t c_pendedAcceptRequests = 100;
 
@@ -76,11 +76,7 @@ namespace details
 
     static void ctsAcceptExIoCompletionCallback(OVERLAPPED*, _In_ ctsAcceptSocketInfo* acceptInfo) noexcept;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// struct to capture relevant details of an accepted connection
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    // struct to capture relevant details of an accepted connection
     struct ctsAcceptedConnection
     {
         wil::unique_socket m_acceptSocket;
@@ -89,28 +85,24 @@ namespace details
         DWORD m_lastError = 0;
     };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// Struct to track listening sockets
-    /// - must have a unique IOCP class for each listener
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Struct to track listening sockets
+    // - must have a unique IOCP class for each listener
     struct ctsListenSocketInfo
     {
-        // c'tor throws a wil::ResultException or bad_alloc on failure
+        // constructor throws a wil::ResultException or bad_alloc on failure
         explicit ctsListenSocketInfo(ctl::ctSockaddr addr) :
             m_sockaddr(std::move(addr))
         {
-            wil::unique_socket tempsocket(
+            wil::unique_socket tempSocket(
                 ctsConfig::CreateSocket(m_sockaddr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags));
 
-            auto error = ctsConfig::SetPreBindOptions(tempsocket.get(), m_sockaddr);
+            auto error = ctsConfig::SetPreBindOptions(tempSocket.get(), m_sockaddr);
             if (error != 0)
             {
                 THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
             }
 
-            if (SOCKET_ERROR == bind(tempsocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
+            if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
             {
                 error = WSAGetLastError();
                 char addrBuffer[ctl::ctSockaddr::FixedStringLength]{};
@@ -118,16 +110,16 @@ namespace details
                 THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
             }
 
-            if (SOCKET_ERROR == listen(tempsocket.get(), ctsConfig::GetListenBacklog()))
+            if (SOCKET_ERROR == listen(tempSocket.get(), ctsConfig::GetListenBacklog()))
             {
                 error = WSAGetLastError();
                 THROW_WIN32_MSG(error, "listen (ctsAcceptEx)");
             }
 
-            m_iocp = std::make_unique<ctl::ctThreadIocp>(tempsocket.get(), g_configSettings->pTpEnvironment);
+            m_iocp = std::make_unique<ctl::ctThreadIocp>(tempSocket.get(), g_configSettings->pTpEnvironment);
 
             // now save the socket after everything succeeded
-            m_listenSocket = std::move(tempsocket);
+            m_listenSocket = std::move(tempSocket);
         }
 
         ~ctsListenSocketInfo() noexcept
@@ -148,17 +140,13 @@ namespace details
         std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
     };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// struct to track accepted sockets
-    /// - tracks the 'parent' listen socket structure
-    /// - preallocates the buffer to use for AcceptEx calls
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    // struct to track accepted sockets
+    // - tracks the 'parent' listen socket structure
+    // - pre-allocates the buffer to use for AcceptEx calls
     class ctsAcceptSocketInfo
     {
     public:
-        // c'tor throws wil::ResultException on failure
+        // constructor throws wil::ResultException on failure
         explicit ctsAcceptSocketInfo(const std::shared_ptr<ctsListenSocketInfo>& listenSocket) noexcept :
             m_listeningSocketInfo(listenSocket)
         {
@@ -167,7 +155,7 @@ namespace details
         ~ctsAcceptSocketInfo() noexcept = default;
 
         // attempts to post a new AcceptEx - internally tracks if succeeds or fails
-        void InitatiateAcceptEx();
+        void InitiateAcceptEx();
 
         // returns a ctsAcceptedConnection struct describing the result of an AcceptEx call
         // - must be called only after the previous AcceptEx call has completed its OVERLAPPED call
@@ -229,14 +217,14 @@ namespace details
                     auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
                     PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
                     //
-                    // Add PendedAcceptRequests pended acceptex objects per listener
+                    // Add PendedAcceptRequests pended AcceptEx objects per listener
                     //
                     for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
                     {
                         auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
                         listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
                         // post AcceptEx on this socket
-                        acceptSocketInfo->InitatiateAcceptEx();
+                        acceptSocketInfo->InitiateAcceptEx();
                     }
 
                     // all successful - save this listen socket
@@ -294,14 +282,7 @@ namespace details
         ctsAcceptExImpl& operator=(ctsAcceptExImpl&&) = delete;
     };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    ///
-    /// Definitions of ctsAcceptSocketInfo members
-    ///
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void ctsAcceptSocketInfo::InitatiateAcceptEx()
+    void ctsAcceptSocketInfo::InitiateAcceptEx()
     {
         const auto listeningSocketObject = m_listeningSocketInfo.lock();
         if (!listeningSocketObject)
@@ -323,7 +304,7 @@ namespace details
                 IPPROTO_TCP,
                 g_configSettings->SocketFlags));
 
-        // since not inheriting from the listening socket, must explicity set options on the accept socket
+        // since not inheriting from the listening socket, must explicitly set options on the accept socket
         // - passing the listening address since that will be the local address of this accepted socket
         auto error = ctsConfig::SetPreBindOptions(newAcceptedSocket.get(), listeningSocketObject->m_sockaddr);
         if (error != 0)
@@ -414,7 +395,7 @@ namespace details
             sizeof listeningSocket);
         FAIL_FAST_IF_MSG(
             err != 0,
-            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%p], listen socket [%p]",
+            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%zu], listen socket [%zu]",
             WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
 
         SOCKADDR_INET* localAddr{};
@@ -441,18 +422,18 @@ namespace details
         return returnDetails;
     }
 
-    ctsAcceptExImpl g_acceptExImpl; // NOLINT(clang-diagnostic-exit-time-destructors)
+    static ctsAcceptExImpl g_acceptExImpl; // NOLINT(clang-diagnostic-exit-time-destructors)
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_acceptExImplInitOnce = INIT_ONCE_STATIC_INIT;
 
-    static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID perror, PVOID*) noexcept try
+    static BOOL CALLBACK ctsAcceptExImplInitFn(PINIT_ONCE, PVOID pError, PVOID*) noexcept try
     {
         g_acceptExImpl.Start();
         return TRUE;
     }
     catch (...)
     {
-        *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
+        *static_cast<DWORD*>(pError) = ctsConfig::PrintThrownException();
         return FALSE;
     }
 
@@ -521,7 +502,7 @@ namespace details
         //
         // always attempt another AcceptEx
         //
-        acceptInfo->InitatiateAcceptEx();
+        acceptInfo->InitiateAcceptEx();
     }
     catch (...)
     {
@@ -532,7 +513,7 @@ namespace details
 //
 //
 // An accepted socket is being requested
-// - if have one queued, return that
+// - if there is one queued, return that
 // - else store the weak_ptr<ctsSocket> to be fulfilled later
 //
 //
@@ -566,7 +547,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             try { details::g_acceptExImpl.m_pendedAcceptRequests.push(weakSocket); }
             catch (...)
             {
-                // fail the caller if can't save this request
+                // fail the caller if we can't save this request
                 error = WSAENOBUFS;
             }
         }
@@ -590,7 +571,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     }
 
     //
-    // if did not defer the accept request and we have a new accepted socket,
+    // if did not defer the accept request, and we have a new accepted socket,
     // complete this socket state
     //
     if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)

@@ -18,14 +18,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-// wil headers
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -35,7 +35,7 @@ using ctsMediaStreamConnectedSocketIoFunctor = std::function<wsIOResult (ctsMedi
 class ctsMediaStreamServerConnectedSocket
 {
 private:
-    // the CS is mutable so we can take a lock / release a lock in const methods
+    // the CS is mutable, so we can take a lock / release a lock in const methods
     mutable wil::critical_section m_objectGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Guarded_by_(m_objectGuard) ctsTask m_nextTask;
 

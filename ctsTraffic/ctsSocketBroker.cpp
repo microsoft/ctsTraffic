@@ -80,7 +80,7 @@ ctsSocketBroker::~ctsSocketBroker() noexcept
 void ctsSocketBroker::Start()
 {
     PRINT_DEBUG_INFO(
-        L"\t\tStarting broker: total connections remaining (%llu), pending limit (%u)\n",
+        L"\t\tStarting broker: total connections remaining (0x%llx), pending limit (0x%x)\n",
         m_totalConnectionsRemaining, m_pendingLimit);
 
     // must always guard access to the vector
@@ -160,7 +160,7 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
     auto fReturn = false;
     switch (WaitForMultipleObjects(2, arWait, FALSE, milliseconds))
     {
-        // we are done with our sockets, or user hit ctrl'c
+        // we are done with our sockets, or user hit ctrl-c
         // - in either case we need to tell the caller to exit
         case WAIT_OBJECT_0:
         case WAIT_OBJECT_0 + 1:
@@ -173,7 +173,7 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 
         default:
             FAIL_FAST_MSG(
-                "ctsSocketBroker - WaitForMultipleObjects(%p) failed [%u]",
+                "ctsSocketBroker - WaitForMultipleObjects(%p) failed [%lu]",
                 arWait, GetLastError());
     }
     return fReturn;
@@ -185,7 +185,7 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 //
 void ctsSocketBroker::RefreshSockets() noexcept try
 {
-    // removedObjects will delete the closed objects outside of the broker lock
+    // removedObjects will delete the closed objects outside the broker lock
     vector<shared_ptr<ctsSocketState>> removedObjects;
 
     auto exiting = false;
@@ -214,7 +214,7 @@ void ctsSocketBroker::RefreshSockets() noexcept try
 
             if (!m_doneEvent.is_signaled())
             {
-                // don't spin up more if the user asked to shutdown
+                // don't spin up more if the user asked to shut down
                 // catch up to the expected # of pended connections
                 while (m_pendingSockets < m_pendingLimit && m_totalConnectionsRemaining > 0)
                 {

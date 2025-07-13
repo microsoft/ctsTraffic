@@ -25,7 +25,7 @@ namespace ctsTraffic
 {
 // The ctsIOTask struct instructs the caller on what action to perform
 // - and provides it the buffer it should use to send/recv data
-enum class ctsTaskAction
+enum class ctsTaskAction : std::uint8_t
 {
     None,
     Send,
@@ -48,7 +48,7 @@ struct ctsTask
     ctsTaskAction m_ioAction = ctsTaskAction::None;
 
     // (internal) flag identifying the type of buffer
-    enum class BufferType
+    enum class BufferType : std::uint8_t
     {
         Null,
         TcpConnectionId,

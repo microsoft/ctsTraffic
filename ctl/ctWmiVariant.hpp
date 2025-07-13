@@ -44,12 +44,13 @@ inline wil::unique_variant ctWmiMakeVariant(const bool value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ bool* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
     }
     THROW_HR_IF(E_INVALIDARG, V_VT(variant) != VT_BOOL);
-    *value = V_BOOL(variant);
+    *value = V_BOOL(variant) ? true : false;
     return true;
 }
 
@@ -63,6 +64,7 @@ inline wil::unique_variant ctWmiMakeVariant(const char value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ char* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -82,6 +84,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned char value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned char* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -101,6 +104,7 @@ inline wil::unique_variant ctWmiMakeVariant(const short value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ short* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -120,6 +124,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned short value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned short* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -139,6 +144,7 @@ inline wil::unique_variant ctWmiMakeVariant(const long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -158,6 +164,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -177,6 +184,7 @@ inline wil::unique_variant ctWmiMakeVariant(const int value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ int* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -196,6 +204,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned int value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned int* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -215,6 +224,7 @@ inline wil::unique_variant ctWmiMakeVariant(const float value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ float* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -234,6 +244,7 @@ inline wil::unique_variant ctWmiMakeVariant(const double value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ double* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -255,6 +266,7 @@ inline wil::unique_variant ctWmiMakeVariant(SYSTEMTIME value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ SYSTEMTIME* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -275,6 +287,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ const BSTR value) // NOLINT(mis
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ BSTR* value)
 {
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -296,6 +309,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ PCWSTR value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::wstring* value)
 {
+    value->clear();
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -305,7 +319,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::wstri
     return true;
 }
 
-// Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
+// Even though VARIANT's support 64-bit integers, WMI passes them around as BSTRs
 inline wil::unique_variant ctWmiMakeVariant(const unsigned long long value)
 {
     wil::unique_variant localVariant;
@@ -317,7 +331,7 @@ inline wil::unique_variant ctWmiMakeVariant(const unsigned long long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned long long* value)
 {
-    *value = 0;
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -327,7 +341,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ unsigned lon
     return true;
 }
 
-// Even though VARIANTs support 64-bit integers, WMI passes them around as BSTRs
+// Even though VARIANT's support 64-bit integers, WMI passes them around as BSTRs
 inline wil::unique_variant ctWmiMakeVariant(_In_ const long long value)
 {
     wil::unique_variant localVariant;
@@ -339,7 +353,7 @@ inline wil::unique_variant ctWmiMakeVariant(_In_ const long long value)
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Out_ long long* value)
 {
-    *value = 0;
+    *value = {};
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -383,7 +397,7 @@ bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<wil::
 
     IUnknown** iUnknownArray;
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&iUnknownArray)));
-    const auto unaccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 
     std::vector<wil::com_ptr<T>> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -432,7 +446,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     BSTR* stringArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&stringArray)));
-    const auto unaccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 
     std::vector<std::wstring> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -478,7 +492,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     uint32_t* intArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-    const auto unaccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 
     std::vector<uint32_t> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -491,7 +505,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
 inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& data)
 {
-    // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
+    // WMI marshaller complains type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
     auto* const tempSafeArray = SafeArrayCreateVector(VT_I4, 0, static_cast<ULONG>(data.size()));
     THROW_IF_NULL_ALLOC(tempSafeArray);
     auto guardArray = wil::scope_exit([&]() noexcept { SafeArrayDestroy(tempSafeArray); });
@@ -518,7 +532,7 @@ inline wil::unique_variant ctWmiMakeVariant(const std::vector<unsigned short>& d
 
 inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<unsigned short>* value)
 {
-    // WMI marshaler complaines type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
+    // WMI marshaller complains type mismatch using VT_UI2 | VT_ARRAY, and VT_I4 | VT_ARRAY works fine.
     if (IsVariantEmptyOrNull(variant))
     {
         return false;
@@ -527,7 +541,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     long* intArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&intArray)));
-    const auto unaccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 
     std::vector<unsigned short> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)
@@ -574,7 +588,7 @@ inline bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vecto
 
     unsigned char* charArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&charArray)));
-    const auto unaccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
+    const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 
     std::vector<unsigned char> tempData;
     for (auto loop = 0ul; loop < variant->parray->rgsabound[0].cElements; ++loop)

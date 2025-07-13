@@ -18,14 +18,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // ctl headers
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/resource.h>
 
 namespace ctsTraffic
 {
@@ -39,7 +39,7 @@ namespace ctsTraffic
 // - so need to ensure that all members are easily copied
 // - also means the counter will need to be a ptr
 //
-// The refcount_sockets vector will optimize in balancing accept calls
+// The ref-count_sockets vector will optimize in balancing accept calls
 // - across all listeners
 //
 namespace details
@@ -52,7 +52,7 @@ namespace details
         // CS guards access to the accepting_sockets vector
         wil::critical_section m_acceptingCs{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
 
-        std::vector<LONG> m_listeningSocketsRefcount{};
+        std::vector<LONG> m_listeningSocketsRefCount{};
 
         _Guarded_by_(m_acceptingCs) std::vector<SOCKET> m_listeningSockets{};
         _Guarded_by_(m_acceptingCs) std::vector<std::weak_ptr<ctsSocket>> m_acceptingSockets{};
@@ -65,7 +65,7 @@ namespace details
             InitializeThreadpoolEnvironment(&m_threadPoolEnvironment);
             SetThreadpoolCallbackRunsLong(&m_threadPoolEnvironment);
 
-            // can *not* pass the this ptr to the threadpool, since this object can be copied
+            // can *not* pass the 'this' ptr to the threadpool, since this object can be copied
             m_threadPoolWorker = CreateThreadpoolWork(ThreadPoolWorker, this, &m_threadPoolEnvironment);
             if (nullptr == m_threadPoolWorker)
             {
@@ -104,7 +104,7 @@ namespace details
             {
                 throw std::exception("ctsSimpleAccept invoked with no listening addresses specified");
             }
-            m_listeningSocketsRefcount.resize(m_listeningSockets.size(), 0L);
+            m_listeningSocketsRefCount.resize(m_listeningSockets.size(), 0L);
         }
 
         ~ctsSimpleAcceptImpl()
@@ -162,16 +162,16 @@ namespace details
                 return;
             }
 
-            // based off of the refcount, choose a socket that's least used
+            // based off of the ref-count, choose a socket that's least used
             // - not taking a lock: it doesn't have to be that precise
-            auto lowestRefcount = pimpl->m_listeningSocketsRefcount[0];
+            auto lowestRefCount = pimpl->m_listeningSocketsRefCount[0];
             uint32_t listenerCounter = 0;
             uint32_t listenerPosition = 0;
-            for (const auto& refcount : pimpl->m_listeningSocketsRefcount)
+            for (const auto& refCount : pimpl->m_listeningSocketsRefCount)
             {
-                if (refcount < lowestRefcount)
+                if (refCount < lowestRefCount)
                 {
-                    lowestRefcount = refcount;
+                    lowestRefCount = refCount;
                     listenerPosition = listenerCounter;
                 }
                 ++listenerCounter;
@@ -187,12 +187,12 @@ namespace details
             lock.reset();
 
             // increment the listening socket before calling accept on the blocking socket
-            ::InterlockedIncrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
+            ::InterlockedIncrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
             ctl::ctSockaddr remoteAddr;
             auto remoteAddrLen = remoteAddr.length();
             const SOCKET newSocket = accept(listener, remoteAddr.sockaddr(), &remoteAddrLen);
             auto gle = WSAGetLastError();
-            ::InterlockedDecrement(&pimpl->m_listeningSocketsRefcount[listenerPosition]);
+            ::InterlockedDecrement(&pimpl->m_listeningSocketsRefCount[listenerPosition]);
 
             // if failed complete the ctsSocket and return
             if (newSocket == INVALID_SOCKET)
@@ -232,18 +232,18 @@ namespace details
         }
     };
 
-    std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
+    static std::shared_ptr<ctsSimpleAcceptImpl> g_pimpl; // NOLINT(clang-diagnostic-exit-time-destructors)
     // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
     static INIT_ONCE g_ctsSimpleAcceptImplInitOnce = INIT_ONCE_STATIC_INIT;
 
-    static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID perror, PVOID*) noexcept try
+    static BOOL CALLBACK ctsSimpleAcceptImplInitFn(PINIT_ONCE, PVOID pError, PVOID*) noexcept try
     {
         g_pimpl = std::make_shared<ctsSimpleAcceptImpl>();
         return TRUE;
     }
     catch (...)
     {
-        *static_cast<DWORD*>(perror) = ctsConfig::PrintThrownException();
+        *static_cast<DWORD*>(pError) = ctsConfig::PrintThrownException();
         return FALSE;
     }
 }

@@ -35,7 +35,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 namespace ctl
 {
-enum class ByteOrder
+enum class ByteOrder : std::uint8_t
 {
     HostOrder,
     NetworkOrder
@@ -90,7 +90,7 @@ public:
         return outV6;
     }
 
-    enum class AddressType
+    enum class AddressType : std::uint8_t
     {
         Loopback,
         Any
@@ -180,8 +180,8 @@ public:
     [[nodiscard]] const IN6_ADDR* in6_addr() const noexcept;
 
 private:
-    static constexpr size_t c_saddrSize = sizeof(SOCKADDR_INET);
-    SOCKADDR_INET m_saddr{};
+    static constexpr size_t c_sockaddrSize = sizeof(SOCKADDR_INET);
+    SOCKADDR_INET m_sockaddr{};
 };
 
 //
@@ -242,7 +242,7 @@ inline ctSockaddr::ctSockaddr(const IN6_ADDR* inAddr, unsigned short port, ByteO
 
 inline ctSockaddr::ctSockaddr(const ctSockaddr& inAddr) noexcept
 {
-    CopyMemory(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+    CopyMemory(&m_sockaddr, &inAddr.m_sockaddr, c_sockaddrSize);
 }
 
 inline ctSockaddr& ctSockaddr::operator=(const ctSockaddr& inAddr) noexcept
@@ -254,19 +254,29 @@ inline ctSockaddr& ctSockaddr::operator=(const ctSockaddr& inAddr) noexcept
 
 inline ctSockaddr::ctSockaddr(ctSockaddr&& inAddr) noexcept
 {
-    CopyMemory(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+    CopyMemory(&m_sockaddr, &inAddr.m_sockaddr, c_sockaddrSize);
 }
 
 inline ctSockaddr& ctSockaddr::operator=(ctSockaddr&& inAddr) noexcept
 {
-    CopyMemory(&m_saddr, &inAddr.m_saddr, c_saddrSize);
-    ZeroMemory(&inAddr.m_saddr, c_saddrSize);
+    CopyMemory(&m_sockaddr, &inAddr.m_sockaddr, c_sockaddrSize);
+    ZeroMemory(&inAddr.m_sockaddr, c_sockaddrSize);
     return *this;
 }
 
 inline bool ctSockaddr::operator==(const ctSockaddr& inAddr) const noexcept
 {
-    return 0 == memcmp(&m_saddr, &inAddr.m_saddr, c_saddrSize);
+	switch (m_sockaddr.si_family)
+	{
+	case AF_INET:
+        // only require the v4 slice of the union to match
+		return 0 == memcmp(&m_sockaddr.Ipv4, &inAddr.m_sockaddr.Ipv4, sizeof(SOCKADDR_IN));
+	case AF_INET6:
+        // only require the v6 slice of the union to match
+		return 0 == memcmp(&m_sockaddr.Ipv6, &inAddr.m_sockaddr.Ipv6, sizeof(SOCKADDR_IN6));
+	default:
+		return 0 == memcmp(&m_sockaddr, &inAddr.m_sockaddr, c_sockaddrSize);
+	}
 }
 
 inline bool ctSockaddr::operator!=(const ctSockaddr& inAddr) const noexcept
@@ -401,24 +411,24 @@ inline bool ctSockaddr::operator>(const ctSockaddr& rhs) const noexcept
 
 inline void ctSockaddr::reset(ADDRESS_FAMILY family) noexcept
 {
-    ZeroMemory(&m_saddr, c_saddrSize);
-    m_saddr.si_family = family;
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    m_sockaddr.si_family = family;
 }
 
 inline void ctSockaddr::reset(ADDRESS_FAMILY family, AddressType type) noexcept
 {
-    ZeroMemory(&m_saddr, c_saddrSize);
-    m_saddr.si_family = family;
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    m_sockaddr.si_family = family;
 
     if (type == AddressType::Loopback)
     {
         if (AF_INET == family)
         {
-            m_saddr.Ipv4.sin_addr = in4addr_loopback; // from ws2ipdef.h
+            m_sockaddr.Ipv4.sin_addr = in4addr_loopback; // from ws2ipdef.h
         }
         else if (AF_INET6 == family)
         {
-            m_saddr.Ipv6.sin6_addr = in6addr_loopback; // from ws2ipdef.h
+            m_sockaddr.Ipv6.sin6_addr = in6addr_loopback; // from ws2ipdef.h
         }
         else
         {
@@ -430,9 +440,9 @@ inline void ctSockaddr::reset(ADDRESS_FAMILY family, AddressType type) noexcept
 inline void ctSockaddr::swap(_Inout_ ctSockaddr& inAddr) noexcept
 {
     SOCKADDR_INET tempAddr{};
-    CopyMemory(&tempAddr, &inAddr.m_saddr, c_saddrSize);
-    CopyMemory(&inAddr.m_saddr, &m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, &tempAddr, c_saddrSize);
+    CopyMemory(&tempAddr, &inAddr.m_sockaddr, c_sockaddrSize);
+    CopyMemory(&inAddr.m_sockaddr, &m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, &tempAddr, c_sockaddrSize);
 }
 
 inline bool ctSockaddr::setAddress(SOCKET s) noexcept
@@ -443,100 +453,100 @@ inline bool ctSockaddr::setAddress(SOCKET s) noexcept
 
 inline void ctSockaddr::setSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, int inLength) noexcept
 {
-    const auto length = static_cast<size_t>(inLength) < c_saddrSize ? inLength : c_saddrSize;
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr, length);
+    const auto length = static_cast<size_t>(inLength) < c_sockaddrSize ? inLength : c_sockaddrSize;
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr, length);
 }
 
 inline void ctSockaddr::setSockaddr(_In_reads_bytes_(inLength) const SOCKADDR* inAddr, size_t inLength) noexcept
 {
-    const auto length = inLength < c_saddrSize ? inLength : c_saddrSize;
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr, length);
+    const auto length = inLength < c_sockaddrSize ? inLength : c_sockaddrSize;
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr, length);
 }
 
 inline void ctSockaddr::setSockaddr(const SOCKADDR_IN* inAddr) noexcept
 {
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr, sizeof(SOCKADDR_IN));
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr, sizeof(SOCKADDR_IN));
 }
 
 inline void ctSockaddr::setSockaddr(const SOCKADDR_IN6* inAddr) noexcept
 {
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr, sizeof(SOCKADDR_IN6));
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr, sizeof(SOCKADDR_IN6));
 }
 
 inline void ctSockaddr::setSockaddr(const SOCKADDR_INET* inAddr) noexcept
 {
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr, sizeof(SOCKADDR_INET));
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr, sizeof(SOCKADDR_INET));
 }
 
 inline void ctSockaddr::setSockaddr(const SOCKET_ADDRESS* inAddr) noexcept
 {
-    const auto length = static_cast<size_t>(inAddr->iSockaddrLength) < c_saddrSize
-                        ? static_cast<size_t>(inAddr->iSockaddrLength) : c_saddrSize;
+    const auto length = static_cast<size_t>(inAddr->iSockaddrLength) < c_sockaddrSize
+                        ? static_cast<size_t>(inAddr->iSockaddrLength) : c_sockaddrSize;
 
-    ZeroMemory(&m_saddr, c_saddrSize);
-    CopyMemory(&m_saddr, inAddr->lpSockaddr, length);
+    ZeroMemory(&m_sockaddr, c_sockaddrSize);
+    CopyMemory(&m_sockaddr, inAddr->lpSockaddr, length);
 }
 
 inline bool ctSockaddr::isAddressLinkLocal() const noexcept
 {
-    if (m_saddr.si_family == 0)
+    if (m_sockaddr.si_family == 0)
     {
         WI_ASSERT(false);
         return false;
     }
 
-    if (m_saddr.si_family == AF_INET6)
+    if (m_sockaddr.si_family == AF_INET6)
     {
-        return IN6_IS_ADDR_LINKLOCAL(&m_saddr.Ipv6.sin6_addr);
+        return IN6_IS_ADDR_LINKLOCAL(&m_sockaddr.Ipv6.sin6_addr);
     }
 
-    return (m_saddr.Ipv4.sin_addr.S_un.S_addr & 0xffff) == 0xfea9; // 169.254/16
+    return (m_sockaddr.Ipv4.sin_addr.S_un.S_addr & 0xffff) == 0xfea9; // 169.254/16
 }
 
 inline void ctSockaddr::setAddressAny() noexcept
 {
-    reset(m_saddr.si_family);
+    reset(m_sockaddr.si_family);
 }
 
 inline bool ctSockaddr::isAddressAny() const noexcept
 {
-    if (m_saddr.si_family == 0)
+    if (m_sockaddr.si_family == 0)
     {
         WI_ASSERT(false);
         return false;
     }
 
-    if (m_saddr.si_family == AF_INET6)
+    if (m_sockaddr.si_family == AF_INET6)
     {
-        return 0 == memcmp(&m_saddr.Ipv6.sin6_addr, &in6addr_any, sizeof IN6_ADDR);
+        return 0 == memcmp(&m_sockaddr.Ipv6.sin6_addr, &in6addr_any, sizeof IN6_ADDR);
     }
-    return 0 == memcmp(&m_saddr.Ipv4.sin_addr, &in4addr_any, sizeof IN_ADDR);
+    return 0 == memcmp(&m_sockaddr.Ipv4.sin_addr, &in4addr_any, sizeof IN_ADDR);
 }
 
 inline void ctSockaddr::setAddressLoopback() noexcept
 {
-    const ctSockaddr loopbackAddr{m_saddr.si_family, AddressType::Loopback};
-    CopyMemory(&m_saddr, &loopbackAddr.m_saddr, c_saddrSize);
+    const ctSockaddr loopbackAddr{m_sockaddr.si_family, AddressType::Loopback};
+    CopyMemory(&m_sockaddr, &loopbackAddr.m_sockaddr, c_sockaddrSize);
 }
 
 inline bool ctSockaddr::isAddressLoopback() const noexcept
 {
-    if (m_saddr.si_family == 0)
+    if (m_sockaddr.si_family == 0)
     {
         WI_ASSERT(false);
         return false;
     }
 
-    if (m_saddr.si_family == AF_INET6)
+    if (m_sockaddr.si_family == AF_INET6)
     {
-        return 0 == memcmp(&m_saddr.Ipv6.sin6_addr, &in6addr_loopback, sizeof IN6_ADDR);
+        return 0 == memcmp(&m_sockaddr.Ipv6.sin6_addr, &in6addr_loopback, sizeof IN6_ADDR);
     }
-    return 0 == memcmp(&m_saddr.Ipv4.sin_addr, &in4addr_loopback, sizeof IN_ADDR);
+    return 0 == memcmp(&m_sockaddr.Ipv4.sin_addr, &in4addr_loopback, sizeof IN_ADDR);
 }
 
 inline bool ctSockaddr::setAddress(_In_ PCWSTR wszAddr) noexcept
@@ -576,33 +586,33 @@ inline bool ctSockaddr::setAddress(_In_ PCSTR szAddr) noexcept
 inline void ctSockaddr::setAddress(const IN_ADDR* inAddr) noexcept
 {
     reset(AF_INET);
-    m_saddr.Ipv4.sin_addr.S_un.S_addr = inAddr->S_un.S_addr;
+    m_sockaddr.Ipv4.sin_addr.S_un.S_addr = inAddr->S_un.S_addr;
 }
 
 inline void ctSockaddr::setAddress(const IN6_ADDR* inAddr) noexcept
 {
     reset(AF_INET6);
-    m_saddr.Ipv6.sin6_addr = *inAddr;
+    m_sockaddr.Ipv6.sin6_addr = *inAddr;
 }
 
 inline void ctSockaddr::setPort(uint16_t port, ByteOrder byteOrder) noexcept
 {
-    m_saddr.Ipv4.sin_port = byteOrder == ByteOrder::HostOrder ? htons(port) : port;
+    m_sockaddr.Ipv4.sin_port = byteOrder == ByteOrder::HostOrder ? htons(port) : port;
 }
 
 inline void ctSockaddr::setScopeId(uint32_t scopeid) noexcept
 {
-    if (AF_INET6 == m_saddr.si_family)
+    if (AF_INET6 == m_sockaddr.si_family)
     {
-        m_saddr.Ipv6.sin6_scope_id = scopeid;
+        m_sockaddr.Ipv6.sin6_scope_id = scopeid;
     }
 }
 
 inline void ctSockaddr::setFlowInfo(uint32_t flowinfo) noexcept
 {
-    if (AF_INET6 == m_saddr.si_family)
+    if (AF_INET6 == m_sockaddr.si_family)
     {
-        m_saddr.Ipv6.sin6_flowinfo = flowinfo;
+        m_sockaddr.Ipv6.sin6_flowinfo = flowinfo;
     }
 }
 
@@ -618,18 +628,18 @@ inline bool ctSockaddr::writeAddress(WCHAR (&address)[FixedStringLength]) const 
 {
     ZeroMemory(address, FixedStringLength * sizeof(WCHAR));
 
-    const void* const pAddr = AF_INET == m_saddr.si_family
-                              ? static_cast<const void*>(&m_saddr.Ipv4.sin_addr) : static_cast<const void*>(&m_saddr.Ipv6.sin6_addr);
-    return nullptr != InetNtopW(m_saddr.si_family, pAddr, address, FixedStringLength);
+    const void* const pAddr = AF_INET == m_sockaddr.si_family
+                              ? static_cast<const void*>(&m_sockaddr.Ipv4.sin_addr) : static_cast<const void*>(&m_sockaddr.Ipv6.sin6_addr);
+    return nullptr != InetNtopW(m_sockaddr.si_family, pAddr, address, FixedStringLength);
 }
 
 inline bool ctSockaddr::writeAddress(CHAR (&address)[FixedStringLength]) const noexcept
 {
     ZeroMemory(address, FixedStringLength * sizeof(CHAR));
 
-    const void* const pAddr = AF_INET == m_saddr.si_family
-                              ? static_cast<const void*>(&m_saddr.Ipv4.sin_addr) : static_cast<const void*>(&m_saddr.Ipv6.sin6_addr);
-    return nullptr != InetNtopA(m_saddr.si_family, pAddr, address, FixedStringLength);
+    const void* const pAddr = AF_INET == m_sockaddr.si_family
+                              ? static_cast<const void*>(&m_sockaddr.Ipv4.sin_addr) : static_cast<const void*>(&m_sockaddr.Ipv6.sin6_addr);
+    return nullptr != InetNtopA(m_sockaddr.si_family, pAddr, address, FixedStringLength);
 }
 
 inline std::wstring ctSockaddr::writeCompleteAddress(bool trimScope) const
@@ -645,9 +655,9 @@ inline bool ctSockaddr::writeCompleteAddress(WCHAR (&address)[FixedStringLength]
     ZeroMemory(address, FixedStringLength * sizeof(WCHAR));
 
     DWORD addressLength = FixedStringLength;
-    if (0 == WSAAddressToStringW(const_cast<SOCKADDR*>(sockaddr()), c_saddrSize, nullptr, address, &addressLength))
+    if (0 == WSAAddressToStringW(const_cast<SOCKADDR*>(sockaddr()), c_sockaddrSize, nullptr, address, &addressLength))
     {
-        if (m_saddr.si_family == AF_INET6 && trimScope)
+        if (m_sockaddr.si_family == AF_INET6 && trimScope)
         {
             // ReSharper disable once CppLocalVariableMayBeConst
             auto* const end = address + addressLength;
@@ -684,15 +694,15 @@ inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[FixedStringLength],
     ZeroMemory(address, FixedStringLength * sizeof(CHAR));
 
     DWORD addressLength = FixedStringLength;
-    if (0 == WSAAddressToStringA(const_cast<SOCKADDR*>(sockaddr()), c_saddrSize, nullptr, address, &addressLength))
+    if (0 == WSAAddressToStringA(const_cast<SOCKADDR*>(sockaddr()), c_sockaddrSize, nullptr, address, &addressLength))
     {
-        if (m_saddr.si_family == AF_INET6 && trimScope)
+        if (m_sockaddr.si_family == AF_INET6 && trimScope)
         {
             // ReSharper disable once CppLocalVariableMayBeConst
             auto* const end = address + addressLength;
             if (auto* pScopePtr = std::find(address, end, '%'); pScopePtr != end)
             {
-                if (auto* pMovePtr = std::find(address, end, ']'); pMovePtr != end)
+                if (const auto* pMovePtr = std::find(address, end, ']'); pMovePtr != end)
                 {
                     while (pMovePtr != end)
                     {
@@ -721,95 +731,95 @@ inline bool ctSockaddr::writeCompleteAddress(CHAR (&address)[FixedStringLength],
 // ReSharper disable once CppMemberFunctionMayBeStatic
 inline int ctSockaddr::length() const noexcept // NOLINT(readability-convert-member-functions-to-static)
 {
-    return static_cast<int>(c_saddrSize);
+    return c_sockaddrSize;
 }
 
 inline ADDRESS_FAMILY ctSockaddr::family() const noexcept
 {
-    return m_saddr.si_family;
+    return m_sockaddr.si_family;
 }
 
 inline uint16_t ctSockaddr::port() const noexcept
 {
-    return ntohs(m_saddr.Ipv4.sin_port);
+    return ntohs(m_sockaddr.Ipv4.sin_port);
 }
 
 inline uint32_t ctSockaddr::flowinfo() const noexcept
 {
-    if (AF_INET6 == m_saddr.si_family)
+    if (AF_INET6 == m_sockaddr.si_family)
     {
-        return m_saddr.Ipv6.sin6_flowinfo;
+        return m_sockaddr.Ipv6.sin6_flowinfo;
     }
     return 0;
 }
 
 inline uint32_t ctSockaddr::scope_id() const noexcept
 {
-    if (AF_INET6 == m_saddr.si_family)
+    if (AF_INET6 == m_sockaddr.si_family)
     {
-        return m_saddr.Ipv6.sin6_scope_id;
+        return m_sockaddr.Ipv6.sin6_scope_id;
     }
     return 0;
 }
 
 inline SOCKADDR* ctSockaddr::sockaddr() noexcept
 {
-    return reinterpret_cast<SOCKADDR*>(&m_saddr);
+    return reinterpret_cast<SOCKADDR*>(&m_sockaddr);
 }
 
 inline SOCKADDR_IN* ctSockaddr::sockaddr_in() noexcept
 {
-    return &m_saddr.Ipv4;
+    return &m_sockaddr.Ipv4;
 }
 
 inline SOCKADDR_IN6* ctSockaddr::sockaddr_in6() noexcept
 {
-    return &m_saddr.Ipv6;
+    return &m_sockaddr.Ipv6;
 }
 
 inline SOCKADDR_INET* ctSockaddr::sockaddr_inet() noexcept
 {
-    return &m_saddr;
+    return &m_sockaddr;
 }
 
 inline IN_ADDR* ctSockaddr::in_addr() noexcept
 {
-    return &m_saddr.Ipv4.sin_addr;
+    return &m_sockaddr.Ipv4.sin_addr;
 }
 
 inline IN6_ADDR* ctSockaddr::in6_addr() noexcept
 {
-    return &m_saddr.Ipv6.sin6_addr;
+    return &m_sockaddr.Ipv6.sin6_addr;
 }
 
 inline const SOCKADDR* ctSockaddr::sockaddr() const noexcept
 {
-    return reinterpret_cast<const SOCKADDR*>(&m_saddr);
+    return reinterpret_cast<const SOCKADDR*>(&m_sockaddr);
 }
 
 inline const SOCKADDR_IN* ctSockaddr::sockaddr_in() const noexcept
 {
-    return &m_saddr.Ipv4;
+    return &m_sockaddr.Ipv4;
 }
 
 inline const SOCKADDR_IN6* ctSockaddr::sockaddr_in6() const noexcept
 {
-    return &m_saddr.Ipv6;
+    return &m_sockaddr.Ipv6;
 }
 
 inline const SOCKADDR_INET* ctSockaddr::sockaddr_inet() const noexcept
 {
-    return &m_saddr;
+    return &m_sockaddr;
 }
 
 inline const IN_ADDR* ctSockaddr::in_addr() const noexcept
 {
-    return &m_saddr.Ipv4.sin_addr;
+    return &m_sockaddr.Ipv4.sin_addr;
 }
 
 inline const IN6_ADDR* ctSockaddr::in6_addr() const noexcept
 {
-    return &m_saddr.Ipv6.sin6_addr;
+    return &m_sockaddr.Ipv6.sin6_addr;
 }
 } // namespace ctl
 

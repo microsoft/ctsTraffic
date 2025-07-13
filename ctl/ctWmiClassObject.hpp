@@ -34,7 +34,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl
 {
 // class ctWmiClassObject
-// Exposes enumerating properties of a WMI Provider through an property_iterator interface.
+// Exposes enumerating properties of a WMI Provider through a property_iterator interface.
 class ctWmiClassObject
 {
 private:
@@ -83,25 +83,25 @@ public:
 
     [[nodiscard]] property_iterator property_begin(bool fNonSystemPropertiesOnly = true) const
     {
-        return property_iterator(m_wbemClassObject, fNonSystemPropertiesOnly);
+        return {m_wbemClassObject, fNonSystemPropertiesOnly};
     }
 
     [[nodiscard]] static property_iterator property_end() noexcept
     {
-        return property_iterator();
+        return {};
     }
 
     //
     // Not yet implemented
     //
-    /// method_iterator method_begin(bool _fLocalMethodsOnly = true)
-    /// {
-    ///     return method_iterator(wbemClass, _fLocalMethodsOnly);
-    /// }
-    /// method_iterator method_end() noexcept
-    /// {
-    ///     return method_iterator();
-    /// }
+    // method_iterator method_begin(bool _fLocalMethodsOnly = true)
+    // {
+    //     return method_iterator(wbemClass, _fLocalMethodsOnly);
+    // }
+    // method_iterator method_end() noexcept
+    // {
+    //     return method_iterator();
+    // }
 
     // A forward property_iterator class type to enable forward-traversing instances of the queried WMI provider
     class property_iterator
@@ -140,13 +140,9 @@ public:
             swap(m_propertyType, rhs.m_propertyType);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        ///
-        /// accessors:
-        /// - dereference operators to access the property name
-        /// - explicit type() method to expose its CIM type
-        ///
-        ////////////////////////////////////////////////////////////////////////////////
+        // accessors:
+        // - dereference operators to access the property name
+        // - explicit type() method to expose its CIM type
         BSTR operator*()
         {
             if (m_index == c_endIteratorIndex)

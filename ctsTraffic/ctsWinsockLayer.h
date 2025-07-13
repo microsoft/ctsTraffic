@@ -39,7 +39,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic
 {
 // this is only defined in the public header for Windows 10 RS2 and later
-enum TCPSTATE
+enum TCPSTATE : std::uint8_t
 {
     TCPSTATE_CLOSED,
     TCPSTATE_LISTEN,
@@ -153,6 +153,6 @@ wsIOResult ctsWSASendTo(
     const ctsTask& task,
     std::function<void(OVERLAPPED*)>&& callback) noexcept;
 
-// Set LINGER options to force a RST when the socket is closed
-wsIOResult ctsSetLingertoResetSocket(SOCKET socket) noexcept;
+// Set LINGER options to force an RST when the socket is closed
+wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept;
 }

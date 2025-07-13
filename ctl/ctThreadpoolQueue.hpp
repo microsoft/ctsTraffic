@@ -22,7 +22,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctl
 {
 // forward-declare classes that can instantiate a ctThreadpoolQueueWaitableResult object
-enum class ctThreadpoolGrowthPolicy
+enum class ctThreadpoolGrowthPolicy : std::uint8_t
 {
     Growable,
     Flat
@@ -156,7 +156,7 @@ private:
     TReturn m_result{};
     DWORD m_internalError = NO_ERROR;
 
-    enum class RunStatus
+    enum class RunStatus : std::uint8_t
     {
         NotYetRun,
         Running,
@@ -229,12 +229,6 @@ public:
     template <typename FunctorType>
     HRESULT submit_and_wait(FunctorType&& functor) noexcept try
     {
-        // this is not applicable for flat queues
-        if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)
-        {
-            FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
-        }
-
         if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Growable)
         {
             HRESULT hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
@@ -248,6 +242,9 @@ public:
             }
             return hr;
         }
+
+        // this is not applicable for flat queues
+        FAIL_FAST_MSG("submit_and_wait only supported with Growable queues");
     }
     CATCH_RETURN()
 
@@ -256,16 +253,16 @@ public:
     {
         if (m_tpHandle)
         {
-            // immediately release anyone waiting for these workitems not yet run
+            // immediately release anyone waiting for these work-items not yet run
             {
                 const auto queueLock = m_lock.lock();
 
                 for (const auto& work : m_workItems)
                 {
-                    // signal that these are canceled before we shutdown the TP which they could be scheduled
-                    if (const auto* pWaitableWorkitem = std::get_if<WaitableFunctionT>(&work))
+                    // signal that these are canceled before we shut down the TP which they could be scheduled
+                    if (const auto* pWaitableWorkItem = std::get_if<WaitableFunctionT>(&work))
                     {
-                        (*pWaitableWorkitem)->abort();
+                        (*pWaitableWorkItem)->abort();
                     }
                 }
 
@@ -344,6 +341,7 @@ private:
     std::deque<FunctionVariantT> m_workItems;
     mutable LONG64 m_threadpoolThreadId{0}; // useful for callers to assert they are running within the queue
 
+    // ReSharper disable once CppNotAllPathsReturnValue
     bool ShouldSubmitThreadpoolWork() noexcept
     {
         if constexpr (GrowthPolicy == ctThreadpoolGrowthPolicy::Flat)

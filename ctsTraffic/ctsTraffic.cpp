@@ -15,6 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "targetver.h"
 
 // CRT headers
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 // os headers
@@ -32,12 +33,13 @@ using namespace std;
 
 
 // global ptr for easing debugging
-ctsSocketBroker* g_socketBroker = nullptr;
+static ctsSocketBroker* g_socketBroker = nullptr;
 
-BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
+static BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
-    // handle all exit types - notify config that it's time to shutdown
-    ctsConfig::Shutdown();
+    // handle all exit types - notify config that it's time to shut down
+    ctsConfig::PrintSummary(L"\n  **** ctrl-break hit -- shutting down ****\n");
+    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
     return TRUE;
 }
 
@@ -55,34 +57,33 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     {
         if (!ctsConfig::Startup(argc, argv))
         {
-            ctsConfig::Shutdown();
+            ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
             err = ERROR_INVALID_DATA;
         }
     }
     catch (const invalid_argument& e)
     {
         ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
-        ctsConfig::Shutdown();
+        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
         err = ERROR_INVALID_DATA;
     }
     catch (const exception& e)
     {
         ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown();
+        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
         err = ERROR_INVALID_DATA;
     }
 
     if (err == ERROR_INVALID_DATA)
     {
         wprintf(
-            L"\n\n"
+            L"\n"
             L"For more information on command line options, specify -Help\n"
             L"ctsTraffic.exe -Help:[tcp] [udp] [logging] [advanced]\n"
-            L"\t- <default> == prints this usage statement\n"
-            L"\t- tcp : prints usage for TCP-specific options\n"
-            L"\t- udp : prints usage for UDP-specific options\n"
-            L"\t- logging : prints usage for logging options\n"
-            L"\t- advanced : prints the usage for advanced and experimental options\n"
+            L"   -help:tcp : prints usage for TCP options\n"
+            L"   -help:udp : prints usage for UDP options\n"
+            L"   -help:logging : prints usage for logging options\n"
+            L"   -help:advanced : prints the usage for advanced and experimental options\n"
             L"\n\n");
         return err;
     }
@@ -114,33 +115,33 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 
         if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
         {
-            ctsConfig::PrintSummary(L"\n  Time-limit of %lu reached\n", ctsConfig::g_configSettings->TimeLimit);
+            ctsConfig::PrintSummary(L"\n  **** Time-limit of %lu reached ****\n", ctsConfig::g_configSettings->TimeLimit);
         }
 
         if (ctsConfig::g_configSettings->PauseAtEnd > 0)
         {
             // stop all status updates being printed to the console and pause before destroying the broker object
             statusTimer.reset();
-            ctsConfig::PrintSummary(L"\n  Pausing-At-End for %lu milliseconds\n", ctsConfig::g_configSettings->PauseAtEnd);
+            ctsConfig::PrintSummary(L"\n  **** Pausing-At-End for %lu milliseconds ****\n", ctsConfig::g_configSettings->PauseAtEnd);
             Sleep(ctsConfig::g_configSettings->PauseAtEnd);
         }
     }
     catch (const wil::ResultException& e)
     {
         ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown();
+        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
         return e.GetErrorCode();
     }
     catch (const bad_alloc&)
     {
         ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed: Out of Memory");
-        ctsConfig::Shutdown();
+        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
         return ERROR_OUTOFMEMORY;
     }
     catch (const exception& e)
     {
         ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed: %hs", e.what()).c_str());
-        ctsConfig::Shutdown();
+        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
         return ERROR_CANCELLED;
     }
 
@@ -149,7 +150,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     // write out the final status update
     ctsConfig::PrintStatusUpdate();
 
-    ctsConfig::Shutdown();
+    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Normal);
 
     ctsConfig::PrintSummary(
         L"\n\n"
@@ -208,9 +209,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
     int64_t errorCount =
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
         ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
-    if (errorCount > MAXINT)
-    {
-        errorCount = MAXINT;
-    }
+
+    errorCount = std::min<int64_t>(errorCount, MAXINT);
     return static_cast<int>(errorCount);
 }
