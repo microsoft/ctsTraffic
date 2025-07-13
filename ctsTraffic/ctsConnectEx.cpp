@@ -49,8 +49,8 @@ static void ctsConnectExIoCompletionCallback(
         // a null OVERLAPPED means this is called directly when completed inline
         if (overlapped)
         {
-            DWORD transferred;
-            DWORD flags;
+            DWORD transferred{};
+            DWORD flags{};
             if (!WSAGetOverlappedResult(socket, overlapped, &transferred, FALSE, &flags))
             {
                 gle = WSAGetLastError();
@@ -113,7 +113,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             // get a new IO request from the socket's TP
             const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
 
-            OVERLAPPED* pOverlapped = connectIocp->new_request(
+            OVERLAPPED* const pOverlapped = connectIocp->new_request(
                 [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
 
             if (!ctl::ctConnectEx(socket, targetAddress.sockaddr(), targetAddress.length(), nullptr, 0, nullptr, pOverlapped))

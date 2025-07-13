@@ -58,7 +58,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
     }
     else
     {
-        DWORD flags;
+        DWORD flags{};
         if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
         {
             gle = WSAGetLastError();

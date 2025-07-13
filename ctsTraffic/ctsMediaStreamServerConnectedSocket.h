@@ -39,7 +39,7 @@ private:
     mutable wil::critical_section m_objectGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Guarded_by_(m_objectGuard) ctsTask m_nextTask;
 
-    wil::unique_threadpool_timer m_taskTimer;
+    wil::unique_threadpool_timer m_taskTimer{};
 
     // this weak_socket is the weak reference to the ctsSocket tracked by ctsSocketState & ctsSocketBroker
     // used to complete the state when finished and take a shared_ptr when needing to take a reference

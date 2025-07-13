@@ -297,7 +297,7 @@ ctsIoPatternType ctsIoPatternProtocolPolicy<Protocol>::GetNextPatternType() cons
         return ctsIoPatternType::NoIo;
     }
 
-    ctsIoPatternType nextType;
+    ctsIoPatternType nextType{};
     switch (m_internalState)
     {
         case InternalPatternState::Initialized:

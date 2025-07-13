@@ -375,7 +375,7 @@ inline std::wstring format_message(DWORD messageId)
 //
 // *Note key differences between the 2 functions:
 //
-// - replace_all takes an original string as an std::wstring reference.
+// - replace_all takes an original string as a std::wstring reference.
 //   Meaning an implicit std::wstring object cannot be created.
 //
 //   This is not valid:
@@ -450,7 +450,7 @@ inline std::string replace_all_copy(std::string originalString, const std::strin
 // Escapes characters that are 'special' in the context of a WMI WQL query which could
 //  inadvertently affect the result of the query.
 //
-// - escape_wmi_query takes an original string as an std::wstring reference.
+// - escape_wmi_query takes an original string as a std::wstring reference.
 //   Meaning an implicit std::wstring object cannot be created.
 //
 // - escape_wmi_query_copy takes an original string by value into std::wstring.

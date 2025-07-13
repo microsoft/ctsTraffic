@@ -196,11 +196,11 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write the property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -223,13 +223,13 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
         ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
+        propertyclassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg2);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -252,15 +252,15 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
         ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
+        propertyclassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg3);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -283,17 +283,17 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
         ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg4);
+        propertyclassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg3);
+        ++propertyIterator;
+        propertyclassObject.set(*propertyIterator, arg4);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -316,29 +316,29 @@ public:
 
         // Instantiate a class object to iterate through each property
         const ctWmiClassObject propertyObject(m_wbemServices, inParamsDefinition);
-        auto propertyItererator = propertyObject.property_begin();
+        auto propertyIterator = propertyObject.property_begin();
 
         // write each property
         //
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyItererator, arg1);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg2);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg3);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg4);
-        ++propertyItererator;
-        propertyclassObject.set(*propertyItererator, arg5);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg2);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg3);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg4);
+        ++propertyIterator;
+        propertyClassObject.set(*propertyIterator, arg5);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
     }
 
-    bool is_null(_In_ PCWSTR propname) const
+    bool is_null(_In_ PCWSTR property_name) const
     {
         wil::unique_variant variant;
-        get_property(propname, variant.addressof());
+        get_property(property_name, variant.addressof());
         return V_VT(&variant) == VT_NULL;
     }
 
@@ -359,36 +359,36 @@ public:
     //       returns true if retrieved the matching type
 
 
-    bool get(_In_ PCWSTR propname, _Inout_ VARIANT* value) const
+    bool get(_In_ PCWSTR property_name, _Inout_ VARIANT* value) const
     {
         VariantClear(value);
-        get_property(propname, value);
+        get_property(property_name, value);
         return !IsVariantEmptyOrNull(value);
     }
 
     template <typename T>
-    bool get(_In_ PCWSTR propname, _Out_ T* value) const
+    bool get(_In_ PCWSTR property_name, _Out_ T* value) const
     {
         wil::unique_variant variant;
-        get_property(propname, variant.addressof());
+        get_property(property_name, variant.addressof());
         return ctWmiReadFromVariant(variant.addressof(), value);
     }
 
-    void set(_In_ PCWSTR propname, _In_ const VARIANT* value) const
+    void set(_In_ PCWSTR property_name, _In_ const VARIANT* value) const
     {
-        set_property(propname, value);
+        set_property(property_name, value);
     }
 
     template <typename T>
-    void set(_In_ PCWSTR propname, const T value) const
+    void set(_In_ PCWSTR property_name, const T value) const
     {
-        set_property(propname, ctWmiMakeVariant(value).addressof());
+        set_property(property_name, ctWmiMakeVariant(value).addressof());
     }
 
     // Calling IWbemClassObject::Delete on a property of an instance resets to the default value.
-    void set_default(_In_ PCWSTR propname) const
+    void set_default(_In_ PCWSTR property_name) const
     {
-        THROW_IF_FAILED(m_instanceObject->Delete(propname));
+        THROW_IF_FAILED(m_instanceObject->Delete(property_name));
     }
 
 private:
@@ -403,10 +403,10 @@ private:
             nullptr));
     }
 
-    void set_property(_In_ PCWSTR propname, _In_ const VARIANT* pVariant) const
+    void set_property(_In_ PCWSTR property_name, _In_ const VARIANT* pVariant) const
     {
         THROW_IF_FAILED(m_instanceObject->Put(
-            propname,
+            property_name,
             0,
             const_cast<VARIANT*>(pVariant), // COM is not const-correct
             0));

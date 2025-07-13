@@ -51,12 +51,12 @@ wsIOResult ctsWSARecvFrom(
         const auto& ioThreadPool = sharedSocket->GetIocpThreadpool();
         OVERLAPPED* pOverlapped = ioThreadPool->new_request(std::move(callback));
 
-        WSABUF wsabuffer;
-        wsabuffer.buf = task.m_buffer + task.m_bufferOffset;
-        wsabuffer.len = task.m_bufferLength;
+        WSABUF wsaBuffer{};
+        wsaBuffer.buf = task.m_buffer + task.m_bufferOffset;
+        wsaBuffer.len = task.m_bufferLength;
 
         DWORD flags = 0;
-        if (WSARecvFrom(socket, &wsabuffer, 1, nullptr, &flags, nullptr, nullptr, pOverlapped, nullptr) != 0)
+        if (WSARecvFrom(socket, &wsaBuffer, 1, nullptr, &flags, nullptr, nullptr, pOverlapped, nullptr) != 0)
         {
             returnResult.m_errorCode = WSAGetLastError();
             // IO pended == successfully initiating the IO

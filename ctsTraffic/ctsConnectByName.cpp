@@ -75,7 +75,9 @@ namespace ctsTraffic
                     ctsConfig::PrintErrorIfFailed("WSAConnectByName", error);
                     THROW_WIN32(error);
                 }
-                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n", localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(
+                    L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n",
+                    localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
 
                 sharedSocket->SetLocalSockaddr(localAddr);
                 sharedSocket->SetRemoteSockaddr(remoteAddr);

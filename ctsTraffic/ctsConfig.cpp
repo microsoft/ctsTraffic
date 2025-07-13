@@ -425,7 +425,7 @@ static shared_ptr<ctsLogger> g_tcpInfoLogger;
 	// 
 	// NOTE:
 	// - will *only* assume a string starting with "0x" to be converted as hexadecimal
-	//   if does not start with "0x", will assume as base-10
+	//   if it does not start with "0x", will assume as base-10
 	// - if an unsigned type is specified in the template and a negative number is entered,
 	//   will convert that to the "unsigned" version of that set of bits
 	//   e.g.
@@ -4946,7 +4946,8 @@ static void ParseForKeepAlive(vector<const wchar_t*>& args)
 		if (g_qosHandle)
 		{
 			// attempt to assign the DSCP value to this socket
-			auto destinationAddress{remoteAddress};
+            auto destinationAddress{remoteAddress};
+
 			QOS_FLOWID flowID{ 0 };
 			if (!QOSAddSocketToFlow(
 				g_qosHandle,

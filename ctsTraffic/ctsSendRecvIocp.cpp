@@ -73,7 +73,7 @@ namespace ctsTraffic
             }
             else
             {
-                DWORD flags;
+                DWORD flags{};
                 if (!WSAGetOverlappedResult(socket, pOverlapped, &transferred, FALSE, &flags))
                 {
                     gle = WSAGetLastError();
@@ -222,7 +222,7 @@ namespace ctsTraffic
                     DWORD bytesTransferred = 0;
                     if (NO_ERROR == returnStatus.m_ioErrorCode)
                     {
-                        DWORD flags;
+                        DWORD flags{};
                         if (!WSAGetOverlappedResult(socket, pOverlapped, &bytesTransferred, FALSE, &flags))
                         {
                             FAIL_FAST_MSG(
