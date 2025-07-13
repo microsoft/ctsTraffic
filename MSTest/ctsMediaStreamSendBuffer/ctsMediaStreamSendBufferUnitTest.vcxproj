@@ -174,7 +174,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -200,7 +200,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <ClCompile>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -228,7 +228,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -256,7 +256,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -293,7 +293,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -318,7 +318,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -343,7 +343,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
@@ -368,7 +368,7 @@
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
       <SmallerTypeCheck>false</SmallerTypeCheck>
-      <AdditionalOptions>/D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
+      <AdditionalOptions>/D "_MSVC_STL_HARDENING=1" /D "_MSVC_STL_DESTRUCTOR_TOMBSTONES=1" /D "_WIN32_WINNT=_WIN32_WINNT_WIN7" /D "_WINSOCK_DEPRECATED_NO_WARNINGS" /D "NOMINMAX"</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>

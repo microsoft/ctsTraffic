@@ -27,6 +27,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 	namespace ctsStatistics
 	{
+		inline void __stdcall UniqueAnyRpcStringFree(_Pre_opt_valid_ _Frees_ptr_opt_ RPC_CSTR str)
+		{
+			::RpcStringFreeA(&str);
+		}
+		using unique_rpc_cstr = wil::unique_any<RPC_CSTR, decltype(&UniqueAnyRpcStringFree), UniqueAnyRpcStringFree>;
+
 		constexpr uint32_t ConnectionIdLength = 36 + 1; // UUID strings are 36 chars
 
 		template <typename T>
@@ -39,7 +45,7 @@ namespace ctsTraffic {
 				THROW_WIN32_MSG(status, "UuidCreate (ctsStatistics)");
 			}
 
-			RPC_CSTR connectionIdString = nullptr;
+			unique_rpc_cstr connectionIdString;
 			status = UuidToStringA(&connectionId, &connectionIdString);
 			if (status != RPC_S_OK)
 			{
@@ -47,16 +53,15 @@ namespace ctsTraffic {
 			}
 			FAIL_FAST_IF_MSG(
 				// ReSharper disable once CppRedundantParentheses
-				strlen(reinterpret_cast<LPSTR>(connectionIdString)) != (ConnectionIdLength - 1),
+				strlen(reinterpret_cast<const char*>(connectionIdString.get())) != (ConnectionIdLength - 1),
 				"UuidToString returned a string not 36 characters long (%zu)",
-				strlen(reinterpret_cast<LPSTR>(connectionIdString)));
+				strlen(reinterpret_cast<const char*>(connectionIdString.get())));
 
-			const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString, ConnectionIdLength);
+			const auto copyError = ::memcpy_s(statisticsObject.m_connectionIdentifier, ConnectionIdLength, connectionIdString.get(), ConnectionIdLength);
 			FAIL_FAST_IF_MSG(
 				copyError != 0,
 				"memcpy_s failed trying to copy a UUID string (%d)", copyError);
 
-			RpcStringFreeA(&connectionIdString);
 			statisticsObject.m_connectionIdentifier[ConnectionIdLength - 1] = '\0';
 		}
 
