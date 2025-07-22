@@ -208,13 +208,13 @@ public:
                 throw std::out_of_range("ctWmiProperties::iterator - cannot increment: at the end");
             }
 
-            CIMTYPE nextCimtype;
+            CIMTYPE nextCimType;
             wil::shared_bstr nextName;
             const auto hr = m_wbemClassObject->Next(
                 0,
                 nextName.addressof(),
                 nullptr,
-                &nextCimtype,
+                &nextCimType,
                 nullptr);
             switch (hr)
             {
@@ -224,7 +224,7 @@ public:
                     ++m_index;
                     using std::swap;
                     swap(m_propertyName, nextName);
-                    swap(m_propertyType, nextCimtype);
+                    swap(m_propertyType, nextCimType);
                     break;
                 }
 

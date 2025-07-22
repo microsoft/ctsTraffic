@@ -287,9 +287,11 @@ namespace ctsTraffic
                         "Could not find the socket (%Iu) in the waiting_endpoint from our listening sockets (%p)\n",
                         waitingEndpoint->first, &g_listeningSockets);
 
-                    sharedSocket->SetLocalSockaddr((*foundSocket)->GetListeningAddress());
-                    sharedSocket->SetRemoteSockaddr(waitingEndpoint->second);
-                    sharedSocket->CompleteState(NO_ERROR);
+                ctsConfig::SetPostConnectOptions(sharedSocket->AcquireSocketLock().GetSocket(), waitingEndpoint->second);
+
+                sharedSocket->SetLocalSockaddr((*foundSocket)->GetListeningAddress());
+                sharedSocket->SetRemoteSockaddr(waitingEndpoint->second);
+                sharedSocket->CompleteState(NO_ERROR);
 
                     ctsConfig::PrintNewConnection(sharedSocket->GetLocalSockaddr(), sharedSocket->GetRemoteSockaddr());
                     // if added to connected_sockets, can then safely remove it from the waiting endpoint
@@ -371,10 +373,12 @@ namespace ctsTraffic
                     addToAwaiting = false;
                     g_acceptingSockets.pop_back();
 
-                    // now complete the accepted ctsSocket back to the ctsSocketState
-                    sharedInstance->SetLocalSockaddr(localAddr);
-                    sharedInstance->SetRemoteSockaddr(targetAddr);
-                    sharedInstance->CompleteState(NO_ERROR);
+                ctsConfig::SetPostConnectOptions(socket, targetAddr);
+
+                // now complete the accepted ctsSocket back to the ctsSocketState
+                sharedInstance->SetLocalSockaddr(localAddr);
+                sharedInstance->SetRemoteSockaddr(targetAddr);
+                sharedInstance->CompleteState(NO_ERROR);
 
                     ctsConfig::PrintNewConnection(localAddr, targetAddr);
                     break;

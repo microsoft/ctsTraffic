@@ -94,7 +94,7 @@ public:
         // before printing the final results, make sure the timers are stopped
         if (0 == GetLastPatternError() && 0 == m_stats.current_bytes())
         {
-            PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transfered zero bytes\n");
+            PRINT_DEBUG_INFO(L"\t\tctsIOPattern::PrintStatistics : reporting a successful IO completion but transferred zero bytes\n");
             m_protocolPolicy.update_protocol_error(ctsIoPatternError::TooFewBytes);
         }
         ctsConfig::PrintConnectionResults(

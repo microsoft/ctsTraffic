@@ -49,13 +49,6 @@ namespace ctsTraffic
         {
             try
             {
-                error = ctsConfig::SetPreConnectOptions(socket);
-                if (error != NO_ERROR)
-                {
-                    ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
-                    THROW_WIN32(error);
-                }
-
                 const auto targetSize = ctsConfig::g_configSettings->TargetAddressStrings.size();
                 const auto connectCounter = g_targetCounter.fetch_add(1) + 1;
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
@@ -82,7 +75,9 @@ namespace ctsTraffic
                     ctsConfig::PrintErrorIfFailed("WSAConnectByName", error);
                     THROW_WIN32(error);
                 }
-                PRINT_DEBUG_INFO(L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n", localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
+                PRINT_DEBUG_INFO(
+                    L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n",
+                    localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
 
                 sharedSocket->SetLocalSockaddr(localAddr);
                 sharedSocket->SetRemoteSockaddr(remoteAddr);

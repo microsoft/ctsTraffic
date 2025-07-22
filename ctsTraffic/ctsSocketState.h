@@ -89,7 +89,7 @@ private:
     // private members of ctsSocketState
     // - CS's are mutable to allow taking a CS in a const function
     //
-    wil::unique_threadpool_work m_threadPoolWorker;
+    wil::unique_threadpool_work m_threadPoolWorker{};
     mutable wil::critical_section m_stateGuard{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     std::weak_ptr<ctsSocketBroker> m_broker{};
     std::shared_ptr<ctsSocket> m_socket{};

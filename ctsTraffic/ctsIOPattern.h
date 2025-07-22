@@ -432,7 +432,7 @@ public:
     ~ctsIoPatternStatistics() noexcept override
     {
         // guarantee that end_pattern has been called at least once
-        ctsIoPatternStatistics<S>::EndStatistics();
+        ctsIoPatternStatistics::EndStatistics();
     }
 
     ctsIoPatternStatistics(const ctsIoPatternStatistics&) = delete;

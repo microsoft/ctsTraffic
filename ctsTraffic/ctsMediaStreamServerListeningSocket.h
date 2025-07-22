@@ -33,15 +33,15 @@ private:
 
     std::shared_ptr<ctl::ctThreadIocp> m_threadIocp;
 
-    mutable wil::critical_section m_listeningsocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
-    _Requires_lock_held_(m_listeningsocketLock) wil::unique_socket m_listeningSocket;
+    mutable wil::critical_section m_listeningSocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
+    _Requires_lock_held_(m_listeningSocketLock) wil::unique_socket m_listeningSocket;
 
     const ctl::ctSockaddr m_listeningAddr;
     std::array<char, c_recvBufferSize> m_recvBuffer{};
     DWORD m_recvFlags{};
     ctl::ctSockaddr m_remoteAddr;
     int m_remoteAddrLen{};
-    bool m_priorFailureWasConectionReset = false;
+    bool m_priorFailureWasConnectionReset = false;
 
     void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
 

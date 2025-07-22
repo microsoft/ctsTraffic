@@ -170,17 +170,9 @@ namespace ctsTraffic
             return;
         }
 
-        const auto socket = lockedSocket.GetSocket();
-        const auto error = ctsConfig::SetPreConnectOptions(socket);
-        ctsConfig::PrintErrorIfFailed("SetPreConnectOptions", error);
-        if (error != NO_ERROR)
-        {
-            sharedSocket->CompleteState(error);
-            return;
-        }
-
-        const ctl::ctSockaddr targetAddress(sharedSocket->GetRemoteSockaddr());
-        const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
+    const auto socket = lockedSocket.GetSocket();
+    const ctl::ctSockaddr targetAddress(sharedSocket->GetRemoteSockaddr());
+    const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
         // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
         const auto response = ctsWSASendTo(
@@ -203,7 +195,9 @@ namespace ctsTraffic
             }
             sharedSocket->SetRemoteSockaddr(targetAddress);
 
-            ctsConfig::PrintNewConnection(localAddr, targetAddress);
+        ctsConfig::SetPostConnectOptions(socket, targetAddress);
+
+        ctsConfig::PrintNewConnection(localAddr, targetAddress);
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamClient sent its START message to %ws\n",
@@ -512,6 +506,7 @@ namespace ctsTraffic
                 sharedSocket->SetLocalSockaddr(localAddr);
             }
             sharedSocket->SetRemoteSockaddr(targetAddress);
+            ctsConfig::SetPostConnectOptions(socket, targetAddress);
             ctsConfig::PrintNewConnection(localAddr, targetAddress);
         }
 
