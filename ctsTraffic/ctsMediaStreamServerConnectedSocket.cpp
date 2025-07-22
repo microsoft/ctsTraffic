@@ -66,7 +66,7 @@ void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noex
         }
         else
         {
-            const FILETIME ftDueTime(ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds));
+            FILETIME ftDueTime{ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds)};
             // assign the next task *and* schedule the timer while in *this object lock
             m_nextTask = task;
             SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);
