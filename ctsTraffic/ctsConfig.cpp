@@ -286,7 +286,7 @@ namespace ctsTraffic::ctsConfig
 		{
 			std::wstring interfaceDescription;
 			setting.get(L"InterfaceDescription", &interfaceDescription);
-			if (!ctl::ctString::iordinal_equals(interfaceDescription, inputInterfaceDescription))
+			if (!ctString::iordinal_equals(interfaceDescription, inputInterfaceDescription))
 			{
 				continue;
 			}
@@ -2856,7 +2856,7 @@ namespace ctsTraffic::ctsConfig
 				L"     <default> == off\n"
 				L"     note : SO_REUSE_UNICASTPORT will be set instead of SO_PORT_SCALABILITY if the system is configured for it\n"
 				L"            SO_REUSE_UNICASTPORT will be used if AutoReusePortRangeNumberOfPorts is set in any MSFT_NetTCPSetting\n"
-				L"            This can be set in Powershell with the Set-NetTCPSetting Powershell command'let\n"
+				L"            This can be set in Powershell with the Set-NetTCPSetting Powershell command-let\n"
 				L"-PrePostRecvs:#####\n"
 				L"   - specifies the number of recv requests to issue concurrently within an IO Pattern\n"
 				L"   - for example, with the default -pattern:pull, the client will post recv calls \n"
