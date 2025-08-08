@@ -93,72 +93,79 @@ namespace ctsTraffic
 		virtual PCWSTR FormatLegend(const ctsConfig::StatusFormatting& format) noexcept = 0;
 		virtual PCWSTR FormatHeader(const ctsConfig::StatusFormatting& format) noexcept = 0;
 
-		void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, float value) noexcept
+		static constexpr uint32_t ConversionBufferLength = 32; // buffer large enough to print any type we support
+		static auto PrintToBuffer(wchar_t(&conversionBuffer)[ConversionBufferLength], uint32_t value) noexcept
 		{
-			constexpr uint32_t conversionBufferLength = 16;
-			wchar_t conversionBuffer[conversionBufferLength]{};
-
-			FAIL_FAST_IF_MSG(
-				rightJustifiedOffset > c_outputBufferSize,
-				"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-				c_outputBufferSize, rightJustifiedOffset);
-			_Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
-
-			FAIL_FAST_IF_MSG(
-				maxLength > conversionBufferLength - 1, // minus one for the null terminator
-				"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-				conversionBufferLength - 1, maxLength);
-			_Analysis_assume_(maxLength <= conversionBufferLength - 1);
-
-			const auto converted = _snwprintf_s(
+			return _snwprintf_s(
 				conversionBuffer,
-				conversionBufferLength,
-				L"%.3f",
-				value);
-			_Analysis_assume_(converted != -1);
-
-			wmemcpy_s(
-				m_outputBuffer + (rightJustifiedOffset - converted),
-				c_outputBufferSize - (rightJustifiedOffset - converted),
-				conversionBuffer,
-				converted);
-		}
-
-		void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, uint32_t value) noexcept
-		{
-			constexpr uint32_t conversionBufferLength = 12;
-			wchar_t conversionBuffer[conversionBufferLength]{};
-
-			FAIL_FAST_IF_MSG(
-				rightJustifiedOffset > c_outputBufferSize,
-				"ctsStatusInformation will only print up to %u columns - an offset of %u was given",
-				c_outputBufferSize, rightJustifiedOffset);
-			_Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
-
-			FAIL_FAST_IF_MSG(
-				maxLength > conversionBufferLength - 1, // minus one for the null terminator
-				"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-				conversionBufferLength - 1, maxLength);
-			_Analysis_assume_(maxLength > conversionBufferLength - 1);
-
-			const auto converted = _snwprintf_s(
-				conversionBuffer,
-				conversionBufferLength,
+				ConversionBufferLength,
 				L"%lu",
 				value);
-			_Analysis_assume_(converted != -1);
-
-			wmemcpy_s(
-				m_outputBuffer + (rightJustifiedOffset - converted),
-				c_outputBufferSize - (rightJustifiedOffset - converted),
+		}
+		static auto PrintToBuffer(wchar_t(&conversionBuffer)[ConversionBufferLength], int64_t value) noexcept
+		{
+			return _snwprintf_s(
 				conversionBuffer,
-				converted);
+				ConversionBufferLength,
+				L"%lld",
+				value);
+		}
+		static auto PrintToBuffer(wchar_t(&conversionBuffer)[ConversionBufferLength], float value) noexcept
+		{
+			return _snwprintf_s(
+				conversionBuffer,
+				ConversionBufferLength,
+				L"%.3f",
+				value);
 		}
 
-		void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, int64_t value) noexcept
+		template <typename T>
+		static auto PrintToBufferWithExponentOf6(wchar_t(&conversionBuffer)[ConversionBufferLength], T value) noexcept
 		{
-			constexpr uint32_t conversionBufferLength = 20;
-			wchar_t conversionBuffer[conversionBufferLength]{};
+			// if we can't express the value in the given maxLength
+			// we'll convert it to units of millions
+			double float_value = 0.0 + value;
+			float_value /= 0.0 + 1000000;
+
+			return _snwprintf_s(
+				conversionBuffer,
+				ConversionBufferLength,
+				L"%.1fx^6",
+				float_value);
+		}
+		template <typename T>
+		static auto PrintToBufferWithExponentOf9(wchar_t(&conversionBuffer)[ConversionBufferLength], T value) noexcept
+		{
+			// if we can't express the value in the given maxLength
+			// we'll convert it to units of millions
+			double float_value = 0.0 + value;
+			float_value /= 0.0 + 1000000000;
+
+			return _snwprintf_s(
+				conversionBuffer,
+				ConversionBufferLength,
+				L"%.1fx^9",
+				float_value);
+		}
+		template <typename T>
+		static auto PrintToBufferWithExponentOf12(wchar_t(&conversionBuffer)[ConversionBufferLength], T value) noexcept
+		{
+			// if we can't express the value in the given maxLength
+			// we'll convert it to units of millions
+			double float_value = 0.0 + value;
+			float_value /= 0.0 + 1000000000000;
+
+			return _snwprintf_s(
+				conversionBuffer,
+				ConversionBufferLength,
+				L"%.1fx^12",
+				float_value);
+		}
+
+	    template <typename T>
+		void RightJustifyOutput(uint32_t rightJustifiedOffset, uint32_t maxLength, T value) noexcept
+		{
+			wchar_t conversionBuffer[ConversionBufferLength]{};
 
 			FAIL_FAST_IF_MSG(
 				rightJustifiedOffset > c_outputBufferSize,
@@ -167,17 +174,53 @@ namespace ctsTraffic
 			_Analysis_assume_(rightJustifiedOffset <= c_outputBufferSize);
 
 			FAIL_FAST_IF_MSG(
-				maxLength > conversionBufferLength - 1, // minus one for the null terminator
+				maxLength > ConversionBufferLength - 1, // minus one for the null terminator
 				"ctsStatusInformation will only print converted strings up to %u characters long - the number '%u' was given",
-				conversionBufferLength - 1, maxLength);
-			_Analysis_assume_(maxLength <= conversionBufferLength - 1);
+				ConversionBufferLength - 1, maxLength);
+			_Analysis_assume_(maxLength <= ConversionBufferLength - 1);
 
-			const auto converted = _snwprintf_s(
-				conversionBuffer,
-				conversionBufferLength,
-				L"%lld",
-				value);
-			_Analysis_assume_(converted != -1);
+			auto converted = PrintToBuffer(conversionBuffer, value);
+			if (converted < 0)
+			{
+				// something went wrong, we can't print the value
+				return;
+			}
+
+			if (static_cast<uint32_t>(converted) > maxLength)
+			{
+				converted = PrintToBufferWithExponentOf6(conversionBuffer, value);
+				if (converted < 0)
+				{
+					// something went wrong, we can't print the value
+					return;
+				}
+			}
+			if (static_cast<uint32_t>(converted) > maxLength)
+			{
+				converted = PrintToBufferWithExponentOf9(conversionBuffer, value);
+				if (converted < 0)
+				{
+					// something went wrong, we can't print the value
+					return;
+				}
+			}
+			if (static_cast<uint32_t>(converted) > maxLength)
+			{
+				converted = PrintToBufferWithExponentOf12(conversionBuffer, value);
+				if (converted < 0)
+				{
+					// something went wrong, we can't print the value
+					return;
+				}
+			}
+			if (static_cast<uint32_t>(converted) > maxLength)
+			{
+				// if it still can't fit, just write "9.99+" to indicate a value larger than can be printed
+				converted = _snwprintf_s(
+					conversionBuffer,
+					ConversionBufferLength,
+					L"9+++T");
+			}
 
 			wmemcpy_s(
 				m_outputBuffer + (rightJustifiedOffset - converted),
@@ -244,8 +287,8 @@ namespace ctsTraffic
 				}
 				if (convertedCharacterCount < writableBufferSizeCharacters)
 				{
-				    *outputBufferPointer = L'+';
-				    ++convertedCharacterCount;
+					*outputBufferPointer = L'+';
+					++convertedCharacterCount;
 				}
 			}
 			else
