@@ -226,14 +226,13 @@ inline void ctWmiEnumerate::iterator::increment()
         throw std::out_of_range("ctWmiEnumerate::iterator::increment at the end");
     }
 
-    ULONG uReturn;
+    ULONG uReturn{};
     wil::com_ptr<IWbemClassObject> wbemTarget;
     THROW_IF_FAILED(m_wbemEnumerator->Next(
         WBEM_INFINITE,
         1,
         wbemTarget.put(),
         &uReturn));
-
     if (0 == uReturn)
     {
         // at the end...

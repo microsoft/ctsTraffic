@@ -15,9 +15,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <utility>
-#include <vector>
 #include <algorithm>
-#include <utility>
 // os headers
 #include <Windows.h>
 #include <objbase.h>
@@ -145,7 +143,7 @@ public:
             context,
             result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
@@ -165,14 +163,14 @@ public:
             nullptr,
             result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
 
 
     // Invokes an instance method with zero -> 5 arguments from the instantiated IWbemClassObject
-    // Returns a ctWmiInstace containing the [out] parameters from the method call
+    // Returns a ctWmiInstance containing the [out] parameters from the method call
     // (the property "ReturnValue" contains the return value)
     ctWmiInstance execute_method(_In_ PCWSTR method)
     {
@@ -226,10 +224,10 @@ public:
         auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyIterator, arg1);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg2);
+        propertyClassObject.set(*propertyIterator, arg2);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -255,12 +253,12 @@ public:
         auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyIterator, arg1);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg2);
+        propertyClassObject.set(*propertyIterator, arg2);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg3);
+        propertyClassObject.set(*propertyIterator, arg3);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -286,14 +284,14 @@ public:
         auto propertyIterator = propertyObject.property_begin();
 
         // write each property
-        ctWmiInstance propertyclassObject(m_wbemServices, inParamsInstance);
-        propertyclassObject.set(*propertyIterator, arg1);
+        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg2);
+        propertyClassObject.set(*propertyIterator, arg2);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg3);
+        propertyClassObject.set(*propertyIterator, arg3);
         ++propertyIterator;
-        propertyclassObject.set(*propertyIterator, arg4);
+        propertyClassObject.set(*propertyIterator, arg4);
 
         // execute the method with the properties set
         return execute_method_impl(method, inParamsInstance.get());
@@ -351,7 +349,7 @@ public:
     //   See the MSDN documentation for WMI MOF Data Types (Numbers):
     //   http://msdn.microsoft.com/en-us/library/aa392716(v=VS.85).aspx
     //
-    //   Even though VARIANTs support 16- and 32-bit unsigned integers, WMI passes them both 
+    //   Even though VARIANTS support 16- and 32-bit unsigned integers, WMI passes them both
     //   around as 32-bit signed integers. Yes, that means you can't pass very large UINT32 values
     //   correctly through WMI directly.
     //

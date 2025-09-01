@@ -16,7 +16,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 #include <string>
-
 // os headers
 #include <Windows.h>
 #include <objbase.h>
@@ -395,7 +394,7 @@ bool ctWmiReadFromVariant(_In_ const VARIANT* variant, _Inout_ std::vector<wil::
     }
     THROW_HR_IF(E_INVALIDARG, V_VT(variant) != (VT_UNKNOWN | VT_ARRAY));
 
-    IUnknown** iUnknownArray;
+    IUnknown** iUnknownArray{};
     THROW_IF_FAILED(::SafeArrayAccessData(variant->parray, reinterpret_cast<void**>(&iUnknownArray)));
     const auto unAccessArray = wil::scope_exit([&]() noexcept { SafeArrayUnaccessData(variant->parray); });
 

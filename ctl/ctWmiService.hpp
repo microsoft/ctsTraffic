@@ -21,7 +21,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/com.h>
 #include <wil/resource.h>
 
-
 namespace ctl
 {
 // Callers must instantiate a ctWmiService instance in order to use any of the ctWmi* classes
@@ -104,7 +103,7 @@ public:
             context.get(),
             result.addressof()));
         // wait for the call to complete
-        HRESULT status;
+        HRESULT status{};
         THROW_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
         THROW_IF_FAILED(status);
     }
@@ -114,8 +113,8 @@ public:
     //    MyClass.MyProperty1='33',MyProperty2='value'
     void delete_path(_In_ PCWSTR objPath) const
     {
-        const wil::com_ptr<IWbemContext> nullcontext;
-        delete_path(objPath, nullcontext.get());
+        const wil::com_ptr<IWbemContext> nullContext;
+        delete_path(objPath, nullContext.get());
     }
 
 private:
