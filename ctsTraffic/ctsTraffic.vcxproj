@@ -412,6 +412,7 @@
     <ClCompile Include="ctsConnectByName.cpp" />
     <ClCompile Include="ctsConnectEx.cpp" />
     <ClCompile Include="ctsIOPattern.cpp" />
+    <ClCompile Include="ctsIOPatternDuplexUnitTest.cpp" />
     <ClCompile Include="ctsIOPatternMediaStream.cpp" />
     <ClCompile Include="ctsMediaStreamClient.cpp" />
     <ClCompile Include="ctsMediaStreamServer.cpp" />

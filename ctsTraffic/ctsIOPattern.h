@@ -147,7 +147,7 @@ public:
     ctsIoPattern(ctsIoPattern&&) = delete;
     ctsIoPattern& operator=(ctsIoPattern&&) = delete;
 
-private:
+protected:
     [[nodiscard]] ctsIoStatus GetCurrentStatus() const noexcept
     {
         if (c_statusIoRunning == m_lastError)
@@ -164,6 +164,7 @@ private:
         return ctsIoStatus::FailedIo;
     }
 
+private:
     // Private method to return a pre-populated task
     // - *not* setting the private ctsIOTask::tracked_io property
     ctsTask CreateNewTask(ctsTaskAction action, uint32_t maxTransfer) noexcept;
@@ -583,7 +584,7 @@ private:
 //  - The client both pushes and pulls data concurrently
 //  - The server both pushes and pulls data concurrently
 //
-class ctsIoPatternDuplex final : public ctsIoPatternStatistics<ctsTcpStatistics>
+class ctsIoPatternDuplex : public ctsIoPatternStatistics<ctsTcpStatistics>
 {
 public:
     ctsIoPatternDuplex() noexcept;
@@ -598,7 +599,7 @@ public:
     ctsTask GetNextTaskFromPattern() noexcept override;
     ctsIoPatternError CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept override;
 
-private:
+protected:
     // need to know when to stop sending
     uint64_t m_remainingSendBytes{0};
     uint64_t m_remainingRecvBytes{0};

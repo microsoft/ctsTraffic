@@ -99,6 +99,9 @@
     <ClCompile Include="ctsConnectByName.cpp">
       <Filter>TCPFunctions</Filter>
     </ClCompile>
+    <ClCompile Include="ctsIOPatternDuplexUnitTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
