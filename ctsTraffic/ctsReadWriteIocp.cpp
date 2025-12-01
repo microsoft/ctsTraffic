@@ -140,7 +140,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         while (!ioDone && NO_ERROR == ioError)
         {
             // each loop requests the next task
-            ctsTask nextIo = lockedPattern->InitiateIo();
+            const ctsTask nextIo = lockedPattern->InitiateIo();
             if (ctsTaskAction::None == nextIo.m_ioAction)
             {
                 // nothing failed, just no more IO right now

@@ -177,7 +177,7 @@ namespace ctsTraffic
         m_targetSockaddr = targetAddress;
     }
 
-    void ctsSocket::SetIoPattern()
+    void ctsSocket::CreateIoPattern()
     {
         m_pattern = ctsIoPattern::MakeIoPattern();
         if (!m_pattern)

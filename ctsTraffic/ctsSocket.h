@@ -138,9 +138,9 @@ public:
     void SetRemoteSockaddr(const ctl::ctSockaddr& targetAddress) noexcept;
 
     //
-    // Get/Set the ctsIOPattern
+    // Creates the ctsIOPattern for this socket
     //
-    void SetIoPattern();
+    void CreateIoPattern();
 
     //
     // methods for functors to use for ref-counting the # of IO they have issued on this socket
