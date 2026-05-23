@@ -23,12 +23,10 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+#include "ctsTCPFunctions.h"
 
 namespace ctsTraffic
 {
-    // forward declaration
-    void ctsSendRecvIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept;
-
     struct ctsSendRecvStatus
     {
         // Winsock error code
@@ -175,9 +173,10 @@ namespace ctsTraffic
                         ctsSendRecvCompletionCallback(pCallbackOverlapped, weak_reference, nextIo);
                     });
 
-                WSABUF wsaBuffer{};
-                wsaBuffer.buf = nextIo.m_buffer + nextIo.m_bufferOffset;
-                wsaBuffer.len = nextIo.m_bufferLength;
+                WSABUF wsaBuffer{
+                    .len = nextIo.m_bufferLength,
+                    .buf = nextIo.m_buffer + nextIo.m_bufferOffset
+                };
 
                 PCSTR functionName{};
                 if (ctsTaskAction::Send == nextIo.m_ioAction)

@@ -582,126 +582,128 @@ namespace ctsTraffic
             // if that's exhausted, return no-IO yet
             if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO) && m_sendingRioBufferIds.empty())
             {
-                return {};
+				// return an empty task - no IO requested
             }
-
-            //
-            // check to see if the send needs to be deferred into the future
-            //
-            returnTask.m_timeOffsetMilliseconds = 0LL;
-            if (m_bytesSendingPerQuantum > 0)
+            else
             {
-                const auto currentTimeMs(ctTimer::snap_qpc_as_msec());
-                if (m_bytesSendingThisQuantum < m_bytesSendingPerQuantum)
+                //
+                // check to see if the send needs to be deferred into the future
+                //
+                returnTask.m_timeOffsetMilliseconds = 0LL;
+                if (m_bytesSendingPerQuantum > 0)
                 {
-                    // adjust bytes_sending_this_quantum
-                    m_bytesSendingThisQuantum += verifiedNewBufferSize;
-
-                    // no need to adjust quantum_start_time_ms unless we skipped into a new quantum
-                    // (meaning the previous quantum had not filled the max bytes for that quantum)
-                    // ReSharper disable once CppRedundantParentheses
-                    if (currentTimeMs > (m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod))
+                    const auto currentTimeMs(ctTimer::snap_qpc_as_msec());
+                    if (m_bytesSendingThisQuantum < m_bytesSendingPerQuantum)
                     {
-                        // current time shows it's now beyond this quantum timeframe
-                        // - once we see how many quantums we have skipped forward, move our quantum start time to the quantum we are actually in
-                        // - then adjust the number of bytes we are to send this quantum by how many quantum we just skipped
-                        const auto quantumsSkippedSinceLastSend = (currentTimeMs - m_quantumStartTimeMs) / ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
-                        m_quantumStartTimeMs += quantumsSkippedSinceLastSend * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+                        // adjust bytes_sending_this_quantum
+                        m_bytesSendingThisQuantum += verifiedNewBufferSize;
 
-                        // we have to be careful making this adjustment since the remaining bytes this quantum could be very small
-                        // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
-                        const auto bytesToAdjust = m_bytesSendingPerQuantum * quantumsSkippedSinceLastSend;
-                        if (bytesToAdjust > m_bytesSendingThisQuantum)
+                        // no need to adjust quantum_start_time_ms unless we skipped into a new quantum
+                        // (meaning the previous quantum had not filled the max bytes for that quantum)
+                        // ReSharper disable once CppRedundantParentheses
+                        if (currentTimeMs > (m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod))
                         {
-                            m_bytesSendingThisQuantum = 0;
-                        }
-                        else
-                        {
-                            m_bytesSendingThisQuantum -= bytesToAdjust;
+                            // current time shows it's now beyond this quantum timeframe
+                            // - once we see how many quantum we have skipped forward, move our quantum start time to the quantum we are actually in
+                            // - then adjust the number of bytes we are to send this quantum by how many quantum we just skipped
+                            const auto quantumSkippedSinceLastSend = (currentTimeMs - m_quantumStartTimeMs) / ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+                            m_quantumStartTimeMs += quantumSkippedSinceLastSend * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+
+                            // we have to be careful making this adjustment since the remaining bytes this quantum could be very small
+                            // - we only subtract out if the number of bytes skipped is >= bytes actually skipped
+                            const auto bytesToAdjust = m_bytesSendingPerQuantum * quantumSkippedSinceLastSend;
+                            if (bytesToAdjust > m_bytesSendingThisQuantum)
+                            {
+                                m_bytesSendingThisQuantum = 0;
+                            }
+                            else
+                            {
+                                m_bytesSendingThisQuantum -= bytesToAdjust;
+                            }
                         }
                     }
-                }
-                else
-                {
-                    // we have sent more than required for this quantum
-                    // - check if this full-filled future quantums as well
-                    const auto quantumAheadToSchedule = m_bytesSendingThisQuantum / m_bytesSendingPerQuantum;
-
-                    // ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
-                    // - when we have already sent at least 1 additional quantum of bytes
-                    const auto msForQuantumsToSkip = (quantumAheadToSchedule - 1) * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
-
-                    // carry forward extra bytes from quantums that will be filled by the bytes we have already sent
-                    // (including the current quantum)
-                    // then adding the bytes we're about to send
-                    m_bytesSendingThisQuantum -= m_bytesSendingPerQuantum * quantumAheadToSchedule;
-                    m_bytesSendingThisQuantum += verifiedNewBufferSize;
-
-                    // update the return task for when to schedule the send
-                    // first, calculate the time to get to the end of this time quantum
-                    // - only adjust if the current time isn't already outside this quantum
-                    if (currentTimeMs < m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod)
+                    else
                     {
-                        returnTask.m_timeOffsetMilliseconds = m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod - currentTimeMs;
+                        // we have sent more than required for this quantum
+                        // - check if this full-filled future quantum as well
+                        const auto quantumAheadToSchedule = m_bytesSendingThisQuantum / m_bytesSendingPerQuantum;
+
+                        // ms_for_quantum_to_skip = the # of quantum beyond the current quantum that will be skipped
+                        // - when we have already sent at least 1 additional quantum of bytes
+                        const auto msForQuantumToSkip = (quantumAheadToSchedule - 1) * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+
+                        // carry forward extra bytes from quantum that will be filled by the bytes we have already sent
+                        // (including the current quantum)
+                        // then adding the bytes we're about to send
+                        m_bytesSendingThisQuantum -= m_bytesSendingPerQuantum * quantumAheadToSchedule;
+                        m_bytesSendingThisQuantum += verifiedNewBufferSize;
+
+                        // update the return task for when to schedule the send
+                        // first, calculate the time to get to the end of this time quantum
+                        // - only adjust if the current time isn't already outside this quantum
+                        if (currentTimeMs < m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod)
+                        {
+                            returnTask.m_timeOffsetMilliseconds = m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod - currentTimeMs;
+                        }
+                        // then add in any quantum we need to skip
+                        returnTask.m_timeOffsetMilliseconds += msForQuantumToSkip;
+                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to RateLimit (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
+
+                        // finally, adjust quantum_start_time_ms to the next quantum which IO will complete
+                        m_quantumStartTimeMs += msForQuantumToSkip + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
                     }
-                    // then add in any quantum we need to skip
-                    returnTask.m_timeOffsetMilliseconds += msForQuantumsToSkip;
-                    PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to RateLimit (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
-
-                    // finally, adjust quantum_start_time_ms to the next quantum which IO will complete
-                    m_quantumStartTimeMs += msForQuantumsToSkip + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
                 }
-            }
-            else if (m_burstCount.has_value())
-            {
-                if (m_burstCount.value() == 0)
+                else if (m_burstCount.has_value())
                 {
-                    m_burstCount = ctsConfig::g_configSettings->BurstCount;
+                    if (m_burstCount.value() == 0)
+                    {
+                        m_burstCount = ctsConfig::g_configSettings->BurstCount;
+                    }
+
+                    m_burstCount = m_burstCount.value() - 1;
+                    if (m_burstCount.value() == 0)
+                    {
+                        returnTask.m_timeOffsetMilliseconds = m_burstDelay.value();
+                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to BurstDelay (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
+                    }
+                    else
+                    {
+                        PRINT_DEBUG_INFO(L"\t\tctsIOPattern : not delaying the next send due to BurstDelay\n");
+                    }
                 }
 
-                m_burstCount = m_burstCount.value() - 1;
-                if (m_burstCount.value() == 0)
+                returnTask.m_ioAction = ctsTaskAction::Send;
+                returnTask.m_bufferType = ctsTask::BufferType::Static;
+                returnTask.m_bufferLength = verifiedNewBufferSize;
+                returnTask.m_bufferOffset = m_sendPatternOffset;
+                returnTask.m_expectedPatternOffset = 0;
+                returnTask.m_buffer = g_senderSharedBuffer;
+
+                // every RIOSend must have unique RIO buffer IDs - it can't reuse buffers ID's like WSASend can use the same m_buffer
+                if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
                 {
-                    returnTask.m_timeOffsetMilliseconds = m_burstDelay.value();
-                    PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to BurstDelay (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
+                    FAIL_FAST_IF_MSG(
+                        m_sendingRioBufferIds.empty(),
+                        "m_sendingRioBufferIds is empty for a new Send task  (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
+                    returnTask.m_bufferType = ctsTask::BufferType::Dynamic;
+                    // Release successfully hands off the RIO_BUFFERID - safe to pop this object now
+                    returnTask.m_rioBufferid = m_sendingRioBufferIds.rbegin()->Release();
+                    m_sendingRioBufferIds.pop_back();
                 }
-                else
-                {
-                    PRINT_DEBUG_INFO(L"\t\tctsIOPattern : not delaying the next send due to BurstDelay\n");
-                }
-            }
 
-            returnTask.m_ioAction = ctsTaskAction::Send;
-            returnTask.m_bufferType = ctsTask::BufferType::Static;
-            returnTask.m_bufferLength = verifiedNewBufferSize;
-            returnTask.m_bufferOffset = m_sendPatternOffset;
-            returnTask.m_expectedPatternOffset = 0;
-            returnTask.m_buffer = g_senderSharedBuffer;
+                // now that we are indicating this buffer to send, increment the offset for the next send request
+                m_sendPatternOffset += verifiedNewBufferSize;
+                m_sendPatternOffset %= c_bufferPatternSize;
 
-            // every RIOSend must have unique RIO buffer IDs - it can't reuse buffers ID's like WSASend can use the same m_buffer
-            if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
-            {
                 FAIL_FAST_IF_MSG(
-                    m_sendingRioBufferIds.empty(),
-                    "m_sendingRioBufferIds is empty for a new Send task  (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)", this);
-                returnTask.m_bufferType = ctsTask::BufferType::Dynamic;
-                // Release successfully hands off the RIO_BUFFERID - safe to pop this object now
-                returnTask.m_rioBufferid = m_sendingRioBufferIds.rbegin()->Release();
-                m_sendingRioBufferIds.pop_back();
+                    m_sendPatternOffset >= c_bufferPatternSize,
+                    "pattern_offset being too large (larger than BufferPatternSize %u) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                    c_bufferPatternSize, this);
+                FAIL_FAST_IF_MSG(
+                    returnTask.m_bufferLength + returnTask.m_bufferOffset > g_maximumBufferSize,
+                    "return_task (%p) for a Send request is specifying a buffer that is larger than the static SharedBufferSize (%u) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
+                    &returnTask, g_maximumBufferSize, this);
             }
-
-            // now that we are indicating this buffer to send, increment the offset for the next send request
-            m_sendPatternOffset += verifiedNewBufferSize;
-            m_sendPatternOffset %= c_bufferPatternSize;
-
-            FAIL_FAST_IF_MSG(
-                m_sendPatternOffset >= c_bufferPatternSize,
-                "pattern_offset being too large (larger than BufferPatternSize %u) means we might walk off the end of our shared buffer (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
-                c_bufferPatternSize, this);
-            FAIL_FAST_IF_MSG(
-                returnTask.m_bufferLength + returnTask.m_bufferOffset > g_maximumBufferSize,
-                "return_task (%p) for a Send request is specifying a buffer that is larger than the static SharedBufferSize (%u) (dt ctsTraffic!ctsTraffic::ctsIOPattern %p)",
-                &returnTask, g_maximumBufferSize, this);
         }
         else
         {
@@ -749,7 +751,7 @@ namespace ctsTraffic
         }
         //
         // We're using RtlCompareMemory instead of memcmp because it returns the first offset at which the buffers differ,
-        // which is more useful than memcmp's "sign of the difference between the first two differing elements"
+        // which is more useful than using memcmp, which returns "sign of the difference between the first two differing elements"
         //
         const auto* const patternBuffer = g_senderSharedBuffer + originalTask.m_expectedPatternOffset;
         const size_t lengthMatched = RtlCompareMemory(
@@ -920,7 +922,7 @@ namespace ctsTraffic
     //
     ctsTask ctsIoPatternPushPull::GetNextTaskFromPattern() noexcept
     {
-        uint32_t segmentSize{};
+        uint32_t segmentSize;
         if (m_listening)
         {
             // server role is opposite client
@@ -967,7 +969,7 @@ namespace ctsTraffic
         m_ioNeeded = true;
         m_intraSegmentTransfer += currentTransfer;
 
-        uint32_t segmentSize{};
+        uint32_t segmentSize;
         if (m_listening)
         {
             // server role is opposite client

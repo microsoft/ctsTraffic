@@ -129,9 +129,10 @@ namespace ctl
 			if (!m_groupAffinities.empty())
 			{
 				const GroupAffinity& ga = m_groupAffinities[index % m_groupAffinities.size()];
-				GROUP_AFFINITY gaff{};
-				gaff.Group = ga.Group;
-				gaff.Mask = ga.Mask;
+				GROUP_AFFINITY gaff{
+					.Mask = ga.Mask,
+					.Group = ga.Group
+				};
 				// ignore return value; affinity is best-effort
 				SetThreadGroupAffinity(GetCurrentThread(), &gaff, nullptr);
 				// TODO: leaving in the printf for now until I find a better way to
@@ -188,7 +189,7 @@ namespace ctl
 				return;
 			}
 
-			// wake up all workers by posting null OVERLAPPEDs
+			// wake up all workers by posting null OVERLAPPED pointers
 			for (size_t i = 0; i < m_workers.size(); ++i)
 			{
 				PostQueuedCompletionStatus(m_iocp.get(), 0, 0, nullptr);

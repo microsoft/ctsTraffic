@@ -88,19 +88,72 @@ for (unsigned char current_character : buffer)
 
 ---
 
-## 6. Use Descriptive Loop Variable Names
+## 6. Single Point of Return
 
-Loop variable names should describe what they hold, not be generic abbreviations.
+Functions should have a single `return` statement at the end rather than multiple early returns from the middle of the function body.
+Assign to a result variable and use control flow (`else`, `break`) to reach the single return point.
+This allows the compiler to optimize the call to the function using RVO (return value optimization).
 
 ```cpp
 // WRONG
-for (const auto& p : skipped_paths) { ... }
-for (const auto& fname : skipped_filenames) { ... }
+wsIOResult ctsWSARecvFrom(...) noexcept
+{
+    wsIOResult returnResult;
+    try
+    {
+        ...
+    }
+    catch (...)
+    {
+        const auto error = ctsConfig::PrintThrownException();
+        return wsIOResult(error); // early return
+    }
+
+    return returnResult;
+}
 
 // RIGHT
-for (const auto& path : skipped_paths) { ... }
-for (const auto& name : skipped_filenames) { ... }
-for (const auto& prefix : skipped_path_prefixes) { ... }
+wsIOResult ctsWSARecvFrom(...) noexcept
+{
+    wsIOResult returnResult;
+    try
+    {
+        ...
+    }
+    catch (...)
+    {
+        const auto error = ctsConfig::PrintThrownException();
+        returnResult = wsIOResult(error); // assign, don't return
+    }
+
+    return returnResult; // single return
+}
+```
+
+---
+
+## 7. Prefer Designated Initializers for Struct Initialization
+
+When initializing C-style structs, use C++20 designated initializers (`{ .member = value }`) instead of declaring the variable and assigning members separately.
+Only apply when setting all members of the structure. Default to initializing all fields, but if only a subset of fields are being initialized and if the structure was initially zero'd, do not make changes.
+
+```cpp
+// WRONG
+WSABUF wsabuffer;
+wsabuffer.buf = task.m_buffer + task.m_bufferOffset;
+wsabuffer.len = task.m_bufferLength;
+
+linger lingerOption{};
+lingerOption.l_onoff = 1;
+lingerOption.l_linger = 0;
+
+// RIGHT
+WSABUF wsa_buffer{
+    .len = task.m_bufferLength,
+    .buf = task.m_buffer + task.m_bufferOffset
+};
+
+linger lingerOption{ .l_onoff = 1, .l_linger = 0 };
 ```
 
 ---

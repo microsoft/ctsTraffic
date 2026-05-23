@@ -5,7 +5,7 @@ All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY OR NON-INFRINGEMENT.
 
 See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 
@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 #include <memory>
 #include <utility>
-#include <atomic>
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
@@ -76,9 +75,10 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
             const auto lock = m_listeningSocketLock.lock();
             if (m_listeningSocket)
             {
-                WSABUF wsaBuffer{};
-                wsaBuffer.buf = m_recvBuffer.data();
-                wsaBuffer.len = static_cast<ULONG>(m_recvBuffer.size());
+                WSABUF wsaBuffer{
+                    .len = static_cast<ULONG>(m_recvBuffer.size()),
+                    .buf = m_recvBuffer.data()
+                };
                 ::ZeroMemory(m_recvBuffer.data(), m_recvBuffer.size());
 
                 m_recvFlags = 0;
@@ -161,7 +161,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
 {
     // Cannot be holding the object_guard when calling into any pimpl-> methods
     // - will risk deadlocking the server
-    // Will store the pimpl call to be made in this std function to be exeucted outside the lock
+    // Will store the pimpl call to be made in this std function to be executed outside the lock
     std::function<void()> pimplOperation(nullptr);
 
     try

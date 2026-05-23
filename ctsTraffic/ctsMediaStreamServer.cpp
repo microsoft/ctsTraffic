@@ -531,9 +531,10 @@ namespace ctsTraffic
             if (ctsTask::BufferType::UdpConnectionId == nextTask.m_bufferType)
             {
                 // making a synchronous call
-                WSABUF wsaBuffer;
-                wsaBuffer.buf = nextTask.m_buffer;
-                wsaBuffer.len = nextTask.m_bufferLength;
+                WSABUF wsaBuffer{
+                    .len = nextTask.m_bufferLength,
+                    .buf = nextTask.m_buffer
+                };
 
                 const auto sendResult = WSASendTo(
                     socket,
@@ -554,7 +555,7 @@ namespace ctsTraffic
                         socket,
                         remoteAddr.writeCompleteAddress().c_str(),
                         error);
-                    return wsIOResult(error);
+                    returnResults = wsIOResult(error);
                 }
             }
             else
@@ -605,7 +606,8 @@ namespace ctsTraffic
                                 remoteAddr.writeCompleteAddress().c_str(),
                                 error);
                         }
-                        return wsIOResult(error);
+                        returnResults = wsIOResult(error);
+                        break;
                     }
 
                     // successfully completed synchronously
