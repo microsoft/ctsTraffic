@@ -4,6 +4,8 @@
 /ctsTraffic/x64
 /ctsTraffic/ARM64
 /ctsTraffic/ctsTraffic.log
+/ctsTraffic/ctsTraffic/*
+
 /Debug
 /Release
 /x64
@@ -31,4 +33,4 @@
 /.vs
 /_ReSharper.Caches
 /packages
-/ctsTraffic/ctsTraffic/x64/Release
+
