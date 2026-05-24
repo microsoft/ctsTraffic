@@ -26,6 +26,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
+#include "ctsTCPFunctions.h"
 // wil headers always included last
 #include <wil/stl.h>
 #include <wil/resource.h>
@@ -135,9 +136,9 @@ namespace details
         ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
         wil::unique_socket m_listenSocket;
-        ctl::ctSockaddr m_sockaddr;
         std::unique_ptr<ctl::ctThreadIocp> m_iocp;
         std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
+        ctl::ctSockaddr m_sockaddr;
     };
 
     // struct to track accepted sockets
@@ -357,67 +358,74 @@ namespace details
         {
             returnDetails.m_lastError = WSAECONNABORTED;
             m_acceptSocket.reset();
-            // return empty/failed details object
-            return returnDetails;
         }
-        const auto listeningSocket = listeningSocketObject->m_listenSocket.get();
-
-        const auto lock = m_lock.lock();
-
-        // if the OVERLAPPED* is null, it means it completed inline (no OVERLAPPED async completion)
-        // - thus we know it already succeeded
-        if (m_pOverlapped)
+        else
         {
-            DWORD transferred{};
-            DWORD flags{};
-            if (!WSAGetOverlappedResult(
-                listeningSocket,
-                m_pOverlapped,
-                &transferred,
-                FALSE,
-                &flags))
+            const auto listeningSocket = listeningSocketObject->m_listenSocket.get();
+
+            const auto lock = m_lock.lock();
+
+            // using a bool to avoid multiple return calls
+			// so that this function correctly takes advantage of RVO (return value optimization)
+            // i.e., this function must return once
+            bool overlappedSucceeded = true;
+            // if the OVERLAPPED* is null, it means it completed inline (no OVERLAPPED async completion)
+            // - thus we know it already succeeded
+            if (m_pOverlapped)
             {
-                returnDetails.m_lastError = WSAGetLastError();
-                ctsConfig::PrintErrorIfFailed("AcceptEx", returnDetails.m_lastError);
-                m_acceptSocket.reset();
-                // return empty/failed details object
-                return returnDetails;
+                DWORD transferred{};
+                DWORD flags{};
+                if (!WSAGetOverlappedResult(
+                    listeningSocket,
+                    m_pOverlapped,
+                    &transferred,
+                    FALSE,
+                    &flags))
+                {
+                    returnDetails.m_lastError = WSAGetLastError();
+                    ctsConfig::PrintErrorIfFailed("AcceptEx", returnDetails.m_lastError);
+                    m_acceptSocket.reset();
+                    overlappedSucceeded = false;
+                }
+            }
+
+            if (overlappedSucceeded)
+            {
+                // if successful, update the socket context
+                // this should never fail - break if it does to debug it
+                const auto err = setsockopt(
+                    m_acceptSocket.get(),
+                    SOL_SOCKET,
+                    SO_UPDATE_ACCEPT_CONTEXT,
+                    reinterpret_cast<const char*>(&listeningSocket),
+                    sizeof listeningSocket);
+                FAIL_FAST_IF_MSG(
+                    err != 0,
+                    "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%zu], listen socket [%zu]",
+                    WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
+
+                SOCKADDR_INET* localAddr{};
+                auto localAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
+                SOCKADDR_INET* remoteAddr{};
+                auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
+
+                ctl::ctGetAcceptExSockaddrs(
+                    m_outputBuffer,
+                    0,
+                    c_singleOutputBufferSize,
+                    c_singleOutputBufferSize,
+                    reinterpret_cast<sockaddr**>(&localAddr),
+                    &localAddrLen,
+                    reinterpret_cast<sockaddr**>(&remoteAddr),
+                    &remoteAddrLen);
+
+                // transfer ownership of the SOCKET to the caller
+                returnDetails.m_acceptSocket = std::move(m_acceptSocket);
+                returnDetails.m_lastError = 0;
+                returnDetails.m_localAddr.setSockaddr(localAddr);
+                returnDetails.m_remoteAddr.setSockaddr(remoteAddr);
             }
         }
-
-        // if successful, update the socket context
-        // this should never fail - break if it does to debug it
-        const auto err = setsockopt(
-            m_acceptSocket.get(),
-            SOL_SOCKET,
-            SO_UPDATE_ACCEPT_CONTEXT,
-            reinterpret_cast<const char*>(&listeningSocket),
-            sizeof listeningSocket);
-        FAIL_FAST_IF_MSG(
-            err != 0,
-            "setsockopt(SO_UPDATE_ACCEPT_CONTEXT) failed [%d], accept socket [%zu], listen socket [%zu]",
-            WSAGetLastError(), m_acceptSocket.get(), listeningSocket);
-
-        SOCKADDR_INET* localAddr{};
-        auto localAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
-        SOCKADDR_INET* remoteAddr{};
-        auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
-
-        ctl::ctGetAcceptExSockaddrs(
-            m_outputBuffer,
-            0,
-            c_singleOutputBufferSize,
-            c_singleOutputBufferSize,
-            reinterpret_cast<sockaddr**>(&localAddr),
-            &localAddrLen,
-            reinterpret_cast<sockaddr**>(&remoteAddr),
-            &remoteAddrLen);
-
-        // transfer ownership of the SOCKET to the caller
-        returnDetails.m_acceptSocket = std::move(m_acceptSocket);
-        returnDetails.m_lastError = 0;
-        returnDetails.m_localAddr.setSockaddr(localAddr);
-        returnDetails.m_remoteAddr.setSockaddr(remoteAddr);
 
         return returnDetails;
     }
@@ -472,7 +480,7 @@ namespace details
 
                     ctsConfig::SetPostConnectOptions(acceptedSocket.m_acceptSocket.get(), acceptedSocket.m_remoteAddr);
 
-                    // socket ownership was successfully transfered
+                    // socket ownership was successfully transferred
                     sharedSocket->SetSocket(acceptedSocket.m_acceptSocket.release());
                     sharedSocket->SetRemoteSockaddr(acceptedSocket.m_remoteAddr);
                     sharedSocket->CompleteState(0);
@@ -586,7 +594,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
         ctsConfig::SetPostConnectOptions(acceptedConnection.m_acceptSocket.get(), acceptedConnection.m_remoteAddr);
 
-        // transfering ownership to the ctsSocket
+        // transferring ownership to the ctsSocket
         sharedSocket->SetSocket(acceptedConnection.m_acceptSocket.release());
         sharedSocket->SetRemoteSockaddr(acceptedConnection.m_remoteAddr);
         sharedSocket->CompleteState(0);
