@@ -38,18 +38,6 @@ namespace ctsTraffic
         // shutdown() tears down the socket object
         Shutdown();
 
-        /*
-        // wait for all IO to be completed before deleting the pattern if this is RIO
-        // as the IO requests are still using the RIO Buffers we gave it
-        if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
-        {
-            while (GetPendedIoCount() != 0)
-            {
-                YieldProcessor();
-            }
-        }
-        */
-
         // if the IO pattern is still alive, must delete it once in the destructor before this object goes away
         // - can't reset this in ctsSocket::shutdown since ctsSocket::shutdown can be called from the parent ctsSocketState 
         //   and there may be callbacks still running holding onto a reference to this ctsSocket object
@@ -118,9 +106,9 @@ namespace ctsTraffic
 
     void ctsSocket::PrintPatternResults(uint32_t lastError) const noexcept
     {
+        const auto lock = m_lock.lock();
         if (m_pattern)
         {
-            const auto lock = m_lock.lock();
             m_pattern->PrintStatistics(
                 GetLocalSockaddr(),
                 GetRemoteSockaddr());
@@ -179,6 +167,7 @@ namespace ctsTraffic
 
     void ctsSocket::SetIoPattern()
     {
+        const auto lock = m_lock.lock();
         m_pattern = ctsIoPattern::MakeIoPattern();
         if (!m_pattern)
         {

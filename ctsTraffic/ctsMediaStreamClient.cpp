@@ -42,7 +42,7 @@ namespace ctsTraffic
 	static IoImplStatus ctsMediaStreamClientIoImpl(
 		const std::shared_ptr<ctsSocket>& sharedSocket,
 		SOCKET socket,
-		const std::shared_ptr<ctsIoPattern>& lockedPattern,
+		ctsIoPattern* const lockedPattern,
 		const ctsTask& task) noexcept;
 
 	static void ctsMediaStreamClientIoCompletionCallback(
@@ -70,8 +70,8 @@ namespace ctsTraffic
 
 		// hold a reference on the socket
 		const auto lockedSocket = sharedSocket->AcquireSocketLock();
-		const auto lockedPattern = lockedSocket.GetPattern();
 		const auto socket = lockedSocket.GetSocket();
+		auto* const lockedPattern = lockedSocket.GetPattern();
 		if (!lockedPattern || socket == INVALID_SOCKET)
 		{
 			return;
@@ -95,7 +95,7 @@ namespace ctsTraffic
 
 				// hold a reference on the socket
 				const auto lambdaLockedSocket = lambdaSharedSocket->AcquireSocketLock();
-				const auto lambdaLockedPattern = lambdaLockedSocket.GetPattern();
+				auto* const lambdaLockedPattern = lambdaLockedSocket.GetPattern();
 				if (!lambdaLockedPattern || lambdaLockedSocket.GetSocket() == INVALID_SOCKET)
 				{
 					return;
@@ -218,7 +218,7 @@ namespace ctsTraffic
 
 	// go into a loop issuing non-blocking recv's to drain all pended data until we get a WSAEWOULDBLOCK, which indicates the socket buffer is drained
 	// will update the caller's 'task' parameter if we move to a later task
-	static ctsIoStatus ctsMediaStreamClientNonBlockedRecv(const std::shared_ptr<ctsIoPattern>& lockedPattern, SOCKET socket, ctsTask& task)
+	static ctsIoStatus ctsMediaStreamClientNonBlockedRecv(ctsIoPattern* const lockedPattern, SOCKET socket, ctsTask& task)
 	{
 		// start with the initial task, then request new tasks until we get a WSAEWOULDBLOCK
 		for (;;)
@@ -286,21 +286,9 @@ namespace ctsTraffic
 	IoImplStatus ctsMediaStreamClientIoImpl(
 		const std::shared_ptr<ctsSocket>& sharedSocket,
 		SOCKET socket,
-		const std::shared_ptr<ctsIoPattern>& lockedPattern,
+		ctsIoPattern* const lockedPattern,
 		const ctsTask& task) noexcept
 	{
-		// add-ref the IO about to start
-		sharedSocket->IncrementIo();
-		auto decrement_if_not_pended = wil::scope_exit([&] {// decrement the IO count if failed and/or inlined-completed
-			const auto ioCount = sharedSocket->DecrementIo();
-			// IO count should never be zero: callers should be guaranteeing a ref-count before calling Impl
-			FAIL_FAST_IF_MSG(
-				0 == ioCount,
-				"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
-				sharedSocket.get());
-			}
-		);
-
 		// work with a local copy of the task in case we need to update it for the next loop iteration
 		ctsTask local_task = task;
 
@@ -308,8 +296,14 @@ namespace ctsTraffic
 		// so we will fall through the later if block even if we don't spin on recvfrom first
 		IoImplStatus returnStatus;
 
+		bool socket_io_incremented = false;
+
 		if (local_task.m_ioAction == ctsTaskAction::Recv)
 		{
+			// add-ref the IO about to start
+			sharedSocket->IncrementIo();
+			socket_io_incremented = true;
+
 			// spin to drain any pending recv data before issuing the next async IO
 			switch (ctsMediaStreamClientNonBlockedRecv(lockedPattern, socket, local_task))
 			{
@@ -347,6 +341,13 @@ namespace ctsTraffic
 				[[fallthrough]];
 			case ctsTaskAction::Recv:
 			{
+				if (!socket_io_incremented)
+				{
+					// add-ref the IO about to start
+					sharedSocket->IncrementIo();
+					socket_io_incremented = true;
+				}
+
 				auto callback = [weak_reference = std::weak_ptr(sharedSocket), local_task](OVERLAPPED* ov) noexcept
 					{
 						ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, local_task);
@@ -376,7 +377,7 @@ namespace ctsTraffic
 					returnStatus.m_errorCode = static_cast<int>(result.m_errorCode);
 					returnStatus.m_continueIo = true;
 					// it's pended, so don't decrement the IO count
-					decrement_if_not_pended.release();
+					socket_io_incremented = false;
 				}
 				else
 				{
@@ -389,8 +390,7 @@ namespace ctsTraffic
 							result.m_errorCode);
 					}
 
-					switch (const auto protocolStatus = lockedPattern->CompleteIo(
-						local_task, result.m_bytesTransferred, result.m_errorCode))
+					switch (lockedPattern->CompleteIo(local_task, result.m_bytesTransferred, result.m_errorCode))
 					{
 					case ctsIoStatus::ContinueIo:
 						// the protocol wants to ignore the error and send more data
@@ -456,6 +456,15 @@ namespace ctsTraffic
 			}
 		}
 
+		if (socket_io_incremented)
+		{
+			const auto ioCount = sharedSocket->DecrementIo();
+			// IO count should never be zero: callers should be guaranteeing a ref-count before calling Impl
+			FAIL_FAST_IF_MSG(
+				0 == ioCount,
+				"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
+				sharedSocket.get());
+		}
 		return returnStatus;
 	}
 
@@ -474,7 +483,7 @@ namespace ctsTraffic
 
 		// hold a reference on the socket
 		const auto lockedSocket = sharedSocket->AcquireSocketLock();
-		const auto lockedPattern = lockedSocket.GetPattern();
+		auto* const lockedPattern = lockedSocket.GetPattern();
 		if (!lockedPattern)
 		{
 			sharedSocket->DecrementIo();

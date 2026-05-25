@@ -506,7 +506,7 @@ namespace ctsTraffic {
 				}
 
 				// hold a reference on the ioPattern to ask for the RIO IO count
-				const auto lockedPattern(lockedSocket.GetPattern());
+				const auto* const lockedPattern = lockedSocket.GetPattern();
 				if (!lockedPattern)
 				{
 					THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: failed to get a lock on the ctsIoPatter");
@@ -590,7 +590,7 @@ namespace ctsTraffic {
 
 				// Must lock the socket before doing anything on it
 				const auto lockedSocket(sharedSocket->AcquireSocketLock());
-				const auto lockedPattern(lockedSocket.GetPattern());
+				auto* const lockedPattern = lockedSocket.GetPattern();
 				if (!lockedPattern)
 				{
 					const auto lock = m_lock.lock();
@@ -672,7 +672,7 @@ namespace ctsTraffic {
 				{
 					return WSAECONNABORTED;
 				}
-				const auto lockedPattern(lockedSocket.GetPattern());
+				auto* const lockedPattern = lockedSocket.GetPattern();
 				if (!lockedPattern)
 				{
 					return WSAECONNABORTED;

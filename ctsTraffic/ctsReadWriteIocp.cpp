@@ -44,7 +44,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
 
     // hold a reference on the socket
     const auto lockedSocket = sharedSocket->AcquireSocketLock();
-    const auto lockedPattern = lockedSocket.GetPattern();
+    auto* const lockedPattern = lockedSocket.GetPattern();
     if (!lockedPattern)
     {
         gle = WSAECONNABORTED;
@@ -122,7 +122,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
     // hold a reference on the socket
     const auto lockedSocket = sharedSocket->AcquireSocketLock();
-    const auto lockedPattern = lockedSocket.GetPattern();
+    auto* const lockedPattern = lockedSocket.GetPattern();
     if (!lockedPattern)
     {
         return;

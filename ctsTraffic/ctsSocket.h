@@ -59,22 +59,22 @@ public:
             return m_socket;
         }
 
-        [[nodiscard]] std::shared_ptr<ctsIoPattern> GetPattern() const noexcept
+        [[nodiscard]] ctsIoPattern* GetPattern() const noexcept
         {
-            return m_patternWeakRef.lock();
+            return m_pattern.get();
         }
 
     private:
         friend class ctsSocket;
 
-        SocketReference(wil::cs_leave_scope_exit&& socketLock, SOCKET socket, std::weak_ptr<ctsIoPattern> patternWeakRef) noexcept :
-            m_socketLock(std::move(socketLock)), m_socket(socket), m_patternWeakRef(std::move(patternWeakRef))
+        SocketReference(wil::cs_leave_scope_exit&& socketLock, SOCKET socket, std::shared_ptr<ctsIoPattern> patternWeakRef) noexcept :
+            m_socketLock(std::move(socketLock)), m_socket(socket), m_pattern(std::move(patternWeakRef))
         {
         }
 
         const wil::cs_leave_scope_exit m_socketLock;
         const SOCKET m_socket = INVALID_SOCKET;
-        const std::weak_ptr<ctsIoPattern> m_patternWeakRef;
+        const std::shared_ptr<ctsIoPattern> m_pattern;
     };
 
     [[nodiscard]] SocketReference AcquireSocketLock() const noexcept;
