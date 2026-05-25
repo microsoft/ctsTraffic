@@ -32,7 +32,7 @@ namespace ctsTraffic
     // ReSharper disable once CppInconsistentNaming
     void ctsWSASocket(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     {
-        auto sharedSocket(weakSocket.lock());
+        const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
         {
             return;
@@ -61,7 +61,7 @@ namespace ctsTraffic
         else
         {
             const auto bindSize = ctsConfig::g_configSettings->BindAddresses.size();
-            auto socketCounter = g_bindCounter.fetch_add(1) + 1;
+            const auto socketCounter = g_bindCounter.fetch_add(1) + 1;
             localAddr = ctsConfig::g_configSettings->BindAddresses[socketCounter % bindSize];
         }
 

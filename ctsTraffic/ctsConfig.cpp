@@ -1292,7 +1292,7 @@ namespace ctsTraffic::ctsConfig
 				}
 				else
 				{
-					auto tempAddresses(ctSockaddr::ResolveName(value));
+					const auto tempAddresses(ctSockaddr::ResolveName(value));
 					if (tempAddresses.empty())
 					{
 						throw invalid_argument("-listen value did not resolve to an IP address");
@@ -1327,7 +1327,7 @@ namespace ctsTraffic::ctsConfig
 				const auto* const value = ParseArgument(*foundTarget, L"-target");
 				g_configSettings->TargetAddressStrings.emplace_back(value);
 
-				auto tempAddresses(ctSockaddr::ResolveName(value));
+				const auto tempAddresses(ctSockaddr::ResolveName(value));
 				if (!tempAddresses.empty())
 				{
 					g_configSettings->TargetAddresses.insert(end(g_configSettings->TargetAddresses),
@@ -1365,7 +1365,7 @@ namespace ctsTraffic::ctsConfig
 				}
 				else
 				{
-					auto tempAddresses(ctSockaddr::ResolveName(value));
+					const auto tempAddresses(ctSockaddr::ResolveName(value));
 					if (tempAddresses.empty())
 					{
 						throw invalid_argument("-bind value did not resolve to an IP address");

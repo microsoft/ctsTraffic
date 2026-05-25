@@ -175,4 +175,20 @@ namespace ctsTraffic
 
 		return returnResult;
 	}
+
+	int ctsSetNonBlockingIo(SOCKET socket) noexcept
+	{
+		int return_value{};
+		u_long nonBlockingMode = 1;
+		if (ioctlsocket(socket, FIONBIO, &nonBlockingMode) != 0)
+		{
+			return_value = WSAGetLastError();
+			PRINT_DEBUG_INFO(L"\t\tIO Failed: ioctlsocket(FIONBIO) (%d)\n", return_value);
+		}
+		else
+		{
+			PRINT_DEBUG_INFO(L"\t\tIO successfully called ioctlsocket(FIONBIO) (%d)\n", return_value);
+		}
+		return return_value;
+	}
 }

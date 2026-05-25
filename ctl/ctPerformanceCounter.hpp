@@ -1168,7 +1168,7 @@ namespace ctl
 			// the counters might be destroyed, and we don't hold a ref on them
 			if (m_lockedData)
 			{
-				auto lock = m_lockedData->m_lock.lock();
+				const auto lock = m_lockedData->m_lock.lock();
 				m_lockedData->m_countersStarted = false;
 			}
 			m_timer.reset();
@@ -1202,7 +1202,7 @@ namespace ctl
 			}
 
 			{
-				auto lock = m_lockedData->m_lock.lock();
+				const auto lock = m_lockedData->m_lock.lock();
 				m_lockedData->m_countersStarted = true;
 				m_timerIntervalMs = interval;
 				FILETIME relativeTimeout = wil::filetime::from_int64(
@@ -1215,7 +1215,7 @@ namespace ctl
 		void stop_all_counters() noexcept
 		{
 			{
-				auto lock = m_lockedData->m_lock.lock();
+				const auto lock = m_lockedData->m_lock.lock();
 				m_lockedData->m_countersStarted = false;
 			}
 
@@ -1276,7 +1276,7 @@ namespace ctl
 
 		static void NTAPI TimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER) noexcept
 		{
-			const auto* pThis = static_cast<ctPerformanceCounter*>(pContext);
+			const auto* const pThis = static_cast<ctPerformanceCounter*>(pContext);
 			try
 			{
 				// must guarantee COM is initialized on this thread
@@ -1292,7 +1292,7 @@ namespace ctl
 				// best-effort to update the caller with the data from this time-slice
 			}
 
-			auto lock = pThis->m_lockedData->m_lock.lock();
+			const auto lock = pThis->m_lockedData->m_lock.lock();
 			if (pThis->m_lockedData->m_countersStarted)
 			{
 				FILETIME relativeTimeout = wil::filetime::from_int64(

@@ -155,7 +155,7 @@ void ctsSocketBroker::Closing(bool wasActive) noexcept
 
 bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 {
-    HANDLE arWait[2]{m_doneEvent.get(), ctsConfig::g_configSettings->CtrlCHandle};
+    const HANDLE arWait[2]{m_doneEvent.get(), ctsConfig::g_configSettings->CtrlCHandle};
 
     auto fReturn = false;
     switch (WaitForMultipleObjects(2, arWait, FALSE, milliseconds))

@@ -173,7 +173,7 @@ namespace ctl
 		{
 			FAIL_FAST_IF(m_tpHandle.get() == nullptr);
 
-			std::shared_ptr<ctThreadpoolQueueWaitableResult<TReturn>> returnResult{ std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor)) };
+			const auto returnResult{ std::make_shared<ctThreadpoolQueueWaitableResult<TReturn>>(std::forward<FunctorType>(functor)) };
 			auto shouldSubmit = false;
 
 			// scope to the queue lock
@@ -352,7 +352,7 @@ namespace ctl
 
 		static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, void* context, PTP_WORK) noexcept try
 		{
-			auto* pThis = static_cast<ctThreadpoolQueue*>(context);
+			auto* const pThis = static_cast<ctThreadpoolQueue*>(context);
 
 			FunctionVariantT work;
 			{

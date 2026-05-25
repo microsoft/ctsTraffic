@@ -215,14 +215,14 @@ namespace details
                 try
                 {
                     // Make the structures for the listener and its accept sockets
-                    auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
+                    const auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
                     PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
                     //
                     // Add PendedAcceptRequests pended AcceptEx objects per listener
                     //
                     for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
                     {
-                        auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
+                        const auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
                         listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
                         // post AcceptEx on this socket
                         acceptSocketInfo->InitiateAcceptEx();
@@ -256,7 +256,7 @@ namespace details
                 // close out all caller requests for new accepted sockets
                 while (!m_pendedAcceptRequests.empty())
                 {
-                    auto weakSocket = m_pendedAcceptRequests.front();
+                    const auto weakSocket = m_pendedAcceptRequests.front();
 
                     if (const auto sharedSocket = weakSocket.lock())
                     {
@@ -537,7 +537,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         return;
     }
 
-    auto sharedSocket(weakSocket.lock());
+    const auto sharedSocket(weakSocket.lock());
     if (!sharedSocket)
     {
         return;

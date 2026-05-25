@@ -148,7 +148,7 @@ public:
     OVERLAPPED* new_request(std::function<void(OVERLAPPED*)> _callback) const override
     {
         // this can fail by throwing std::bad_alloc
-        auto* new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
+        auto* const new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
 
         // once creating a new request succeeds, start the IO
         // - all below calls are no-fail calls
@@ -195,7 +195,7 @@ private:
         const EXCEPTION_POINTERS* exr = nullptr;
         __try
         {
-            const auto* _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
+            const auto* const _request = static_cast<ctThreadIocpCallbackInfo*>(_overlapped);
             _request->callback(static_cast<OVERLAPPED*>(_overlapped));
             delete _request;
         }

@@ -237,7 +237,7 @@ try {
     // - plus the session name and file name appended to the end of the struct
     //
     std::shared_ptr<BYTE[]> pPropertyBuffer;
-    EVENT_TRACE_PROPERTIES* pProperties =
+    EVENT_TRACE_PROPERTIES* const pProperties =
         BuildEventTraceProperties(pPropertyBuffer, szSessionName, szFileName, msFlushTimer);
     //
     // Now start the trace session
@@ -271,7 +271,7 @@ try {
     // forced to make a copy of szSessionName in a non-const string for the EVENT_TRACE_LOGFILE.LoggerName member
     //
     const auto sessionSize = wcslen(szSessionName) + 1;
-    std::shared_ptr<wchar_t[]> localSessionName(new wchar_t[sessionSize]);
+    const std::shared_ptr<wchar_t[]> localSessionName(new wchar_t[sessionSize]);
     ::wcscpy_s(localSessionName.get(), sessionSize, szSessionName);
     localSessionName.get()[sessionSize - 1] = L'\0';
     //
@@ -301,8 +301,8 @@ try {
     //
     // forced to make a copy of szFileName in a non-const string for the EVENT_TRACE_LOGFILE.LogFileName member
     //
-    size_t fileNameSize = wcslen(szFileName) + 1;
-    std::shared_ptr<wchar_t[]> localFileName(new wchar_t[fileNameSize]);
+    const auto fileNameSize = wcslen(szFileName) + 1;
+    const std::shared_ptr<wchar_t[]> localFileName(new wchar_t[fileNameSize]);
     ::wcscpy_s(localFileName.get(), fileNameSize, szFileName);
     localFileName.get()[fileNameSize - 1] = L'\0';
     //
@@ -365,7 +365,7 @@ ctEtwReader::VerifyTraceSession()
         //
         // Quick check to see that the worker tread calling ProcessTrace didn't fail out
         //
-        DWORD dwWait = ::WaitForSingleObject(m_threadHandle, 0);
+        const auto dwWait = ::WaitForSingleObject(m_threadHandle, 0);
         if (WAIT_OBJECT_0 == dwWait) {
             //
             // The worker thread already exited - ProcessTrace() failed
@@ -389,7 +389,7 @@ inline void
 ctEtwReader::WaitForSession() const noexcept
 {
     if (m_threadHandle) {
-        DWORD dwWait = ::WaitForSingleObject(m_threadHandle, INFINITE);
+        const auto dwWait = ::WaitForSingleObject(m_threadHandle, INFINITE);
         FAIL_FAST_IF_MSG(
             dwWait != WAIT_OBJECT_0,
             "Failed waiting on ctEtwReader::StopSession thread to stop [%u - gle %u]",
@@ -454,7 +454,7 @@ ctEtwReader::StopSession(_In_ PCWSTR szSessionName) noexcept
 {
     EVENT_TRACE_PROPERTIES tempProperties{};
     tempProperties.Wnode.BufferSize = sizeof(EVENT_TRACE_PROPERTIES);
-    auto error_code = ::ControlTrace(NULL, szSessionName, &tempProperties, EVENT_TRACE_CONTROL_STOP);
+    const auto error_code = ::ControlTrace(NULL, szSessionName, &tempProperties, EVENT_TRACE_CONTROL_STOP);
     FAIL_FAST_IF_MSG(
         (error_code != ERROR_MORE_DATA) && (error_code != ERROR_SUCCESS),
         "ctEtwReader::StopSession - ControlTrace failed [%u] : cannot stop the trace session",
@@ -543,7 +543,7 @@ ctEtwReader::BuildEventTraceProperties(
     //   LogFileNameOffset
     //   LoggerNameOffset
     //
-    EVENT_TRACE_PROPERTIES* pProperties = reinterpret_cast<EVENT_TRACE_PROPERTIES*>(pPropertyBuffer.get());
+    EVENT_TRACE_PROPERTIES* const pProperties = reinterpret_cast<EVENT_TRACE_PROPERTIES*>(pPropertyBuffer.get());
     pProperties->MinimumBuffers = 1; // smaller will make it easier to flush - explicitly not performance sensitive
     pProperties->Wnode.BufferSize = static_cast<ULONG>(cbProperties);
     pProperties->Wnode.Guid = m_sessionGUID;
@@ -605,7 +605,7 @@ CATCH_RETURN();
 inline VOID WINAPI
 ctEtwReader::EventRecordCallback(PEVENT_RECORD pEventRecord) noexcept
 {
-    ctEtwReader* pEventReader = static_cast<ctEtwReader*>(pEventRecord->UserContext);
+    ctEtwReader* const pEventReader = static_cast<ctEtwReader*>(pEventRecord->UserContext);
 
     try {
         //
@@ -644,7 +644,7 @@ ctEtwReader::EventRecordCallback(PEVENT_RECORD pEventRecord) noexcept
 inline ULONG WINAPI
 ctEtwReader::BufferCallback(PEVENT_TRACE_LOGFILE Buffer) noexcept
 {
-    ctEtwReader* pEventReader = static_cast<ctEtwReader*>(Buffer->Context);
+    ctEtwReader* const pEventReader = static_cast<ctEtwReader*>(Buffer->Context);
     return Buffer->BuffersRead != pEventReader->m_numBuffers;
 }
 

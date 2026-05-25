@@ -148,7 +148,7 @@ namespace details
     private:
         static VOID NTAPI ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_WORK) noexcept
         {
-            auto* pimpl = static_cast<ctsSimpleAcceptImpl*>(pContext);
+            auto* const pimpl = static_cast<ctsSimpleAcceptImpl*>(pContext);
 
             // get an accept-socket off the vector (protected with its cs)
             auto lock = pimpl->m_acceptingCs.lock();

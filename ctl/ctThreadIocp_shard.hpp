@@ -73,7 +73,7 @@ namespace ctl
 		// new_request: allocate a callback info and return the OVERLAPPED*
 		OVERLAPPED* new_request(std::function<void(OVERLAPPED*)> _callback) const override
 		{
-			auto* new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
+			auto* const new_callback = new ctThreadIocpCallbackInfo(std::move(_callback));
 			ZeroMemory(&new_callback->ov, sizeof OVERLAPPED);
 			return &new_callback->ov;
 		}
@@ -129,7 +129,7 @@ namespace ctl
 			if (!m_groupAffinities.empty())
 			{
 				const GroupAffinity& ga = m_groupAffinities[index % m_groupAffinities.size()];
-				GROUP_AFFINITY gaff{
+				const GROUP_AFFINITY gaff{
 					.Mask = ga.Mask,
 					.Group = ga.Group
 				};
@@ -159,7 +159,7 @@ namespace ctl
 						const OVERLAPPED_ENTRY& e = entries[i];
 						if (e.lpOverlapped)
 						{
-							const auto* request = reinterpret_cast<ctThreadIocpCallbackInfo*>(e.lpOverlapped);
+							const auto* const request = reinterpret_cast<ctThreadIocpCallbackInfo*>(e.lpOverlapped);
 							request->callback(e.lpOverlapped);
 							delete request;
 						}

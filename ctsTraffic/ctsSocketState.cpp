@@ -144,7 +144,7 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
     // - since this could complete inline if it fails, and complete_state
     //   needs to know that we already tried to run the functor for this state
     //
-    auto* thisPtr = static_cast<ctsSocketState*>(context);
+    auto* const thisPtr = static_cast<ctsSocketState*>(context);
     switch (thisPtr->m_state)
     {
         case InternalState::Creating:

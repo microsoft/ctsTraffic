@@ -506,7 +506,7 @@ namespace ctsTraffic {
 				}
 
 				// hold a reference on the ioPattern to ask for the RIO IO count
-				auto lockedPattern(lockedSocket.GetPattern());
+				const auto lockedPattern(lockedSocket.GetPattern());
 				if (!lockedPattern)
 				{
 					THROW_WIN32_MSG(WSAECONNABORTED, "ctsRioIocp: failed to get a lock on the ctsIoPatter");

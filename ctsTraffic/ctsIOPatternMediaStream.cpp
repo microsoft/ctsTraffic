@@ -441,7 +441,7 @@ VOID CALLBACK ctsIoPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE
 {
     static constexpr char c_startBuffer[] = "START";
 
-    auto* thisPtr = static_cast<ctsIoPatternMediaStreamClient*>(pContext);
+    auto* const thisPtr = static_cast<ctsIoPatternMediaStreamClient*>(pContext);
     // take the base lock before touching any internal members
     const auto lock = thisPtr->AcquireIoPatternLock();
 
@@ -472,7 +472,7 @@ VOID CALLBACK ctsIoPatternMediaStreamClient::StartCallback(PTP_CALLBACK_INSTANCE
 
 VOID CALLBACK ctsIoPatternMediaStreamClient::TimerCallback(PTP_CALLBACK_INSTANCE, _In_ PVOID pContext, PTP_TIMER) noexcept
 {
-    auto* thisPtr = static_cast<ctsIoPatternMediaStreamClient*>(pContext);
+    auto* const thisPtr = static_cast<ctsIoPatternMediaStreamClient*>(pContext);
 
     // process frames until the timer is scheduled in the future to process more frames
     auto timerScheduled = false;

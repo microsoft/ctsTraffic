@@ -183,7 +183,7 @@ public:
         const auto propertyIterator = propertyObject.begin();
 
         // write the property
-        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        const ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
         propertyClassObject.set(*propertyIterator, arg1);
 
         // execute the method with the properties set
@@ -210,7 +210,7 @@ public:
         auto propertyIterator = propertyObject.begin();
 
         // write each property
-        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        const ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
         propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
         propertyClassObject.set(*propertyIterator, arg2);
@@ -239,7 +239,7 @@ public:
         auto propertyIterator = propertyObject.begin();
 
         // write each property
-        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        const ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
         propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
         propertyClassObject.set(*propertyIterator, arg2);
@@ -270,7 +270,7 @@ public:
         auto propertyIterator = propertyObject.begin();
 
         // write each property
-        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        const ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
         propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
         propertyClassObject.set(*propertyIterator, arg2);
@@ -304,7 +304,7 @@ public:
 
         // write each property
         //
-        ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
+        const ctWmiInstance propertyClassObject(m_wbemServices, inParamsInstance);
         propertyClassObject.set(*propertyIterator, arg1);
         ++propertyIterator;
         propertyClassObject.set(*propertyIterator, arg2);
@@ -379,7 +379,7 @@ public:
 private:
     void get_property(_In_ PCWSTR propertyName, _Inout_ VARIANT* pVariant) const
     {
-        auto* pInstance = m_instanceObject.get();
+        auto* const pInstance = m_instanceObject.get();
         THROW_IF_FAILED(pInstance->Get(
             propertyName,
             0,

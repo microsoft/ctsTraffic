@@ -65,7 +65,7 @@ static void ctsReadWriteIocpIoCompletionCallback(
         }
     }
 
-    const char* functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
+    const char* const functionName = ctsTaskAction::Send == task.m_ioAction ? "WriteFile" : "ReadFile";
     if (gle != NO_ERROR)
     {
         PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsReadWriteIocp]\n", functionName, gle);
@@ -200,7 +200,7 @@ void ctsReadWriteIocp(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                 continue;
             }
 
-            char* ioBuffer = nextIo.m_buffer + nextIo.m_bufferOffset;
+            char* const ioBuffer = nextIo.m_buffer + nextIo.m_bufferOffset;
             if (ctsTaskAction::Send == nextIo.m_ioAction)
             {
                 if (!WriteFile(reinterpret_cast<HANDLE>(socket), ioBuffer, nextIo.m_bufferLength, nullptr, pOverlapped)) // NOLINT(performance-no-int-to-ptr)

@@ -348,7 +348,7 @@ namespace ctsTraffic
 
     void NTAPI ctsSocket::ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER)
     {
-        auto* pThis = static_cast<ctsSocket*>(pContext);
+        auto* const pThis = static_cast<ctsSocket*>(pContext);
 
         ctsTask task;
         function<void(weak_ptr<ctsSocket>, const ctsTask&)> callback;

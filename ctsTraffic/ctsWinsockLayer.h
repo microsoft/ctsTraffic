@@ -155,4 +155,7 @@ wsIOResult ctsWSASendTo(
 
 // Set LINGER options to force an RST when the socket is closed
 wsIOResult ctsSetLingerToResetSocket(SOCKET socket) noexcept;
+
+int ctsSetNonBlockingIo(SOCKET socket) noexcept;
+
 }

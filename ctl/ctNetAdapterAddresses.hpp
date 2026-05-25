@@ -104,7 +104,7 @@ public:
 
         iterator operator++(int)
         {
-            auto tempIterator(*this);
+            const auto tempIterator(*this);
             ++*this;
             return tempIterator;
         }

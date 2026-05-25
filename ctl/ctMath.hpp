@@ -42,14 +42,14 @@ std::tuple<double, double> ctSampledStandardDeviation(const BidirectionalIterato
 
     const double sum = std::accumulate(begin, end, 0.0);
     const double mean = sum / static_cast<double>(size);
-    auto accum = 0.0;
+    auto accumulate = 0.0;
     for (auto iter = begin; iter != end; ++iter)
     {
-        auto& value = *iter;
-        accum += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
+        const auto& value = *iter;
+        accumulate += (static_cast<double>(value) - mean) * (static_cast<double>(value) - mean);
     }
 
-    const auto stdev = std::sqrt(accum / (static_cast<double>(size) - 1.0));
+    const auto stdev = std::sqrt(accumulate / (static_cast<double>(size) - 1.0));
     return std::make_tuple(mean, stdev);
 }
 

@@ -152,7 +152,7 @@ namespace ctsTraffic
                     const auto affinityPolicy = ctsConfig::GetCpuAffinityPolicy();
 
                     // compute per-shard affinities (round-robin per-cpu)
-                    std::optional<std::vector<ctl::GroupAffinity>> maybeAffinities = ctl::ComputeShardAffinities(shardCount, affinityPolicy);
+                    const std::optional<std::vector<ctl::GroupAffinity>> maybeAffinities = ctl::ComputeShardAffinities(shardCount, affinityPolicy);
 
                     for (uint32_t shard = 0; shard < shardCount; ++shard)
                     {
@@ -316,7 +316,7 @@ namespace ctsTraffic
         // Schedule the first IO on the specified ctsSocket
         void ScheduleIo(const std::weak_ptr<ctsSocket>& weakSocket, const ctsTask& task)
         {
-            auto sharedSocket = weakSocket.lock();
+            const auto sharedSocket = weakSocket.lock();
             if (!sharedSocket)
             {
                 THROW_WIN32_MSG(WSAECONNABORTED, "ctsSocket already freed");
@@ -367,7 +367,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    auto waitingEndpoint = g_awaitingEndpoints.rbegin();
+                    const auto waitingEndpoint = g_awaitingEndpoints.rbegin();
 
                     const auto existingSocket = std::ranges::find_if(
                         g_connectedSockets,
@@ -479,7 +479,7 @@ namespace ctsTraffic
             auto addToAwaiting = true;
             while (!g_acceptingSockets.empty())
             {
-                auto weakInstance = *g_acceptingSockets.rbegin();
+                const auto weakInstance = *g_acceptingSockets.rbegin();
                 if (const auto sharedInstance = weakInstance.lock())
                 {
                     // 'move' the accepting socket to connected

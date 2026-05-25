@@ -49,7 +49,7 @@ public:
     static std::vector<ctSockaddr> ResolveName(_In_ PCWSTR name)
     {
         ADDRINFOW* addrResult = nullptr;
-        auto freeAddrOnExit = wil::scope_exit([&]() noexcept {
+        const auto freeAddrOnExit = wil::scope_exit([&]() noexcept {
             if (addrResult)
             {
                 FreeAddrInfoW(addrResult);

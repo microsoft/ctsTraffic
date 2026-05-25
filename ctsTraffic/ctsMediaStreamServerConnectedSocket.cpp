@@ -85,7 +85,7 @@ void ctsMediaStreamServerConnectedSocket::CompleteState(uint32_t errorCode) cons
 
 VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(PTP_CALLBACK_INSTANCE, PVOID context, PTP_TIMER) noexcept
 {
-    auto* thisPtr = static_cast<ctsMediaStreamServerConnectedSocket*>(context);
+    auto* const thisPtr = static_cast<ctsMediaStreamServerConnectedSocket*>(context);
 
     // take a lock on the ctsSocket for this 'connection'
     const auto sharedSocket = thisPtr->m_weakSocket.lock();
