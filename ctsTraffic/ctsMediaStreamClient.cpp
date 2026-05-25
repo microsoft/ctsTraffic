@@ -216,137 +216,244 @@ namespace ctsTraffic
 		}
 	}
 
+	// go into a loop issuing non-blocking recv's to drain all pended data until we get a WSAEWOULDBLOCK, which indicates the socket buffer is drained
+	// will update the caller's 'task' parameter if we move to a later task
+	static ctsIoStatus ctsMediaStreamClientNonBlockedRecv(const std::shared_ptr<ctsIoPattern>& lockedPattern, SOCKET socket, ctsTask& task)
+	{
+		// start with the initial task, then request new tasks until we get a WSAEWOULDBLOCK
+		for (;;)
+		{
+			int recv_error = 0;
+			uint32_t bytes_received = 0;
+			constexpr int recvfrom_flags = 0;
+			const auto response = recvfrom(socket, task.m_buffer + task.m_bufferOffset, static_cast<int>(task.m_bufferLength), recvfrom_flags, nullptr, nullptr);
+			if (response == SOCKET_ERROR)
+			{
+				recv_error = WSAGetLastError();
+				if (recv_error == WSAEMSGSIZE)
+				{
+					// something truncated the datagram - don't treat it as a hard-error
+					// pass the count to the protocol to track it at their layer
+					ctsConfig::PrintErrorInfo(
+						L"MediaStream Client: %ws failed with WSAEMSGSIZE (datagram was truncated)",
+						task.m_ioAction == ctsTaskAction::Recv ? L"WSARecvFrom" : L"WSASendTo");
+					// recvfrom() does not return the actual byte count when this happens
+					// so will pass the full buffer to the protocol to move forward to the next recv
+					recv_error = NO_ERROR;
+					bytes_received = task.m_bufferLength;
+				}
+			}
+			else
+			{
+				bytes_received = response;
+			}
+
+			if (recv_error == WSAEWOULDBLOCK)
+			{
+				// tell the caller to post an async recv since the socket buffer is drained
+				return ctsIoStatus::ContinueIo;
+			}
+
+			// process the recv() return code
+			if (recv_error != NO_ERROR)
+			{
+				PRINT_DEBUG_INFO(L"\t\tIO Failed: recv(non-blocking) (%u) [ctsMediaStreamClient]\n", recv_error);
+			}
+
+			const auto protocolStatus = lockedPattern->CompleteIo(task, bytes_received, recv_error);
+			if (protocolStatus == ctsIoStatus::CompletedIo)
+			{
+				// the protocol is done with IO - return this to the caller
+				return ctsIoStatus::CompletedIo;
+			}
+			if (protocolStatus == ctsIoStatus::FailedIo)
+			{
+				// the protocol acknowledged the failure - socket is done with IO
+				ctsConfig::PrintErrorIfFailed("recvfrom", recv_error);
+				return ctsIoStatus::FailedIo;
+			}
+
+			// the protocol is requesting more IO - loop to issue another non-blocking recv()
+			task = lockedPattern->InitiateIo();
+			if (task.m_ioAction != ctsTaskAction::Recv)
+			{
+				// the protocol is requesting a different IO action - return this to the caller to handle
+				return ctsIoStatus::ContinueIo;
+			}
+		}
+	}
+
 	IoImplStatus ctsMediaStreamClientIoImpl(
 		const std::shared_ptr<ctsSocket>& sharedSocket,
 		SOCKET socket,
 		const std::shared_ptr<ctsIoPattern>& lockedPattern,
 		const ctsTask& task) noexcept
 	{
+		// add-ref the IO about to start
+		sharedSocket->IncrementIo();
+		auto decrement_if_not_pended = wil::scope_exit([&] {// decrement the IO count if failed and/or inlined-completed
+			const auto ioCount = sharedSocket->DecrementIo();
+			// IO count should never be zero: callers should be guaranteeing a ref-count before calling Impl
+			FAIL_FAST_IF_MSG(
+				0 == ioCount,
+				"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
+				sharedSocket.get());
+			}
+		);
+
+		// work with a local copy of the task in case we need to update it for the next loop iteration
+		ctsTask local_task = task;
+
+		// default to continue_io == true
+		// so we will fall through the later if block even if we don't spin on recvfrom first
 		IoImplStatus returnStatus;
 
-		switch (task.m_ioAction)
+		if (local_task.m_ioAction == ctsTaskAction::Recv)
 		{
-		case ctsTaskAction::Send:
-			[[fallthrough]];
-		case ctsTaskAction::Recv:
-		{
-			// add-ref the IO about to start
-			sharedSocket->IncrementIo();
-			auto callback = [weak_reference = std::weak_ptr(sharedSocket), task](OVERLAPPED* ov) noexcept
-				{
-					ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, task);
-				};
+			// spin to drain any pending recv data before issuing the next async IO
+			switch (ctsMediaStreamClientNonBlockedRecv(lockedPattern, socket, local_task))
+			{
+			case ctsIoStatus::CompletedIo:
+				// the protocol wants to ignore the error but is done with IO
+				sharedSocket->CloseSocket();
+				returnStatus.m_errorCode = NO_ERROR;
+				returnStatus.m_continueIo = false;
+				break;
 
-			PCSTR functionName{};
-			wsIOResult result;
-			if (ctsTaskAction::Send == task.m_ioAction)
-			{
-				functionName = "WSASendTo";
-				result = ctsWSASendTo(sharedSocket, socket, task, std::move(callback));
-			}
-			else if (ctsTaskAction::Recv == task.m_ioAction)
-			{
-				functionName = "WSARecvFrom";
-				result = ctsWSARecvFrom(sharedSocket, socket, task, std::move(callback));
-			}
-			else
-			{
-				FAIL_FAST_MSG(
-					"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)", &task);
-			}
+			case ctsIoStatus::FailedIo:
+				// the protocol acknowledged the failure - socket is done with IO
+				sharedSocket->CloseSocket();
+				returnStatus.m_errorCode = static_cast<int>(lockedPattern->GetLastPatternError());
+				returnStatus.m_continueIo = false;
+				break;
 
-			if (WSA_IO_PENDING == result.m_errorCode)
-			{
-				// if successful but did not complete inline
-				returnStatus.m_errorCode = static_cast<int>(result.m_errorCode);
+			case ctsIoStatus::ContinueIo:
+				returnStatus.m_errorCode = NO_ERROR;
 				returnStatus.m_continueIo = true;
+				break;
 			}
-			else
+		}
+		else
+		{
+			// fall into the next if block if we didn't first try to process recvfrom() calls
+			returnStatus.m_continueIo = true;
+		}
+
+		if (returnStatus.m_continueIo)
+		{
+			switch (local_task.m_ioAction)
 			{
-				// IO successfully completed inline and the async completion won't be invoked
-				// - or the IO failed
-				if (result.m_errorCode != 0)
+			case ctsTaskAction::Send:
+				[[fallthrough]];
+			case ctsTaskAction::Recv:
+			{
+				auto callback = [weak_reference = std::weak_ptr(sharedSocket), local_task](OVERLAPPED* ov) noexcept
+					{
+						ctsMediaStreamClientIoCompletionCallback(ov, weak_reference, local_task);
+					};
+
+				PCSTR functionName{};
+				wsIOResult result;
+				if (ctsTaskAction::Send == local_task.m_ioAction)
 				{
-					PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsMediaStreamClient]\n",
-						functionName,
-						result.m_errorCode);
+					functionName = "WSASendTo";
+					result = ctsWSASendTo(sharedSocket, socket, local_task, std::move(callback));
+				}
+				else if (ctsTaskAction::Recv == local_task.m_ioAction)
+				{
+					functionName = "WSARecvFrom";
+					result = ctsWSARecvFrom(sharedSocket, socket, local_task, std::move(callback));
+				}
+				else
+				{
+					FAIL_FAST_MSG(
+						"ctsMediaStreamClientIoImpl: received an unexpected IOStatus in the ctsIOTask (%p)", &local_task);
 				}
 
-				switch (const auto protocolStatus = lockedPattern->CompleteIo(
-					task, result.m_bytesTransferred, result.m_errorCode))
+				if (WSA_IO_PENDING == result.m_errorCode)
 				{
-				case ctsIoStatus::ContinueIo:
-					// the protocol wants to ignore the error and send more data
-					returnStatus.m_errorCode = NO_ERROR;
+					// if successful but did not complete inline
+					returnStatus.m_errorCode = static_cast<int>(result.m_errorCode);
 					returnStatus.m_continueIo = true;
-					break;
+					// it's pended, so don't decrement the IO count
+					decrement_if_not_pended.release();
+				}
+				else
+				{
+					// IO successfully completed inline and the async completion won't be invoked
+					// - or the IO failed
+					if (result.m_errorCode != 0)
+					{
+						PRINT_DEBUG_INFO(L"\t\tIO Failed: %hs (%u) [ctsMediaStreamClient]\n",
+							functionName,
+							result.m_errorCode);
+					}
 
-				case ctsIoStatus::CompletedIo:
-					// the protocol wants to ignore the error but is done with IO
-					sharedSocket->CloseSocket();
-					returnStatus.m_errorCode = NO_ERROR;
-					returnStatus.m_continueIo = false;
-					break;
+					switch (const auto protocolStatus = lockedPattern->CompleteIo(
+						local_task, result.m_bytesTransferred, result.m_errorCode))
+					{
+					case ctsIoStatus::ContinueIo:
+						// the protocol wants to ignore the error and send more data
+						returnStatus.m_errorCode = NO_ERROR;
+						returnStatus.m_continueIo = true;
+						break;
 
-				case ctsIoStatus::FailedIo:
-					// the protocol acknowledged the failure - socket is done with IO
-					// write out the error
-					ctsConfig::PrintErrorIfFailed(functionName, result.m_errorCode);
-					sharedSocket->CloseSocket();
-					returnStatus.m_errorCode = static_cast<int>(lockedPattern->GetLastPatternError());
-					returnStatus.m_continueIo = false;
-					break;
+					case ctsIoStatus::CompletedIo:
+						// the protocol wants to ignore the error but is done with IO
+						sharedSocket->CloseSocket();
+						returnStatus.m_errorCode = NO_ERROR;
+						returnStatus.m_continueIo = false;
+						break;
 
-				default:
-					FAIL_FAST_MSG("ctsMediaStreamClientIoImpl: unknown ctsSocket::IOStatus - %d\n", protocolStatus);
+					case ctsIoStatus::FailedIo:
+						// the protocol acknowledged the failure - socket is done with IO
+						// write out the error
+						ctsConfig::PrintErrorIfFailed(functionName, result.m_errorCode);
+						sharedSocket->CloseSocket();
+						returnStatus.m_errorCode = static_cast<int>(lockedPattern->GetLastPatternError());
+						returnStatus.m_continueIo = false;
+						break;
+					}
 				}
 
-				// decrement the IO count if failed and/or inlined-completed
-				const auto ioCount = sharedSocket->DecrementIo();
-				// IO count should never be zero: callers should be guaranteeing a ref-count before calling Impl
-				FAIL_FAST_IF_MSG(
-					0 == ioCount,
-					"ctsMediaStreamClient : ctsSocket::io_count fell to zero while the Impl function was called (dt %p ctsTraffic::ctsSocket)",
-					sharedSocket.get());
+				break;
 			}
 
-			break;
-		}
+			case ctsTaskAction::None:
+			{
+				// nothing failed, just no more IO right now
+				returnStatus.m_errorCode = NO_ERROR;
+				returnStatus.m_continueIo = false;
+				break;
+			}
 
-		case ctsTaskAction::None:
-		{
-			// nothing failed, just no more IO right now
-			returnStatus.m_errorCode = NO_ERROR;
-			returnStatus.m_continueIo = false;
-			break;
-		}
+			case ctsTaskAction::Abort:
+			{
+				// the protocol signaled to immediately stop the stream
+				lockedPattern->CompleteIo(local_task, 0, 0);
+				sharedSocket->CloseSocket();
 
-		case ctsTaskAction::Abort:
-		{
-			// the protocol signaled to immediately stop the stream
-			lockedPattern->CompleteIo(task, 0, 0);
-			sharedSocket->CloseSocket();
+				returnStatus.m_errorCode = NO_ERROR;
+				returnStatus.m_continueIo = false;
+				break;
+			}
 
-			returnStatus.m_errorCode = NO_ERROR;
-			returnStatus.m_continueIo = false;
-			break;
-		}
+			case ctsTaskAction::FatalAbort:
+			{
+				// the protocol indicated to rudely abort the connection
+				lockedPattern->CompleteIo(local_task, 0, 0);
+				sharedSocket->CloseSocket();
 
-		case ctsTaskAction::FatalAbort:
-		{
-			// the protocol indicated to rudely abort the connection
-			lockedPattern->CompleteIo(task, 0, 0);
-			sharedSocket->CloseSocket();
+				returnStatus.m_errorCode = static_cast<int>(lockedPattern->GetLastPatternError());
+				returnStatus.m_continueIo = false;
+				break;
+			}
 
-			returnStatus.m_errorCode = static_cast<int>(lockedPattern->GetLastPatternError());
-			returnStatus.m_continueIo = false;
-			break;
-		}
-
-		case ctsTaskAction::GracefulShutdown:
-		case ctsTaskAction::HardShutdown:
-		default:
-			break;
+			case ctsTaskAction::GracefulShutdown:
+			case ctsTaskAction::HardShutdown:
+			default:
+				break;
+			}
 		}
 
 		return returnStatus;
@@ -422,8 +529,7 @@ namespace ctsTraffic
 					lockedSocket.GetSocket(),
 					lockedPattern,
 					lockedPattern->InitiateIo());
-			}
-			while (status.m_continueIo);
+			} while (status.m_continueIo);
 
 			gle = status.m_errorCode;
 			break;
