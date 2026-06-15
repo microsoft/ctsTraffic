@@ -31,3 +31,4 @@
 /.vs
 /_ReSharper.Caches
 /packages
+/MSTest/ctsIOPatternProtocolPolicyUnitTest/ctsIOPatternProtocolPolicyUnitTest.log
