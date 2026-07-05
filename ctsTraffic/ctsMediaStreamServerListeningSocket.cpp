@@ -15,7 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 #include <memory>
 #include <utility>
-#include <atomic>
 // os headers
 #include <Windows.h>
 #include <WinSock2.h>
@@ -161,7 +160,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
 {
     // Cannot be holding the object_guard when calling into any pimpl-> methods
     // - will risk deadlocking the server
-    // Will store the pimpl call to be made in this std function to be exeucted outside the lock
+    // Will store the pimpl call to be made in this std function to be executed outside the lock
     std::function<void()> pimplOperation(nullptr);
 
     try

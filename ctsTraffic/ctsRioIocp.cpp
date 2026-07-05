@@ -242,11 +242,11 @@ namespace ctsTraffic { namespace Rioiocp
         //
         // Singleton initialization routine for the global CQ and its corresponding IOCP thread pool
         //
-        static BOOL CALLBACK InitOnceRioiocp(PINIT_ONCE, PVOID, PVOID*) noexcept
+        static BOOL CALLBACK InitOnceRioIocp(PINIT_ONCE, PVOID, PVOID*) noexcept
         {
             FAIL_FAST_IF(!InitializeCriticalSectionEx(&g_queueLock, ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock, 0));
 
-            // delete all cq's on error
+            // delete all completion queues on error
             auto deleteAllCqsOnError = wil::scope_exit([&]() noexcept { DeleteAllCompletionQueues(); });
 
             ::ZeroMemory(&g_rioNotifySettings, sizeof g_rioNotifySettings);
@@ -651,7 +651,7 @@ namespace ctsTraffic { namespace Rioiocp
                 sharedSocket->CompleteState(error);
             }
 
-            FAIL_FAST_IF(currentIo != static_cast<long>(m_outstandingRecvs + m_outstandingSends));
+            FAIL_FAST_IF(currentIo != m_outstandingRecvs + m_outstandingSends);
             return currentIo;
         }
 
@@ -875,7 +875,7 @@ namespace ctsTraffic { namespace Rioiocp
         //
         // guarantee fully initialized
         //
-        if (!InitOnceExecuteOnce(&Rioiocp::g_sharedBufferInitializer, Rioiocp::InitOnceRioiocp, nullptr, nullptr))
+        if (!InitOnceExecuteOnce(&Rioiocp::g_sharedBufferInitializer, Rioiocp::InitOnceRioIocp, nullptr, nullptr))
         {
             auto gle = GetLastError();
             if (0 == gle)

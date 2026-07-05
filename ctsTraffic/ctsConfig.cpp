@@ -937,7 +937,7 @@ namespace ctsTraffic::ctsConfig
 			}
 
 			// verify we can load QoS
-			QOS_VERSION QosVersion{ 1, 0 };
+			QOS_VERSION QosVersion{.MajorVersion = 1, .MinorVersion = 0 };
 			THROW_IF_WIN32_BOOL_FALSE_MSG(QOSCreateHandle(&QosVersion, &g_qosHandle), "QOSCreateHandle failed");
 
 			g_qosDscpValue = value;
@@ -3440,8 +3440,6 @@ namespace ctsTraffic::ctsConfig
 		ParseForPrePostSends(args);
 		ParseForRecvBufValue(args);
 		ParseForSendBufValue(args);
-
-		// move parsing into a helper consistent with the codebase style
 		ParseForRecvSharding(args);
 
 		// if sharding is enabled, there must be at least one adapter with RSS enabled

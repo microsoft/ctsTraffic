@@ -124,7 +124,7 @@ namespace ctsTraffic
 		{
 			// if we can't express the value in the given maxLength
 			// we'll convert it to units of millions
-			double float_value = 0.0 + value;
+			double float_value = 0.0 + static_cast<double>(value);
 			float_value /= 0.0 + 1000000;
 
 			return _snwprintf_s(
@@ -138,7 +138,7 @@ namespace ctsTraffic
 		{
 			// if we can't express the value in the given maxLength
 			// we'll convert it to units of millions
-			double float_value = 0.0 + value;
+			double float_value = 0.0 + static_cast<double>(value);
 			float_value /= 0.0 + 1000000000;
 
 			return _snwprintf_s(
@@ -152,7 +152,7 @@ namespace ctsTraffic
 		{
 			// if we can't express the value in the given maxLength
 			// we'll convert it to units of millions
-			double float_value = 0.0 + value;
+			double float_value = 0.0 + static_cast<double>(value);
 			float_value /= 0.0 + 1000000000000;
 
 			return _snwprintf_s(

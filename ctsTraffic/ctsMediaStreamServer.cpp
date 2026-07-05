@@ -113,9 +113,7 @@ namespace ctsTraffic
             ctsMediaStreamServerImpl::RemoveSocket(sharedSocket->GetRemoteSockaddr());
         }
     }
-    catch (...)
-    {
-    }
+    CATCH_LOG()
 
 
     namespace ctsMediaStreamServerImpl
@@ -276,7 +274,7 @@ namespace ctsTraffic
                 throw std::exception("ctsMediaStreamServer invoked with no listening addresses specified");
             }
 
-            // initiate the recv's in the 'listening' sockets
+            // initiate the receives in the 'listening' sockets
             for (const auto& listener : g_listeningSockets)
             {
                 listener->InitiateRecv();
@@ -305,9 +303,9 @@ namespace ctsTraffic
             for (size_t i = 0; i < g_listeningSockets.size(); ++i)
             {
                 infos.push_back(ListenerInfo{
-                    g_listeningSockets[i]->GetListeningAddress(),
-                    g_listeningSockets[i]->GetConnectionCount(),
-                    i
+	                .ListeningAddress = g_listeningSockets[i]->GetListeningAddress(),
+	                .ConnectionCount = g_listeningSockets[i]->GetConnectionCount(),
+	                .ShardIndex = i
                 });
             }
             return infos;
@@ -527,7 +525,7 @@ namespace ctsTraffic
             const ctl::ctSockaddr& remoteAddr(connectedSocket->GetRemoteAddress());
             const ctsTask nextTask = connectedSocket->GetNextTask();
 
-            wsIOResult returnResults;
+            wsIOResult returnResults{ERROR_SUCCESS};
             if (ctsTask::BufferType::UdpConnectionId == nextTask.m_bufferType)
             {
                 // making a synchronous call
@@ -548,13 +546,12 @@ namespace ctsTraffic
 
                 if (SOCKET_ERROR == sendResult)
                 {
-                    const auto error = WSAGetLastError();
+                    returnResults.m_errorCode = WSAGetLastError();
                     ctsConfig::PrintErrorInfo(
                         L"WSASendTo(%Iu, %ws) for the Connection-ID failed [%d]",
                         socket,
                         remoteAddr.writeCompleteAddress().c_str(),
-                        error);
-                    return wsIOResult(error);
+                        returnResults.m_errorCode);
                 }
             }
             else
@@ -580,8 +577,8 @@ namespace ctsTraffic
                         nullptr);
                     if (SOCKET_ERROR == sendResult)
                     {
-                        const auto error = WSAGetLastError();
-                        if (WSAEMSGSIZE == error)
+                        returnResults.m_errorCode = WSAGetLastError();
+                        if (WSAEMSGSIZE == returnResults.m_errorCode)
                         {
                             uint32_t bytesRequested = 0;
                             // iterate across each WSABUF* in the array
@@ -603,16 +600,17 @@ namespace ctsTraffic
                                 socket,
                                 sequenceNumber,
                                 remoteAddr.writeCompleteAddress().c_str(),
-                                error);
+                                returnResults.m_errorCode);
                         }
-                        return wsIOResult(error);
                     }
-
-                    // successfully completed synchronously
-                    returnResults.m_bytesTransferred += bytesSent;
-                    PRINT_DEBUG_INFO(
-                        L"\t\tctsMediaStreamServer sending seq number %lld (%u sent-bytes, %u frame-bytes)\n",
-                        sequenceNumber, bytesSent, returnResults.m_bytesTransferred);
+                    else
+                    {
+                        // successfully completed synchronously
+                        returnResults.m_bytesTransferred += bytesSent;
+                        PRINT_DEBUG_INFO(
+                            L"\t\tctsMediaStreamServer sending seq number %lld (%u sent-bytes, %u frame-bytes)\n",
+                            sequenceNumber, bytesSent, returnResults.m_bytesTransferred);
+                    }
                 }
             }
 

@@ -57,7 +57,8 @@ ctsIoPatternMediaStreamClient::ctsIoPatternMediaStreamClient() :
     m_maxDatagramSize(ctsConfig::GetMediaStream().DatagramMaxSize)
 {
     // if the entire session fits in the initial buffer, update accordingly
-    m_initialBufferFrames = std::min(m_finalFrame, m_initialBufferFrames);
+    FAIL_FAST_IF(m_finalFrame > UINT32_MAX);
+    m_initialBufferFrames = std::min(static_cast<uint32_t>(m_finalFrame), m_initialBufferFrames);
     m_timerWheelOffsetFrames = m_initialBufferFrames;
 
     constexpr long extraBufferDepthFactor = 2;
@@ -202,7 +203,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
             m_statistics.m_errorFrames.Increment();
 
             PRINT_DEBUG_INFO(
-                L"\t\tctsIOPatternMediaStreamClient received **an unknown** seq number (%lld) (outside the final frame %u)\n",
+                L"\t\tctsIOPatternMediaStreamClient received **an unknown** seq number (%lld) (outside the final frame %lld)\n",
                 receivedSequenceNumber,
                 m_finalFrame);
         }
@@ -226,7 +227,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
                 foundSlot->m_bytesReceived += completedBytes;
 
                 PRINT_DEBUG_INFO(
-                    L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%u received-bytes, %u frame-bytes)\n",
+                    L"\t\tctsIOPatternMediaStreamClient received seq number %lld (%u received-bytes, %lld frame-bytes)\n",
                     foundSlot->m_sequenceNumber,
                     completedBytes,
                     foundSlot->m_bytesReceived);
@@ -234,7 +235,7 @@ ctsIoPatternError ctsIoPatternMediaStreamClient::CompleteTaskBackToPattern(const
                 // stop the timer once we receive the last frame
                 // - it's not perfect (e.g. might have received them out of order)
                 // - but it will be very close for tracking the total bits/sec
-                if (static_cast<uint32_t>(receivedSequenceNumber) == m_finalFrame)
+                if (receivedSequenceNumber == m_finalFrame)
                 {
                     EndStatistics();
                 }
@@ -415,7 +416,7 @@ void ctsIoPatternMediaStreamClient::RenderFrame() noexcept
         droppedFrame.m_sequenceNumber = m_headEntry->m_sequenceNumber;
         PrintJitterUpdate(droppedFrame, ctsConfig::JitterFrameEntry());
     }
-    else // m_headEntry->bytes_received > m_frameSizeBytes
+    else // m_headEntry->bytes_received == m_frameSizeBytes
     {
         ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
         m_statistics.m_duplicateFrames.Increment();

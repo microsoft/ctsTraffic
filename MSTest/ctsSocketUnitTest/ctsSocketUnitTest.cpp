@@ -296,21 +296,25 @@ public:
         shared_ptr<ctsSocketState> default_socket_state_object;
         const auto test(make_shared<ctsSocket>(default_socket_state_object));
 
+        constexpr uint32_t zero{ 0 };
+        constexpr uint32_t one{ 1 };
+		constexpr uint32_t two{ 2 };
+
         Logger::WriteMessage(L"Incrementing to 1\n");
-        Assert::AreEqual(1, test->IncrementIo());
-        Assert::AreEqual(1, test->GetPendedIoCount());
+        Assert::AreEqual(one, test->IncrementIo());
+        Assert::AreEqual(one, test->GetPendedIoCount());
 
         Logger::WriteMessage(L"Incrementing to 2\n");
-        Assert::AreEqual(2, test->IncrementIo());
-        Assert::AreEqual(2, test->GetPendedIoCount());
+        Assert::AreEqual(two, test->IncrementIo());
+        Assert::AreEqual(two, test->GetPendedIoCount());
 
         Logger::WriteMessage(L"Decrementing to 1\n");
-        Assert::AreEqual(1, test->DecrementIo());
-        Assert::AreEqual(1, test->GetPendedIoCount());
+        Assert::AreEqual(one, test->DecrementIo());
+        Assert::AreEqual(one, test->GetPendedIoCount());
 
         Logger::WriteMessage(L"Decrementing to 0\n");
-        Assert::AreEqual(0, test->DecrementIo());
-        Assert::AreEqual(0, test->GetPendedIoCount());
+        Assert::AreEqual(zero, test->DecrementIo());
+        Assert::AreEqual(zero, test->GetPendedIoCount());
 
         // todo: not sure how to validate going below 0 invokes fail-fast
     }

@@ -145,9 +145,9 @@ public:
     //
     // methods for functors to use for ref-counting the # of IO they have issued on this socket
     //
-    int32_t IncrementIo() noexcept;
-    int32_t DecrementIo() noexcept;
-    int32_t GetPendedIoCount() const noexcept;
+    uint32_t IncrementIo() noexcept;
+    uint32_t DecrementIo() noexcept;
+    uint32_t GetPendedIoCount() const noexcept;
 
     //
     // method for the parent to instruct the ctsSocket to print the connection data
@@ -204,7 +204,7 @@ private:
     ctl::ctSockaddr m_localSockaddr;
     ctl::ctSockaddr m_targetSockaddr;
 
-    long m_ioCount = 0L;
+    uint32_t m_ioCount = 0L;
 
     static void NTAPI ThreadPoolTimerCallback(PTP_CALLBACK_INSTANCE, PVOID pContext, PTP_TIMER);
 };
