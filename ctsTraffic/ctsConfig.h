@@ -185,7 +185,7 @@ namespace ctsTraffic
 
         struct JitterFrameEntry
         {
-            uint32_t m_bytesReceived = 0UL;
+            int64_t m_bytesReceived = 0LL;
             int64_t m_sequenceNumber = 0LL;
             int64_t m_senderQpc = 0LL;
             int64_t m_senderQpf = 0LL;
@@ -350,7 +350,7 @@ namespace ctsTraffic
                 {
                     throw std::invalid_argument("The frame size is too small - it must be at least 40 bytes");
                 }
-                StreamLengthFrames = static_cast<uint32_t>(totalStreamLengthFrames);
+                StreamLengthFrames = totalStreamLengthFrames;
 
                 // guarantee frame alignment
                 FAIL_FAST_IF_MSG(

@@ -937,7 +937,7 @@ namespace ctsTraffic::ctsConfig
 			}
 
 			// verify we can load QoS
-			QOS_VERSION QosVersion{ 1, 0 };
+			QOS_VERSION QosVersion{.MajorVersion = 1, .MinorVersion = 0 };
 			THROW_IF_WIN32_BOOL_FALSE_MSG(QOSCreateHandle(&QosVersion, &g_qosHandle), "QOSCreateHandle failed");
 
 			g_qosDscpValue = value;

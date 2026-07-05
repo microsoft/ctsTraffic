@@ -287,24 +287,24 @@ namespace ctsTraffic
     }
 
     // AcquireSocketLock() must have been called when calling this
-    int32_t ctsSocket::IncrementIo() noexcept
+    uint32_t ctsSocket::IncrementIo() noexcept
     {
         ++m_ioCount;
         return m_ioCount;
     }
 
     // AcquireSocketLock() must have been called when calling this
-    int32_t ctsSocket::DecrementIo() noexcept
+    uint32_t ctsSocket::DecrementIo() noexcept
     {
-        --m_ioCount;
         FAIL_FAST_IF_MSG(
-            m_ioCount < 0,
-            "ctsSocket: io count fell below zero (%ld)\n", m_ioCount);
+            m_ioCount == 0,
+            "ctsSocket: io count fell below zero (%lu)\n", m_ioCount);
+        --m_ioCount;
         return m_ioCount;
     }
 
     // AcquireSocketLock() must have been called when calling this
-    int32_t ctsSocket::GetPendedIoCount() const noexcept
+    uint32_t ctsSocket::GetPendedIoCount() const noexcept
     {
         return m_ioCount;
     }

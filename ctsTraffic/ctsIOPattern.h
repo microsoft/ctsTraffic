@@ -513,9 +513,9 @@ public:
     ctsIoPatternError CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept override;
 
 private:
-    const ctsTaskAction m_ioAction;
     uint32_t m_recvNeeded{0};
     uint32_t m_sendBytesInFlight{0};
+    const ctsTaskAction m_ioAction;
 };
 
 //
@@ -540,9 +540,9 @@ public:
     ctsIoPatternError CompleteTaskBackToPattern(const ctsTask& task, uint32_t completedBytes) noexcept override;
 
 private:
-    const ctsTaskAction m_ioAction;
     uint32_t m_recvNeeded{0};
     uint32_t m_sendBytesInFlight{0};
+    const ctsTaskAction m_ioAction;
 };
 
 //
@@ -629,12 +629,12 @@ public:
     ctsIoPatternError CompleteTaskBackToPattern(const ctsTask& task, uint32_t currentTransfer) noexcept override;
 
 private:
+    int64_t m_baseTimeMilliseconds{ 0 };
     uint32_t m_frameSizeBytes{0};
     uint32_t m_currentFrameRequested{0};
     uint32_t m_currentFrameCompleted{0};
     uint32_t m_frameRateFps{0};
     uint32_t m_currentFrame{1};
-    int64_t m_baseTimeMilliseconds{0};
 
     enum class ServerState : std::uint8_t
     {
@@ -675,8 +675,8 @@ private:
 
     int64_t m_baseTimeMilliseconds = 0LL;
     const double m_frameRateMsPerFrame = 0LL;
+    const int64_t m_finalFrame = ctsConfig::GetMediaStream().StreamLengthFrames;
     const uint32_t m_frameSizeBytes = ctsConfig::GetMediaStream().FrameSizeBytes;
-    const uint32_t m_finalFrame = ctsConfig::GetMediaStream().StreamLengthFrames;
 
     uint32_t m_initialBufferFrames = ctsConfig::GetMediaStream().BufferedFrames;
     uint32_t m_timerWheelOffsetFrames = 0UL;

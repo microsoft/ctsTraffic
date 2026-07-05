@@ -312,6 +312,7 @@ namespace ctsTraffic {
 		}
 	};
 
+	constexpr auto* nullGuidString = "00000000-0000-0000-0000-000000000000";
 	struct ctsTcpStatistics
 	{
 		ctsStatsTracking m_startTime;
@@ -324,7 +325,6 @@ namespace ctsTraffic {
 		explicit ctsTcpStatistics(int64_t current_time = 0LL) noexcept :
 			m_startTime(current_time)
 		{
-			static const auto* nullGuidString = "00000000-0000-0000-0000-000000000000";
 			strcpy_s(
 				m_connectionIdentifier,
 				nullGuidString);
