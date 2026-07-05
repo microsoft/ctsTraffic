@@ -1007,6 +1007,8 @@ namespace ctsTraffic
 			SetTotalTransfer(++currentMaxTransfer);
 		}
 
+		// TODO: validate with copilot if there are additional races if PrePostRecvs > 1
+
 		m_remainingSendBytes = currentMaxTransfer / 2;
 		m_remainingRecvBytes = m_remainingSendBytes;
 

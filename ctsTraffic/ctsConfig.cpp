@@ -3440,8 +3440,6 @@ namespace ctsTraffic::ctsConfig
 		ParseForPrePostSends(args);
 		ParseForRecvBufValue(args);
 		ParseForSendBufValue(args);
-
-		// move parsing into a helper consistent with the codebase style
 		ParseForRecvSharding(args);
 
 		// if sharding is enabled, there must be at least one adapter with RSS enabled
