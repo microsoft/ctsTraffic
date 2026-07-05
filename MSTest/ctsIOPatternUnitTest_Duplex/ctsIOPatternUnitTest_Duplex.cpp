@@ -307,6 +307,61 @@ private:
         Assert::AreEqual(ctsIoStatus::CompletedIo, pattern->CompleteIo(task, 0, NO_ERROR));
     }
 
+    // Completes the connection-id handshake and the full data phase successfully, controlling
+    // which path carries the final byte: sendCompletesLast == true means the recv completes first
+    // and the send completes last (driving the transition); false is the reverse. Leaves the
+    // pattern at the very start of the end-of-connection (shutdown) sequence.
+    static void CompleteDataPhase(const std::shared_ptr<ctsIoPattern>& pattern, TestRole role, bool sendCompletesLast)
+    {
+        CompleteConnectionId(pattern, role);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(pattern, recv_task, send_task);
+
+        if (sendCompletesLast)
+        {
+            Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(pattern, recv_task, HalfTransferSize));
+            Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        }
+        else
+        {
+            Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+            Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(pattern, recv_task, HalfTransferSize));
+        }
+    }
+
+    // From the start of the client shutdown sequence: recv the server's 'DONE' completion and
+    // perform the graceful shutdown(SD_SEND), then post and return the pending zero-byte FIN recv
+    // so the caller can complete it with a FIN, an RST, an error, or unexpected data.
+    static ctsTask DriveClientToFinRecv(const std::shared_ptr<ctsIoPattern>& pattern)
+    {
+        ctsTask task = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(task, g_TestCompletionMessageLength, NO_ERROR));
+
+        task = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::GracefulShutdown, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(task, 0, NO_ERROR));
+
+        task = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction, L"client must request the FIN recv");
+        return task;
+    }
+
+    // From the start of the server shutdown sequence: send the 'DONE' completion, then post and
+    // return the pending zero-byte FIN recv so the caller can complete it with a FIN, RST, etc.
+    static ctsTask DriveServerToFinRecv(const std::shared_ptr<ctsIoPattern>& pattern)
+    {
+        ctsTask task = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(task, g_TestCompletionMessageLength, NO_ERROR));
+
+        task = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction, L"server must request the FIN recv");
+        return task;
+    }
+
 public:
     TEST_CLASS_INITIALIZE(Setup)
     {
@@ -684,6 +739,324 @@ public:
         Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
         Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, 0, WSAECONNRESET));
         Assert::AreEqual(static_cast<uint32_t>(WSAECONNRESET), test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Final data byte carried by the SEND path (send completes last) ----
+    //
+
+    // recv completes first (full), then the final send fails => the whole pattern fails even
+    // though all recv bytes already arrived.
+    TEST_METHOD(Duplex_Client_SendLast_SendFails)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, HalfTransferSize));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(send_task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    // recv completes first (full), then the final send completes with an RST (WSAECONNRESET).
+    // The client does not special-case send RSTs mid-transfer => failure.
+    TEST_METHOD(Duplex_Client_SendLast_SendRst)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, HalfTransferSize));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(send_task, 0, WSAECONNRESET));
+        Assert::AreEqual(static_cast<uint32_t>(WSAECONNRESET), test_pattern->GetLastPatternError());
+    }
+
+    // Server: recv completes first (full), then the final send fails => failure.
+    TEST_METHOD(Duplex_Server_SendLast_SendFails)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Server);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, HalfTransferSize));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(send_task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Final data byte carried by the RECV path (recv completes last) ----
+    //
+
+    // send completes first (full), then the final recv fails => failure.
+    TEST_METHOD(Duplex_Client_RecvLast_RecvFails)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(recv_task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    // send completes first (full), then the final recv completes with an RST => failure.
+    TEST_METHOD(Duplex_Client_RecvLast_RecvRst)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(recv_task, 0, WSAECONNRESET));
+        Assert::AreEqual(static_cast<uint32_t>(WSAECONNRESET), test_pattern->GetLastPatternError());
+    }
+
+    // send completes first, then the final recv completes partially: the pattern must re-post a
+    // recv for the remainder and only transition once the full transfer is confirmed.
+    TEST_METHOD(Duplex_Client_RecvLast_PartialThenComplete)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        // final recv lands only 4 of the 10 bytes
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, 4));
+
+        const ctsTask recv_remainder = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, recv_remainder.m_ioAction, L"a partial recv must be followed by a recv for the remainder");
+        Assert::AreEqual(HalfTransferSize - 4, recv_remainder.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_remainder, HalfTransferSize - 4));
+
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // Server: send completes first (full), then the final recv fails => failure.
+    TEST_METHOD(Duplex_Server_RecvLast_RecvFails)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Server);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(recv_task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Client hard-shutdown orderings and failures ----
+    //
+
+    // Hard shutdown success where the send carries the final data byte (send completes last).
+    TEST_METHOD(Duplex_Client_HardShutdown_SendLast)
+    {
+        this->SetTestDuplexDefaults(Client, Hard);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+        CompleteSuccessfulShutdown(test_pattern, Client, Hard);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // The hard-shutdown (RST) IO itself failing must fail the pattern.
+    TEST_METHOD(Duplex_Client_HardShutdown_Fails)
+    {
+        this->SetTestDuplexDefaults(Client, Hard);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ false);
+
+        // client recvs the server's completion 'DONE'
+        ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(task, g_TestCompletionMessageLength, NO_ERROR));
+
+        task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::HardShutdown, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Client completion-message ('DONE') validation ----
+    //
+
+    // The server's completion recv returning fewer than the expected 4 bytes must fail.
+    TEST_METHOD(Duplex_Client_CompletionTooFewBytes)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+
+        const ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, task.m_bufferLength);
+        // only 2 of the 4 completion bytes arrived
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, 2, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorNotAllDataTransferred), test_pattern->GetLastPatternError());
+    }
+
+    // The server's completion recv returning 4 bytes that are not "DONE" must fail.
+    TEST_METHOD(Duplex_Client_CompletionWrongContent)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+
+        const ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, task.m_bufferLength);
+        // corrupt the received completion so it no longer matches "DONE"
+        memcpy(task.m_buffer, "FAIL", g_TestCompletionMessageLength);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, g_TestCompletionMessageLength, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorNotAllDataTransferred), test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- FIN / RST arriving in the client's RequestFin state ----
+    //
+
+    // The client does NOT tolerate an abortive close while awaiting the server's FIN.
+    TEST_METHOD(Duplex_Client_FailFinWithConnAborted)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ false);
+        const ctsTask fin = DriveClientToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(fin, 0, WSAECONNABORTED));
+        Assert::AreEqual(static_cast<uint32_t>(WSAECONNABORTED), test_pattern->GetLastPatternError());
+    }
+
+    // The client does NOT tolerate a timeout while awaiting the server's FIN.
+    TEST_METHOD(Duplex_Client_FailFinWithTimeout)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ false);
+        const ctsTask fin = DriveClientToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(fin, 0, WSAETIMEDOUT));
+        Assert::AreEqual(static_cast<uint32_t>(WSAETIMEDOUT), test_pattern->GetLastPatternError());
+    }
+
+    // A clean FIN (zero-byte recv) completes the client transfer, regardless of which data path
+    // carried the final byte. Here the recv carried it.
+    TEST_METHOD(Duplex_Client_CleanFin_RecvLast)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ false);
+        const ctsTask fin = DriveClientToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(fin, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- FIN / RST arriving in the server's RequestFin state ----
+    //
+
+    // The server tolerates a timeout while awaiting the client's FIN (client may have gone away).
+    TEST_METHOD(Duplex_Server_TolerateTimeoutAwaitingFin)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ false);
+        const ctsTask fin = DriveServerToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(fin, 0, WSAETIMEDOUT));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // The server tolerates an abortive close (RST) while awaiting the client's FIN.
+    TEST_METHOD(Duplex_Server_TolerateConnAbortedAwaitingFin)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ true);
+        const ctsTask fin = DriveServerToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(fin, 0, WSAECONNABORTED));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // A non-abortive error (not RST/timeout/abort) while awaiting the client's FIN is NOT
+    // tolerated by the server and must fail.
+    TEST_METHOD(Duplex_Server_FailFinWithError)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ false);
+        const ctsTask fin = DriveServerToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(fin, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
+    }
+
+    // The server receiving extra data instead of the client's zero-byte FIN is a protocol error.
+    TEST_METHOD(Duplex_Server_ExtraBytesWhenExpectingFin)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ true);
+        const ctsTask fin = DriveServerToFinRecv(test_pattern);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(fin, 1, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorTooMuchDataTransferred), test_pattern->GetLastPatternError());
+    }
+
+    // The server's completion 'DONE' send failing must fail the pattern.
+    TEST_METHOD(Duplex_Server_FailSendingCompletion)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ false);
+
+        const ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, task.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, task.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, 0, g_TestErrorCode));
+        Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
     }
 };
 }
