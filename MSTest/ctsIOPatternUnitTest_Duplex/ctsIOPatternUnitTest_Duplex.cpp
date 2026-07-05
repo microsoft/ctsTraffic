@@ -15,6 +15,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "CppUnitTest.h"
 // cpp headers
 #include <memory>
+#include <vector>
+#include <algorithm>
 // OS headers
 #include <Windows.h>
 #include <WinSock2.h>
@@ -360,6 +362,104 @@ private:
         task = pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction, L"server must request the FIN recv");
         return task;
+    }
+
+    // ---- Multiple concurrent sends (ISB-gated) ----
+    //
+    // Duplex is full-duplex: while at most one recv is ever pended (PrePostRecvs==1 with
+    // -Verify:data), the *send* side keeps posting WSASend calls until the in-flight send bytes
+    // reach the Ideal Send Backlog (ISB == GetMaxBufferSize() * PrePostSends, or a value pushed by
+    // the TCP stack via SIO_IDEAL_SEND_BACKLOG when PrePostSends==0). So a connection can have N
+    // concurrent sends alongside its single recv. These helpers configure a small per-IO buffer so
+    // the send-half spans multiple ISB chunks, letting the tests exercise N concurrently-pended
+    // sends completing in various orders (and the send re-drive as the ISB budget frees up).
+
+    static constexpr uint32_t MultiSendChunk = 10UL; // bytes per send/recv IO (== the per-IO buffer)
+
+    // Configures the Duplex defaults for N concurrent sends: each IO is capped to MultiSendChunk,
+    // ISB == MultiSendChunk * prePostSends (or a single chunk in ISB mode, prePostSends==0), and
+    // each direction transfers chunksPerDirection chunks.
+    void SetTestDuplexMultiSendDefaults(TestRole role, uint32_t prePostSends, uint32_t chunksPerDirection) const
+    {
+        SetTestDuplexDefaults(role, Graceful);
+        ctsConfig::g_configSettings->PrePostSends = prePostSends;
+        // per-IO buffer == one chunk, so both sends and recvs are handed out one chunk at a time
+        g_BufferSize = MultiSendChunk;
+        // ISB base == one chunk; total ISB budget == MultiSendChunk * prePostSends (one chunk in ISB mode)
+        g_MaxBufferSize = MultiSendChunk;
+        // split evenly: chunksPerDirection each way
+        g_transferSize = static_cast<uint64_t>(2 * chunksPerDirection) * MultiSendChunk;
+    }
+
+    // Retrieves the concurrently-pended data IO: one recv followed by expectedSends sends (bounded
+    // by the ISB budget), then asserts the pattern yields None - it must not over-subscribe beyond
+    // 1 recv + the ISB-budgeted sends, nor busy-loop.
+    static void GetPendedMultiSendTasks(const std::shared_ptr<ctsIoPattern>& pattern, ctsTask& recvTask, std::vector<ctsTask>& sendTasks, uint32_t expectedSends)
+    {
+        recvTask = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, recvTask.m_ioAction, L"first Duplex data task should be a recv");
+        Assert::AreEqual(MultiSendChunk, recvTask.m_bufferLength);
+
+        sendTasks.clear();
+        for (uint32_t i = 0; i < expectedSends; ++i)
+        {
+            const ctsTask sendTask = pattern->InitiateIo();
+            Assert::AreEqual(ctsTaskAction::Send, sendTask.m_ioAction, L"expected a concurrently-pended send within the ISB budget");
+            Assert::AreEqual(MultiSendChunk, sendTask.m_bufferLength);
+            sendTasks.push_back(sendTask);
+        }
+
+        // the recv is pended and the ISB send budget is fully consumed => no more IO right now
+        const ctsTask noTask = pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::None, noTask.m_ioAction, L"pattern must not pend more than 1 recv + the ISB-budgeted sends");
+    }
+
+    // Completes the given pended sends (forward or reverse order), then drains any sends the pattern
+    // re-drives once the ISB budget frees up (send-half larger than the budget), until none is
+    // offered. Every send completion must be ContinueIo. The single recv is still pending
+    // throughout, so InitiateIo can only return Send or None here.
+    static void CompleteMultiSends(const std::shared_ptr<ctsIoPattern>& pattern, const std::vector<ctsTask>& pendedSends, bool reverseOrder)
+    {
+        std::vector<ctsTask> order(pendedSends.begin(), pendedSends.end());
+        if (reverseOrder)
+        {
+            ranges::reverse(order);
+        }
+        for (const ctsTask& sendTask : order)
+        {
+            Assert::AreEqual(ctsTaskAction::Send, sendTask.m_ioAction);
+            Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(sendTask, sendTask.m_bufferLength, NO_ERROR));
+        }
+
+        // drain any re-driven sends now that the ISB budget has room
+        for (;;)
+        {
+            const ctsTask next = pattern->InitiateIo();
+            if (ctsTaskAction::Send != next.m_ioAction)
+            {
+                Assert::AreEqual(ctsTaskAction::None, next.m_ioAction, L"with the recv still pending, only Send or None may be offered");
+                break;
+            }
+            Assert::AreEqual(ctsIoStatus::ContinueIo, pattern->CompleteIo(next, next.m_bufferLength, NO_ERROR));
+        }
+    }
+
+    // Receives the entire recv-half as sequential chunk-sized recvs (PrePostRecvs==1), starting from
+    // an already-pended recv task. Every completion is ContinueIo (the transition into shutdown is
+    // itself ContinueIo). Returns after the final data recv has been completed.
+    static void CompleteMultiSendRecvHalf(const std::shared_ptr<ctsIoPattern>& pattern, const ctsTask& firstRecv, uint32_t recvChunks)
+    {
+        ctsTask recvTask = firstRecv;
+        for (uint32_t i = 0; i < recvChunks; ++i)
+        {
+            Assert::AreEqual(ctsTaskAction::Recv, recvTask.m_ioAction);
+            Assert::AreEqual(MultiSendChunk, recvTask.m_bufferLength);
+            Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(pattern, recvTask, MultiSendChunk));
+            if (i + 1 < recvChunks)
+            {
+                recvTask = pattern->InitiateIo();
+            }
+        }
     }
 
 public:
@@ -1279,6 +1379,172 @@ public:
         task = test_pattern->InitiateIo();
         Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction, L"the FIN is a distinct recv, never merged into the data recv");
         Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(task, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Multiple concurrent sends (N sends gated by the Ideal Send Backlog) ----
+    //
+    // The reported hang repro relies on the send side keeping *N* WSASend calls in flight - not one.
+    // With -PrePostSends:0 ctsTraffic follows the Ideal Send Backlog (a TCP hint of the optimal
+    // number of bytes to keep pended across N send calls); with -PrePostSends:N the ISB budget is
+    // MaxBufferSize * N. Because Duplex both sends and receives on the one connection, these tests
+    // verify the pattern pends N concurrent sends alongside its single recv, never over-subscribes,
+    // completes those sends in any order (forward / reverse / re-driven) and still reaches a clean
+    // finish - for both the client and the server role.
+    //
+
+    // CLIENT: exactly N sends pend concurrently with the single recv, then the pattern yields None
+    // (no over-subscription / no busy-loop), and the whole transfer still completes cleanly.
+    TEST_METHOD(Duplex_Client_MultipleConcurrentSends_PendedThenNone)
+    {
+        this->SetTestDuplexMultiSendDefaults(Client, 3, 3);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        std::vector<ctsTask> send_tasks;
+        GetPendedMultiSendTasks(test_pattern, recv_task, send_tasks, 3);
+        Assert::AreEqual(static_cast<size_t>(3), send_tasks.size(), L"three sends must be pended concurrently within the ISB budget");
+
+        CompleteMultiSends(test_pattern, send_tasks, false);
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 3);
+
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // CLIENT: the N concurrently-pended sends complete in reverse order (the last-posted send
+    // completes first). Completion order must not matter to the pattern's byte accounting.
+    TEST_METHOD(Duplex_Client_MultipleConcurrentSends_CompleteReverseOrder)
+    {
+        this->SetTestDuplexMultiSendDefaults(Client, 3, 3);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        std::vector<ctsTask> send_tasks;
+        GetPendedMultiSendTasks(test_pattern, recv_task, send_tasks, 3);
+
+        CompleteMultiSends(test_pattern, send_tasks, true);
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 3);
+
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // CLIENT: send-half (4 chunks) exceeds the ISB budget (3 chunks). Only 3 sends pend up front;
+    // completing one frees the budget so the pattern re-drives the 4th send. Exercises the ISB
+    // send re-drive path with sends still in flight.
+    TEST_METHOD(Duplex_Client_MultipleConcurrentSends_ReDriveAfterCompletion)
+    {
+        this->SetTestDuplexMultiSendDefaults(Client, 3, 4);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        std::vector<ctsTask> send_tasks;
+        // only 3 sends fit the ISB budget even though 4 chunks remain to send
+        GetPendedMultiSendTasks(test_pattern, recv_task, send_tasks, 3);
+
+        // completing one in-flight send frees a chunk of ISB budget => the 4th send is re-driven
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_tasks[0], MultiSendChunk, NO_ERROR));
+        const ctsTask reDriven = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, reDriven.m_ioAction, L"the freed ISB budget must re-drive the remaining send");
+        Assert::AreEqual(MultiSendChunk, reDriven.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(reDriven, MultiSendChunk, NO_ERROR));
+
+        // send-half now fully posted; complete the two still-in-flight sends
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_tasks[1], MultiSendChunk, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_tasks[2], MultiSendChunk, NO_ERROR));
+        Assert::AreEqual(ctsTaskAction::None, test_pattern->InitiateIo().m_ioAction, L"no more sends once the send-half is exhausted (recv still pending)");
+
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 4);
+
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // CLIENT: ISB mode (-PrePostSends:0). The Ideal Send Backlog starts at a single chunk, so only
+    // one send pends initially; when the TCP stack advertises a larger ISB (simulated via
+    // SetIdealSendBacklog) the pattern immediately pends the additional sends. This directly
+    // exercises the dynamic-ISB gate that governs the reported repro.
+    TEST_METHOD(Duplex_Client_IsbMode_DynamicBacklogGatesSends)
+    {
+        this->SetTestDuplexMultiSendDefaults(Client, 0, 3);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        // ISB starts at one chunk => one recv + a single send, then None
+        const ctsTask recv_task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, recv_task.m_ioAction);
+        Assert::AreEqual(MultiSendChunk, recv_task.m_bufferLength);
+
+        const ctsTask send1 = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, send1.m_ioAction);
+        Assert::AreEqual(MultiSendChunk, send1.m_bufferLength);
+        Assert::AreEqual(ctsTaskAction::None, test_pattern->InitiateIo().m_ioAction, L"the initial single-chunk ISB budget allows only one send");
+
+        // TCP raises the Ideal Send Backlog to three chunks; the pattern may now pend more sends
+        test_pattern->SetIdealSendBacklog(3 * MultiSendChunk);
+
+        const ctsTask send2 = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, send2.m_ioAction, L"the raised ISB must admit another send");
+        const ctsTask send3 = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, send3.m_ioAction, L"the raised ISB must admit another send");
+        Assert::AreEqual(ctsTaskAction::None, test_pattern->InitiateIo().m_ioAction, L"send-half fully posted at the raised ISB");
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send1, MultiSendChunk, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send2, MultiSendChunk, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send3, MultiSendChunk, NO_ERROR));
+
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 3);
+
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // SERVER: N sends pend concurrently with the single recv (server role), completing forward
+    // order, then the server's graceful shutdown (DONE send + FIN recv) completes cleanly.
+    TEST_METHOD(Duplex_Server_MultipleConcurrentSends_CompleteInOrder)
+    {
+        this->SetTestDuplexMultiSendDefaults(Server, 3, 3);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Server);
+
+        ctsTask recv_task;
+        std::vector<ctsTask> send_tasks;
+        GetPendedMultiSendTasks(test_pattern, recv_task, send_tasks, 3);
+        Assert::AreEqual(static_cast<size_t>(3), send_tasks.size(), L"three sends must be pended concurrently within the ISB budget");
+
+        CompleteMultiSends(test_pattern, send_tasks, false);
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 3);
+
+        CompleteSuccessfulShutdown(test_pattern, Server, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // SERVER: the N concurrently-pended sends complete in reverse order.
+    TEST_METHOD(Duplex_Server_MultipleConcurrentSends_CompleteReverseOrder)
+    {
+        this->SetTestDuplexMultiSendDefaults(Server, 3, 3);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Server);
+
+        ctsTask recv_task;
+        std::vector<ctsTask> send_tasks;
+        GetPendedMultiSendTasks(test_pattern, recv_task, send_tasks, 3);
+
+        CompleteMultiSends(test_pattern, send_tasks, true);
+        CompleteMultiSendRecvHalf(test_pattern, recv_task, 3);
+
+        CompleteSuccessfulShutdown(test_pattern, Server, Graceful);
         Assert::AreEqual(0u, test_pattern->GetLastPatternError());
     }
 };
