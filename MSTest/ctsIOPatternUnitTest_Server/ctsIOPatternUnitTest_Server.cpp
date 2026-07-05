@@ -85,9 +85,9 @@ uint64_t g_transferSize = 0ULL;
 bool g_IsListening = true;
 ctsTraffic::ctsConfig::MediaStreamSettings g_MediaStreamSettings;
 
-const uint32_t g_TestBufferLength = 4;
-const uint32_t g_TestRecvBufferLength = 1024;
-const uint32_t g_TestErrorCode = 1;
+constexpr uint32_t g_TestBufferLength = 4;
+constexpr uint32_t g_TestRecvBufferLength = 1024;
+constexpr uint32_t g_TestErrorCode = 1;
 
 ///
 /// Fakes
@@ -229,7 +229,7 @@ private:
         Hard
     };
 
-    static const uint32_t DefaultTransferSize = 10UL;
+    static constexpr uint32_t DefaultTransferSize = 10UL;
 
     void SetTestBaseClassDefaults(TestRole _role, TestShutdownMethod _shutdown = Graceful) const
     {

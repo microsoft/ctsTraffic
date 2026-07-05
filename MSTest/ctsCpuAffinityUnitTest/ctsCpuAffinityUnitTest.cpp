@@ -73,7 +73,7 @@ namespace ctsUnitTest
 
         TEST_METHOD(ComputeShardAffinities_Sanity)
         {
-            const uint32_t shardCount = 4;
+	        constexpr uint32_t shardCount = 4;
             auto mapping = ctl::ComputeShardAffinities(shardCount, ctl::CpuAffinityPolicy::PerCpu);
             Assert::IsTrue(mapping.has_value());
             Assert::AreEqual(shardCount, static_cast<uint32_t>(mapping->size()));

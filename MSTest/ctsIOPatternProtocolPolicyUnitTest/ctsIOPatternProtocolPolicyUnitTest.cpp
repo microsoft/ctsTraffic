@@ -77,7 +77,7 @@ inline std::wstring ToString<ctsTraffic::ctsIoPatternError>(const ctsTraffic::ct
 
 uint64_t g_transferSize = 0ULL;
 bool g_isListening = false;
-const uint32_t g_TestErrorCode = 1;
+constexpr uint32_t g_TestErrorCode = 1;
 
 ///
 /// Fakes
@@ -427,7 +427,7 @@ public:
 
     TEST_METHOD(GracefulShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+	    constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitClientGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -440,7 +440,7 @@ public:
 
     TEST_METHOD(HardShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+	    constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitClientHardShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -453,7 +453,7 @@ public:
 
     TEST_METHOD(TCPServerShutdownSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+	    constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitServerGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -466,7 +466,7 @@ public:
 
     TEST_METHOD(UdpClientSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+	    constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitUdpClientTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());
@@ -479,7 +479,7 @@ public:
 
     TEST_METHOD(UdpServerSetMaxTransfer)
     {
-        const uint64_t testTransferSize(100);
+	    constexpr uint64_t testTransferSize(100);
 
         const auto testPattern = InitUdpServerTest(250);
         Assert::AreEqual(g_transferSize, testPattern->GetMaxTransfer());

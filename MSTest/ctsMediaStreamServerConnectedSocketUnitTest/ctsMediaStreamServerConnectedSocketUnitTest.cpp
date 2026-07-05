@@ -338,7 +338,7 @@ public:
         test_connected_socket.ScheduleTask(test_task);
         // not 'done' yet, just stopped sending for the time-being
         Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
-        const uint32_t ExpectedCallbacks = 1;
+        constexpr uint32_t ExpectedCallbacks = 1;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
 
@@ -384,7 +384,7 @@ public:
         test_connected_socket.ScheduleTask(test_task);
         // not 'done' yet, just stopped sending for the time-being
         Assert::AreEqual(static_cast<DWORD>(WAIT_TIMEOUT), WaitForSingleObject(g_RemovedSocketEvent, 0));
-        const uint32_t ExpectedCallbacks = 10;
+        constexpr uint32_t ExpectedCallbacks = 10;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
 
@@ -434,7 +434,7 @@ public:
         test_connected_socket.ScheduleTask(test_task);
         // should complete within 1 second (a few ms after 900ms)
         Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 1250));
-        const uint32_t ExpectedCallbacks = 10;
+        constexpr uint32_t ExpectedCallbacks = 10;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
 
@@ -480,7 +480,7 @@ public:
         test_connected_socket.ScheduleTask(test_task);
         // 'done' since it failed
         Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 0));
-        const uint32_t ExpectedCallbacks = 1;
+        constexpr uint32_t ExpectedCallbacks = 1;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
 
@@ -531,7 +531,7 @@ public:
         test_connected_socket.ScheduleTask(test_task);
         // should complete within 500ms - failing after 5 IO
         Assert::AreEqual(WAIT_OBJECT_0, WaitForSingleObject(g_RemovedSocketEvent, 500));
-        const uint32_t ExpectedCallbacks = 5;
+        constexpr uint32_t ExpectedCallbacks = 5;
         Assert::AreEqual(ExpectedCallbacks, callback_invoked);
     }
 };

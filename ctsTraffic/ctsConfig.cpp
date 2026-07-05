@@ -3199,7 +3199,7 @@ namespace ctsTraffic::ctsConfig
 				std::wstring adapterInfo =
 					wil::str_printf<std::wstring>(L"Adapter %ws (%ws)\n\t", interfaceDescription.c_str(), operationalStatus == 1 ? L"Up" : L"NOT-UP");
 
-				const std::wstring comma_space{ L", " };
+				constexpr auto* comma_space{ L", " };
 				adapterInfo += CheckOffloadRsc(interfaceDescription) + comma_space;
 				adapterInfo += CheckOffloadLso(interfaceDescription) + comma_space;
 				adapterInfo += CheckOffloadRss(interfaceDescription) + comma_space;

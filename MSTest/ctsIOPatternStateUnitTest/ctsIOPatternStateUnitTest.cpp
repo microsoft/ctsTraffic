@@ -378,7 +378,7 @@ public:
 
     TEST_METHOD(TestSetMaxTransfer)
     {
-        static const uint64_t c_testTransferSize(100);
+        static constexpr uint64_t c_testTransferSize(100);
 
         this->InitGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, m_ioPatternState->GetMaxTransfer());
@@ -393,7 +393,7 @@ public:
 
     TEST_METHOD(TestGetRemainingTransferAfterSetMaxTransfer)
     {
-        static const uint64_t c_testTransferSize(100);
+        static constexpr uint64_t c_testTransferSize(100);
 
         this->InitGracefulShutdownTest(250);
         Assert::AreEqual(g_transferSize, m_ioPatternState->GetMaxTransfer());

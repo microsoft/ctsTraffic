@@ -25,21 +25,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-int64_t g_QpcTime = 0LL;
+// Bind the test's simulated clock to the unit-test hook read by ctl::ctTimer::snap_qpc_as_msec().
+int64_t& g_QpcTime = ctl::ctTimer::g_unitTestQpcTimeMs;
 
-uint64_t g_TransferSize = 0ULL;
-int64_t g_TcpBytesPerSecond = 0LL;
+static uint64_t g_TransferSize = 0ULL;
+static int64_t g_TcpBytesPerSecond = 0LL;
 
 ///
 /// Fakes
 ///
-namespace ctl::ctTimer
-{
-int64_t ctsnap_qpc_as_msec() noexcept
-{
-    return g_QpcTime;
-}
-}
 
 namespace ctsTraffic::ctsConfig
 {
@@ -187,7 +181,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // one byte every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -212,7 +206,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 100LL;
         // ten bytes every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
         // should send 10 every 100ms
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -241,7 +235,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // 100 bytes every 10 seconds
-        const int64_t TestBytes = 100;
+        constexpr int64_t TestBytes = 100;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -269,7 +263,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // one byte every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -293,7 +287,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 100LL;
         // ten bytes every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
         // should send 10 every 100ms
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -320,7 +314,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // 100 bytes every 10 seconds
-        const int64_t TestBytes = 100;
+        constexpr int64_t TestBytes = 100;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -347,7 +341,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // one byte every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -371,7 +365,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 100LL;
         // ten bytes every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
         // should send 10 every 100ms
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -398,7 +392,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // 100 bytes every 10 seconds
-        const int64_t TestBytes = 100;
+        constexpr int64_t TestBytes = 100;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -425,7 +419,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // one byte every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -452,7 +446,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 100LL;
         // ten bytes every 100ms
-        const int64_t TestBytes = 1;
+        constexpr int64_t TestBytes = 1;
         // should send 10 every 100ms
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -494,7 +488,7 @@ public:
         g_QpcTime = 0LL;
         g_TcpBytesPerSecond = 10LL;
         // 100 bytes every 10 seconds
-        const int64_t TestBytes = 100;
+        constexpr int64_t TestBytes = 100;
 
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
 
@@ -522,7 +516,7 @@ public:
         g_QpcTime = 0LL;
 
         g_TcpBytesPerSecond = 10LL;
-        const int64_t TestBytes = 2;
+        constexpr int64_t TestBytes = 2;
         // 10 bytes per second, sending 2 bytes at a time, 
         // - should be evenly split 5 times per second (every 200ms)
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
@@ -533,7 +527,7 @@ public:
         test_timer->update_time_offset(test_task, TestBytes);
         Assert::AreEqual(0LL, test_task.m_timeOffsetMilliseconds);
 
-        const auto ExpectedTimeOffset = 199LL;
+        constexpr auto ExpectedTimeOffset = 199LL;
 
         g_QpcTime = 1LL;
         test_timer->update_time_offset(test_task, TestBytes);
@@ -556,7 +550,7 @@ public:
         g_QpcTime = 0LL;
 
         g_TcpBytesPerSecond = 100LL;
-        const int64_t TestBytes = 2;
+        constexpr int64_t TestBytes = 2;
         // 100 bytes per second, sending 2 bytes at a time, 
         // - should send 5 2-byte sends every quantum
         // - followed by a time offset to the next 100ms offset
@@ -633,7 +627,7 @@ public:
         g_QpcTime = 0LL;
 
         g_TcpBytesPerSecond = 10LL;
-        const auto TestBytes = 10LL;
+        constexpr auto TestBytes = 10LL;
         // 10 bytes per second, sending 2 bytes at a time, 
         // - should be evenly split 5 times per second (every 200ms)
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
@@ -674,7 +668,7 @@ public:
         g_QpcTime = 0LL;
 
         g_TcpBytesPerSecond = 10LL;
-        const auto TestBytes = 5LL;
+        constexpr auto TestBytes = 5LL;
         // 10 bytes per second, sending 2 bytes at a time, 
         // - should be evenly split 5 times per second (every 200ms)
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();
@@ -724,7 +718,7 @@ public:
         g_QpcTime = 0LL;
 
         g_TcpBytesPerSecond = 10LL;
-        const auto TestBytes = 3LL;
+        constexpr auto TestBytes = 3LL;
         // 10 bytes per second, sending 2 bytes at a time, 
         // - should be evenly split 5 times per second (every 200ms)
         const auto test_timer = std::make_unique<ctsIOPatternRateLimitPolicy<ctsIOPatternRateLimitThrottle>>();

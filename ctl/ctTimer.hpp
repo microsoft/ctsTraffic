@@ -49,9 +49,13 @@ namespace ctl {namespace ctTimer { namespace Details
         }
 
 #ifdef CTSTRAFFIC_UNIT_TESTS
+        // Unit tests drive a simulated clock by setting this value (in milliseconds).
+        // It defaults to 0 so tests that don't care about time see a fixed clock.
+        inline int64_t g_unitTestQpcTimeMs = 0;
+
         inline int64_t snap_qpc_as_msec() noexcept
         {
-            return 0;
+            return g_unitTestQpcTimeMs;
         }
 #else
         inline int64_t snap_qpc_as_msec() noexcept
