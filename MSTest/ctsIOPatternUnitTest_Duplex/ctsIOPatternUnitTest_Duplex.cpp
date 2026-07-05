@@ -1058,5 +1058,228 @@ public:
         Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(task, 0, g_TestErrorCode));
         Assert::AreEqual(g_TestErrorCode, test_pattern->GetLastPatternError());
     }
+
+    //
+    // ---- Completion 'DONE' message split across multiple IOs ----
+    //
+    // The completion 'DONE' is a fixed 4-byte message, but TCP is a byte stream and can segment
+    // even a tiny message across multiple completions (e.g. under load, odd MTUs, or a middlebox).
+    // The pattern posts a *single* fixed-size IO for it and assumes the whole message is
+    // delivered / sent in exactly one completion. These tests characterize what happens when that
+    // assumption is violated - the suspected end-of-connection fragility on a random few
+    // connections.
+    //
+
+    // CLIENT: the server's 'DONE' is received in two pieces (2 + 2). The first short recv is
+    // treated as a fatal "too few bytes" error - the pattern does NOT re-post a recv to collect
+    // the remaining bytes, so a segmented completion breaks an otherwise-healthy connection.
+    TEST_METHOD(Duplex_Client_CompletionDoneSplitRecv_ShortFirstPieceFailsWithoutReassembly)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, completion.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, completion.m_bufferLength);
+
+        // 'DO' arrives first - only 2 of the 4 'DONE' bytes
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(completion, 2, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorNotAllDataTransferred), test_pattern->GetLastPatternError());
+
+        // the pattern has given up: it does NOT offer another recv to collect the remaining 'NE'
+        const ctsTask afterFailure = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::None, afterFailure.m_ioAction, L"a segmented completion is not reassembled - the pattern fails instead of re-posting");
+    }
+
+    // CLIENT: the 'DONE' recv delivering a single byte is likewise fatal (boundary of the split).
+    TEST_METHOD(Duplex_Client_CompletionDoneSplitRecv_OneByteFails)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, completion.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(completion, 1, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorNotAllDataTransferred), test_pattern->GetLastPatternError());
+    }
+
+    // CLIENT: the 'DONE' recv delivering three of four bytes is fatal (near-complete boundary).
+    TEST_METHOD(Duplex_Client_CompletionDoneSplitRecv_ThreeBytesFails)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Client, /*sendCompletesLast*/ true);
+
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, completion.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::FailedIo, test_pattern->CompleteIo(completion, 3, NO_ERROR));
+        Assert::AreEqual(static_cast<uint32_t>(c_statusErrorNotAllDataTransferred), test_pattern->GetLastPatternError());
+    }
+
+    // SERVER: the 'DONE' completion send reports fewer bytes than the full 4-byte message. The
+    // pattern advances to RequestFin as if the whole message was sent - it does NOT re-send the
+    // remaining bytes. A peer client would then observe a short 'DONE' and fail, while this server
+    // completes 'successfully'. This is the send-side analog of the split-completion fragility.
+    TEST_METHOD(Duplex_Server_CompletionDoneSplitSend_ShortSendAdvancesWithoutResend)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ false);
+
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, completion.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, completion.m_bufferLength);
+
+        // only 2 of the 4 'DONE' bytes were accepted by the transport
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(completion, 2, NO_ERROR));
+
+        // the pattern moved on to await the FIN rather than re-sending the remaining 2 bytes
+        const ctsTask next = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, next.m_ioAction, L"server advances to the FIN recv despite a short completion send");
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(next, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError(), L"server reports success even though the peer never received a full 'DONE'");
+    }
+
+    // SERVER: a single-byte 'DONE' send is also treated as complete (boundary of the split).
+    TEST_METHOD(Duplex_Server_CompletionDoneSplitSend_OneByteAdvances)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteDataPhase(test_pattern, Server, /*sendCompletesLast*/ true);
+
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, completion.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(completion, 1, NO_ERROR));
+
+        const ctsTask next = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, next.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(next, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    //
+    // ---- Completion 'DONE' coalesced with the final data bytes ----
+    //
+    // A peer typically sends its final data and its 'DONE' completion back-to-back, so the OS can
+    // deliver them coalesced in a single TCP segment sitting in the socket receive buffer. These
+    // tests verify the pattern de-frames data from 'DONE': because a data recv buffer is capped to
+    // the outstanding *data* bytes (min(remainingTransfer, bufferSize, remainingRecvBytes)), a
+    // data recv can never pull the trailing 'DONE' bytes - they are always left for the separate,
+    // fixed-size completion recv. A regression that broke the cap would let 'DONE' bleed into a
+    // data recv (verify failure / too-many-bytes) or starve the completion recv.
+    //
+
+    // CLIENT: the socket buffer is far larger than the data remaining, yet the final data recv is
+    // capped to exactly the outstanding data - so a 'DONE' already queued behind the data cannot
+    // be delivered in the same recv. The completion arrives as its own fixed-size IO.
+    TEST_METHOD(Duplex_Client_DataRecvCappedBelowSocketBuffer_DoneCannotCoalesce)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        // the data recv is capped to exactly the outstanding data, far below the (larger) socket
+        // buffer - so a 'DONE' already queued behind the data cannot be delivered in the same recv
+        Assert::IsTrue(recv_task.m_bufferLength < g_BufferSize, L"the data recv must be capped to the outstanding data, not the (larger) socket buffer");
+
+        // the peer coalesced [10 data][DONE] into one segment; the capped recv pulls only the 10
+        // data bytes and leaves 'DONE' buffered for the completion recv
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, HalfTransferSize));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+
+        // the completion is a distinct, fixed-size IO - never merged into the data recv above
+        CompleteSuccessfulShutdown(test_pattern, Client, Graceful);
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // CLIENT: the peer coalesced [partial data][more data + DONE] so the final data arrives split.
+    // A partial data recv re-posts a recv capped to the *remaining data* - which again cannot
+    // absorb the trailing 'DONE'. 'DONE' still arrives as the separate completion recv.
+    TEST_METHOD(Duplex_Client_PartialFinalData_ThenDone_Deframed)
+    {
+        this->SetTestDuplexDefaults(Client, Graceful);
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Client);
+
+        ctsTask recv_task;
+        ctsTask send_task;
+        GetPendedDataTasks(test_pattern, recv_task, send_task);
+
+        // first segment carried only 6 of the 10 data bytes
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, 6));
+
+        // the re-posted recv is capped to the remaining 4 data bytes - so even though the peer's
+        // next segment is [4 data][DONE], this recv can only ever take the 4 data bytes
+        const ctsTask recv_remainder = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, recv_remainder.m_ioAction);
+        Assert::AreEqual(HalfTransferSize - 6, recv_remainder.m_bufferLength, L"the remainder recv is capped to the outstanding data, so 'DONE' cannot ride along");
+
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_remainder, HalfTransferSize - 6));
+
+        // 'DONE' arrives as the separate completion recv and the connection completes cleanly
+        const ctsTask completion = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, completion.m_ioAction);
+        Assert::AreEqual(g_TestCompletionMessageLength, completion.m_bufferLength);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(completion, g_TestCompletionMessageLength, NO_ERROR));
+
+        // graceful shutdown then the FIN
+        ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::GracefulShutdown, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(task, 0, NO_ERROR));
+        task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(task, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
+
+    // SERVER: the client coalesced [final data][FIN] into one segment. The server's final data
+    // recv is capped to the outstanding data, so it pulls only the data; the zero-byte FIN is left
+    // for the separate RequestFin recv. (Mirror of the client de-framing, on the recv-then-FIN
+    // boundary rather than the recv-then-DONE boundary.)
+    TEST_METHOD(Duplex_Server_DataRecvCapped_FinCannotCoalesce)
+    {
+        this->SetTestDuplexDefaults(Server, Graceful);
+        g_BufferSize = g_TestRecvBufferLength;
+        g_MaxBufferSize = g_TestRecvBufferLength;
+        const std::shared_ptr test_pattern(ctsIoPattern::MakeIoPattern());
+
+        CompleteConnectionId(test_pattern, Server);
+
+        const ctsTask recv_task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, recv_task.m_ioAction);
+        Assert::AreEqual(HalfTransferSize, recv_task.m_bufferLength);
+        Assert::IsTrue(recv_task.m_bufferLength < g_BufferSize, L"the server data recv must be capped to the outstanding data");
+
+        const ctsTask send_task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, send_task.m_ioAction);
+
+        // capped recv pulls only the 10 data bytes; the client's trailing FIN stays buffered
+        Assert::AreEqual(ctsIoStatus::ContinueIo, CompleteDataRecv(test_pattern, recv_task, HalfTransferSize));
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(send_task, HalfTransferSize, NO_ERROR));
+
+        // server sends its 'DONE', then the FIN arrives as the separate zero-byte RequestFin recv
+        ctsTask task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Send, task.m_ioAction);
+        Assert::AreEqual(ctsIoStatus::ContinueIo, test_pattern->CompleteIo(task, g_TestCompletionMessageLength, NO_ERROR));
+
+        task = test_pattern->InitiateIo();
+        Assert::AreEqual(ctsTaskAction::Recv, task.m_ioAction, L"the FIN is a distinct recv, never merged into the data recv");
+        Assert::AreEqual(ctsIoStatus::CompletedIo, test_pattern->CompleteIo(task, 0, NO_ERROR));
+        Assert::AreEqual(0u, test_pattern->GetLastPatternError());
+    }
 };
 }
