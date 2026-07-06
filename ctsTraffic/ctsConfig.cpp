@@ -55,6 +55,7 @@ namespace ctsTraffic::ctsConfig
 {
 	ctsConfigSettings* g_configSettings;
 
+		std::vector<wil::network::socket_address> returnAddresses;
 	//
 	// Hiding the details of the raw data in an unnamed namespace to make it completely private
 	// Free functions below provide proper access to this information

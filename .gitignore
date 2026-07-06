@@ -32,3 +32,5 @@
 /_ReSharper.Caches
 /packages
 /MSTest/*/*.log
+/ctsTraffic/ctsTraffic
+/ctsPerf/ctsPerf
