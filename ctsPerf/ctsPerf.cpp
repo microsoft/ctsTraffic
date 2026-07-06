@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 
 #include <Windows.h>
-#include <WinSock2.h>
 
 #include <ctString.hpp>
 #include <ctWmiService.hpp>
@@ -29,6 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsEstats.h"
 
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 using namespace std;

@@ -14,18 +14,19 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <sdkddkver.h>
 #include "CppUnitTest.h"
 
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mswsock.h>
 #include <atomic>
 #include <string>
 
+#include <windows.h>
 #include "ctThreadIocp_shard.hpp"
 #include "ctThreadIocp.hpp"
 #include <vector>
 #include <memory>
 #include <functional>
+
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;

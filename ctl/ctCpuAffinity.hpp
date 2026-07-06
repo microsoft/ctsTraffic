@@ -26,10 +26,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <optional>
 #include <string>
 
-#include <winsock2.h>
-#include <ws2def.h>
-#include <mstcpip.h>
-
+// wil headers always included last; wil/stl.h before wil/network.h; wil/network.h owns all networking headers
+#include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 namespace ctl
