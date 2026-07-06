@@ -17,11 +17,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #include <Windows.h>
 #include <ctString.hpp>
+
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsSocketState.h"
 #include "ctsSocketBroker.h"
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
@@ -80,17 +84,17 @@ namespace ctsConfig
         va_end(args);
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, uint32_t) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, uint32_t) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(address, error)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
     }
 
-    void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+    void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
     {
         Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
     }

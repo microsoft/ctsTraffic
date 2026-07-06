@@ -15,9 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
-// ctl headers
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsMediaStreamProtocol.hpp"
 #include "ctsMediaStreamClient.h"
@@ -28,6 +25,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 // wil headers always included last
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 namespace ctsTraffic
@@ -54,7 +52,7 @@ namespace ctsTraffic
     static void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
-        const ctl::ctSockaddr& targetAddress
+        const wil::network::socket_address& targetAddress
     ) noexcept;
 
     // The function that is registered with ctsTraffic to run Winsock IO using IO Completion Ports
@@ -171,7 +169,7 @@ namespace ctsTraffic
         }
 
     const auto socket = lockedSocket.GetSocket();
-    const ctl::ctSockaddr targetAddress(sharedSocket->GetRemoteSockaddr());
+    const wil::network::socket_address targetAddress(sharedSocket->GetRemoteSockaddr());
     const ctsTask startTask = ctsMediaStreamMessage::Construct(MediaStreamAction::START);
 
         // Not add-ref'ing the IO on the socket since this is a single send() simulating connect()
@@ -187,8 +185,8 @@ namespace ctsTraffic
         if (NO_ERROR == response.m_errorCode)
         {
             // set the local and remote addresses on the socket object
-            ctl::ctSockaddr localAddr;
-            auto localAddrLen = localAddr.length();
+            wil::network::socket_address localAddr;
+            auto localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);
@@ -201,7 +199,7 @@ namespace ctsTraffic
 
             PRINT_DEBUG_INFO(
                 L"\t\tctsMediaStreamClient sent its START message to %ws\n",
-                targetAddress.writeCompleteAddress().c_str());
+                targetAddress.format_complete_address().c_str());
         }
 
         // complete only on failure or successfully completed inline (otherwise will complete in the IOCP callback)
@@ -467,7 +465,7 @@ namespace ctsTraffic
     void ctsMediaStreamClientConnectionCompletionCallback(
         _In_ OVERLAPPED* pOverlapped,
         const std::weak_ptr<ctsSocket>& weakSocket,
-        const ctl::ctSockaddr& targetAddress) noexcept
+        const wil::network::socket_address& targetAddress) noexcept
     {
         const auto sharedSocket(weakSocket.lock());
         if (!sharedSocket)
@@ -499,8 +497,8 @@ namespace ctsTraffic
         if (NO_ERROR == gle)
         {
             // set the local and remote addresses
-            ctl::ctSockaddr localAddr;
-            int localAddrLen = localAddr.length();
+            wil::network::socket_address localAddr;
+            int localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

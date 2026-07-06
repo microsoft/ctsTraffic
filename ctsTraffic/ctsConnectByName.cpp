@@ -15,12 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
-// ctl headers
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 static std::atomic_signed_lock_free g_targetCounter{};
 
@@ -54,10 +54,10 @@ namespace ctsTraffic
                 const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
 
                 // read the local sockaddr - e.g. if we needed to bind locally
-                ctl::ctSockaddr localAddr(sharedSocket->GetLocalSockaddr());
-                ctl::ctSockaddr remoteAddr;
-                DWORD localAddrLength = localAddr.length();
-                DWORD remoteAddrLength = remoteAddr.length();
+                wil::network::socket_address localAddr(sharedSocket->GetLocalSockaddr());
+                wil::network::socket_address remoteAddr;
+                DWORD localAddrLength = localAddr.size();
+                DWORD remoteAddrLength = remoteAddr.size();
 
                 PRINT_DEBUG_INFO(L"\t\tWSAConnectByName to %ws : %u\n", targetAddr.c_str(), ctsConfig::g_configSettings->Port);
                 if (!WSAConnectByNameW(
@@ -77,7 +77,7 @@ namespace ctsTraffic
                 }
                 PRINT_DEBUG_INFO(
                     L"\t\tWSAConnectByName completed successfully - localAddress (%ws), remoteAddress (%ws)\n",
-                    localAddr.writeCompleteAddress().c_str(), remoteAddr.writeCompleteAddress().c_str());
+                    localAddr.format_complete_address().c_str(), remoteAddr.format_complete_address().c_str());
 
                 sharedSocket->SetLocalSockaddr(localAddr);
                 sharedSocket->SetRemoteSockaddr(remoteAddr);

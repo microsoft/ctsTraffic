@@ -20,13 +20,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <exception>
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // local headers
 #include "ctsConfig.h"
 #include "ctsSocketBroker.h"
 #include "ctsMediaStreamServer.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
+#include <wil/resource.h>
 
 using namespace ctsTraffic;
 using namespace ctl;
@@ -217,7 +218,7 @@ int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
                     ctsConfig::PrintSummary(
                         L"    Listener %zu : %ws : %u\n",
                         i,
-                        info.ListeningAddress.writeCompleteAddress().c_str(),
+                        info.ListeningAddress.format_complete_address().c_str(),
                         info.ConnectionCount);
                 }
             }

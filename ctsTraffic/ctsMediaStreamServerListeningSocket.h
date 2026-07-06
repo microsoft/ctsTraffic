@@ -19,10 +19,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctThreadIocp_base.hpp>
 // project headers
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace ctsTraffic
 {
@@ -36,10 +38,10 @@ private:
     mutable wil::critical_section m_listeningSocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Requires_lock_held_(m_listeningSocketLock) wil::unique_socket m_listeningSocket;
 
-    const ctl::ctSockaddr m_listeningAddr;
+    const wil::network::socket_address m_listeningAddr;
     std::array<char, c_recvBufferSize> m_recvBuffer{};
     DWORD m_recvFlags{};
-    ctl::ctSockaddr m_remoteAddr;
+    wil::network::socket_address m_remoteAddr;
     int m_remoteAddrLen{};
     bool m_priorFailureWasConnectionReset = false;
 
@@ -56,14 +58,14 @@ public:
     uint32_t GetConnectionCount() const noexcept { return m_connectionCount.load(std::memory_order_relaxed); }
     ctsMediaStreamServerListeningSocket(
         wil::unique_socket&& listeningSocket,
-        ctl::ctSockaddr listeningAddr,
+        wil::network::socket_address listeningAddr,
         std::shared_ptr<ctl::ctThreadIocp_base> threadIocp);
 
     ~ctsMediaStreamServerListeningSocket() noexcept;
 
     SOCKET GetSocket() const noexcept;
 
-    ctl::ctSockaddr GetListeningAddress() const noexcept;
+    wil::network::socket_address GetListeningAddress() const noexcept;
 
     void InitiateRecv() noexcept;
 

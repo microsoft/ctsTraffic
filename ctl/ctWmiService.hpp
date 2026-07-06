@@ -112,6 +112,83 @@ namespace ctl
 		wil::com_ptr<IWbemServices> m_wbemServices{};
 	};
 
+	class ctWmiStaticMethod
+	{
+	public:
+		ctWmiStaticMethod(_In_ PCWSTR className, _In_ PCWSTR methodName, ctWmiService wbemService = ctWmiService{ L"ROOT\\StandardCimv2" }) :
+			m_wbemService(std::move(wbemService)),
+			m_className(wil::make_bstr(className)),
+			m_methodName(wil::make_bstr(methodName))
+		{
+			THROW_IF_FAILED(m_wbemService->GetObjectW(
+				m_className.get(),
+				0,
+				nullptr,
+				m_wbemClassObject.put(),
+				nullptr));
+
+			THROW_IF_FAILED(m_wbemClassObject->GetMethod(
+				m_methodName.get(),
+				0,
+				m_wbemFunctionObject.put(),
+				nullptr));
+
+			THROW_IF_FAILED(m_wbemFunctionObject->SpawnInstance(
+				0,
+				m_wbemParameterObject.put()));
+
+		}
+
+		HRESULT add_parameter_nothrow(_In_ PCWSTR parameterName, _In_opt_ const VARIANT* value) const noexcept
+		{
+			RETURN_IF_FAILED(m_wbemParameterObject->Put(
+				wil::make_bstr(parameterName).get(),
+				0,
+				const_cast<VARIANT*>(value),
+				0));
+			return S_OK;
+		}
+
+		void add_parameter(_In_ PCWSTR parameterName, _In_opt_ const VARIANT* value) const
+		{
+			THROW_IF_FAILED(m_wbemParameterObject->Put(
+				wil::make_bstr(parameterName).get(),
+				0,
+				const_cast<VARIANT*>(value),
+				0));
+		}
+
+		HRESULT execute_method_nothrow() noexcept
+		{
+			wil::com_ptr<IWbemCallResult> result;
+			RETURN_IF_FAILED(m_wbemService->ExecMethod(
+				m_className.get(),
+				m_methodName.get(),
+				0,
+				nullptr,
+				m_wbemParameterObject.get(),
+				nullptr,
+				result.addressof()));
+
+			// wait for the call to complete
+			HRESULT status{};
+			RETURN_IF_FAILED(result->GetCallStatus(WBEM_INFINITE, &status));
+			return status;
+		}
+		void execute_method()
+		{
+			THROW_IF_FAILED(execute_method_nothrow());
+		}
+
+	private:
+		ctWmiService m_wbemService;
+		wil::unique_bstr m_className;
+		wil::unique_bstr m_methodName;
+		wil::com_ptr<IWbemClassObject> m_wbemClassObject{};
+		wil::com_ptr<IWbemClassObject> m_wbemFunctionObject{};
+		wil::com_ptr<IWbemClassObject> m_wbemParameterObject{};
+	};
+
 	// Exposes enumerating properties of a WMI Provider (class object) through an iterator interface.
 	class ctWmiEnumerateClassProperties
 	{

@@ -19,13 +19,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>
 // project headers
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace ctl;
 
@@ -34,7 +35,7 @@ namespace ctsTraffic
 ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
     std::weak_ptr<ctsSocket> weakSocket,
     SOCKET sendingSocket,
-    ctSockaddr remoteAddr,
+    wil::network::socket_address remoteAddr,
     ctsMediaStreamConnectedSocketIoFunctor ioFunctor) :
     m_weakSocket(std::move(weakSocket)),
     m_ioFunctor(std::move(ioFunctor)),
@@ -171,14 +172,14 @@ VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(PTP_
 
         ctsConfig::PrintErrorInfo(
             L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.format_complete_address().c_str());
         thisPtr->CompleteState(returnedStatus);
     }
     else if (ctsIoStatus::CompletedIo == status)
     {
         PRINT_DEBUG_INFO(
             L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.format_complete_address().c_str());
         thisPtr->CompleteState(sendResults.m_errorCode);
     }
     _Analysis_assume_lock_released_(thisPtr->m_objectGuard);

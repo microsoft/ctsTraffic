@@ -18,16 +18,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <queue>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
-#include <MSWSock.h>
 // ctl headers
-#include <ctSocketExtensions.hpp>
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 // wil headers always included last
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 using ctsTraffic::ctsConfig::g_configSettings;
@@ -80,8 +77,8 @@ namespace details
     struct ctsAcceptedConnection
     {
         wil::unique_socket m_acceptSocket;
-        ctl::ctSockaddr m_localAddr;
-        ctl::ctSockaddr m_remoteAddr;
+        wil::network::socket_address m_localAddr;
+        wil::network::socket_address m_remoteAddr;
         DWORD m_lastError = 0;
     };
 
@@ -90,7 +87,7 @@ namespace details
     struct ctsListenSocketInfo
     {
         // constructor throws a wil::ResultException or bad_alloc on failure
-        explicit ctsListenSocketInfo(ctl::ctSockaddr addr) :
+        explicit ctsListenSocketInfo(wil::network::socket_address addr) :
             m_sockaddr(std::move(addr))
         {
             wil::unique_socket tempSocket(
@@ -102,11 +99,11 @@ namespace details
                 THROW_WIN32_MSG(error, "ctsConfig::SetPreBindOptions (ctsAcceptEx)");
             }
 
-            if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), m_sockaddr.length()))
+            if (SOCKET_ERROR == bind(tempSocket.get(), m_sockaddr.sockaddr(), m_sockaddr.size()))
             {
                 error = WSAGetLastError();
-                char addrBuffer[ctl::ctSockaddr::FixedStringLength]{};
-                m_sockaddr.writeCompleteAddress(addrBuffer);
+                wil::network::socket_address_string addrBuffer{};
+                m_sockaddr.format_complete_address_nothrow(addrBuffer);
                 THROW_WIN32_MSG(error, "bind %hs (ctsAcceptEx)", addrBuffer);
             }
 
@@ -135,7 +132,7 @@ namespace details
         ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
         wil::unique_socket m_listenSocket;
-        ctl::ctSockaddr m_sockaddr;
+        wil::network::socket_address m_sockaddr;
         std::unique_ptr<ctl::ctThreadIocp> m_iocp;
         std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
     };
@@ -215,7 +212,7 @@ namespace details
                 {
                     // Make the structures for the listener and its accept sockets
                     auto listenSocketInfo(std::make_shared<ctsListenSocketInfo>(addr));
-                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.writeCompleteAddress().c_str());
+                    PRINT_DEBUG_INFO(L"\t\tListening to %ws\n", addr.format_complete_address().c_str());
                     //
                     // Add PendedAcceptRequests pended AcceptEx objects per listener
                     //
@@ -317,7 +314,7 @@ namespace details
 
         ::ZeroMemory(m_outputBuffer, c_singleOutputBufferSize * 2);
         DWORD bytesReceived{};
-        if (!ctl::ctAcceptEx(
+        if (!ctsConfig::GetWinsockExtensionFunctions()->AcceptEx(
             listeningSocketObject->m_listenSocket.get(),
             newAcceptedSocket.get(),
             m_outputBuffer,
@@ -403,7 +400,7 @@ namespace details
         SOCKADDR_INET* remoteAddr{};
         auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
 
-        ctl::ctGetAcceptExSockaddrs(
+        ctsConfig::GetWinsockExtensionFunctions()->GetAcceptExSockaddrs(
             m_outputBuffer,
             0,
             c_singleOutputBufferSize,
@@ -416,8 +413,8 @@ namespace details
         // transfer ownership of the SOCKET to the caller
         returnDetails.m_acceptSocket = std::move(m_acceptSocket);
         returnDetails.m_lastError = 0;
-        returnDetails.m_localAddr.setSockaddr(localAddr);
-        returnDetails.m_remoteAddr.setSockaddr(remoteAddr);
+        returnDetails.m_localAddr.reset(localAddr);
+        returnDetails.m_remoteAddr.reset(remoteAddr);
 
         return returnDetails;
     }
@@ -463,8 +460,8 @@ namespace details
                 if (0 == acceptedSocket.m_lastError)
                 {
                     // set the local addr
-                    ctl::ctSockaddr localAddr;
-                    int localAddrLen = localAddr.length();
+                    wil::network::socket_address localAddr;
+                    int localAddrLen = localAddr.size();
                     if (0 == getsockname(acceptedSocket.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
                     {
                         sharedSocket->SetLocalSockaddr(localAddr);
@@ -577,8 +574,8 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     if (acceptedConnection.m_acceptSocket.get() != INVALID_SOCKET)
     {
         // set the local addr
-        ctl::ctSockaddr localAddr;
-        auto localAddrLen = localAddr.length();
+        wil::network::socket_address localAddr;
+        auto localAddrLen = localAddr.size();
         if (0 == getsockname(acceptedConnection.m_acceptSocket.get(), localAddr.sockaddr(), &localAddrLen))
         {
             sharedSocket->SetLocalSockaddr(localAddr);
@@ -586,7 +583,7 @@ void ctsAcceptEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
 
         ctsConfig::SetPostConnectOptions(acceptedConnection.m_acceptSocket.get(), acceptedConnection.m_remoteAddr);
 
-        // transfering ownership to the ctsSocket
+        // transferring ownership to the ctsSocket
         sharedSocket->SetSocket(acceptedConnection.m_acceptSocket.release());
         sharedSocket->SetRemoteSockaddr(acceptedConnection.m_remoteAddr);
         sharedSocket->CompleteState(0);

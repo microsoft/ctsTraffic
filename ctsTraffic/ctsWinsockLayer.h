@@ -18,10 +18,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <functional>
 // os headers
 #include <Windows.h>
-#include <mstcpip.h>
 // project headers
 #include "ctsIOTask.hpp"
 #include "ctsSocket.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 // ReSharper disable CppInconsistentNaming
 

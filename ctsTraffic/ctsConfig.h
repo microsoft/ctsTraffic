@@ -24,14 +24,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // ctl headers
+#include <ctCpuAffinity.hpp>
 #include <ctTimer.hpp>
-#include <ctSockaddr.hpp>
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 //
 // ** NOTE ** cannot include local project cts headers to avoid circular references
 // - except for ctsStatistics.hpp
 // - this header *can* be included here because it does not include any cts* headers
 //
-#include <ctCpuAffinity.hpp>
 
 #include "ctsStatistics.hpp"
 
@@ -229,28 +231,28 @@ namespace ctsTraffic
         // Override will always print to console regardless of settings (important if can't even start)
         void PrintExceptionOverride(_In_ PCSTR exceptionText) noexcept;
 
-        void PrintNewConnection(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept;
+        void PrintNewConnection(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept;
 
         void PrintConnectionResults(uint32_t error) noexcept;
         void PrintConnectionResults(
-            const ctl::ctSockaddr& localAddr,
-            const ctl::ctSockaddr& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             uint32_t error,
             const ctsTcpStatistics& stats) noexcept;
         void PrintConnectionResults(
-            const ctl::ctSockaddr& localAddr,
-            const ctl::ctSockaddr& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             uint32_t error,
             const ctsUdpStatistics& stats) noexcept;
 
         void PrintTcpDetails(
-            const ctl::ctSockaddr& localAddr,
-            const ctl::ctSockaddr& remoteAddr,
+            const wil::network::socket_address& localAddr,
+            const wil::network::socket_address& remoteAddr,
             SOCKET socket,
             const ctsTcpStatistics& stats) noexcept;
         constexpr void PrintTcpDetails(
-            const ctl::ctSockaddr&,
-            const ctl::ctSockaddr&,
+            const wil::network::socket_address&,
+            const wil::network::socket_address&,
             SOCKET,
             const ctsUdpStatistics&) noexcept
         {
@@ -275,8 +277,24 @@ namespace ctsTraffic
         TcpShutdownType GetShutdownType() noexcept;
 
         // Set* functions
-        int32_t SetPreBindOptions(SOCKET socket, const ctl::ctSockaddr& localAddress) noexcept;
-        int32_t SetPostConnectOptions(SOCKET socket, const ctl::ctSockaddr& remoteAddress) noexcept;
+        int32_t SetPreBindOptions(SOCKET socket, const wil::network::socket_address& localAddress) noexcept;
+        int32_t SetPostConnectOptions(SOCKET socket, const wil::network::socket_address& remoteAddress) noexcept;
+
+        // Lazily-loaded Winsock extension function tables (AcceptEx/ConnectEx/etc. and RIO)
+        // Defined inline (header-only) so translation units can use them without linking ctsConfig.cpp.
+        // Each table holds its own WSAStartup reference; the shared function-local statics guarantee a
+        // single instance across all translation units.
+        inline const wil::network::winsock_extension_function_table& GetWinsockExtensionFunctions() noexcept
+        {
+            static const wil::network::winsock_extension_function_table s_winsockFunctions;
+            return s_winsockFunctions;
+        }
+
+        inline const wil::network::rio_extension_function_table& GetRioExtensionFunctions() noexcept
+        {
+            static const wil::network::rio_extension_function_table s_rioFunctions;
+            return s_rioFunctions;
+        }
 
         // for the MediaStream pattern
         struct MediaStreamSettings
@@ -402,9 +420,9 @@ namespace ctsTraffic
             uint32_t ConnectionLimit = 0;
             uint32_t ConnectionThrottleLimit = 0;
 
-            std::vector<ctl::ctSockaddr> ListenAddresses{};
-            std::vector<ctl::ctSockaddr> TargetAddresses{};
-            std::vector<ctl::ctSockaddr> BindAddresses{};
+            std::vector<wil::network::socket_address> ListenAddresses{};
+            std::vector<wil::network::socket_address> TargetAddresses{};
+            std::vector<wil::network::socket_address> BindAddresses{};
             std::vector<std::wstring> TargetAddressStrings{};
 
             // stats for status updates and summaries

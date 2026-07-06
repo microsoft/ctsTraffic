@@ -16,15 +16,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
 // project headers
 #include "ctsWinsockLayer.h"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 #include "ctsSocket.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 //
 // These functions encapsulate making Winsock API calls
@@ -118,7 +119,7 @@ namespace ctsTraffic
 				.len = task.m_bufferLength,
 				.buf = task.m_buffer + task.m_bufferOffset };
 
-			if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pOverlapped, nullptr) != 0)
+			if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.size(), pOverlapped, nullptr) != 0)
 			{
 				returnResult.m_errorCode = WSAGetLastError();
 				// IO pended == successfully initiating the IO

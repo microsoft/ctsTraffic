@@ -19,14 +19,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <set>
 
 #include <Windows.h>
-#include <WinSock2.h>
-#include <ws2ipdef.h>
-#include <iphlpapi.h>
 #include <tcpestats.h>
-
-#include <ctSockaddr.hpp>
+// wil headers always included last
 
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
 
@@ -678,7 +675,7 @@ namespace ctsPerf { namespace Details
                 return EstatsDataTracking<TcpType>::PrintHeader();
             }
 
-            EstatsDataPoint(ctl::ctSockaddr local_addr, ctl::ctSockaddr remote_addr) noexcept :
+            EstatsDataPoint(wil::network::socket_address local_addr, wil::network::socket_address remote_addr) noexcept :
                 m_localAddr(std::move(local_addr)),
                 m_remoteAddr(std::move(remote_addr))
             {
@@ -688,32 +685,28 @@ namespace ctsPerf { namespace Details
                 m_localAddr(AF_INET),
                 m_remoteAddr(AF_INET)
             {
-                m_localAddr.setAddress(
-                    reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwLocalAddr)));
-                m_localAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwLocalPort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_localAddr.set_address(
+                    reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwLocalAddr));
+                m_localAddr.set_port(
+                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
-                m_remoteAddr.setAddress(
-                    reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwRemoteAddr)));
-                m_remoteAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwRemotePort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_remoteAddr.set_address(
+                    reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwRemoteAddr));
+                m_remoteAddr.set_port(
+                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             explicit EstatsDataPoint(const MIB_TCP6ROW* pTcpRow) noexcept :
                 m_localAddr(AF_INET6),
                 m_remoteAddr(AF_INET6)
             {
-                m_localAddr.setAddress(&pTcpRow->LocalAddr);
-                m_localAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwLocalPort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_localAddr.set_address(&pTcpRow->LocalAddr);
+                m_localAddr.set_port(
+                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
-                m_remoteAddr.setAddress(&pTcpRow->RemoteAddr);
-                m_remoteAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwRemotePort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_remoteAddr.set_address(&pTcpRow->RemoteAddr);
+                m_remoteAddr.set_port(
+                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             ~EstatsDataPoint() = default;
@@ -744,10 +737,10 @@ namespace ctsPerf { namespace Details
 
             std::wstring PrintAddresses() const
             {
-                WCHAR local_string[ctl::ctSockaddr::FixedStringLength];
-                m_localAddr.writeCompleteAddress(local_string);
-                WCHAR remote_string[ctl::ctSockaddr::FixedStringLength];
-                m_remoteAddr.writeCompleteAddress(remote_string);
+                WCHAR local_string[INET6_ADDRSTRLEN];
+                m_localAddr.format_complete_address_nothrow(local_string);
+                WCHAR remote_string[INET6_ADDRSTRLEN];
+                m_remoteAddr.format_complete_address_nothrow(remote_string);
 
                 return wil::str_printf<std::wstring>(
                     L"%ws,%ws",
@@ -773,12 +766,12 @@ namespace ctsPerf { namespace Details
                 m_data.UpdateData(tcpRow);
             }
 
-            ctl::ctSockaddr LocalAddr() const noexcept
+            wil::network::socket_address LocalAddr() const noexcept
             {
                 return m_localAddr;
             }
 
-            ctl::ctSockaddr RemoteAddr() const noexcept
+            wil::network::socket_address RemoteAddr() const noexcept
             {
                 return m_remoteAddr;
             }
@@ -789,8 +782,8 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            ctl::ctSockaddr m_localAddr;
-            ctl::ctSockaddr m_remoteAddr;
+            wil::network::socket_address m_localAddr;
+            wil::network::socket_address m_remoteAddr;
             // the tracking object must be mutable because EstatsDataPoint instances
             // are stored in a std::set container, and access to objects in a std::set
             // must be const (since you are not allowed to modify std::set objects in-place)
@@ -1131,8 +1124,8 @@ namespace ctsPerf { namespace Details
 
             while (foundInstance != std::end(m_synOptsData))
             {
-                const ctl::ctSockaddr localAddr(foundInstance->LocalAddr());
-                const ctl::ctSockaddr remoteAddr(foundInstance->RemoteAddr());
+                const wil::network::socket_address localAddr(foundInstance->LocalAddr());
+                const wil::network::socket_address remoteAddr(foundInstance->RemoteAddr());
 
                 const auto synOptsInstance = foundInstance;
                 const auto byteTrackingInstance = m_byteTrackingData.find(

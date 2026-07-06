@@ -20,6 +20,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketState.h"
 #include "ctsWinsockLayer.h"
 // wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/win32_helpers.h>
 
 namespace ctsTraffic
@@ -157,22 +159,22 @@ namespace ctsTraffic
         }
     }
 
-    const ctSockaddr& ctsSocket::GetLocalSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetLocalSockaddr() const noexcept
     {
         return m_localSockaddr;
     }
 
-    void ctsSocket::SetLocalSockaddr(const ctSockaddr& localAddress) noexcept
+    void ctsSocket::SetLocalSockaddr(const wil::network::socket_address& localAddress) noexcept
     {
         m_localSockaddr = localAddress;
     }
 
-    const ctSockaddr& ctsSocket::GetRemoteSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetRemoteSockaddr() const noexcept
     {
         return m_targetSockaddr;
     }
 
-    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& targetAddress) noexcept
+    void ctsSocket::SetRemoteSockaddr(const wil::network::socket_address& targetAddress) noexcept
     {
         m_targetSockaddr = targetAddress;
     }

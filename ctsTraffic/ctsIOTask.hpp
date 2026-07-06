@@ -13,11 +13,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 #pragma once
 
-// os headers
-// ReSharper disable once CppUnusedIncludeDirective
-#include <WinSock2.h>
-#include <MSWSock.h>
-#include <Windows.h>
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 // ** NOTE ** should not include any local project cts headers - to avoid circular references
 

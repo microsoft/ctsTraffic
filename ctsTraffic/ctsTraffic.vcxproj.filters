@@ -139,9 +139,6 @@
     <ClInclude Include="..\ctl\ctRandom.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctSocketExtensions.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctString.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -149,9 +146,6 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctTimer.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctSockaddr.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="ctsIOPatternState.hpp">
@@ -193,19 +187,7 @@
     <ClInclude Include="..\ctl\ctMath.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiClassObject.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiEnumerate.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiInitialize.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiInstance.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiProperties.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctWmiService.hpp">
@@ -220,9 +202,6 @@
     <ClInclude Include="ctsTCPFunctions.h">
       <Filter>TCPFunctions</Filter>
     </ClInclude>
-    <ClInclude Include="..\ctl\ctWmiPerformance.hpp">
-      <Filter>ctl</Filter>
-    </ClInclude>
     <ClInclude Include="..\ctl\ctWmiVariant.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
@@ -233,6 +212,18 @@
       <Filter>ctl</Filter>
     </ClInclude>
     <ClInclude Include="..\ctl\ctThreadIocp_shard.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctCpuAffinity.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctEtwReader.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctEtwRecord.hpp">
+      <Filter>ctl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ctl\ctPerformanceCounter.hpp">
       <Filter>ctl</Filter>
     </ClInclude>
   </ItemGroup>

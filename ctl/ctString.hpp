@@ -20,6 +20,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <Windows.h>
 // wil headers
+// wil/stl.h provides the string_maker<std::wstring> specialization required by
+// wil::details::str_vprintf_nothrow<std::wstring> used in format_string below
+#include <wil/stl.h>
 #include <wil/win32_helpers.h>
 #include <wil/resource.h>
 
