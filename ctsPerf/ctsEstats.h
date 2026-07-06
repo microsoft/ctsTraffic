@@ -737,9 +737,9 @@ namespace ctsPerf { namespace Details
 
             std::wstring PrintAddresses() const
             {
-                WCHAR local_string[INET6_ADDRSTRLEN];
+                wil::network::socket_address_wstring local_string;
                 m_localAddr.format_complete_address_nothrow(local_string);
-                WCHAR remote_string[INET6_ADDRSTRLEN];
+                wil::network::socket_address_wstring remote_string;
                 m_remoteAddr.format_complete_address_nothrow(remote_string);
 
                 return wil::str_printf<std::wstring>(
