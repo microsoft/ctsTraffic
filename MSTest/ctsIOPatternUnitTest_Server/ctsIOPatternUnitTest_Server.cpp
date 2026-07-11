@@ -22,6 +22,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 #include "ctsIOPattern.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -100,11 +103,11 @@ void PrintConnectionResults(uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -124,7 +127,7 @@ void PrintErrorInfo(_In_ _Printf_format_string_ PCWSTR, ...) noexcept
 {
 }
 
-void PrintTcpDetails(const ctl::ctSockaddr&, const ctl::ctSockaddr&, SOCKET, const ctsTcpStatistics&) noexcept
+void PrintTcpDetails(const wil::network::socket_address&, const wil::network::socket_address&, SOCKET, const ctsTcpStatistics&) noexcept
 {
 }
 
@@ -217,13 +220,13 @@ const std::string g_doneString("DONE");
 TEST_CLASS(ctsIOPatternUnitTest_Server)
 {
 private:
-    enum TestRole
+    enum TestRole : uint8_t
     {
         Client,
         Server
     };
 
-    enum TestShutdownMethod
+    enum TestShutdownMethod : uint8_t
     {
         Graceful,
         Hard

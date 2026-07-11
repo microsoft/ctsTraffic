@@ -15,14 +15,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace ctsTraffic
 {

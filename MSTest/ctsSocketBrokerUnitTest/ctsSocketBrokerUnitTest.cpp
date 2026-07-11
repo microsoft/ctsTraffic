@@ -17,15 +17,16 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // cpp headers
 #include <vector>
 #include <memory>
+#include <algorithm>
 // os headers
 #include <Windows.h>
-// wil headers
-#include <wil/stl.h>
-#include <wil/resource.h>
 // project headers
 #include "ctsSocketBroker.h"
 #include "ctsSocketState.h"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -53,17 +54,17 @@ unsigned long PrintThrownException() noexcept
     return 0;
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(error)\n");
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsTcpStatistics)\n");
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
     Logger::WriteMessage(L"ctsConfig::PrintConnectionResults(ctsUdpStatistics)\n");
 }

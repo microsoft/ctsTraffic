@@ -19,30 +19,31 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctString.hpp>
 #include <ctTimer.hpp>
 // project headers
 #include "ctsWinsockLayer.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
-using namespace ctl;
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
 ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
     std::weak_ptr<ctsSocket> weakSocket,
     SOCKET sendingSocket,
-    ctSockaddr remoteAddr,
+    wil::network::socket_address remoteAddr,
     ctsMediaStreamConnectedSocketIoFunctor ioFunctor) :
     m_weakSocket(std::move(weakSocket)),
     m_ioFunctor(std::move(ioFunctor)),
     m_sendingSocket(sendingSocket),
-    m_remoteAddr(std::move(remoteAddr)),
-    m_connectTime(ctTimer::snap_qpc_as_msec())
+    m_remoteAddr(remoteAddr),
+    m_connectTime(ctl::ctTimer::snap_qpc_as_msec())
 {
-    m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
+    m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback, this, g_configSettings->pTpEnvironment));
     THROW_LAST_ERROR_IF(!m_taskTimer);
 }
 
@@ -66,7 +67,7 @@ void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noex
         }
         else
         {
-            FILETIME ftDueTime{ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds)};
+            FILETIME ftDueTime{ctl::ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds)};
             // assign the next task *and* schedule the timer while in *this object lock
             m_nextTask = task;
             SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);
@@ -171,14 +172,14 @@ VOID CALLBACK ctsMediaStreamServerConnectedSocket::MediaStreamTimerCallback(PTP_
 
         ctsConfig::PrintErrorInfo(
             L"MediaStream Server socket (%ws) was indicated Failed IO from the protocol - aborting this stream",
-            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.format_complete_address().c_str());
         thisPtr->CompleteState(returnedStatus);
     }
     else if (ctsIoStatus::CompletedIo == status)
     {
         PRINT_DEBUG_INFO(
             L"\t\tctsMediaStreamServerConnectedSocket socket (%ws) has completed its stream - closing this 'connection'\n",
-            thisPtr->m_remoteAddr.writeCompleteAddress().c_str());
+            thisPtr->m_remoteAddr.format_complete_address().c_str());
         thisPtr->CompleteState(sendResults.m_errorCode);
     }
     _Analysis_assume_lock_released_(thisPtr->m_objectGuard);

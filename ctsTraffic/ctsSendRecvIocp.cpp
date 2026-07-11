@@ -15,14 +15,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsConfig.h"
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
+
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
@@ -196,7 +199,7 @@ namespace ctsTraffic
                 else
                 {
                     functionName = "WSARecv";
-                    DWORD flags = ctsConfig::g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? MSG_WAITALL : 0;
+                    DWORD flags = g_configSettings->Options & ctsConfig::OptionType::MsgWaitAll ? MSG_WAITALL : 0;
                     if (WSARecv(socket, &wsaBuffer, 1, nullptr, &flags, pOverlapped, nullptr) != 0)
                     {
                         returnStatus.m_ioErrorCode = WSAGetLastError();
@@ -208,7 +211,7 @@ namespace ctsTraffic
                 //
                 if (WSA_IO_PENDING == returnStatus.m_ioErrorCode ||
                     // ReSharper disable once CppRedundantParentheses
-                    (NO_ERROR == returnStatus.m_ioErrorCode && !(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)))
+                    (NO_ERROR == returnStatus.m_ioErrorCode && !(g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)))
                 {
                     returnStatus.m_ioErrorCode = NO_ERROR;
                     returnStatus.m_ioStarted = true;

@@ -19,17 +19,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <algorithm>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
-#include <mstcpip.h>
-#include <iphlpapi.h>
 #include <qos2.h>
 // multimedia timer
 #include <mmsystem.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctString.hpp>
 #include <ctNetAdapterAddresses.hpp>
-#include <ctSocketExtensions.hpp>
 #include <ctTimer.hpp>
 #include <ctRandom.hpp>
 #include <ctWmiInstance.hpp>
@@ -38,14 +33,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsLogger.hpp"
 #include "ctsIOPattern.h"
 #include "ctsPrintStatus.hpp"
-// project headers
 #include "ctsTCPFunctions.h"
 #include "ctsMediaStreamClient.h"
 #include "ctsMediaStreamServer.h"
 #include "ctsWinsockLayer.h"
-// wil headers always included last
 #include <ctCpuAffinity.hpp>
+// wil headers always included last
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 using namespace std;
@@ -54,6 +49,18 @@ using namespace ctl;
 namespace ctsTraffic::ctsConfig
 {
 	ctsConfigSettings* g_configSettings;
+
+	// Resolves a name (or address literal) to the list of matching socket_address results, throwing on failure.
+	static std::vector<wil::network::socket_address> ResolveNameToAddresses(_In_ PCWSTR name)
+	{
+		std::vector<wil::network::socket_address> returnAddresses;
+		const auto addrResults = wil::network::resolve_name(name);
+		for (const auto& address : wil::network::addr_info_iterator{ addrResults.get() })
+		{
+			returnAddresses.push_back(address);
+		}
+		return returnAddresses;
+	}
 
 	//
 	// Hiding the details of the raw data in an unnamed namespace to make it completely private
@@ -100,8 +107,8 @@ namespace ctsTraffic::ctsConfig
 
 	static uint32_t g_timePeriodRefCount{};
 
-	static int64_t g_previousPrintTimeslice{};
-	static int64_t g_printTimesliceCount{};
+	static int64_t g_previousPrintTimeSlice{};
+	static int64_t g_printTimeSliceCount{};
 
 	static NET_IF_COMPARTMENT_ID g_compartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
 	static ctNetAdapterAddresses* g_netAdapterAddresses = nullptr;
@@ -149,8 +156,8 @@ namespace ctsTraffic::ctsConfig
 		g_configSettings->ShardWorkerCount = 1;
 		g_configSettings->ShardAffinityPolicy = AffinityPolicy::PerCpu;
 
-		g_previousPrintTimeslice = 0LL;
-		g_printTimesliceCount = 0LL;
+		g_previousPrintTimeSlice = 0LL;
+		g_printTimeSliceCount = 0LL;
 		return TRUE;
 	}
 	static void ctsConfigInitOnce() noexcept
@@ -448,7 +455,7 @@ namespace ctsTraffic::ctsConfig
 			returnValue = stoll(inputString, &firstUnconvertedOffset, 10);
 		}
 
-		if (firstUnconvertedOffset != inputString.length())
+		if (firstUnconvertedOffset != inputString.size())
 		{
 			throw invalid_argument(ctString::convert_to_string(inputString));
 		}
@@ -468,7 +475,7 @@ namespace ctsTraffic::ctsConfig
 			returnValue = stoull(inputString, &firstUnconvertedOffset, 10);
 		}
 
-		if (firstUnconvertedOffset != inputString.length())
+		if (firstUnconvertedOffset != inputString.size())
 		{
 			throw invalid_argument(ctString::convert_to_string(inputString));
 		}
@@ -1285,14 +1292,14 @@ namespace ctsTraffic::ctsConfig
 				if (ctString::iordinal_equals(L"*", value))
 				{
 					// add both v4 and v6
-					ctSockaddr listenAddr(AF_INET, ctSockaddr::AddressType::Any);
+					wil::network::socket_address listenAddr(AF_INET);
 					g_configSettings->ListenAddresses.push_back(listenAddr);
-					listenAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
+					listenAddr.reset(AF_INET6);
 					g_configSettings->ListenAddresses.push_back(listenAddr);
 				}
 				else
 				{
-					auto tempAddresses(ctSockaddr::ResolveName(value));
+					auto tempAddresses(ResolveNameToAddresses(value));
 					if (tempAddresses.empty())
 					{
 						throw invalid_argument("-listen value did not resolve to an IP address");
@@ -1327,7 +1334,7 @@ namespace ctsTraffic::ctsConfig
 				const auto* const value = ParseArgument(*foundTarget, L"-target");
 				g_configSettings->TargetAddressStrings.emplace_back(value);
 
-				auto tempAddresses(ctSockaddr::ResolveName(value));
+				auto tempAddresses(ResolveNameToAddresses(value));
 				if (!tempAddresses.empty())
 				{
 					g_configSettings->TargetAddresses.insert(end(g_configSettings->TargetAddresses),
@@ -1358,14 +1365,14 @@ namespace ctsTraffic::ctsConfig
 				if (ctString::iordinal_equals(L"*", value))
 				{
 					// add both v4 and v6
-					ctSockaddr bindAddr(AF_INET, ctSockaddr::AddressType::Any);
+					wil::network::socket_address bindAddr(AF_INET);
 					g_configSettings->BindAddresses.push_back(bindAddr);
-					bindAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
+					bindAddr.reset(AF_INET6);
 					g_configSettings->BindAddresses.push_back(bindAddr);
 				}
 				else
 				{
-					auto tempAddresses(ctSockaddr::ResolveName(value));
+					auto tempAddresses(ResolveNameToAddresses(value));
 					if (tempAddresses.empty())
 					{
 						throw invalid_argument("-bind value did not resolve to an IP address");
@@ -1397,9 +1404,9 @@ namespace ctsTraffic::ctsConfig
 		// default bind addresses if not listening and did not exclusively want to bind
 		if (g_configSettings->ListenAddresses.empty() && g_configSettings->BindAddresses.empty())
 		{
-			ctSockaddr defaultAddr(AF_INET, ctSockaddr::AddressType::Any);
+			wil::network::socket_address defaultAddr(AF_INET);
 			g_configSettings->BindAddresses.push_back(defaultAddr);
-			defaultAddr.reset(AF_INET6, ctSockaddr::AddressType::Any);
+			defaultAddr.reset(AF_INET6);
 			g_configSettings->BindAddresses.push_back(defaultAddr);
 		}
 
@@ -1436,20 +1443,20 @@ namespace ctsTraffic::ctsConfig
 				}
 			}
 			//
-			// if either bind or target has zero of either family, remove those addrs from the other vector
+			// if either bind or target has zero of either family, remove those addresses from the other vector
 			//
 			if (0 == bindV4)
 			{
 				std::erase_if(
 					g_configSettings->TargetAddresses,
-					[](const ctSockaddr& addr) noexcept { return addr.family() == AF_INET; }
+					[](const wil::network::socket_address& addr) noexcept { return addr.family() == AF_INET; }
 				);
 			}
 			else if (0 == targetV4)
 			{
 				std::erase_if(
 					g_configSettings->BindAddresses,
-					[](const ctSockaddr& addr) noexcept { return addr.family() == AF_INET; }
+					[](const wil::network::socket_address& addr) noexcept { return addr.family() == AF_INET; }
 				);
 			}
 
@@ -1457,14 +1464,14 @@ namespace ctsTraffic::ctsConfig
 			{
 				std::erase_if(
 					g_configSettings->TargetAddresses,
-					[](const ctSockaddr& addr) noexcept { return addr.family() == AF_INET6; }
+					[](const wil::network::socket_address& addr) noexcept { return addr.family() == AF_INET6; }
 				);
 			}
 			else if (0 == targetV6)
 			{
 				std::erase_if(
 					g_configSettings->BindAddresses,
-					[](const ctSockaddr& addr) noexcept { return addr.family() == AF_INET6; }
+					[](const wil::network::socket_address& addr) noexcept { return addr.family() == AF_INET6; }
 				);
 			}
 			//
@@ -3224,14 +3231,14 @@ namespace ctsTraffic::ctsConfig
 		{
 			if (addr.port() == 0x0000)
 			{
-				addr.setPort(g_configSettings->Port);
+				addr.set_port(g_configSettings->Port);
 			}
 		}
 		for (auto& addr : g_configSettings->TargetAddresses)
 		{
 			if (addr.port() == 0x0000)
 			{
-				addr.setPort(g_configSettings->Port);
+				addr.set_port(g_configSettings->Port);
 			}
 		}
 
@@ -3305,7 +3312,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_rateLimitLow > 0LL && g_configSettings->BurstDelay.has_value())
 		{
-			throw invalid_argument("-RateLimit and -Burstdelay cannot be used concurrently");
+			throw invalid_argument("-RateLimit and -BurstDelay cannot be used concurrently");
 		}
 
 		const auto ratePerPeriod = g_rateLimitLow * g_configSettings->TcpBytesPerSecondPeriod / 1000LL;
@@ -3844,15 +3851,15 @@ namespace ctsTraffic::ctsConfig
 		if (const auto lock = g_statusUpdateLock.try_lock())
 		{
 			// capture the timeSlices
-			const auto lPreviousTimeslice = g_previousPrintTimeslice;
-			const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
+			const auto lPreviousTimeSlice = g_previousPrintTimeSlice;
+			const auto lCurrentTimeSlice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
-			if (lCurrentTimeslice > lPreviousTimeslice)
+			if (lCurrentTimeSlice > lPreviousTimeSlice)
 			{
 				// write out the header to the console every 40 updates 
 				if (writeToConsole)
 				{
-					if (g_printTimesliceCount != 0 && 0 == g_printTimesliceCount % 40)
+					if (g_printTimeSliceCount != 0 && 0 == g_printTimeSliceCount % 40)
 					{
 						if (const auto* header = g_printStatusInformation->PrintHeader(
 							StatusFormatting::ConsoleOutput))
@@ -3880,7 +3887,7 @@ namespace ctsTraffic::ctsConfig
 					--statusCount;
 					const bool clearStatus = 0 == statusCount;
 					if (const auto* printString = g_printStatusInformation->PrintStatus(
-						StatusFormatting::ConsoleOutput, lCurrentTimeslice, clearStatus))
+						StatusFormatting::ConsoleOutput, lCurrentTimeSlice, clearStatus))
 					{
 						(void)fwprintf_s(stdout, L"%ws", printString);
 					}
@@ -3890,12 +3897,12 @@ namespace ctsTraffic::ctsConfig
 				{
 					--statusCount;
 					const bool clearStatus = 0 == statusCount;
-					g_statusLogger->LogStatus(g_printStatusInformation, lCurrentTimeslice, clearStatus);
+					g_statusLogger->LogStatus(g_printStatusInformation, lCurrentTimeSlice, clearStatus);
 				}
 
 				// update tracking values
-				g_previousPrintTimeslice = lCurrentTimeslice;
-				++g_printTimesliceCount;
+				g_previousPrintTimeSlice = lCurrentTimeSlice;
+				++g_printTimeSliceCount;
 			}
 		}
 	}
@@ -3926,7 +3933,7 @@ namespace ctsTraffic::ctsConfig
 		}
 	}
 
-	void PrintNewConnection(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr) noexcept try
+	void PrintNewConnection(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept try
 	{
 		ctsConfigInitOnce();
 
@@ -3958,10 +3965,10 @@ namespace ctsTraffic::ctsConfig
 			return;
 		}
 
-		WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-		localAddr.writeCompleteAddress(wsaLocalAddress);
-		WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-		remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+		wil::network::socket_address_wstring wsaLocalAddress{};
+		localAddr.format_complete_address_nothrow(wsaLocalAddress);
+		wil::network::socket_address_wstring wsaRemoteAddress{};
+		remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 		if (writeToConsole)
 		{
 			constexpr auto* const tcpConnectionString = L"[%.3f] TCP connection established [%ws - %ws]\n";
@@ -4074,8 +4081,8 @@ namespace ctsTraffic::ctsConfig
 			csvString = wil::str_printf<std::wstring>(
 				tcpResultCsvFormat,
 				currentTime,
-				ctSockaddr().writeCompleteAddress().c_str(),
-				ctSockaddr().writeCompleteAddress().c_str(),
+				wil::network::socket_address().format_complete_address().c_str(),
+				wil::network::socket_address().format_complete_address().c_str(),
 				0LL,
 				0LL,
 				0LL,
@@ -4094,8 +4101,8 @@ namespace ctsTraffic::ctsConfig
 				tcpNetworkFailureResultTextFormat,
 				currentTime,
 				errorString.c_str(),
-				ctSockaddr().writeCompleteAddress().c_str(),
-				ctSockaddr().writeCompleteAddress().c_str(),
+				wil::network::socket_address().format_complete_address().c_str(),
+				wil::network::socket_address().format_complete_address().c_str(),
 				L"",
 				0LL,
 				0LL,
@@ -4127,7 +4134,7 @@ namespace ctsTraffic::ctsConfig
 	{
 	}
 
-	void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, uint32_t error,
+	void PrintConnectionResults(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, uint32_t error,
 		const ctsTcpStatistics& stats) noexcept try
 	{
 		ctsConfigInitOnce();
@@ -4208,10 +4215,10 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
 		{
-			WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-			localAddr.writeCompleteAddress(wsaLocalAddress);
-			WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-			remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+			wil::network::socket_address_wstring wsaLocalAddress{};
+			localAddr.format_complete_address_nothrow(wsaLocalAddress);
+			wil::network::socket_address_wstring wsaRemoteAddress{};
+			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			// csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
 			static const auto* tcpResultCsvFormat = L"%.3f,%ws,%ws,%lld,%lld,%lld,%lld,%lld,%ws,%hs\r\n";
@@ -4234,10 +4241,10 @@ namespace ctsTraffic::ctsConfig
 		// - and/or in the case the g_ConnectionLogger isn't writing to csv
 		if (writeToConsole || (g_connectionLogger && !g_connectionLogger->IsCsvFormat()))
 		{
-			WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-			localAddr.writeCompleteAddress(wsaLocalAddress);
-			WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-			remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+			wil::network::socket_address_wstring wsaLocalAddress{};
+			localAddr.format_complete_address_nothrow(wsaLocalAddress);
+			wil::network::socket_address_wstring wsaRemoteAddress{};
+			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			if (0 == error)
 			{
@@ -4303,7 +4310,7 @@ namespace ctsTraffic::ctsConfig
 	{
 	}
 
-	void PrintConnectionResults(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, uint32_t error,
+	void PrintConnectionResults(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, uint32_t error,
 		const ctsUdpStatistics& stats) noexcept try
 	{
 		ctsConfigInitOnce();
@@ -4383,10 +4390,10 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
 		{
-			WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-			localAddr.writeCompleteAddress(wsaLocalAddress);
-			WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-			remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+			wil::network::socket_address_wstring wsaLocalAddress{};
+			localAddr.format_complete_address_nothrow(wsaLocalAddress);
+			wil::network::socket_address_wstring wsaRemoteAddress{};
+			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			// csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
 			static const auto* udpResultCsvFormat = L"%.3f,%ws,%ws,%llu,%llu,%llu,%llu,%llu,%ws,%hs\r\n";
@@ -4409,10 +4416,10 @@ namespace ctsTraffic::ctsConfig
 		// - and/or in the case the g_ConnectionLogger isn't writing to csv
 		if (writeToConsole || g_connectionLogger && !g_connectionLogger->IsCsvFormat())
 		{
-			WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-			localAddr.writeCompleteAddress(wsaLocalAddress);
-			WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-			remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+			wil::network::socket_address_wstring wsaLocalAddress{};
+			localAddr.format_complete_address_nothrow(wsaLocalAddress);
+			wil::network::socket_address_wstring wsaRemoteAddress{};
+			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			if (0 == error)
 			{
@@ -4478,7 +4485,7 @@ namespace ctsTraffic::ctsConfig
 	{
 	}
 
-	void PrintTcpDetails(const ctSockaddr& localAddr, const ctSockaddr& remoteAddr, SOCKET socket,
+	void PrintTcpDetails(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, SOCKET socket,
 		const ctsTcpStatistics& stats) noexcept try
 	{
 		if (g_processStatus != ExitProcessType::Running)
@@ -4488,10 +4495,10 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_tcpInfoLogger)
 		{
-			WCHAR wsaLocalAddress[ctSockaddr::FixedStringLength]{};
-			localAddr.writeCompleteAddress(wsaLocalAddress);
-			WCHAR wsaRemoteAddress[ctSockaddr::FixedStringLength]{};
-			remoteAddr.writeCompleteAddress(wsaRemoteAddress);
+			wil::network::socket_address_wstring wsaLocalAddress{};
+			localAddr.format_complete_address_nothrow(wsaLocalAddress);
+			wil::network::socket_address_wstring wsaRemoteAddress{};
+			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
 			const int64_t totalTime{ stats.m_endTime.GetValue() - stats.m_startTime.GetValue() };
@@ -4712,7 +4719,7 @@ namespace ctsTraffic::ctsConfig
 
 		auto backlog = SOMAXCONN;
 		// Starting in Win8 listen() supports a larger backlog
-		if (ctSocketIsRioAvailable())
+		if (static_cast<bool>(g_configSettings->rioFunctions))
 		{
 			backlog = SOMAXCONN_HINT(SOMAXCONN);
 		}
@@ -4757,7 +4764,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		auto shardCount = static_cast<int>(g_configSettings->ShardCount);
 		if (shardCount == 0) {
-			const auto info = ctl::QueryCpuAffinitySupport();
+			const auto info = QueryCpuAffinitySupport();
 			const uint32_t logical = info.LogicalProcessorCount ? info.LogicalProcessorCount : 1u;
 			shardCount = static_cast<int>(logical);
 		}
@@ -4765,25 +4772,25 @@ namespace ctsTraffic::ctsConfig
 	}
 
 	// Translate from ctsConfig::g_configSettings->ShardAffinityPolicy to ctl::CpuAffinityPolicy
-	ctl::CpuAffinityPolicy GetCpuAffinityPolicy() noexcept
+	CpuAffinityPolicy GetCpuAffinityPolicy() noexcept
 	{
-		ctl::CpuAffinityPolicy affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+		CpuAffinityPolicy affinityPolicy = CpuAffinityPolicy::PerCpu;
 		switch (g_configSettings->ShardAffinityPolicy)
 		{
 		case AffinityPolicy::PerCpu:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+			affinityPolicy = CpuAffinityPolicy::PerCpu;
 			break;
 		case AffinityPolicy::PerGroup:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerGroup;
+			affinityPolicy = CpuAffinityPolicy::PerGroup;
 			break;
 		case AffinityPolicy::RssAligned:
-			affinityPolicy = ctl::CpuAffinityPolicy::RssAligned;
+			affinityPolicy = CpuAffinityPolicy::RssAligned;
 			break;
 		case AffinityPolicy::Manual:
-			affinityPolicy = ctl::CpuAffinityPolicy::Manual;
+			affinityPolicy = CpuAffinityPolicy::Manual;
 			break;
 		default:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+			affinityPolicy = CpuAffinityPolicy::PerCpu;
 			break;
 		}
 		return affinityPolicy;
@@ -4911,7 +4918,7 @@ namespace ctsTraffic::ctsConfig
 	// - functions capturing any options that need to be set on a socket across different states
 	// - currently only implementing pre-bind options
 	//
-	int SetPreBindOptions(SOCKET socket, const ctSockaddr& localAddress) noexcept
+	int SetPreBindOptions(SOCKET socket, const wil::network::socket_address& localAddress) noexcept
 	{
 		ctsConfigInitOnce();
 
@@ -4984,7 +4991,7 @@ namespace ctsTraffic::ctsConfig
 					return gle;
 				}
 			}
-			else if (!localAddress.isAddressAny() && localAddress.port() == 0)
+			else if (localAddress.address_type() != NlatUnspecified && localAddress.port() == 0)
 			{
 				constexpr DWORD optValue{ 1 }; // BOOL
 				constexpr int optLength{ sizeof(optValue) };
@@ -5147,7 +5154,7 @@ namespace ctsTraffic::ctsConfig
 	/// - functions capturing any options that need to be set once connected
 	///
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	int SetPostConnectOptions(SOCKET socket, const ctSockaddr& remoteAddress) noexcept
+	int SetPostConnectOptions(SOCKET socket, const wil::network::socket_address& remoteAddress) noexcept
 	{
 		ctsConfigInitOnce();
 
@@ -5412,10 +5419,10 @@ namespace ctsTraffic::ctsConfig
 		if (!g_configSettings->ListenAddresses.empty())
 		{
 			settingString.append(L"\tAccepting connections on addresses:\n");
-			WCHAR address[ctSockaddr::FixedStringLength]{};
+			wil::network::socket_address_wstring address{};
 			for (const auto& addr : g_configSettings->ListenAddresses)
 			{
-				if (addr.writeCompleteAddress(address))
+				if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
 				{
 					settingString.append(L"\t\t");
 					settingString.append(address);
@@ -5433,10 +5440,10 @@ namespace ctsTraffic::ctsConfig
 			}
 
 			settingString.append(L"\tConnecting out to addresses:\n");
-			WCHAR address[ctSockaddr::FixedStringLength]{};
+			wil::network::socket_address_wstring address{};
 			for (const auto& addr : g_configSettings->TargetAddresses)
 			{
-				if (addr.writeCompleteAddress(address))
+				if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
 				{
 					settingString.append(L"\t\t");
 					settingString.append(address);
@@ -5447,7 +5454,7 @@ namespace ctsTraffic::ctsConfig
 			settingString.append(L"\tBinding to local addresses for outgoing connections:\n");
 			for (const auto& addr : g_configSettings->BindAddresses)
 			{
-				if (addr.writeCompleteAddress(address))
+				if (SUCCEEDED(addr.format_complete_address_nothrow(address)))
 				{
 					settingString.append(L"\t\t");
 					settingString.append(address);

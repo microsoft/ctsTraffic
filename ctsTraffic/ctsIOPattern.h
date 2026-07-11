@@ -24,7 +24,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOPatternState.hpp"
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
-#include "ctSocketExtensions.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace ctsTraffic
 {
@@ -82,8 +84,8 @@ public:
     virtual ~ctsIoPattern() noexcept = default;
 
     // Exposing statistics members publicly to ctsSocket
-    virtual void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept = 0;
-    virtual void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept = 0;
+    virtual void PrintStatistics(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept = 0;
+    virtual void PrintTcpInfo(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, SOCKET socket) noexcept = 0;
 
     //
     // These are public functions exposed to ctsSocket and the derived types
@@ -229,7 +231,7 @@ private:
         {
             if (m_bufferId != RIO_INVALID_BUFFERID)
             {
-                ctl::ctRIODeregisterBuffer(m_bufferId);
+	            ctsConfig::g_configSettings->rioFunctions->RIODeregisterBuffer(m_bufferId);
                 m_bufferId = RIO_INVALID_BUFFERID;
             }
         }
@@ -441,7 +443,7 @@ public:
     ctsIoPatternStatistics& operator=(ctsIoPatternStatistics&&) = delete;
 
     // Printing of results is controlled by the applicable statistics type
-    void PrintStatistics(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr) noexcept override
+    void PrintStatistics(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr) noexcept override
     {
         // before printing the final results, make sure the timers are stopped
         if (0 == GetLastPatternError() && 0 == m_statistics.GetBytesTransferred())
@@ -457,7 +459,7 @@ public:
             m_statistics);
     }
 
-    void PrintTcpInfo(const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& remoteAddr, SOCKET socket) noexcept override
+    void PrintTcpInfo(const wil::network::socket_address& localAddr, const wil::network::socket_address& remoteAddr, SOCKET socket) noexcept override
     {
         // guarantee stats are ended
         EndStatistics();

@@ -15,11 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 // cpp headers
 #include <memory>
-// ctl headers
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsIOTask.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 // We register both of these functions with ctsConfig:
 // - ctsMediaStreamServerListener is the "Accepting" function
@@ -47,17 +48,17 @@ namespace ctsTraffic { namespace ctsMediaStreamServerImpl
         // - cannot be called from a TP callback from ctsMediaStreamServerConnectedSocket
         //   as remove_socket will deadlock as it tries to delete the ctsMediaStreamServerConnectedSocket instance
         //   (which will wait for all TP threads to complete in the destructor)
-        void RemoveSocket(const ctl::ctSockaddr& targetAddr);
+        void RemoveSocket(const wil::network::socket_address& targetAddr);
 
         // Processes the incoming START request from the client
         // - if we have a waiting ctsSocket to accept it, will add it to connected_sockets
         // - else we'll queue it to awaiting_endpoints
-        void Start(SOCKET socket, const ctl::ctSockaddr& localAddr, const ctl::ctSockaddr& targetAddr);
+        void Start(SOCKET socket, const wil::network::socket_address& localAddr, const wil::network::socket_address& targetAddr);
 
         // Information about a listening socket (used for final reporting)
         struct ListenerInfo
         {
-            ctl::ctSockaddr ListeningAddress;
+            wil::network::socket_address ListeningAddress;
             uint32_t ConnectionCount;
             size_t ShardIndex;
         };

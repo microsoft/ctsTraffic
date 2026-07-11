@@ -17,6 +17,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 
 #include "ctsIOPatternState.hpp"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -83,15 +86,15 @@ namespace ctsTraffic::ctsConfig
 {
 ctsConfigSettings* g_configSettings;
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsTcpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsTcpStatistics&) noexcept
 {
 }
 
-void PrintConnectionResults(const ctl::ctSockaddr&, const ctl::ctSockaddr&, uint32_t, const ctsUdpStatistics&) noexcept
+void PrintConnectionResults(const wil::network::socket_address&, const wil::network::socket_address&, uint32_t, const ctsUdpStatistics&) noexcept
 {
 }
 
@@ -134,7 +137,7 @@ uint32_t ConsoleVerbosity() noexcept
 
 TcpShutdownType GetShutdownType() noexcept
 {
-    return ctsConfig::g_configSettings->TcpShutdown;
+    return g_configSettings->TcpShutdown;
 }
 }
 
@@ -154,7 +157,7 @@ private:
     //
     std::unique_ptr<ctsIoPatternState> m_ioPatternState;
 
-    enum Role
+    enum Role : uint8_t
     {
         Client,
         Server

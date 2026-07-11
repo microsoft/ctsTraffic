@@ -20,10 +20,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // os headers
 #include <excpt.h>
 #include <Windows.h>
-#include <WinSock2.h>
-// wil headers
-#include <wil/resource.h>
-
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 #include "ctThreadIocp_base.hpp"
 

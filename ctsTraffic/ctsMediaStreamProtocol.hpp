@@ -19,7 +19,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <string>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
 #include <ctTimer.hpp>
 // project headers
@@ -27,6 +26,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsIOTask.hpp"
 #include "ctsStatistics.hpp"
 // wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 
 namespace ctsTraffic

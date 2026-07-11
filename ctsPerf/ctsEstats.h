@@ -14,19 +14,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 // ReSharper disable CppInconsistentNaming
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <set>
 
 #include <Windows.h>
-#include <WinSock2.h>
-#include <ws2ipdef.h>
-#include <iphlpapi.h>
 #include <tcpestats.h>
-
-#include <ctSockaddr.hpp>
+// wil headers always included last
 
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
 #include <wil/win32_helpers.h>
 
@@ -284,7 +282,7 @@ namespace ctsPerf { namespace Details
 
             [[nodiscard]] std::wstring PrintData() const
             {
-                return L"," + std::to_wstring(m_mssRcvd) + L"," + std::to_wstring(m_mssSent);
+                return L"," + std::to_wstring(m_mssReceived) + L"," + std::to_wstring(m_mssSent);
             }
 
             template <typename PTCPROW>
@@ -297,19 +295,19 @@ namespace ctsPerf { namespace Details
             template <typename PTCPROW>
             void UpdateData(const PTCPROW tcpRow) noexcept
             {
-                if (m_mssRcvd == 0)
+                if (m_mssReceived == 0)
                 {
                     TCP_ESTATS_SYN_OPTS_ROS_v0 ros{};
                     if (0 == GetPerConnectionStaticEstats(tcpRow, &ros))
                     {
-                        m_mssRcvd = ros.MssRcvd;
+                        m_mssReceived = ros.MssRcvd;
                         m_mssSent = ros.MssSent;
                     }
                 }
             }
 
         private:
-            ULONG m_mssRcvd = 0;
+            ULONG m_mssReceived = 0;
             ULONG m_mssSent = 0;
         };
 
@@ -365,7 +363,7 @@ namespace ctsPerf { namespace Details
             [[nodiscard]] std::wstring PrintData() const
             {
                 return
-                    ctsWriteDetails::PrintMeanStdDev(m_conjestionWindows) +
+                    ctsWriteDetails::PrintMeanStdDev(m_congestionWindows) +
                     wil::str_printf<std::wstring>(
                         L",%lu,%lu,%lu,%Iu,%Iu,%Iu",
                         m_transitionsIntoReceiverLimited,
@@ -390,7 +388,7 @@ namespace ctsPerf { namespace Details
                 TCP_ESTATS_SND_CONG_ROD_v0 rod{};
                 if (0 == GetPerConnectionDynamicEstats<TcpConnectionEstatsSndCong>(tcpRow, &rod))
                 {
-                    m_conjestionWindows.push_back(rod.CurCwnd);
+                    m_congestionWindows.push_back(rod.CurCwnd);
                     m_bytesSentInReceiverLimited = rod.SndLimBytesRwin;
                     m_bytesSentInSenderLimited = rod.SndLimBytesSnd;
                     m_bytesSentInCongestionLimited = rod.SndLimBytesCwnd;
@@ -401,7 +399,7 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            std::vector<ULONG> m_conjestionWindows{};
+            std::vector<ULONG> m_congestionWindows{};
 
             SIZE_T m_bytesSentInReceiverLimited = 0;
             SIZE_T m_bytesSentInSenderLimited = 0;
@@ -418,8 +416,8 @@ namespace ctsPerf { namespace Details
         public:
             static PCWSTR PrintHeader() noexcept
             {
-                return L"BytesRetrans,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
-                    L"RetransTimer(mean),RetransTimer(stddev),"
+                return L"BytesRetransmitted,DupeAcks,SelectiveAcks,CongSignals,MaxSegSize,"
+                    L"RetransmitTimer(mean),RetransmitTimer(stddev),"
                     L"RTT(mean),Rtt(stddev)";
             }
 
@@ -427,9 +425,9 @@ namespace ctsPerf { namespace Details
             {
                 return wil::str_printf<std::wstring>(
                            L",%lu,%lu,%lu,%lu,%lu",
-                           m_bytesRetrans,
-                           m_dupAcksRcvd,
-                           m_sacksRcvd,
+                           m_bytesRetransmitted,
+                           m_dupAcksReceived,
+                           m_sacksReceived,
                            m_congestionSignals,
                            m_maxSegmentSize) +
                        ctsWriteDetails::PrintMeanStdDev(m_retransmitTimer) +
@@ -452,9 +450,9 @@ namespace ctsPerf { namespace Details
                 {
                     m_retransmitTimer.push_back(rod.CurRto);
                     m_roundTripTime.push_back(rod.SmoothedRtt);
-                    m_bytesRetrans = rod.BytesRetrans;
-                    m_dupAcksRcvd = rod.DupAcksIn;
-                    m_sacksRcvd = rod.SacksRcvd;
+                    m_bytesRetransmitted = rod.BytesRetrans;
+                    m_dupAcksReceived = rod.DupAcksIn;
+                    m_sacksReceived = rod.SacksRcvd;
                     m_congestionSignals = rod.CongSignals;
                     m_maxSegmentSize = rod.CurMss;
                 }
@@ -463,9 +461,9 @@ namespace ctsPerf { namespace Details
         private:
             std::vector<ULONG> m_retransmitTimer{};
             std::vector<ULONG> m_roundTripTime{};
-            ULONG m_bytesRetrans = 0;
-            ULONG m_dupAcksRcvd = 0;
-            ULONG m_sacksRcvd = 0;
+            ULONG m_bytesRetransmitted = 0;
+            ULONG m_dupAcksReceived = 0;
+            ULONG m_sacksReceived = 0;
             ULONG m_congestionSignals = 0;
             ULONG m_maxSegmentSize = 0;
         };
@@ -490,14 +488,8 @@ namespace ctsPerf { namespace Details
                 ULONG calculatedMax = 0;
                 for (const auto& value : m_receiveWindow)
                 {
-                    if (value < calculatedMin)
-                    {
-                        calculatedMin = value;
-                    }
-                    if (value > calculatedMax)
-                    {
-                        calculatedMax = value;
-                    }
+	                calculatedMin = std::min(value, calculatedMin);
+	                calculatedMax = std::max(value, calculatedMax);
                 }
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", calculatedMin);
                 formattedString += wil::str_printf<std::wstring>(L"%lu", calculatedMax);
@@ -553,14 +545,8 @@ namespace ctsPerf { namespace Details
                 ULONG calculatedMax = 0;
                 for (const auto& value : m_receiveWindow)
                 {
-                    if (value < calculatedMin)
-                    {
-                        calculatedMin = value;
-                    }
-                    if (value > calculatedMax)
-                    {
-                        calculatedMax = value;
-                    }
+	                calculatedMin = std::min(value, calculatedMin);
+	                calculatedMax = std::max(value, calculatedMax);
                 }
 
                 formattedString += wil::str_printf<std::wstring>(L"%lu,", calculatedMin);
@@ -678,9 +664,9 @@ namespace ctsPerf { namespace Details
                 return EstatsDataTracking<TcpType>::PrintHeader();
             }
 
-            EstatsDataPoint(ctl::ctSockaddr local_addr, ctl::ctSockaddr remote_addr) noexcept :
-                m_localAddr(std::move(local_addr)),
-                m_remoteAddr(std::move(remote_addr))
+            EstatsDataPoint(wil::network::socket_address local_addr, wil::network::socket_address remote_addr) noexcept :
+                m_localAddr(local_addr),
+                m_remoteAddr(remote_addr)
             {
             }
 
@@ -688,32 +674,28 @@ namespace ctsPerf { namespace Details
                 m_localAddr(AF_INET),
                 m_remoteAddr(AF_INET)
             {
-                m_localAddr.setAddress(
-                    reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwLocalAddr)));
-                m_localAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwLocalPort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_localAddr.set_address(
+                    reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwLocalAddr));
+                m_localAddr.set_port(
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
-                m_remoteAddr.setAddress(
-                    reinterpret_cast<const PIN_ADDR>(const_cast<DWORD*>(&pTcpRow->dwRemoteAddr)));
-                m_remoteAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwRemotePort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_remoteAddr.set_address(
+                    reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwRemoteAddr));
+                m_remoteAddr.set_port(
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             explicit EstatsDataPoint(const MIB_TCP6ROW* pTcpRow) noexcept :
                 m_localAddr(AF_INET6),
                 m_remoteAddr(AF_INET6)
             {
-                m_localAddr.setAddress(&pTcpRow->LocalAddr);
-                m_localAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwLocalPort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_localAddr.set_address(&pTcpRow->LocalAddr);
+                m_localAddr.set_port(
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
-                m_remoteAddr.setAddress(&pTcpRow->RemoteAddr);
-                m_remoteAddr.setPort(
-                    static_cast<unsigned short>(pTcpRow->dwRemotePort),
-                    ctl::ByteOrder::NetworkOrder);
+                m_remoteAddr.set_address(&pTcpRow->RemoteAddr);
+                m_remoteAddr.set_port(
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             ~EstatsDataPoint() = default;
@@ -744,10 +726,10 @@ namespace ctsPerf { namespace Details
 
             std::wstring PrintAddresses() const
             {
-                WCHAR local_string[ctl::ctSockaddr::FixedStringLength];
-                m_localAddr.writeCompleteAddress(local_string);
-                WCHAR remote_string[ctl::ctSockaddr::FixedStringLength];
-                m_remoteAddr.writeCompleteAddress(remote_string);
+                wil::network::socket_address_wstring local_string;
+                m_localAddr.format_complete_address_nothrow(local_string);
+                wil::network::socket_address_wstring remote_string;
+                m_remoteAddr.format_complete_address_nothrow(remote_string);
 
                 return wil::str_printf<std::wstring>(
                     L"%ws,%ws",
@@ -773,12 +755,12 @@ namespace ctsPerf { namespace Details
                 m_data.UpdateData(tcpRow);
             }
 
-            ctl::ctSockaddr LocalAddr() const noexcept
+            wil::network::socket_address LocalAddr() const noexcept
             {
                 return m_localAddr;
             }
 
-            ctl::ctSockaddr RemoteAddr() const noexcept
+            wil::network::socket_address RemoteAddr() const noexcept
             {
                 return m_remoteAddr;
             }
@@ -789,8 +771,8 @@ namespace ctsPerf { namespace Details
             }
 
         private:
-            ctl::ctSockaddr m_localAddr;
-            ctl::ctSockaddr m_remoteAddr;
+            wil::network::socket_address m_localAddr;
+            wil::network::socket_address m_remoteAddr;
             // the tracking object must be mutable because EstatsDataPoint instances
             // are stored in a std::set container, and access to objects in a std::set
             // must be const (since you are not allowed to modify std::set objects in-place)
@@ -1105,8 +1087,8 @@ namespace ctsPerf { namespace Details
             }
         }
 
-        template <TCP_ESTATS_TYPE TcpType, typename Mibtype>
-        void UpdateDataPoints(std::set<Details::EstatsDataPoint<TcpType>>& data, Mibtype tableEntry)
+        template <TCP_ESTATS_TYPE TcpType, typename MibType>
+        void UpdateDataPoints(std::set<Details::EstatsDataPoint<TcpType>>& data, MibType tableEntry)
         {
             const auto emplaceResults = data.emplace(tableEntry);
             // first == iterator inserted
@@ -1131,8 +1113,8 @@ namespace ctsPerf { namespace Details
 
             while (foundInstance != std::end(m_synOptsData))
             {
-                const ctl::ctSockaddr localAddr(foundInstance->LocalAddr());
-                const ctl::ctSockaddr remoteAddr(foundInstance->RemoteAddr());
+                const wil::network::socket_address localAddr(foundInstance->LocalAddr());
+                const wil::network::socket_address remoteAddr(foundInstance->RemoteAddr());
 
                 const auto synOptsInstance = foundInstance;
                 const auto byteTrackingInstance = m_byteTrackingData.find(

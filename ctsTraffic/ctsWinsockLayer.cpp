@@ -16,15 +16,18 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
-#include <ctSockaddr.hpp>
 #include <ctThreadIocp.hpp>
 // project headers
 #include "ctsWinsockLayer.h"
 #include "ctsIOTask.hpp"
 #include "ctsConfig.h"
 #include "ctsSocket.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
+
+using ctsTraffic::ctsConfig::g_configSettings;
 
 //
 // These functions encapsulate making Winsock API calls
@@ -69,7 +72,7 @@ namespace ctsTraffic
 			}
 			else
 			{
-				if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
+				if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
 				{
 					returnResult.m_errorCode = ERROR_SUCCESS;
 					// OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
@@ -118,7 +121,7 @@ namespace ctsTraffic
 				.len = task.m_bufferLength,
 				.buf = task.m_buffer + task.m_bufferOffset };
 
-			if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.length(), pOverlapped, nullptr) != 0)
+			if (WSASendTo(socket, &wsaBuffer, 1, nullptr, 0, targetAddress.sockaddr(), targetAddress.size(), pOverlapped, nullptr) != 0)
 			{
 				returnResult.m_errorCode = WSAGetLastError();
 				// IO pended == successfully initiating the IO
@@ -131,7 +134,7 @@ namespace ctsTraffic
 			}
 			else
 			{
-				if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
+				if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
 				{
 					returnResult.m_errorCode = ERROR_SUCCESS;
 					// OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.

@@ -15,13 +15,15 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
 // wil headers always included last
 #include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/resource.h>
+
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
@@ -39,48 +41,48 @@ namespace ctsTraffic
         }
 
         USHORT nextPort = 0;
-        if (ctsConfig::g_configSettings->LocalPortHigh != 0 && ctsConfig::g_configSettings->LocalPortLow != 0)
+        if (g_configSettings->LocalPortHigh != 0 && g_configSettings->LocalPortLow != 0)
         {
             const auto portCounter = g_portCounter.fetch_add(1) + 1;
-            nextPort = static_cast<uint16_t>(portCounter % (ctsConfig::g_configSettings->LocalPortHigh - ctsConfig::g_configSettings->LocalPortLow + 1)) + ctsConfig::g_configSettings->LocalPortLow;
+            nextPort = static_cast<uint16_t>(portCounter % (g_configSettings->LocalPortHigh - g_configSettings->LocalPortLow + 1)) + g_configSettings->LocalPortLow;
         }
         else
         {
-            nextPort = ctsConfig::g_configSettings->LocalPortLow;
+            nextPort = g_configSettings->LocalPortLow;
         }
 
         //
         // Find a bind and target address by moving to the next address in the respective vectors
         //
-        ctl::ctSockaddr localAddr;
-        if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
+        wil::network::socket_address localAddr;
+        if (g_configSettings->ListenAddresses.empty() && !g_configSettings->TargetAddressStrings.empty())
         {
             // if we are connecting by name, always bind to the ephemeral IPv6 address
-            localAddr.reset(AF_INET6, ctl::ctSockaddr::AddressType::Any);
+            localAddr.reset(AF_INET6);
         }
         else
         {
-            const auto bindSize = ctsConfig::g_configSettings->BindAddresses.size();
-            auto socketCounter = g_bindCounter.fetch_add(1) + 1;
-            localAddr = ctsConfig::g_configSettings->BindAddresses[socketCounter % bindSize];
+            const auto bindSize = g_configSettings->BindAddresses.size();
+            const auto socketCounter = g_bindCounter.fetch_add(1) + 1;
+            localAddr = g_configSettings->BindAddresses[socketCounter % bindSize];
         }
 
-        localAddr.setPort(nextPort);
+        localAddr.set_port(nextPort);
 
-        ctl::ctSockaddr targetAddr;
-        if (!ctsConfig::g_configSettings->TargetAddresses.empty())
+        wil::network::socket_address targetAddr;
+        if (!g_configSettings->TargetAddresses.empty())
         {
             //
             // the target address family must match the bind address family
             // - ctsConfig guarantees that at least address families will match with at least one address in bind and target vectors
             //
-            const auto targetSize = ctsConfig::g_configSettings->TargetAddresses.size();
+            const auto targetSize = g_configSettings->TargetAddresses.size();
             auto socketCounter = g_targetCounter.fetch_add(1) + 1;
-            targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
+            targetAddr = g_configSettings->TargetAddresses[socketCounter % targetSize];
             while (targetAddr.family() != localAddr.family())
             {
                 socketCounter = g_targetCounter.fetch_add(1) + 1;
-                targetAddr = ctsConfig::g_configSettings->TargetAddresses[socketCounter % targetSize];
+                targetAddr = g_configSettings->TargetAddresses[socketCounter % targetSize];
             }
         }
 
@@ -89,14 +91,14 @@ namespace ctsTraffic
         const auto* functionName = "CreateSocket";
         try
         {
-            switch (ctsConfig::g_configSettings->Protocol)
+            switch (g_configSettings->Protocol)
             {
             case ctsConfig::ProtocolType::TCP:
-                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags);
+                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags);
                 break;
 
             case ctsConfig::ProtocolType::UDP:
-                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags);
+                socket = ctsConfig::CreateSocket(localAddr.family(), SOCK_DGRAM, IPPROTO_UDP, g_configSettings->SocketFlags);
                 break;
 
             case ctsConfig::ProtocolType::NoProtocolSet:
@@ -104,7 +106,7 @@ namespace ctsTraffic
             default: // NOLINT(clang-diagnostic-covered-switch-default)
                 ctsConfig::PrintErrorInfo(
                     L"Unknown socket protocol (%u)",
-                    static_cast<unsigned>(ctsConfig::g_configSettings->Protocol));
+                    static_cast<unsigned>(g_configSettings->Protocol));
                 gle = WSAEINVAL;
             }
         }
@@ -127,7 +129,7 @@ namespace ctsTraffic
         {
             // setting the socket option to support dual-mode sockets must be done before calling bind
             // must enable dual-mode sockets before calling WSAConnectByName, so it can connect to either IPv4 or IPv6 addresses
-            if (ctsConfig::g_configSettings->ListenAddresses.empty() && !ctsConfig::g_configSettings->TargetAddressStrings.empty())
+            if (g_configSettings->ListenAddresses.empty() && !g_configSettings->TargetAddressStrings.empty())
             {
                 PRINT_DEBUG_INFO(L"\t\tEnabling Dual-mode sockets\n");
                 constexpr DWORD ipv6_only = FALSE;
@@ -145,7 +147,7 @@ namespace ctsTraffic
 
             if (0 == nextPort)
             {
-                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
+                if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.size()))
                 {
                     gle = WSAGetLastError();
                 }
@@ -156,7 +158,7 @@ namespace ctsTraffic
                 constexpr auto bindRetryCount = 5;
                 for (auto bindRetry = 0; bindRetry < bindRetryCount; ++bindRetry)
                 {
-                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.length()))
+                    if (SOCKET_ERROR == bind(socket, localAddr.sockaddr(), localAddr.size()))
                     {
                         gle = WSAGetLastError();
                         if (WSAEADDRINUSE == gle)

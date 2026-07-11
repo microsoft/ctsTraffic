@@ -20,15 +20,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <utility>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
 // ctl headers
 #include <ctThreadIocp.hpp>
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsIOPattern.h"
 #include "ctsIOTask.hpp"
 // wil headers always included last
-#include <wil/resource.h>
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace ctsTraffic
 {
@@ -128,14 +127,14 @@ public:
     //
     // Gets/Sets the local address of the SOCKET
     //
-    const ctl::ctSockaddr& GetLocalSockaddr() const noexcept;
-    void SetLocalSockaddr(const ctl::ctSockaddr& localAddress) noexcept;
+    const wil::network::socket_address& GetLocalSockaddr() const noexcept;
+    void SetLocalSockaddr(const wil::network::socket_address& localAddress) noexcept;
 
     //
     // Gets/Sets the target address of the SOCKET, if there is one
     //
-    const ctl::ctSockaddr& GetRemoteSockaddr() const noexcept;
-    void SetRemoteSockaddr(const ctl::ctSockaddr& targetAddress) noexcept;
+    const wil::network::socket_address& GetRemoteSockaddr() const noexcept;
+    void SetRemoteSockaddr(const wil::network::socket_address& targetAddress) noexcept;
 
     //
     // Get/Set the ctsIOPattern
@@ -201,8 +200,8 @@ private:
     ctsTask m_timerTask{};
     std::function<void(std::weak_ptr<ctsSocket>, const ctsTask&)> m_timerCallback;
 
-    ctl::ctSockaddr m_localSockaddr;
-    ctl::ctSockaddr m_targetSockaddr;
+    wil::network::socket_address m_localSockaddr;
+    wil::network::socket_address m_targetSockaddr;
 
     uint32_t m_ioCount = 0L;
 

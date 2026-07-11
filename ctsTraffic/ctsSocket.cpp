@@ -20,7 +20,11 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsSocketState.h"
 #include "ctsWinsockLayer.h"
 // wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 #include <wil/win32_helpers.h>
+
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
@@ -111,7 +115,7 @@ namespace ctsTraffic
         if (m_socket && !m_tpIocp)
         {
             // can throw
-            m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), ctsConfig::g_configSettings->pTpEnvironment);
+            m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), g_configSettings->pTpEnvironment);
         }
         return m_tpIocp;
     }
@@ -157,22 +161,22 @@ namespace ctsTraffic
         }
     }
 
-    const ctSockaddr& ctsSocket::GetLocalSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetLocalSockaddr() const noexcept
     {
         return m_localSockaddr;
     }
 
-    void ctsSocket::SetLocalSockaddr(const ctSockaddr& localAddress) noexcept
+    void ctsSocket::SetLocalSockaddr(const wil::network::socket_address& localAddress) noexcept
     {
         m_localSockaddr = localAddress;
     }
 
-    const ctSockaddr& ctsSocket::GetRemoteSockaddr() const noexcept
+    const wil::network::socket_address& ctsSocket::GetRemoteSockaddr() const noexcept
     {
         return m_targetSockaddr;
     }
 
-    void ctsSocket::SetRemoteSockaddr(const ctSockaddr& targetAddress) noexcept
+    void ctsSocket::SetRemoteSockaddr(const wil::network::socket_address& targetAddress) noexcept
     {
         m_targetSockaddr = targetAddress;
     }
@@ -188,7 +192,7 @@ namespace ctsTraffic
 
         m_pattern->SetParent(shared_from_this());
 
-        if (ctsConfig::g_configSettings->PrePostSends == 0)
+        if (g_configSettings->PrePostSends == 0)
         {
             // user didn't specify a specific # of sends to pend
             // start ISB notifications (best-effort)
@@ -337,7 +341,7 @@ namespace ctsTraffic
         if (!m_tpTimer)
         {
             m_tpTimer.reset(
-                CreateThreadpoolTimer(ThreadPoolTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
+                CreateThreadpoolTimer(ThreadPoolTimerCallback, this, g_configSettings->pTpEnvironment));
             THROW_LAST_ERROR_IF(!m_tpTimer);
         }
 

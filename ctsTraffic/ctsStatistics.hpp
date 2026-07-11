@@ -27,9 +27,9 @@ See the Apache Version 2.0 License for specific language governing permissions a
 namespace ctsTraffic {
 	namespace ctsStatistics
 	{
-		inline void __stdcall UniqueAnyRpcStringFree(_Pre_opt_valid_ _Frees_ptr_opt_ RPC_CSTR str)
+		inline void __stdcall UniqueAnyRpcStringFree(_Pre_opt_valid_ _Frees_ptr_opt_ RPC_CSTR str) noexcept
 		{
-			::RpcStringFreeA(&str);
+			RpcStringFreeA(&str);
 		}
 		using unique_rpc_cstr = wil::unique_any<RPC_CSTR, decltype(&UniqueAnyRpcStringFree), UniqueAnyRpcStringFree>;
 

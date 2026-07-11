@@ -15,12 +15,12 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <memory>
 // os headers
 #include <Windows.h>
-#include <WinSock2.h>
-// ctl headers
-#include <ctSockaddr.hpp>
 // project headers
 #include "ctsSocket.h"
 #include "ctsConfig.h"
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 namespace ctsTraffic
 {
@@ -45,9 +45,9 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
     const auto socket = socketReference.GetSocket();
     if (socket != INVALID_SOCKET)
     {
-        const ctl::ctSockaddr& targetAddress = sharedSocket->GetRemoteSockaddr();
+        const wil::network::socket_address& targetAddress = sharedSocket->GetRemoteSockaddr();
 
-        if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.length()))
+        if (0 != connect(socket, targetAddress.sockaddr(), targetAddress.size()))
         {
             error = WSAGetLastError();
             ctsConfig::PrintErrorIfFailed("connect", error);
@@ -55,8 +55,8 @@ void ctsSimpleConnect(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
         else
         {
             // set the local address
-            ctl::ctSockaddr localAddr;
-            auto localAddrLen = localAddr.length();
+            wil::network::socket_address localAddr;
+            auto localAddrLen = localAddr.size();
             if (0 == getsockname(socket, localAddr.sockaddr(), &localAddrLen))
             {
                 sharedSocket->SetLocalSockaddr(localAddr);

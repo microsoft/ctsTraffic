@@ -16,11 +16,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 */
 
 #include <sdkddkver.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include "CppUnitTest.h"
 
 #include "../../ctl/ctCpuAffinity.hpp"
+
+// wil headers always included last
+#include <wil/stl.h>
+#include <wil/network.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
