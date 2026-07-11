@@ -29,15 +29,17 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/network.h>
 #include <wil/resource.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
-ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, wil::network::socket_address listeningAddr, std::shared_ptr<ctl::ctThreadIocp_base> threadIocp) :
+ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr, std::shared_ptr<ctl::ctThreadIocp_base> threadIocp) :
     m_threadIocp(std::move(threadIocp)),
     m_listeningSocket(std::move(listeningSocket)),
-    m_listeningAddr(std::move(listeningAddr))
+    m_listeningAddr(listeningAddr)
 {
     FAIL_FAST_IF_MSG(
-        !!(ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp),
+        !!(g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp),
         "ctsMediaStream sockets must not have HANDLE_INLINE_IOCP set on its datagram sockets");
 }
 
@@ -139,7 +141,7 @@ void ctsMediaStreamServerListeningSocket::InitiateRecv() noexcept
 
         if (error != NO_ERROR && error != WSAECONNRESET)
         {
-            ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
+            g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
             ++failureCounter;
 
             ctsConfig::PrintErrorInfo(
@@ -190,7 +192,7 @@ void ctsMediaStreamServerListeningSocket::RecvCompletion(OVERLAPPED* pOverlapped
                 {
                     ctsConfig::PrintErrorInfo(
                         L"ctsMediaStreamServer - WSARecvFrom failed [%d]", WSAGetLastError());
-                    ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
+                    g_configSettings->UdpStatusDetails.m_errorFrames.Increment();
                     m_priorFailureWasConnectionReset = false;
                 }
                 // this receive-call failed - do nothing immediately in response

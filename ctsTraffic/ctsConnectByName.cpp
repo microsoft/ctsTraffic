@@ -24,6 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 
 static std::atomic_signed_lock_free g_targetCounter{};
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
     //
@@ -49,9 +51,9 @@ namespace ctsTraffic
         {
             try
             {
-                const auto targetSize = ctsConfig::g_configSettings->TargetAddressStrings.size();
+                const auto targetSize = g_configSettings->TargetAddressStrings.size();
                 const auto connectCounter = g_targetCounter.fetch_add(1) + 1;
-                const auto& targetAddr = ctsConfig::g_configSettings->TargetAddressStrings[connectCounter % targetSize];
+                const auto& targetAddr = g_configSettings->TargetAddressStrings[connectCounter % targetSize];
 
                 // read the local sockaddr - e.g. if we needed to bind locally
                 wil::network::socket_address localAddr(sharedSocket->GetLocalSockaddr());
@@ -63,7 +65,7 @@ namespace ctsTraffic
                 if (!WSAConnectByNameW(
                     socket,
                     const_cast<LPWSTR>(targetAddr.c_str()),
-                    const_cast<LPWSTR>(std::to_wstring(ctsConfig::g_configSettings->Port).c_str()),
+                    const_cast<LPWSTR>(std::to_wstring(g_configSettings->Port).c_str()),
                     &localAddrLength,
                     localAddr.sockaddr(),
                     &remoteAddrLength,

@@ -25,6 +25,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/network.h>
 #include <wil/resource.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
 //
@@ -71,9 +73,9 @@ namespace details
             }
 
             // listen to each address
-            for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
+            for (const auto& addr : g_configSettings->ListenAddresses)
             {
-                wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, ctsConfig::g_configSettings->SocketFlags)};
+                wil::unique_socket listening{ctsConfig::CreateSocket(addr.family(), SOCK_STREAM, IPPROTO_TCP, g_configSettings->SocketFlags)};
 
                 const auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                 if (error != NO_ERROR)

@@ -36,6 +36,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/network.h>
 #include <wil/resource.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
     // Called to 'accept' incoming connections
@@ -140,9 +142,9 @@ namespace ctsTraffic
         static BOOL CALLBACK InitOnceImpl(PINIT_ONCE, PVOID, PVOID*) noexcept try
         {
             // 'listen' to each address
-            for (const auto& addr : ctsConfig::g_configSettings->ListenAddresses)
+            for (const auto& addr : g_configSettings->ListenAddresses)
             {
-                if (ctsConfig::g_configSettings->EnableRecvSharding)
+                if (g_configSettings->EnableRecvSharding)
                 {
                     const auto shardCount = ctsConfig::GetShardCount();
                     const auto affinityPolicy = ctsConfig::GetCpuAffinityPolicy();
@@ -152,7 +154,7 @@ namespace ctsTraffic
 
                     for (uint32_t shard = 0; shard < shardCount; ++shard)
                     {
-                        wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
+                        wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, g_configSettings->SocketFlags));
 
                         auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                         if (error != NO_ERROR)
@@ -219,9 +221,9 @@ namespace ctsTraffic
 
                         const auto threadIocp = std::make_shared<ctl::ctThreadIocp_shard>(
                             listening.get(),
-                            static_cast<size_t>(ctsConfig::g_configSettings->ShardWorkerCount),
+                            static_cast<size_t>(g_configSettings->ShardWorkerCount),
                             std::move(workerAffinities),
-                            static_cast<size_t>(ctsConfig::g_configSettings->IocpBatchSize));
+                            static_cast<size_t>(g_configSettings->IocpBatchSize));
 
                         g_listeningSockets.emplace_back(
                             std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr, threadIocp));
@@ -235,7 +237,7 @@ namespace ctsTraffic
                 }
                 else
                 {
-                    wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, ctsConfig::g_configSettings->SocketFlags));
+                    wil::unique_socket listening(ctsConfig::CreateSocket(addr.family(), SOCK_DGRAM, IPPROTO_UDP, g_configSettings->SocketFlags));
 
                     auto error = ctsConfig::SetPreBindOptions(listening.get(), addr);
                     if (error != NO_ERROR)
@@ -255,7 +257,7 @@ namespace ctsTraffic
                     const SOCKET listeningSocketToPrint(listening.get());
 
                     // non-sharded: original behavior (threadpool IO manager)
-                    const auto threadIocp = std::make_shared<ctl::ctThreadIocp>(listening.get(), ctsConfig::g_configSettings->pTpEnvironment);
+                    const auto threadIocp = std::make_shared<ctl::ctThreadIocp>(listening.get(), g_configSettings->pTpEnvironment);
 
                     g_listeningSockets.emplace_back(
                         std::make_unique<ctsMediaStreamServerListeningSocket>(std::move(listening), addr, threadIocp));
@@ -373,7 +375,7 @@ namespace ctsTraffic
 
                     if (existingSocket != std::end(g_connectedSockets))
                     {
-                        ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
+                        g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                         PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::accept_socket - socket with remote address %ws asked to be Started but was already established",
                             waitingEndpoint->second.format_complete_address().c_str());
                         // return early if this was a duplicate request: this can happen if there is latency or drops
@@ -448,7 +450,7 @@ namespace ctsTraffic
                 });
             if (existingSocket != std::end(g_connectedSockets))
             {
-                ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
+                g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in connected_sockets",
                     targetAddr.format_complete_address().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops
@@ -463,7 +465,7 @@ namespace ctsTraffic
                 });
             if (awaitingEndpoint != std::end(g_awaitingEndpoints))
             {
-                ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
+                g_configSettings->UdpStatusDetails.m_duplicateFrames.Increment();
                 PRINT_DEBUG_INFO(L"\t\tctsMediaStreamServer::start - socket with remote address %ws asked to be Started but was already in awaiting endpoints",
                     targetAddr.format_complete_address().c_str());
                 // return early if this was a duplicate request: this can happen if there is latency or drops

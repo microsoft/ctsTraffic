@@ -157,7 +157,7 @@ private:
     //
     std::unique_ptr<ctsIoPatternState> m_ioPatternState;
 
-    enum Role
+    enum Role : uint8_t
     {
         Client,
         Server

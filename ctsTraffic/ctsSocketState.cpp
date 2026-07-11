@@ -23,13 +23,14 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsIOPattern.h"
 
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
 ctsSocketState::ctsSocketState(std::weak_ptr<ctsSocketBroker> pBroker) :
     m_broker(std::move(pBroker))
 {
-    m_threadPoolWorker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, ctsConfig::g_configSettings->pTpEnvironment));
+    m_threadPoolWorker.reset(CreateThreadpoolWork(ThreadPoolWorker, this, g_configSettings->pTpEnvironment));
     THROW_LAST_ERROR_IF_NULL(m_threadPoolWorker.get());
 }
 
@@ -71,14 +72,14 @@ void ctsSocketState::CompleteState(DWORD error) noexcept
             case InternalState::Created:
             {
                 // if no connectFunction specified, go straight to IO
-                if (ctsConfig::g_configSettings->ConnectFunction)
+                if (g_configSettings->ConnectFunction)
                 {
                     m_state = InternalState::Connecting;
                 }
                 else
                 {
                     m_state = InternalState::InitiatingIo;
-                    ctsConfig::g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Increment();
+                    g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Increment();
                 }
                 break;
             }
@@ -86,7 +87,7 @@ void ctsSocketState::CompleteState(DWORD error) noexcept
             case InternalState::Connected:
             {
                 m_state = InternalState::InitiatingIo;
-                ctsConfig::g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Increment();
+                g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Increment();
                 break;
             }
 
@@ -157,7 +158,7 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
                 thisPtr->m_state = InternalState::Created;
                 lock.reset();
 
-                ctsConfig::g_configSettings->CreateFunction(thisPtr->m_socket);
+                g_configSettings->CreateFunction(thisPtr->m_socket);
                 PRINT_DEBUG_INFO(L"\t\tctsSocketState Created\n");
             }
             catch (...)
@@ -173,7 +174,7 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
             thisPtr->m_state = InternalState::Connected;
             lock.reset();
 
-            ctsConfig::g_configSettings->ConnectFunction(thisPtr->m_socket);
+            g_configSettings->ConnectFunction(thisPtr->m_socket);
             PRINT_DEBUG_INFO(L"\t\tctsSocketState Connected\n");
             break;
         }
@@ -194,7 +195,7 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
                 thisPtr->m_state = InternalState::InitiatedIo;
                 lock.reset();
 
-                ctsConfig::g_configSettings->IoFunction(thisPtr->m_socket);
+                g_configSettings->IoFunction(thisPtr->m_socket);
                 PRINT_DEBUG_INFO(L"\t\tctsSocketState InitiatedIO\n");
             }
             catch (...)
@@ -214,27 +215,27 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
             if (thisPtr->m_initiatedIo)
             {
                 // Update the status counter if we previously tracked this connection as active
-                ctsConfig::g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Decrement();
+                g_configSettings->ConnectionStatusDetails.m_activeConnectionCount.Decrement();
 
                 // Update the historic stats for this connection
                 if (0 == thisPtr->m_lastError)
                 {
-                    ctsConfig::g_configSettings->ConnectionStatusDetails.m_successfulCompletionCount.Increment();
+                    g_configSettings->ConnectionStatusDetails.m_successfulCompletionCount.Increment();
                 }
                 else if (ctsIoPattern::IsProtocolError(thisPtr->m_lastError))
                 {
-                    ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.Increment();
+                    g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.Increment();
                 }
                 else
                 {
-                    ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.Increment();
+                    g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.Increment();
                 }
             }
             else
             {
                 // if this socket never started IO, it never created an io_pattern to track stats
                 // - in this case, directly track the failures in the global stats
-                ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.Increment();
+                g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.Increment();
             }
 
             if (thisPtr->m_socket)
@@ -242,9 +243,9 @@ VOID NTAPI ctsSocketState::ThreadPoolWorker(PTP_CALLBACK_INSTANCE, PVOID context
                 thisPtr->m_socket->CloseSocket(thisPtr->m_lastError);
                 thisPtr->m_socket->PrintPatternResults(thisPtr->m_lastError);
 
-                if (ctsConfig::g_configSettings->ClosingFunction)
+                if (g_configSettings->ClosingFunction)
                 {
-                    ctsConfig::g_configSettings->ClosingFunction(thisPtr->m_socket);
+                    g_configSettings->ClosingFunction(thisPtr->m_socket);
                 }
             }
 

@@ -220,13 +220,13 @@ const std::string g_doneString("DONE");
 TEST_CLASS(ctsIOPatternUnitTest_Server)
 {
 private:
-    enum TestRole
+    enum TestRole : uint8_t
     {
         Client,
         Server
     };
 
-    enum TestShutdownMethod
+    enum TestShutdownMethod : uint8_t
     {
         Graceful,
         Hard

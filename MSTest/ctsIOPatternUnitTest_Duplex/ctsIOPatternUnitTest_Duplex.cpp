@@ -192,13 +192,13 @@ namespace ctsUnitTest
 TEST_CLASS(ctsIOPatternUnitTest_Duplex)
 {
 private:
-    enum TestRole
+    enum TestRole : uint8_t
     {
         Client,
         Server
     };
 
-    enum TestShutdownMethod
+    enum TestShutdownMethod : uint8_t
     {
         Graceful,
         Hard

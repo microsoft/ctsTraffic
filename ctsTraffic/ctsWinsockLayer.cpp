@@ -27,6 +27,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/stl.h>
 #include <wil/network.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 //
 // These functions encapsulate making Winsock API calls
 // - primarily facilitating unit testing of interface logic that calls through Winsock
@@ -70,7 +72,7 @@ namespace ctsTraffic
 			}
 			else
 			{
-				if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
+				if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
 				{
 					returnResult.m_errorCode = ERROR_SUCCESS;
 					// OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.
@@ -132,7 +134,7 @@ namespace ctsTraffic
 			}
 			else
 			{
-				if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
+				if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
 				{
 					returnResult.m_errorCode = ERROR_SUCCESS;
 					// OVERLAPPED.InternalHigh == the number of bytes transferred for the I/O request.

@@ -28,7 +28,7 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/stl.h>
 #include <wil/network.h>
 
-using namespace ctl;
+using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
@@ -40,10 +40,10 @@ ctsMediaStreamServerConnectedSocket::ctsMediaStreamServerConnectedSocket(
     m_weakSocket(std::move(weakSocket)),
     m_ioFunctor(std::move(ioFunctor)),
     m_sendingSocket(sendingSocket),
-    m_remoteAddr(std::move(remoteAddr)),
-    m_connectTime(ctTimer::snap_qpc_as_msec())
+    m_remoteAddr(remoteAddr),
+    m_connectTime(ctl::ctTimer::snap_qpc_as_msec())
 {
-    m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
+    m_taskTimer.reset(CreateThreadpoolTimer(MediaStreamTimerCallback, this, g_configSettings->pTpEnvironment));
     THROW_LAST_ERROR_IF(!m_taskTimer);
 }
 
@@ -67,7 +67,7 @@ void ctsMediaStreamServerConnectedSocket::ScheduleTask(const ctsTask& task) noex
         }
         else
         {
-            FILETIME ftDueTime{ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds)};
+            FILETIME ftDueTime{ctl::ctTimer::convert_ms_to_relative_filetime(task.m_timeOffsetMilliseconds)};
             // assign the next task *and* schedule the timer while in *this object lock
             m_nextTask = task;
             SetThreadpoolTimer(m_taskTimer.get(), &ftDueTime, 0, 0);

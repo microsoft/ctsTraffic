@@ -30,207 +30,205 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/resource.h>
 
 using namespace ctsTraffic;
-using namespace ctl;
-using namespace std;
-
+using ctsConfig::g_configSettings;
 
 // global ptr for easing debugging
 static ctsSocketBroker* g_socketBroker = nullptr;
 
 static BOOL WINAPI CtrlBreakHandlerRoutine(DWORD) noexcept
 {
-    // handle all exit types - notify config that it's time to shut down
-    ctsConfig::PrintSummary(L"\n  **** ctrl-break hit -- shutting down ****\n");
-    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-    return TRUE;
+	// handle all exit types - notify config that it's time to shut down
+	ctsConfig::PrintSummary(L"\n  **** ctrl-break hit -- shutting down ****\n");
+	ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+	return TRUE;
 }
 
 int __cdecl wmain(int argc, _In_reads_z_(argc) const wchar_t** argv)
 {
-    WSADATA wsadata{};
-    auto err = WSAStartup(WINSOCK_VERSION, &wsadata);
-    if (err != 0)
-    {
-        wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", err);
-        return err;
-    }
+	WSADATA wsadata{};
+	auto err = WSAStartup(WINSOCK_VERSION, &wsadata);
+	if (err != 0)
+	{
+		wprintf(L"ctsTraffic failed at WSAStartup [%d]\n", err);
+		return err;
+	}
 
-    try
-    {
-        if (!ctsConfig::Startup(argc, argv))
-        {
-            ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-            err = ERROR_INVALID_DATA;
-        }
-    }
-    catch (const invalid_argument& e)
-    {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-        err = ERROR_INVALID_DATA;
-    }
-    catch (const exception& e)
-    {
-        ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-        err = ERROR_INVALID_DATA;
-    }
+	try
+	{
+		if (!ctsConfig::Startup(argc, argv))
+		{
+			ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+			err = ERROR_INVALID_DATA;
+		}
+	}
+	catch (const std::invalid_argument& e)
+	{
+		ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"Invalid argument specified: %hs", e.what()).c_str());
+		ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+		err = ERROR_INVALID_DATA;
+	}
+	catch (const std::exception& e)
+	{
+		ctsConfig::PrintExceptionOverride(e.what());
+		ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+		err = ERROR_INVALID_DATA;
+	}
 
-    if (err == ERROR_INVALID_DATA)
-    {
-        wprintf(
-            L"\n"
-            L"For more information on command line options, specify -Help\n"
-            L"ctsTraffic.exe -Help:[tcp] [udp] [logging] [advanced]\n"
-            L"   -help:tcp : prints usage for TCP options\n"
-            L"   -help:udp : prints usage for UDP options\n"
-            L"   -help:logging : prints usage for logging options\n"
-            L"   -help:advanced : prints the usage for advanced and experimental options\n"
-            L"\n\n");
-        return err;
-    }
+	if (err == ERROR_INVALID_DATA)
+	{
+		wprintf(
+			L"\n"
+			L"For more information on command line options, specify -Help\n"
+			L"ctsTraffic.exe -Help:[tcp] [udp] [logging] [advanced]\n"
+			L"   -help:tcp : prints usage for TCP options\n"
+			L"   -help:udp : prints usage for UDP options\n"
+			L"   -help:logging : prints usage for logging options\n"
+			L"   -help:advanced : prints the usage for advanced and experimental options\n"
+			L"\n\n");
+		return err;
+	}
 
-    try
-    {
-        if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE))
-        {
-            THROW_WIN32_MSG(GetLastError(), "SetConsoleCtrlHandler");
-        }
+	try
+	{
+		if (!SetConsoleCtrlHandler(CtrlBreakHandlerRoutine, TRUE))
+		{
+			THROW_WIN32_MSG(GetLastError(), "SetConsoleCtrlHandler");
+		}
 
-        ctsConfig::PrintSettings();
-        ctsConfig::PrintLegend();
+		ctsConfig::PrintSettings();
+		ctsConfig::PrintLegend();
 
-        // set the start timer as close as possible to the start of the engine
-        ctsConfig::g_configSettings->StartTimeMilliseconds = ctTimer::snap_qpc_as_msec();
-        const auto broker(std::make_shared<ctsSocketBroker>());
-        g_socketBroker = broker.get();
-        broker->Start();
+		// set the start timer as close as possible to the start of the engine
+		g_configSettings->StartTimeMilliseconds = ctl::ctTimer::snap_qpc_as_msec();
+		const auto broker(std::make_shared<ctsSocketBroker>());
+		g_socketBroker = broker.get();
+		broker->Start();
 
-        wil::unique_threadpool_timer statusTimer;
-        if (ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds > 0)
-        {
-            statusTimer.reset(CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID, PTP_TIMER) { ctsConfig::PrintStatusUpdate(); }, nullptr, nullptr));
-            THROW_LAST_ERROR_IF(!statusTimer);
-            FILETIME zeroFiletime{};
-            SetThreadpoolTimer(statusTimer.get(), &zeroFiletime, ctsConfig::g_configSettings->StatusUpdateFrequencyMilliseconds, 0);
-        }
+		wil::unique_threadpool_timer statusTimer;
+		if (g_configSettings->StatusUpdateFrequencyMilliseconds > 0)
+		{
+			statusTimer.reset(CreateThreadpoolTimer([](PTP_CALLBACK_INSTANCE, PVOID, PTP_TIMER) { ctsConfig::PrintStatusUpdate(); }, nullptr, nullptr));
+			THROW_LAST_ERROR_IF(!statusTimer);
+			FILETIME zeroFiletime{};
+			SetThreadpoolTimer(statusTimer.get(), &zeroFiletime, g_configSettings->StatusUpdateFrequencyMilliseconds, 0);
+		}
 
-        if (!broker->Wait(ctsConfig::g_configSettings->TimeLimit > 0 ? ctsConfig::g_configSettings->TimeLimit : INFINITE))
-        {
-            ctsConfig::PrintSummary(L"\n  **** Time-limit of %lu reached ****\n", ctsConfig::g_configSettings->TimeLimit);
-        }
+		if (!broker->Wait(g_configSettings->TimeLimit > 0 ? g_configSettings->TimeLimit : INFINITE))
+		{
+			ctsConfig::PrintSummary(L"\n  **** Time-limit of %lu reached ****\n", g_configSettings->TimeLimit);
+		}
 
-        if (ctsConfig::g_configSettings->PauseAtEnd > 0)
-        {
-            // stop all status updates being printed to the console and pause before destroying the broker object
-            statusTimer.reset();
-            ctsConfig::PrintSummary(L"\n  **** Pausing-At-End for %lu milliseconds ****\n", ctsConfig::g_configSettings->PauseAtEnd);
-            Sleep(ctsConfig::g_configSettings->PauseAtEnd);
-        }
-    }
-    catch (const wil::ResultException& e)
-    {
-        ctsConfig::PrintExceptionOverride(e.what());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-        return e.GetErrorCode();
-    }
-    catch (const bad_alloc&)
-    {
-        ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed: Out of Memory");
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-        return ERROR_OUTOFMEMORY;
-    }
-    catch (const exception& e)
-    {
-        ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed: %hs", e.what()).c_str());
-        ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
-        return ERROR_CANCELLED;
-    }
+		if (g_configSettings->PauseAtEnd > 0)
+		{
+			// stop all status updates being printed to the console and pause before destroying the broker object
+			statusTimer.reset();
+			ctsConfig::PrintSummary(L"\n  **** Pausing-At-End for %lu milliseconds ****\n", g_configSettings->PauseAtEnd);
+			Sleep(g_configSettings->PauseAtEnd);
+		}
+	}
+	catch (const wil::ResultException& e)
+	{
+		ctsConfig::PrintExceptionOverride(e.what());
+		ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+		return e.GetErrorCode();
+	}
+	catch (const std::bad_alloc&)
+	{
+		ctsConfig::PrintErrorInfoOverride(L"ctsTraffic failed: Out of Memory");
+		ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+		return ERROR_OUTOFMEMORY;
+	}
+	catch (const std::exception& e)
+	{
+		ctsConfig::PrintErrorInfoOverride(wil::str_printf<std::wstring>(L"ctsTraffic failed: %hs", e.what()).c_str());
+		ctsConfig::Shutdown(ctsConfig::ExitProcessType::Rude);
+		return ERROR_CANCELLED;
+	}
 
-    const auto totalTimeRun = ctTimer::snap_qpc_as_msec() - ctsConfig::g_configSettings->StartTimeMilliseconds;
+	const auto totalTimeRun = ctl::ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
-    // write out the final status update
-    ctsConfig::PrintStatusUpdate();
+	// write out the final status update
+	ctsConfig::PrintStatusUpdate();
 
-    ctsConfig::Shutdown(ctsConfig::ExitProcessType::Normal);
+	ctsConfig::Shutdown(ctsConfig::ExitProcessType::Normal);
 
-    ctsConfig::PrintSummary(
-        L"\n\n"
-        L"  Historic Connection Statistics (all connections over the complete lifetime)  \n"
-        L"-------------------------------------------------------------------------------\n"
-        L"  SuccessfulConnections [%lld]   NetworkErrors [%lld]   ProtocolErrors [%lld]\n",
-        ctsConfig::g_configSettings->ConnectionStatusDetails.m_successfulCompletionCount.GetValue(),
-        ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue(),
-        ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue());
+	ctsConfig::PrintSummary(
+		L"\n\n"
+		L"  Historic Connection Statistics (all connections over the complete lifetime)  \n"
+		L"-------------------------------------------------------------------------------\n"
+		L"  SuccessfulConnections [%lld]   NetworkErrors [%lld]   ProtocolErrors [%lld]\n",
+		g_configSettings->ConnectionStatusDetails.m_successfulCompletionCount.GetValue(),
+		g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue(),
+		g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue());
 
-    if (ctsConfig::g_configSettings->Protocol == ctsConfig::ProtocolType::TCP)
-    {
-        ctsConfig::PrintSummary(
-            L"\n"
-            L"  Total Bytes Recv : %lld\n"
-            L"  Total Bytes Sent : %lld\n",
-            ctsConfig::g_configSettings->TcpStatusDetails.m_bytesRecv.GetValue(),
-            ctsConfig::g_configSettings->TcpStatusDetails.m_bytesSent.GetValue());
-    }
-    else
-    {
-        // currently don't track UDP server stats
-        if (!ctsConfig::IsListening())
-        {
-            const auto successfulFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_successfulFrames.GetValue();
-            const auto droppedFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_droppedFrames.GetValue();
-            const auto duplicateFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_duplicateFrames.GetValue();
-            const auto errorFrames = ctsConfig::g_configSettings->UdpStatusDetails.m_errorFrames.GetValue();
+	if (g_configSettings->Protocol == ctsConfig::ProtocolType::TCP)
+	{
+		ctsConfig::PrintSummary(
+			L"\n"
+			L"  Total Bytes Recv : %lld\n"
+			L"  Total Bytes Sent : %lld\n",
+			g_configSettings->TcpStatusDetails.m_bytesRecv.GetValue(),
+			g_configSettings->TcpStatusDetails.m_bytesSent.GetValue());
+	}
+	else
+	{
+		// currently don't track UDP server stats
+		if (!ctsConfig::IsListening())
+		{
+			const auto successfulFrames = g_configSettings->UdpStatusDetails.m_successfulFrames.GetValue();
+			const auto droppedFrames = g_configSettings->UdpStatusDetails.m_droppedFrames.GetValue();
+			const auto duplicateFrames = g_configSettings->UdpStatusDetails.m_duplicateFrames.GetValue();
+			const auto errorFrames = g_configSettings->UdpStatusDetails.m_errorFrames.GetValue();
 
-            const auto totalFrames =
-                successfulFrames +
-                droppedFrames +
-                duplicateFrames +
-                errorFrames;
-            ctsConfig::PrintSummary(
-                L"\n"
-                L"  Total Bytes Recv : %lld\n"
-                L"  Total Successful Frames : %lld (%f)\n"
-                L"  Total Dropped Frames : %lld (%f)\n"
-                L"  Total Duplicate Frames : %lld (%f)\n"
-                L"  Total Error Frames : %lld (%f)\n",
-                ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.GetValue() / 8LL,
-                successfulFrames,
-                totalFrames > 0 ? static_cast<double>(successfulFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
-                droppedFrames,
-                totalFrames > 0 ? static_cast<double>(droppedFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
-                duplicateFrames,
-                totalFrames > 0 ? static_cast<double>(duplicateFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
-                errorFrames,
-                totalFrames > 0 ? static_cast<double>(errorFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0);
-        }
-        else if (ctsConfig::g_configSettings->EnableRecvSharding)
-        {
+			const auto totalFrames =
+				successfulFrames +
+				droppedFrames +
+				duplicateFrames +
+				errorFrames;
+			ctsConfig::PrintSummary(
+				L"\n"
+				L"  Total Bytes Recv : %lld\n"
+				L"  Total Successful Frames : %lld (%f)\n"
+				L"  Total Dropped Frames : %lld (%f)\n"
+				L"  Total Duplicate Frames : %lld (%f)\n"
+				L"  Total Error Frames : %lld (%f)\n",
+				g_configSettings->UdpStatusDetails.m_bitsReceived.GetValue() / 8LL,
+				successfulFrames,
+				totalFrames > 0 ? static_cast<double>(successfulFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+				droppedFrames,
+				totalFrames > 0 ? static_cast<double>(droppedFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+				duplicateFrames,
+				totalFrames > 0 ? static_cast<double>(duplicateFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0,
+				errorFrames,
+				totalFrames > 0 ? static_cast<double>(errorFrames) / static_cast<double>(totalFrames) * 100.0 : 0.0);
+		}
+		else if (g_configSettings->EnableRecvSharding)
+		{
 
-            // If using the media-stream server, print per-listener connection counts
-            const auto listenerInfos = ctsMediaStreamServerImpl::GetListenerInfos();
-            if (!listenerInfos.empty())
-            {
-                ctsConfig::PrintSummary(L"\n  Connections per listener (shard):\n");
-                for (size_t i = 0; i < listenerInfos.size(); ++i)
-                {
-                    const auto& info = listenerInfos[i];
-                    ctsConfig::PrintSummary(
-                        L"    Listener %zu : %ws : %u\n",
-                        i,
-                        info.ListeningAddress.format_complete_address().c_str(),
-                        info.ConnectionCount);
-                }
-            }
-        }
-    }
-    ctsConfig::PrintSummary(
-        L"  Total Time : %lld ms.\n", totalTimeRun);
+			// If using the media-stream server, print per-listener connection counts
+			const auto listenerInfos = ctsMediaStreamServerImpl::GetListenerInfos();
+			if (!listenerInfos.empty())
+			{
+				ctsConfig::PrintSummary(L"\n  Connections per listener (shard):\n");
+				for (size_t i = 0; i < listenerInfos.size(); ++i)
+				{
+					const auto& info = listenerInfos[i];
+					ctsConfig::PrintSummary(
+						L"    Listener %zu : %ws : %u\n",
+						i,
+						info.ListeningAddress.format_complete_address().c_str(),
+						info.ConnectionCount);
+				}
+			}
+		}
+	}
+	ctsConfig::PrintSummary(
+		L"  Total Time : %lld ms.\n", totalTimeRun);
 
-    int64_t errorCount =
-        ctsConfig::g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
-        ctsConfig::g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
+	int64_t errorCount =
+		g_configSettings->ConnectionStatusDetails.m_connectionErrorCount.GetValue() +
+		g_configSettings->ConnectionStatusDetails.m_protocolErrorCount.GetValue();
 
-    errorCount = std::min<int64_t>(errorCount, MAXINT);
-    return static_cast<int>(errorCount);
+	errorCount = std::min<int64_t>(errorCount, MAXINT);
+	return static_cast<int>(errorCount);
 }

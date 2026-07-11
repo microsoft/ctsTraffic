@@ -58,7 +58,7 @@ public:
     uint32_t GetConnectionCount() const noexcept { return m_connectionCount.load(std::memory_order_relaxed); }
     ctsMediaStreamServerListeningSocket(
         wil::unique_socket&& listeningSocket,
-        wil::network::socket_address listeningAddr,
+        const wil::network::socket_address& listeningAddr,
         std::shared_ptr<ctl::ctThreadIocp_base> threadIocp);
 
     ~ctsMediaStreamServerListeningSocket() noexcept;

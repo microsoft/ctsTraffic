@@ -25,6 +25,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/stl.h>
 #include <wil/resource.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
 	using namespace ctl;
@@ -94,7 +96,7 @@ namespace ctsTraffic
 	//
 	shared_ptr<ctsIoPattern> ctsIoPattern::MakeIoPattern()
 	{
-		switch (ctsConfig::g_configSettings->IoPattern)
+		switch (g_configSettings->IoPattern)
 		{
 		case ctsConfig::IoPatternType::Pull:
 			return make_shared<ctsIoPatternPull>();
@@ -134,14 +136,14 @@ namespace ctsTraffic
 		if (recvCount > 0)
 		{
 			// recv will only use the same shared buffer when the user specified to do so on the cmdline
-			if (ctsConfig::g_configSettings->UseSharedBuffer)
+			if (g_configSettings->UseSharedBuffer)
 			{
 				for (auto bufferCount = 0ul; bufferCount < recvCount; ++bufferCount)
 				{
 					m_recvBufferFreeList[bufferCount] = g_receiverSharedBuffer;
 					if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 					{
-						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(g_receiverSharedBuffer, g_maximumBufferSize);
+						m_receivingRioBufferIds[bufferCount].m_bufferId = g_configSettings->rioFunctions->RIORegisterBuffer(g_receiverSharedBuffer, g_maximumBufferSize);
 						if (m_receivingRioBufferIds[bufferCount].m_bufferId == RIO_INVALID_BUFFERID)
 						{
 							THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -163,7 +165,7 @@ namespace ctsTraffic
 
 					if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 					{
-						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(nextBuffer, ctsConfig::GetMaxBufferSize());
+						m_receivingRioBufferIds[bufferCount].m_bufferId = g_configSettings->rioFunctions->RIORegisterBuffer(nextBuffer, ctsConfig::GetMaxBufferSize());
 						if (m_receivingRioBufferIds[bufferCount].m_bufferId == RIO_INVALID_BUFFERID)
 						{
 							THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -176,13 +178,13 @@ namespace ctsTraffic
 		// register buffers for the connection ID and the completion message
 		if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 		{
-			m_rioConnectionId.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::ConnectionIdLength);
+			m_rioConnectionId.m_bufferId = g_configSettings->rioFunctions->RIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::ConnectionIdLength);
 			if (m_rioConnectionId.m_bufferId == RIO_INVALID_BUFFERID)
 			{
 				THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
 			}
 
-			m_rioCompletionMessage.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(m_completionMessageBuffer.data(), static_cast<DWORD>(m_completionMessageBuffer.size()));
+			m_rioCompletionMessage.m_bufferId = g_configSettings->rioFunctions->RIORegisterBuffer(m_completionMessageBuffer.data(), static_cast<DWORD>(m_completionMessageBuffer.size()));
 			if (m_rioCompletionMessage.m_bufferId == RIO_INVALID_BUFFERID)
 			{
 				THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -201,7 +203,7 @@ namespace ctsTraffic
 			m_sendingRioBufferIds.resize(g_maxNumberOfRioSendBuffers);
 			for (auto& sendingBuffer : m_sendingRioBufferIds)
 			{
-				sendingBuffer.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(g_senderSharedBuffer, g_maximumBufferSize);
+				sendingBuffer.m_bufferId = g_configSettings->rioFunctions->RIORegisterBuffer(g_senderSharedBuffer, g_maximumBufferSize);
 				if (sendingBuffer.m_bufferId == RIO_INVALID_BUFFERID)
 				{
 					THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -216,9 +218,9 @@ namespace ctsTraffic
 
 	ctsIoPattern::ctsIoPattern(uint32_t recvCount) :
 		// (bytes/sec) * (1 sec/1000 ms) * (x ms/Quantum) == (bytes/quantum)
-		m_burstCount{ ctsConfig::g_configSettings->BurstCount },
-		m_burstDelay{ ctsConfig::g_configSettings->BurstDelay },
-		m_bytesSendingPerQuantum{ ctsConfig::GetTcpBytesPerSecond() * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod / 1000LL },
+		m_burstCount{ g_configSettings->BurstCount },
+		m_burstDelay{ g_configSettings->BurstDelay },
+		m_bytesSendingPerQuantum{ ctsConfig::GetTcpBytesPerSecond() * g_configSettings->TcpBytesPerSecondPeriod / 1000LL },
 		m_quantumStartTimeMs{ ctTimer::snap_qpc_as_msec() }
 	{
 		FAIL_FAST_IF_MSG(
@@ -470,8 +472,8 @@ namespace ctsTraffic
 				// and the user requested to verify buffers
 				// then actually validate the received completion
 				//
-				if (ctsConfig::g_configSettings->Protocol == ctsConfig::ProtocolType::TCP &&
-					ctsConfig::g_configSettings->ShouldVerifyBuffers &&
+				if (g_configSettings->Protocol == ctsConfig::ProtocolType::TCP &&
+					g_configSettings->ShouldVerifyBuffers &&
 					originalTask.m_ioAction == ctsTaskAction::Recv &&
 					originalTask.m_trackIo &&
 					(ctsIoPatternError::SuccessfullyCompleted == patternStatus || ctsIoPatternError::NoError == patternStatus))
@@ -505,11 +507,11 @@ namespace ctsTraffic
 		{
 			if (ctsTaskAction::Send == originalTask.m_ioAction)
 			{
-				ctsConfig::g_configSettings->TcpStatusDetails.m_bytesSent.Add(currentTransfer);
+				g_configSettings->TcpStatusDetails.m_bytesSent.Add(currentTransfer);
 			}
 			else if (ctsTaskAction::Recv == originalTask.m_ioAction)
 			{
-				ctsConfig::g_configSettings->TcpStatusDetails.m_bytesRecv.Add(currentTransfer);
+				g_configSettings->TcpStatusDetails.m_bytesRecv.Add(currentTransfer);
 			}
 			// only complete tasks that were requested
 			if (wasIoRequestedFromPattern)
@@ -600,13 +602,13 @@ namespace ctsTraffic
 					// no need to adjust quantum_start_time_ms unless we skipped into a new quantum
 					// (meaning the previous quantum had not filled the max bytes for that quantum)
 					// ReSharper disable once CppRedundantParentheses
-					if (currentTimeMs > (m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod))
+					if (currentTimeMs > (m_quantumStartTimeMs + g_configSettings->TcpBytesPerSecondPeriod))
 					{
 						// current time shows it's now beyond this quantum timeframe
 						// - once we see how many quantums we have skipped forward, move our quantum start time to the quantum we are actually in
 						// - then adjust the number of bytes we are to send this quantum by how many quantum we just skipped
-						const auto quantumsSkippedSinceLastSend = (currentTimeMs - m_quantumStartTimeMs) / ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
-						m_quantumStartTimeMs += quantumsSkippedSinceLastSend * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+						const auto quantumsSkippedSinceLastSend = (currentTimeMs - m_quantumStartTimeMs) / g_configSettings->TcpBytesPerSecondPeriod;
+						m_quantumStartTimeMs += quantumsSkippedSinceLastSend * g_configSettings->TcpBytesPerSecondPeriod;
 
 						// we have to be careful making this adjustment since the remaining bytes this quantum could be very small
 						// - we only subtract out if the number of bytes skipped is >= bytes actually skipped
@@ -629,7 +631,7 @@ namespace ctsTraffic
 
 					// ms_for_quantums_to_skip = the # of quantum beyond the current quantum that will be skipped
 					// - when we have already sent at least 1 additional quantum of bytes
-					const auto msForQuantumsToSkip = (quantumAheadToSchedule - 1) * ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+					const auto msForQuantumsToSkip = (quantumAheadToSchedule - 1) * g_configSettings->TcpBytesPerSecondPeriod;
 
 					// carry forward extra bytes from quantums that will be filled by the bytes we have already sent
 					// (including the current quantum)
@@ -640,23 +642,23 @@ namespace ctsTraffic
 					// update the return task for when to schedule the send
 					// first, calculate the time to get to the end of this time quantum
 					// - only adjust if the current time isn't already outside this quantum
-					if (currentTimeMs < m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod)
+					if (currentTimeMs < m_quantumStartTimeMs + g_configSettings->TcpBytesPerSecondPeriod)
 					{
-						returnTask.m_timeOffsetMilliseconds = m_quantumStartTimeMs + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod - currentTimeMs;
+						returnTask.m_timeOffsetMilliseconds = m_quantumStartTimeMs + g_configSettings->TcpBytesPerSecondPeriod - currentTimeMs;
 					}
 					// then add in any quantum we need to skip
 					returnTask.m_timeOffsetMilliseconds += msForQuantumsToSkip;
 					PRINT_DEBUG_INFO(L"\t\tctsIOPattern : delaying the next send due to RateLimit (%llu ms)\n", returnTask.m_timeOffsetMilliseconds);
 
 					// finally, adjust quantum_start_time_ms to the next quantum which IO will complete
-					m_quantumStartTimeMs += msForQuantumsToSkip + ctsConfig::g_configSettings->TcpBytesPerSecondPeriod;
+					m_quantumStartTimeMs += msForQuantumsToSkip + g_configSettings->TcpBytesPerSecondPeriod;
 				}
 			}
 			else if (m_burstCount.has_value())
 			{
 				if (m_burstCount.value() == 0)
 				{
-					m_burstCount = ctsConfig::g_configSettings->BurstCount;
+					m_burstCount = g_configSettings->BurstCount;
 				}
 
 				m_burstCount = m_burstCount.value() - 1;
@@ -743,7 +745,7 @@ namespace ctsTraffic
 	bool ctsIoPattern::VerifyBuffer(const ctsTask& originalTask, uint32_t transferredBytes) noexcept
 	{
 		// only doing deep verification if the user asked us to
-		if (!ctsConfig::g_configSettings->ShouldVerifyBuffers)
+		if (!g_configSettings->ShouldVerifyBuffers)
 		{
 			return true;
 		}
@@ -792,9 +794,9 @@ namespace ctsTraffic
 	//   - The client pulls data (receives)
 	//
 	ctsIoPatternPull::ctsIoPatternPull() :
-		ctsIoPatternStatistics(ctsConfig::IsListening() ? 0 : ctsConfig::g_configSettings->PrePostRecvs),
+		ctsIoPatternStatistics(ctsConfig::IsListening() ? 0 : g_configSettings->PrePostRecvs),
 		m_ioAction(ctsConfig::IsListening() ? ctsTaskAction::Send : ctsTaskAction::Recv),
-		m_recvNeeded(ctsConfig::IsListening() ? 0 : ctsConfig::g_configSettings->PrePostRecvs)
+		m_recvNeeded(ctsConfig::IsListening() ? 0 : g_configSettings->PrePostRecvs)
 	{}
 
 	//
@@ -845,9 +847,9 @@ namespace ctsTraffic
 	//   - The server pulls data (recv)
 	//
 	ctsIoPatternPush::ctsIoPatternPush() :
-		ctsIoPatternStatistics(ctsConfig::IsListening() ? ctsConfig::g_configSettings->PrePostRecvs : 0),
+		ctsIoPatternStatistics(ctsConfig::IsListening() ? g_configSettings->PrePostRecvs : 0),
 		m_ioAction(ctsConfig::IsListening() ? ctsTaskAction::Recv : ctsTaskAction::Send),
-		m_recvNeeded(ctsConfig::IsListening() ? ctsConfig::g_configSettings->PrePostRecvs : 0)
+		m_recvNeeded(ctsConfig::IsListening() ? g_configSettings->PrePostRecvs : 0)
 	{}
 
 	//
@@ -903,8 +905,8 @@ namespace ctsTraffic
 	//
 	ctsIoPatternPushPull::ctsIoPatternPushPull() :
 		ctsIoPatternStatistics(1), // currently not supporting >1 concurrent IO requests
-		m_pushSegmentSize(ctsConfig::g_configSettings->PushBytes),
-		m_pullSegmentSize(ctsConfig::g_configSettings->PullBytes),
+		m_pushSegmentSize(g_configSettings->PushBytes),
+		m_pullSegmentSize(g_configSettings->PullBytes),
 		m_listening(ctsConfig::IsListening()),
 		m_sending(!ctsConfig::IsListening()) // start with clients sending, servers receiving
 	{}
@@ -996,8 +998,8 @@ namespace ctsTraffic
 	//   - The client and server both send and receive data concurrently
 	//
 	ctsIoPatternDuplex::ctsIoPatternDuplex() noexcept :
-		ctsIoPatternStatistics(ctsConfig::g_configSettings->PrePostRecvs),
-		m_recvNeeded(ctsConfig::g_configSettings->PrePostRecvs)
+		ctsIoPatternStatistics(g_configSettings->PrePostRecvs),
+		m_recvNeeded(g_configSettings->PrePostRecvs)
 	{
 		// max transfer bytes must be an even # so send bytes and recv bytes are balanced
 		auto currentMaxTransfer = GetTotalTransfer();
@@ -1157,7 +1159,7 @@ namespace ctsTraffic
 		{
 			const int64_t currentTransferBits = static_cast<int64_t>(currentTransfer) * 8LL;
 
-			ctsConfig::g_configSettings->UdpStatusDetails.m_bitsReceived.Add(currentTransferBits);
+			g_configSettings->UdpStatusDetails.m_bitsReceived.Add(currentTransferBits);
 			m_statistics.m_bitsReceived.Add(currentTransferBits);
 
 			m_currentFrameCompleted += currentTransfer;

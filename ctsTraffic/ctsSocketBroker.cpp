@@ -26,31 +26,30 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include "ctsConfig.h"
 #include "ctsSocketState.h"
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
-using namespace ctl;
-using namespace std;
-
 ctsSocketBroker::ctsSocketBroker()
 {
-    if (ctsConfig::g_configSettings->AcceptFunction)
+    if (g_configSettings->AcceptFunction)
     {
         // server 'accept' settings
-        m_totalConnectionsRemaining = ctsConfig::g_configSettings->ServerExitLimit;
-        m_pendingLimit = ctsConfig::g_configSettings->AcceptLimit;
+        m_totalConnectionsRemaining = g_configSettings->ServerExitLimit;
+        m_pendingLimit = g_configSettings->AcceptLimit;
     }
     else
     {
         // client 'connect' settings
-        if (ctsConfig::g_configSettings->Iterations == MAXULONGLONG)
+        if (g_configSettings->Iterations == MAXULONGLONG)
         {
             m_totalConnectionsRemaining = MAXULONGLONG;
         }
         else
         {
-            m_totalConnectionsRemaining = ctsConfig::g_configSettings->Iterations * static_cast<ULONGLONG>(ctsConfig::g_configSettings->ConnectionLimit);
+            m_totalConnectionsRemaining = g_configSettings->Iterations * static_cast<ULONGLONG>(g_configSettings->ConnectionLimit);
         }
-        m_pendingLimit = ctsConfig::g_configSettings->ConnectionLimit;
+        m_pendingLimit = g_configSettings->ConnectionLimit;
     }
 
     // make sure pending_limit cannot be larger than total_connections_remaining
@@ -92,8 +91,8 @@ void ctsSocketBroker::Start()
         // for outgoing connections, limit to ConnectionThrottleLimit
         // - to prevent killing the box with DPCs with too many concurrent connect attempts
         // checking first since TimerCallback might have already established connections
-        if (!ctsConfig::g_configSettings->AcceptFunction &&
-            m_pendingSockets >= ctsConfig::g_configSettings->ConnectionThrottleLimit)
+        if (!g_configSettings->AcceptFunction &&
+            m_pendingSockets >= g_configSettings->ConnectionThrottleLimit)
         {
             break;
         }
@@ -155,7 +154,7 @@ void ctsSocketBroker::Closing(bool wasActive) noexcept
 
 bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 {
-    HANDLE arWait[2]{m_doneEvent.get(), ctsConfig::g_configSettings->CtrlCHandle};
+    HANDLE arWait[2]{m_doneEvent.get(), g_configSettings->CtrlCHandle};
 
     auto fReturn = false;
     switch (WaitForMultipleObjects(2, arWait, FALSE, milliseconds))
@@ -186,7 +185,7 @@ bool ctsSocketBroker::Wait(DWORD milliseconds) const noexcept
 void ctsSocketBroker::RefreshSockets() noexcept try
 {
     // removedObjects will delete the closed objects outside the broker lock
-    vector<shared_ptr<ctsSocketState>> removedObjects;
+    std::vector<std::shared_ptr<ctsSocketState>> removedObjects;
 
     auto exiting = false;
     try
@@ -220,15 +219,15 @@ void ctsSocketBroker::RefreshSockets() noexcept try
                 {
                     // not throttling the server accepting sockets based off total # of connections (pending + active)
                     // - only throttling total connections for outgoing connections
-                    if (!ctsConfig::g_configSettings->AcceptFunction)
+                    if (!g_configSettings->AcceptFunction)
                     {
                         // ReSharper disable once CppRedundantParentheses
-                        if ((m_pendingSockets + m_activeSockets) >= ctsConfig::g_configSettings->ConnectionLimit)
+                        if ((m_pendingSockets + m_activeSockets) >= g_configSettings->ConnectionLimit)
                         {
                             break;
                         }
                         // throttle pending connection attempts as specified
-                        if (m_pendingSockets >= ctsConfig::g_configSettings->ConnectionThrottleLimit)
+                        if (m_pendingSockets >= g_configSettings->ConnectionThrottleLimit)
                         {
                             break;
                         }

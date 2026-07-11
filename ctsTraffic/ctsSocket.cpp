@@ -24,6 +24,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/network.h>
 #include <wil/win32_helpers.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
     using namespace ctl;
@@ -113,7 +115,7 @@ namespace ctsTraffic
         if (m_socket && !m_tpIocp)
         {
             // can throw
-            m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), ctsConfig::g_configSettings->pTpEnvironment);
+            m_tpIocp = make_shared<ctThreadIocp>(m_socket.get(), g_configSettings->pTpEnvironment);
         }
         return m_tpIocp;
     }
@@ -190,7 +192,7 @@ namespace ctsTraffic
 
         m_pattern->SetParent(shared_from_this());
 
-        if (ctsConfig::g_configSettings->PrePostSends == 0)
+        if (g_configSettings->PrePostSends == 0)
         {
             // user didn't specify a specific # of sends to pend
             // start ISB notifications (best-effort)
@@ -339,7 +341,7 @@ namespace ctsTraffic
         if (!m_tpTimer)
         {
             m_tpTimer.reset(
-                CreateThreadpoolTimer(ThreadPoolTimerCallback, this, ctsConfig::g_configSettings->pTpEnvironment));
+                CreateThreadpoolTimer(ThreadPoolTimerCallback, this, g_configSettings->pTpEnvironment));
             THROW_LAST_ERROR_IF(!m_tpTimer);
         }
 
