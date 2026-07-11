@@ -63,7 +63,7 @@ namespace ctsTraffic
         else
         {
             const auto bindSize = g_configSettings->BindAddresses.size();
-            auto socketCounter = g_bindCounter.fetch_add(1) + 1;
+            const auto socketCounter = g_bindCounter.fetch_add(1) + 1;
             localAddr = g_configSettings->BindAddresses[socketCounter % bindSize];
         }
 

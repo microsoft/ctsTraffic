@@ -38,17 +38,20 @@ private:
     mutable wil::critical_section m_listeningSocketLock{ctsConfig::ctsConfigSettings::c_CriticalSectionSpinlock};
     _Requires_lock_held_(m_listeningSocketLock) wil::unique_socket m_listeningSocket;
 
-    const wil::network::socket_address m_listeningAddr;
+    // number of established connections accepted on this listening socket
+    std::atomic<uint32_t> m_connectionCount{ 0 };
+
+	const wil::network::socket_address m_listeningAddr;
+
     std::array<char, c_recvBufferSize> m_recvBuffer{};
     DWORD m_recvFlags{};
+
     wil::network::socket_address m_remoteAddr;
     int m_remoteAddrLen{};
+
     bool m_priorFailureWasConnectionReset = false;
 
     void RecvCompletion(OVERLAPPED* pOverlapped) noexcept;
-
-    // number of established connections accepted on this listening socket
-    std::atomic<uint32_t> m_connectionCount{0};
 
 public:
     // increment the per-listener accepted connection count
@@ -59,7 +62,7 @@ public:
     ctsMediaStreamServerListeningSocket(
         wil::unique_socket&& listeningSocket,
         const wil::network::socket_address& listeningAddr,
-        std::shared_ptr<ctl::ctThreadIocp_base> threadIocp);
+        std::shared_ptr<ctl::ctThreadIocp_base> threadIocp) noexcept;
 
     ~ctsMediaStreamServerListeningSocket() noexcept;
 

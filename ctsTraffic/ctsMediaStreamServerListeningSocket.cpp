@@ -33,7 +33,7 @@ using ctsTraffic::ctsConfig::g_configSettings;
 
 namespace ctsTraffic
 {
-ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr, std::shared_ptr<ctl::ctThreadIocp_base> threadIocp) :
+ctsMediaStreamServerListeningSocket::ctsMediaStreamServerListeningSocket(wil::unique_socket&& listeningSocket, const wil::network::socket_address& listeningAddr, std::shared_ptr<ctl::ctThreadIocp_base> threadIocp) noexcept :
     m_threadIocp(std::move(threadIocp)),
     m_listeningSocket(std::move(listeningSocket)),
     m_listeningAddr(listeningAddr)
