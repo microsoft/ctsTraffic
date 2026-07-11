@@ -164,7 +164,7 @@ uint32_t ConsoleVerbosity() noexcept
 
 TcpShutdownType GetShutdownType() noexcept
 {
-    return ctsConfig::g_configSettings->TcpShutdown;
+    return g_configSettings->TcpShutdown;
 }
 }
 

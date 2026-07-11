@@ -29,7 +29,7 @@ namespace ctsTraffic {
 	{
 		inline void __stdcall UniqueAnyRpcStringFree(_Pre_opt_valid_ _Frees_ptr_opt_ RPC_CSTR str)
 		{
-			::RpcStringFreeA(&str);
+			RpcStringFreeA(&str);
 		}
 		using unique_rpc_cstr = wil::unique_any<RPC_CSTR, decltype(&UniqueAnyRpcStringFree), UniqueAnyRpcStringFree>;
 

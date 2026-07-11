@@ -59,7 +59,7 @@ public:
         for (const auto& makeTp : factories)
         {
             // create a UDP socket and bind to loopback ephemeral port
-            const SOCKET s = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            const SOCKET s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             Assert::AreNotEqual(INVALID_SOCKET, s);
 
             sockaddr_in addr{};
@@ -72,7 +72,7 @@ public:
             // get assigned port
             sockaddr_in local{};
             int locallen = sizeof local;
-            const int getsock = ::getsockname(s, reinterpret_cast<sockaddr*>(&local), &locallen);
+            const int getsock = getsockname(s, reinterpret_cast<sockaddr*>(&local), &locallen);
             Assert::AreEqual(0, getsock);
 
             // create the iocp implementation with a single thread where applicable
@@ -123,11 +123,11 @@ public:
             }
 
             // send a small UDP packet from a temporary socket to trigger completion
-            const SOCKET s2 = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            const SOCKET s2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             Assert::AreNotEqual(INVALID_SOCKET, s2);
 
             sockaddr_in dest = local;
-            const int sent = ::sendto(s2, "x", 1, 0, reinterpret_cast<sockaddr*>(&dest), static_cast<int>(sizeof dest));
+            const int sent = sendto(s2, "x", 1, 0, reinterpret_cast<sockaddr*>(&dest), static_cast<int>(sizeof dest));
             Assert::AreEqual(1, sent);
 
             // wait for the callback to run
@@ -135,8 +135,8 @@ public:
             Assert::AreEqual(static_cast<DWORD>(WAIT_OBJECT_0), wait);
 
             CloseHandle(done);
-            ::closesocket(s2);
-            ::closesocket(s);
+            closesocket(s2);
+            closesocket(s);
         }
     }
 
@@ -151,7 +151,7 @@ public:
         for (const auto& makeTp : factories)
         {
             // create a UDP socket and attach to tp
-            const SOCKET s = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            const SOCKET s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             Assert::AreNotEqual(INVALID_SOCKET, s);
 
             auto tp = makeTp(s);
@@ -165,7 +165,7 @@ public:
             // caller must call cancel_request to free the request
             tp->cancel_request(ov);
 
-            ::closesocket(s);
+            closesocket(s);
         }
     }
 };

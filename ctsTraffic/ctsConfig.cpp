@@ -4764,7 +4764,7 @@ namespace ctsTraffic::ctsConfig
 	{
 		auto shardCount = static_cast<int>(g_configSettings->ShardCount);
 		if (shardCount == 0) {
-			const auto info = ctl::QueryCpuAffinitySupport();
+			const auto info = QueryCpuAffinitySupport();
 			const uint32_t logical = info.LogicalProcessorCount ? info.LogicalProcessorCount : 1u;
 			shardCount = static_cast<int>(logical);
 		}
@@ -4772,25 +4772,25 @@ namespace ctsTraffic::ctsConfig
 	}
 
 	// Translate from ctsConfig::g_configSettings->ShardAffinityPolicy to ctl::CpuAffinityPolicy
-	ctl::CpuAffinityPolicy GetCpuAffinityPolicy() noexcept
+	CpuAffinityPolicy GetCpuAffinityPolicy() noexcept
 	{
-		ctl::CpuAffinityPolicy affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+		CpuAffinityPolicy affinityPolicy = CpuAffinityPolicy::PerCpu;
 		switch (g_configSettings->ShardAffinityPolicy)
 		{
 		case AffinityPolicy::PerCpu:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+			affinityPolicy = CpuAffinityPolicy::PerCpu;
 			break;
 		case AffinityPolicy::PerGroup:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerGroup;
+			affinityPolicy = CpuAffinityPolicy::PerGroup;
 			break;
 		case AffinityPolicy::RssAligned:
-			affinityPolicy = ctl::CpuAffinityPolicy::RssAligned;
+			affinityPolicy = CpuAffinityPolicy::RssAligned;
 			break;
 		case AffinityPolicy::Manual:
-			affinityPolicy = ctl::CpuAffinityPolicy::Manual;
+			affinityPolicy = CpuAffinityPolicy::Manual;
 			break;
 		default:
-			affinityPolicy = ctl::CpuAffinityPolicy::PerCpu;
+			affinityPolicy = CpuAffinityPolicy::PerCpu;
 			break;
 		}
 		return affinityPolicy;

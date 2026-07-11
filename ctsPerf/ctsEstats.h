@@ -677,12 +677,12 @@ namespace ctsPerf { namespace Details
                 m_localAddr.set_address(
                     reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwLocalAddr));
                 m_localAddr.set_port(
-                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
                 m_remoteAddr.set_address(
                     reinterpret_cast<const IN_ADDR*>(&pTcpRow->dwRemoteAddr));
                 m_remoteAddr.set_port(
-                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             explicit EstatsDataPoint(const MIB_TCP6ROW* pTcpRow) noexcept :
@@ -691,11 +691,11 @@ namespace ctsPerf { namespace Details
             {
                 m_localAddr.set_address(&pTcpRow->LocalAddr);
                 m_localAddr.set_port(
-                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwLocalPort)));
 
                 m_remoteAddr.set_address(&pTcpRow->RemoteAddr);
                 m_remoteAddr.set_port(
-                    ::ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
+                    ntohs(static_cast<unsigned short>(pTcpRow->dwRemotePort)));
             }
 
             ~EstatsDataPoint() = default;
