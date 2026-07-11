@@ -107,8 +107,8 @@ namespace ctsTraffic::ctsConfig
 
 	static uint32_t g_timePeriodRefCount{};
 
-	static int64_t g_previousPrintTimeslice{};
-	static int64_t g_printTimesliceCount{};
+	static int64_t g_previousPrintTimeSlice{};
+	static int64_t g_printTimeSliceCount{};
 
 	static NET_IF_COMPARTMENT_ID g_compartmentId = NET_IF_COMPARTMENT_ID_UNSPECIFIED;
 	static ctNetAdapterAddresses* g_netAdapterAddresses = nullptr;
@@ -156,8 +156,8 @@ namespace ctsTraffic::ctsConfig
 		g_configSettings->ShardWorkerCount = 1;
 		g_configSettings->ShardAffinityPolicy = AffinityPolicy::PerCpu;
 
-		g_previousPrintTimeslice = 0LL;
-		g_printTimesliceCount = 0LL;
+		g_previousPrintTimeSlice = 0LL;
+		g_printTimeSliceCount = 0LL;
 		return TRUE;
 	}
 	static void ctsConfigInitOnce() noexcept
@@ -1443,7 +1443,7 @@ namespace ctsTraffic::ctsConfig
 				}
 			}
 			//
-			// if either bind or target has zero of either family, remove those addrs from the other vector
+			// if either bind or target has zero of either family, remove those addresses from the other vector
 			//
 			if (0 == bindV4)
 			{
@@ -3312,7 +3312,7 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_rateLimitLow > 0LL && g_configSettings->BurstDelay.has_value())
 		{
-			throw invalid_argument("-RateLimit and -Burstdelay cannot be used concurrently");
+			throw invalid_argument("-RateLimit and -BurstDelay cannot be used concurrently");
 		}
 
 		const auto ratePerPeriod = g_rateLimitLow * g_configSettings->TcpBytesPerSecondPeriod / 1000LL;
@@ -3851,15 +3851,15 @@ namespace ctsTraffic::ctsConfig
 		if (const auto lock = g_statusUpdateLock.try_lock())
 		{
 			// capture the timeSlices
-			const auto lPreviousTimeslice = g_previousPrintTimeslice;
-			const auto lCurrentTimeslice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
+			const auto lPreviousTimeSlice = g_previousPrintTimeSlice;
+			const auto lCurrentTimeSlice = ctTimer::snap_qpc_as_msec() - g_configSettings->StartTimeMilliseconds;
 
-			if (lCurrentTimeslice > lPreviousTimeslice)
+			if (lCurrentTimeSlice > lPreviousTimeSlice)
 			{
 				// write out the header to the console every 40 updates 
 				if (writeToConsole)
 				{
-					if (g_printTimesliceCount != 0 && 0 == g_printTimesliceCount % 40)
+					if (g_printTimeSliceCount != 0 && 0 == g_printTimeSliceCount % 40)
 					{
 						if (const auto* header = g_printStatusInformation->PrintHeader(
 							StatusFormatting::ConsoleOutput))
@@ -3887,7 +3887,7 @@ namespace ctsTraffic::ctsConfig
 					--statusCount;
 					const bool clearStatus = 0 == statusCount;
 					if (const auto* printString = g_printStatusInformation->PrintStatus(
-						StatusFormatting::ConsoleOutput, lCurrentTimeslice, clearStatus))
+						StatusFormatting::ConsoleOutput, lCurrentTimeSlice, clearStatus))
 					{
 						(void)fwprintf_s(stdout, L"%ws", printString);
 					}
@@ -3897,12 +3897,12 @@ namespace ctsTraffic::ctsConfig
 				{
 					--statusCount;
 					const bool clearStatus = 0 == statusCount;
-					g_statusLogger->LogStatus(g_printStatusInformation, lCurrentTimeslice, clearStatus);
+					g_statusLogger->LogStatus(g_printStatusInformation, lCurrentTimeSlice, clearStatus);
 				}
 
 				// update tracking values
-				g_previousPrintTimeslice = lCurrentTimeslice;
-				++g_printTimesliceCount;
+				g_previousPrintTimeSlice = lCurrentTimeSlice;
+				++g_printTimeSliceCount;
 			}
 		}
 	}
@@ -3965,9 +3965,9 @@ namespace ctsTraffic::ctsConfig
 			return;
 		}
 
-		wil::network::socket_address_string wsaLocalAddress{};
+		wil::network::socket_address_wstring wsaLocalAddress{};
 		localAddr.format_complete_address_nothrow(wsaLocalAddress);
-		wil::network::socket_address_string wsaRemoteAddress{};
+		wil::network::socket_address_wstring wsaRemoteAddress{};
 		remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 		if (writeToConsole)
 		{
@@ -4215,9 +4215,9 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
 		{
-			wil::network::socket_address_string wsaLocalAddress{};
+			wil::network::socket_address_wstring wsaLocalAddress{};
 			localAddr.format_complete_address_nothrow(wsaLocalAddress);
-			wil::network::socket_address_string wsaRemoteAddress{};
+			wil::network::socket_address_wstring wsaRemoteAddress{};
 			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			// csv format : L"TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId"
@@ -4241,9 +4241,9 @@ namespace ctsTraffic::ctsConfig
 		// - and/or in the case the g_ConnectionLogger isn't writing to csv
 		if (writeToConsole || (g_connectionLogger && !g_connectionLogger->IsCsvFormat()))
 		{
-			wil::network::socket_address_string wsaLocalAddress{};
+			wil::network::socket_address_wstring wsaLocalAddress{};
 			localAddr.format_complete_address_nothrow(wsaLocalAddress);
-			wil::network::socket_address_string wsaRemoteAddress{};
+			wil::network::socket_address_wstring wsaRemoteAddress{};
 			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			if (0 == error)
@@ -4390,9 +4390,9 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_connectionLogger && g_connectionLogger->IsCsvFormat())
 		{
-			wil::network::socket_address_string wsaLocalAddress{};
+			wil::network::socket_address_wstring wsaLocalAddress{};
 			localAddr.format_complete_address_nothrow(wsaLocalAddress);
-			wil::network::socket_address_string wsaRemoteAddress{};
+			wil::network::socket_address_wstring wsaRemoteAddress{};
 			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			// csv format : "TimeSlice,LocalAddress,RemoteAddress,Bits/Sec,Completed,Dropped,Repeated,Errors,Result,ConnectionId"
@@ -4416,9 +4416,9 @@ namespace ctsTraffic::ctsConfig
 		// - and/or in the case the g_ConnectionLogger isn't writing to csv
 		if (writeToConsole || g_connectionLogger && !g_connectionLogger->IsCsvFormat())
 		{
-			wil::network::socket_address_string wsaLocalAddress{};
+			wil::network::socket_address_wstring wsaLocalAddress{};
 			localAddr.format_complete_address_nothrow(wsaLocalAddress);
-			wil::network::socket_address_string wsaRemoteAddress{};
+			wil::network::socket_address_wstring wsaRemoteAddress{};
 			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			if (0 == error)
@@ -4495,9 +4495,9 @@ namespace ctsTraffic::ctsConfig
 
 		if (g_tcpInfoLogger)
 		{
-			wil::network::socket_address_string wsaLocalAddress{};
+			wil::network::socket_address_wstring wsaLocalAddress{};
 			localAddr.format_complete_address_nothrow(wsaLocalAddress);
-			wil::network::socket_address_string wsaRemoteAddress{};
+			wil::network::socket_address_wstring wsaRemoteAddress{};
 			remoteAddr.format_complete_address_nothrow(wsaRemoteAddress);
 
 			static const auto* tcpSuccessfulResultTextFormat = L"%.3f, %ws, %ws, %hs, %lld, %lld, %lld, %lld, %lld, ";
