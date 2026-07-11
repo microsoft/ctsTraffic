@@ -60,14 +60,10 @@ namespace ctsTraffic
 //
 namespace details
 {
-    //
     // constant defining how many AcceptEx requests we want maintained per listener
-    //
     constexpr uint32_t c_pendedAcceptRequests = 100;
 
-    //
     // necessary forward declarations of internal classes
-    //
     struct ctsAcceptExImpl;
     class ctsAcceptSocketInfo;
 
@@ -132,9 +128,9 @@ namespace details
         ctsListenSocketInfo& operator=(ctsListenSocketInfo&&) = delete;
 
         wil::unique_socket m_listenSocket;
-        wil::network::socket_address m_sockaddr;
         std::unique_ptr<ctl::ctThreadIocp> m_iocp;
-        std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSockets;
+        std::vector<std::shared_ptr<ctsAcceptSocketInfo>> m_acceptSocketInfo;
+        wil::network::socket_address m_sockaddr;
     };
 
     // struct to track accepted sockets
@@ -219,8 +215,8 @@ namespace details
                     for (auto acceptCounter = 0ul; acceptCounter < c_pendedAcceptRequests; ++acceptCounter)
                     {
                         auto acceptSocketInfo = std::make_shared<ctsAcceptSocketInfo>(listenSocketInfo);
-                        listenSocketInfo->m_acceptSockets.push_back(acceptSocketInfo);
-                        // post AcceptEx on this socket
+                        listenSocketInfo->m_acceptSocketInfo.push_back(acceptSocketInfo);
+						// post AcceptEx on this socket once we have successfully added it to the listener's vector
                         acceptSocketInfo->InitiateAcceptEx();
                     }
 
@@ -314,7 +310,7 @@ namespace details
 
         ::ZeroMemory(m_outputBuffer, c_singleOutputBufferSize * 2);
         DWORD bytesReceived{};
-        if (!ctsConfig::GetWinsockExtensionFunctions()->AcceptEx(
+        if (!g_configSettings->winsockFunctions->AcceptEx(
             listeningSocketObject->m_listenSocket.get(),
             newAcceptedSocket.get(),
             m_outputBuffer,
@@ -400,7 +396,7 @@ namespace details
         SOCKADDR_INET* remoteAddr{};
         auto remoteAddrLen = static_cast<int>(sizeof SOCKADDR_INET);
 
-        ctsConfig::GetWinsockExtensionFunctions()->GetAcceptExSockaddrs(
+        g_configSettings->winsockFunctions->GetAcceptExSockaddrs(
             m_outputBuffer,
             0,
             c_singleOutputBufferSize,

@@ -231,7 +231,7 @@ private:
         {
             if (m_bufferId != RIO_INVALID_BUFFERID)
             {
-                ctsConfig::GetRioExtensionFunctions()->RIODeregisterBuffer(m_bufferId);
+	            ctsConfig::g_configSettings->rioFunctions->RIODeregisterBuffer(m_bufferId);
                 m_bufferId = RIO_INVALID_BUFFERID;
             }
         }

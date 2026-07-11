@@ -4719,7 +4719,7 @@ namespace ctsTraffic::ctsConfig
 
 		auto backlog = SOMAXCONN;
 		// Starting in Win8 listen() supports a larger backlog
-		if (static_cast<bool>(GetRioExtensionFunctions()))
+		if (static_cast<bool>(g_configSettings->rioFunctions))
 		{
 			backlog = SOMAXCONN_HINT(SOMAXCONN);
 		}

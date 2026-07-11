@@ -23,6 +23,8 @@ See the Apache Version 2.0 License for specific language governing permissions a
 #include <wil/stl.h>
 #include <wil/network.h>
 
+using ctsTraffic::ctsConfig::g_configSettings;
+
 namespace ctsTraffic
 {
 static void ctsConnectExIoCompletionCallback(
@@ -114,9 +116,12 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
             const std::shared_ptr<ctl::ctThreadIocp>& connectIocp = sharedSocket->GetIocpThreadpool();
 
             OVERLAPPED* const pOverlapped = connectIocp->new_request(
-                [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept { ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress); });
+                [weakSocket, targetAddress](OVERLAPPED* pCallbackOverlapped) noexcept
+	            {
+		            ctsConnectExIoCompletionCallback(pCallbackOverlapped, weakSocket, targetAddress);
+	            });
 
-            if (!ctsConfig::GetWinsockExtensionFunctions()->ConnectEx(socket, targetAddress.sockaddr(), targetAddress.size(), nullptr, 0, nullptr, pOverlapped))
+            if (!g_configSettings->winsockFunctions->ConnectEx(socket, targetAddress.sockaddr(), targetAddress.size(), nullptr, 0, nullptr, pOverlapped))
             {
                 error = WSAGetLastError();
                 if (ERROR_IO_PENDING == error)
@@ -130,7 +135,7 @@ void ctsConnectEx(const std::weak_ptr<ctsSocket>& weakSocket) noexcept
                     connectIocp->cancel_request(pOverlapped);
                 }
             }
-            else if (ctsConfig::g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
+            else if (g_configSettings->Options & ctsConfig::OptionType::HandleInlineIocp)
             {
                 // if inline completions are enabled, the IOCP won't be queued the completion
                 connectIocp->cancel_request(pOverlapped);

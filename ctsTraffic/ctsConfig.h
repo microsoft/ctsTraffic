@@ -280,22 +280,6 @@ namespace ctsTraffic
         int32_t SetPreBindOptions(SOCKET socket, const wil::network::socket_address& localAddress) noexcept;
         int32_t SetPostConnectOptions(SOCKET socket, const wil::network::socket_address& remoteAddress) noexcept;
 
-        // Lazily-loaded Winsock extension function tables (AcceptEx/ConnectEx/etc. and RIO)
-        // Defined inline (header-only) so translation units can use them without linking ctsConfig.cpp.
-        // Each table holds its own WSAStartup reference; the shared function-local statics guarantee a
-        // single instance across all translation units.
-        inline const wil::network::winsock_extension_function_table& GetWinsockExtensionFunctions() noexcept
-        {
-            static const wil::network::winsock_extension_function_table s_winsockFunctions;
-            return s_winsockFunctions;
-        }
-
-        inline const wil::network::rio_extension_function_table& GetRioExtensionFunctions() noexcept
-        {
-            static const wil::network::rio_extension_function_table s_rioFunctions;
-            return s_rioFunctions;
-        }
-
         // for the MediaStream pattern
         struct MediaStreamSettings
         {
@@ -401,6 +385,8 @@ namespace ctsTraffic
             HANDLE CtrlCHandle = nullptr;
             PTP_CALLBACK_ENVIRON pTpEnvironment = nullptr;
 
+            wil::network::winsock_extension_function_table winsockFunctions;
+            wil::network::rio_extension_function_table rioFunctions;
             ctsSocketFunction CreateFunction;
             ctsSocketFunction ConnectFunction;
             ctsSocketFunction AcceptFunction;

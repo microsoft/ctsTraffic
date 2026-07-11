@@ -141,7 +141,7 @@ namespace ctsTraffic
 					m_recvBufferFreeList[bufferCount] = g_receiverSharedBuffer;
 					if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 					{
-						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::GetRioExtensionFunctions()->RIORegisterBuffer(g_receiverSharedBuffer, g_maximumBufferSize);
+						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(g_receiverSharedBuffer, g_maximumBufferSize);
 						if (m_receivingRioBufferIds[bufferCount].m_bufferId == RIO_INVALID_BUFFERID)
 						{
 							THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -163,7 +163,7 @@ namespace ctsTraffic
 
 					if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 					{
-						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::GetRioExtensionFunctions()->RIORegisterBuffer(nextBuffer, ctsConfig::GetMaxBufferSize());
+						m_receivingRioBufferIds[bufferCount].m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(nextBuffer, ctsConfig::GetMaxBufferSize());
 						if (m_receivingRioBufferIds[bufferCount].m_bufferId == RIO_INVALID_BUFFERID)
 						{
 							THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -176,13 +176,13 @@ namespace ctsTraffic
 		// register buffers for the connection ID and the completion message
 		if (WI_IsFlagSet(ctsConfig::g_configSettings->SocketFlags, WSA_FLAG_REGISTERED_IO))
 		{
-			m_rioConnectionId.m_bufferId = ctsConfig::GetRioExtensionFunctions()->RIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::ConnectionIdLength);
+			m_rioConnectionId.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(GetConnectionIdentifier(), ctsStatistics::ConnectionIdLength);
 			if (m_rioConnectionId.m_bufferId == RIO_INVALID_BUFFERID)
 			{
 				THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
 			}
 
-			m_rioCompletionMessage.m_bufferId = ctsConfig::GetRioExtensionFunctions()->RIORegisterBuffer(m_completionMessageBuffer.data(), static_cast<DWORD>(m_completionMessageBuffer.size()));
+			m_rioCompletionMessage.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(m_completionMessageBuffer.data(), static_cast<DWORD>(m_completionMessageBuffer.size()));
 			if (m_rioCompletionMessage.m_bufferId == RIO_INVALID_BUFFERID)
 			{
 				THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
@@ -201,7 +201,7 @@ namespace ctsTraffic
 			m_sendingRioBufferIds.resize(g_maxNumberOfRioSendBuffers);
 			for (auto& sendingBuffer : m_sendingRioBufferIds)
 			{
-				sendingBuffer.m_bufferId = ctsConfig::GetRioExtensionFunctions()->RIORegisterBuffer(g_senderSharedBuffer, g_maximumBufferSize);
+				sendingBuffer.m_bufferId = ctsConfig::g_configSettings->rioFunctions->RIORegisterBuffer(g_senderSharedBuffer, g_maximumBufferSize);
 				if (sendingBuffer.m_bufferId == RIO_INVALID_BUFFERID)
 				{
 					THROW_WIN32_MSG(WSAGetLastError(), "RIORegisterBuffer");
