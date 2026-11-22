@@ -424,6 +424,10 @@ measuring the reliability of a networking deployment. Below are examples
 of combinations of options we have found to be particularly useful in
 discovering issues in networking components and devices.
 
+For the draft Windows networking stack reliability plan covering VM
+topologies, test goals, and run phases, see
+[documents/reliability](documents/reliability/README.md).
+
 
 # Looking for data corruption #
 
