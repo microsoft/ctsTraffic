@@ -47,10 +47,16 @@ extensions.
   and health. Do not automatically delete, revert, or reimage these resources.
   Recovery-point restoration after a failure requires separate approval and
   must not precede evidence capture.
-- **Management:** determine and document secure WinRM access during setup
-  design, before any system changes. Authentication, privileges, guest
-  bootstrap, management switch/addressing, and firewall rules must be reviewed
-  as one deliverable; an unspecified management design blocks provisioning.
+- **Management:** implement both PowerShell Direct and WinRM behind one
+  transport layer and select between them using the Phase 3B evaluation; see
+  [remote control and firewall](remote-control-and-firewall.md). Credentials,
+  WinRM authentication, guest bootstrap, and management switch/addressing
+  must be reviewed as one deliverable before any system changes; an
+  unspecified management design blocks provisioning.
+- **Guest firewall:** keep Windows Firewall enabled and add the scoped
+  `ctsTraffic Reliability` rule group on test adapters (plus a WinRM rule on
+  the management adapter when used). The rules are retained with the lab and
+  verified at setup and cleanup.
 - **Workload selection:** support an existing versioned configuration or an
   optional system-specific characterization workflow. Both routes produce a
   resolved workload configuration and validate resource limits before use.
@@ -207,9 +213,10 @@ multi-device snapshot round-trips through machine and human-readable formats.
    vNIC-to-switch attachment, host vNICs, VHDX/recovery-point references, and
    physical-adapter bindings. Capture both the intended configuration and the
    actual configuration; do not infer a VM's network path from its name alone.
-4. Add coordinated remote collection for every declared guest. Use the
-   approved WinRM identity, authentication, firewall, and least-privilege
-   policy; do not put credentials in command lines or artifacts.
+4. Add coordinated remote collection for every declared guest through the
+   transport layer, supporting both PowerShell Direct and WinRM. Use the
+   approved credential source and least-privilege policy; do not put
+   credentials in command lines or artifacts. Record the channel used.
 5. Normalize and validate results against the snapshot schema. Preserve
    collection errors, source commands, timestamps, and per-device success
    status.
@@ -236,8 +243,10 @@ Resolve the initial provisioning/snapshot dependency explicitly:
    Private switches. Preserve the
    source image. Journal stable IDs and ownership of every created resource;
    name collisions or unowned existing objects must stop provisioning.
-4. Bootstrap guest management using the approved design, configure test vNICs
-   and static addresses, stage tools, and establish recoverability. Verify each
+4. Bootstrap guest management using the approved design (PowerShell Direct
+   first, then the management vNIC and WinRM listener), configure test vNICs
+   and static addresses, apply the guest firewall rules, stage tools, and
+   establish recoverability. Verify each
    operation and record before/after state and partial failures.
 5. Capture a complete host-plus-guest snapshot after provisioning. The workload
    must reference this complete snapshot and pass live setup checks.
@@ -253,6 +262,28 @@ or replacement is a separately approved operation.
 **Exit gate:** initial provisioning and reuse are both tested; the source image
 and unrelated host resources remain unchanged, and partial setup is recoverable
 without losing evidence or duplicating resources.
+
+### Phase 3B — Compare PowerShell Direct and WinRM
+
+On the provisioned two-VM lab, run evaluation use cases RC-01 through RC-11
+from [remote control and firewall](remote-control-and-firewall.md) with each
+channel. Use short ctsTraffic workloads; this phase measures the control
+channel, not the product.
+
+1. Run each use case with each channel, repeated enough to observe failures
+   and timing variation. Record the listed measurements per channel.
+2. Include reboots, host link-loss faults, guest adapter-lifecycle faults, and
+   the low-resource verifier profile, so each channel is tested under the
+   conditions it must survive.
+3. Measure the management traffic WinRM adds to each guest during monitoring
+   and decide whether it is acceptable during G1B measured intervals.
+4. Apply the selection criteria and record the result, per operation, in the
+   remote-control document.
+
+**Exit gate:** each runbook operation has a selected channel supported by
+recorded evaluation data, and the README open decision on remote control is
+closed. Until then, fault-time operations and hang probes use PowerShell
+Direct.
 
 ### Phase 4 — Define the scenario input and result contracts
 
@@ -353,11 +384,11 @@ and the scenario's desired state.
 | SET-01 Device identity and OS | Host and guest IDs, VM IDs, OS edition/version/build/architecture, boot/reboot state, and clock offset | Snapshot and live host/guest inventory; identifiers, version strings, UTC timestamps, clock offset | Every expected participant is present, uniquely identified, healthy, and within the approved clock tolerance. |
 | SET-02 VM configuration | VM state, generation/config version, vCPU count, static/dynamic memory settings, firmware/Secure Boot, integration services, attached disks and recovery point | Hyper-V host configuration query/export compared with approved desired VM configuration | Every owned lab VM matches the approved scenario; missing or unexplained lab resources block execution. Inventory unrelated VMs for capacity but do not modify them. |
 | SET-03 vSwitch and port configuration | Switch ID/name/type, isolation mode, physical-adapter binding, management-OS sharing, extensions, switch ports, VLAN/QoS settings, and attached vNICs | Hyper-V switch/port configuration query/export; record each switch and attachment | Each test link maps to the planned isolated switch and expected endpoints. No test mutation can reach the management path. No unexpected attachment or setting is allowed on owned test switches; unrelated switches are not modified. |
-| SET-04 Guest vNIC and IP configuration | vNIC ID/name/MAC, connected switch, link state, VLAN/QoS, guest interface index, address/prefix, routes, neighbors, DNS, and gateways | Hyper-V vNIC inventory plus guest network configuration; values/counts and before/after comparison | Every endpoint has the exact planned test configuration, no duplicate address or unintended route exists, and the separate management connection is reachable. |
+| SET-04 Guest vNIC, IP, and firewall configuration | vNIC ID/name/MAC, connected switch, link state, VLAN/QoS, guest interface index, address/prefix, routes, neighbors, DNS, gateways, network profile per adapter, firewall profile settings, and the effective `ctsTraffic Reliability` rules | Hyper-V vNIC inventory plus guest network and firewall configuration; values/counts and before/after comparison; ICMP and short ctsTraffic reachability check per test link | Every endpoint has the exact planned test configuration, no duplicate address or unintended route exists, firewall rules match the scenario's ports/adapters/subnets, every test link is reachable, and the separate management connection is reachable. |
 | SET-05 Capacity and recovery readiness | Assigned and available CPU/RAM/storage, recovery-point identity, free artifact space, and declared resource envelope | Host/guest inventory and live capacity counters; counts, bytes, percentages | Available capacity meets the calibrated minimum and remains within the approved envelope; recovery path and artifact space are available. |
-| SET-06 Tools, remote operations, verifier state | WinRM/reachability, ctsTraffic/support-tool versions and hashes, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration; both verifiers are disabled for G1B; all required monitors can collect data. |
+| SET-06 Tools, remote operations, verifier state | Declared control channel and session result, ctsTraffic/support-tool versions and hashes, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration; both verifiers are disabled for G1B; all required monitors can collect data. |
 | SET-07 Baseline evidence readiness | Pre-run system memory, paged/nonpaged pool, required pool-tag snapshots, event-log position, network state, counter sample timestamps, and process-sampler readiness | Counter/snapshot outputs; bytes/counts and capture timestamps | Required baseline artifacts exist for every applicable device and have valid timestamps/units; sampling begins before workload launch. An absent ctsTraffic process has no process-memory baseline; capture its first live sample and label its workload stage. |
-| SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
+| SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, firewall rule, WinRM/host trust, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
 | SET-09 Crash and hang capture readiness | Complete-dump configuration, dump path and free space, injected-NMI dump setting, WER local-dump settings, heartbeat/probe availability, and KDNET connection if the campaign opted in | Guest configuration query, free-space check, host heartbeat and PowerShell Direct probe | Every guest can write a complete dump and be probed for hangs; an opted-in debugger is connected. Otherwise setup fails. |
 
 #### Execution phase
@@ -369,7 +400,7 @@ acceptable evidence.
 
 | Measurement ID | What to verify and record | Source / unit / timing | Scenario criterion |
 | --- | --- | --- | --- |
-| EXE-01 Invocation and process state | Exact command/config hash, target, process ID, launch/readiness/exit times, exit status, and listener/client roles | Runner event log and per-device process status; UTC timestamps/status | Required processes start on all assigned devices, execute the approved command, and exit as expected. Unexplained or nonzero exit fails G1B-07. |
+| EXE-01 Invocation and process state | Exact command/config hash, target, process ID, launch/readiness/exit times, exit code, per-process standard output/error files, and listener/client roles | Runner event log and per-device process status; UTC timestamps/status | Required processes start on all assigned devices, execute the approved command, and exit as expected. Unexplained or nonzero exit fails G1B-07. |
 | EXE-02 Connection outcomes | Attempted, established, completed, failed, retried/replaced connections and success rate | ctsTraffic aggregate output and per-connection CSV; counts and percent, from first attempt through final completion | Every failure is counted; zero unexpected failures for this no-fault run. Retries do not erase earlier failures (G1B-01). |
 | EXE-03 Payload correctness | Data-verification successes/errors and completed transfers | ctsTraffic `-Verify:data` output; counts and bytes, over the complete run | All completed transfers verify; zero data-integrity errors (G1B-02). |
 | EXE-04 Work and elapsed time | Completed connections, transferred bytes, actual workload duration, and work rate | ctsTraffic output/CSV plus coordinated timestamps; counts, bytes, seconds, rate | Meets the calibrated target and approved duration; repeated-run variance is assessed only after a reference/tolerance is approved (G1B-03). |
@@ -389,7 +420,7 @@ allowed, the expected final network/VM configuration is the approved baseline.
 | Measurement ID | What to verify and record | Source / unit / timing | Cleanup gate / scenario criterion |
 | --- | --- | --- | --- |
 | CLN-01 Process and connection shutdown | Graceful stop request, process exit, forced terminations, residual listeners/connections, and drain duration | Runner/process/network status; statuses, counts, seconds | All helpers stop as declared; no unexplained residual process/connection remains. Forced termination is recorded and prevents a clean pass unless explicitly allowed. |
-| CLN-02 VM/vSwitch/network state | VM state/configuration, vSwitch/switch-port/vNIC mappings, VLAN and adapter binding, guest addresses/routes/neighbors, management reachability | Re-query Hyper-V host and guests; diff against approved post-setup state after cleanup | Retain owned VMs/switches and verify they remain reusable. No unapproved configuration drift; management remains reachable. Treat dynamic neighbor/cache changes under an explicit comparison policy, not exact equality. Any unexplained mismatch is a cleanup failure. |
+| CLN-02 VM/vSwitch/network state | VM state/configuration, vSwitch/switch-port/vNIC mappings, VLAN and adapter binding, guest addresses/routes/neighbors, firewall rule group and adapter network profiles, management reachability | Re-query Hyper-V host and guests; diff against approved post-setup state after cleanup | Retain owned VMs/switches and firewall rules and verify they remain reusable. No unapproved configuration drift; management remains reachable. Treat dynamic neighbor/cache changes under an explicit comparison policy, not exact equality. Any unexplained mismatch is a cleanup failure. |
 | CLN-03 Quiescence and post-run memory/pool | Residual activity, quiescence evidence, system memory/paged/nonpaged pool, and final pool-tag snapshot | Per-device counters/snapshots after stop and after cooldown; bytes/counts/elapsed time | Quiescence condition is met within the declared window; post-cooldown deltas satisfy approved limits (G1B-05, G1B-06). |
 | CLN-04 User-mode memory closeout | Last live ctsTraffic sample and process exit time; explicitly mark post-exit process memory as not applicable | Execution time-series and process monitor; bytes/timestamps/status | Required live samples exist before exit and are linked to G1B-04; do not treat a vanished process as a zero-byte sample. |
 | CLN-05 Health and verifier closeout | Final VM/host health, uptime/boot changes, event/crash review, verifier state | Health and verifier queries after cooldown; status/counts | No new bugcheck, unexpected reboot, or verifier activation; system remains usable (G1B-07, G1B-08). |
@@ -519,7 +550,8 @@ Resolve the relevant decisions in the [plan index](README.md) and
   versioning.
 - Exact Hyper-V fields and supported configuration sources to use for VM,
   vSwitch, switch-port, vNIC, and host-adapter capture and comparison.
-- WinRM identity, authentication, permissions, and firewall configuration.
+- Remote-control channel selection from Phase 3B, WinRM authentication mode,
+  credential source, management switch type/addressing, and permissions.
 - User-supplied Windows 11 RTM VHDX path, per-VM allocations, and recovery-point
   policy. Automated provisioning and retained-lab reuse are required; reimage
   and destructive recovery are not normal cleanup.

@@ -34,12 +34,14 @@ VM-A NIC-AC ── Private switch AC ── VM-C NIC-CA
 VM-B NIC-BC ── Private switch BC ── VM-C NIC-CB
 ```
 
-Use PowerShell Remoting/WinRM on a separate management path to configure and
-control the guests and collect artifacts. Do not route that management
-connection through the isolated test switches. Use PowerShell Direct
-(`Invoke-Command -VMName`) for operations that may disrupt guest networking,
-such as adapter-lifecycle faults, because it does not depend on any guest
-network path. An optional KDNET debug vNIC, if used, must also stay off the
+Both PowerShell Direct (over VMBus) and WinRM (over a separate management
+path) are evaluated as control channels; see
+[remote control and firewall](remote-control-and-firewall.md). Each guest has a
+management vNIC on a dedicated management switch with static addresses so
+WinRM can be tested. Do not route management traffic through the isolated
+test switches. Use PowerShell Direct (`Invoke-Command -VMName`) for operations
+that may disrupt guest networking, such as adapter-lifecycle faults, because
+it does not depend on any guest network path. An optional KDNET debug vNIC, if used, must also stay off the
 test switches. Control-path churn must neither
 modify nor depend on the management interfaces, addresses, routes, neighbors,
 or connectivity; the management path remains available independently of the
@@ -146,8 +148,9 @@ criteria rather than a silent variation of this baseline.
 
 1. What procedure should select a static, routable IPv4 and IPv6 range for
    each campaign?
-2. Which management network, WinRM authentication mode, and guest firewall
-   policy will be used?
+2. Which management switch type and address range, and which WinRM
+   authentication mode, will be used? (Guest firewall policy is defined in
+   [remote control and firewall](remote-control-and-firewall.md).)
 3. What process will supply the per-run Windows version/build and architecture?
 
 IPv4-only and IPv6-only are both required run configurations. Dual-stack

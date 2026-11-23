@@ -2,8 +2,9 @@
 
 Status: **Draft**. This describes the phases and evidence required for a run.
 The first vertical slice uses two Hyper-V VMs, then three; the runbook supports
-campaigns of up to five VMs. It selects WinRM for remote operations, without yet
-specifying a production-ready script or the WinRM security policy.
+campaigns of up to five VMs. Remote operations use PowerShell Direct or WinRM
+through one transport layer while both are evaluated; see
+[remote control and firewall](remote-control-and-firewall.md).
 
 ## Run inputs
 
@@ -61,12 +62,16 @@ with missing or changed required configuration.
 3. **Stage tools and scripts.** Copy the approved ctsTraffic binaries,
    scenario scripts, support tools, and configuration to each guest. Verify
    versions and file integrity. Record the transfer and destination paths.
-4. **Establish remote operations.** Use PowerShell Remoting/WinRM for remote
-   guest configuration, process launch/status/stop, and artifact collection.
-   Confirm it works on every guest and record the access outcome; do not store
-   credentials in run artifacts. The identity, authentication, privilege, and
-   firewall policy for WinRM is TBD and must be selected before implementing
-   this step.
+4. **Establish remote operations and firewall rules.** Open sessions to every
+   guest with the run's declared control channel (PowerShell Direct or WinRM)
+   for configuration, process launch/status/stop, and artifact collection.
+   Record the channel and access outcome; do not store credentials in run
+   artifacts. Record the firewall state, then create or verify the
+   `ctsTraffic Reliability` rule group on the test adapters (and the WinRM
+   rule on the management adapter when WinRM is used). Verify reachability on
+   every test link. Follow
+   [remote control and firewall](remote-control-and-firewall.md), including
+   its unattended run rules.
 5. **Configure guest OS, crash capture, and verifiers.** Apply only the
    scenario's declared OS settings. Configure complete memory dumps, injected
    NMI dumps, and WER local dumps on every guest as defined in
@@ -92,7 +97,7 @@ with missing or changed required configuration.
 8. **Prepare control-path churn (when in scope).** Before any test changes,
    capture and retain the baseline IP address, route, and neighbor state for
    each affected test interface/address, along with enough system state to
-   restore the declared configuration. Identify the separate WinRM management
+   restore the declared configuration. Identify the separate management
    path and its interfaces, addresses, and required routes. Explicitly exclude
    that path from every test mutation; no churn operation may alter or remove
    its configuration or connectivity. Verify management reachability before
@@ -105,7 +110,8 @@ with missing or changed required configuration.
    an agreed coordinated start barrier. Record actual start times and clock
    offsets.
 2. Execute for the scenario's declared duration or completion condition.
-   Preserve the exact command line/configuration and per-process exit status.
+   Preserve the exact command line/configuration, per-process exit code, and
+   per-process standard output and standard error files.
    Enable and collect ctsTraffic connection-result CSVs only when required by
    the scenario's connection-success/recovery metrics using
    `-ConnectionFilename`; record the reason when intentionally noisy failure

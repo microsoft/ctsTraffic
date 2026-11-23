@@ -13,16 +13,20 @@ artifacts so that results can be reproduced and compared.
 The initial target is two Windows VMs on Hyper-V connected by one isolated
 Hyper-V Private virtual switch, growing to three or more VMs with one private
 switch per VM pair. Guest
-configuration, remote control, and artifact collection will use PowerShell
-Remoting/WinRM. Initial scenarios cover TCP; UDP is deferred until the TCP
+configuration, remote control, and artifact collection go through one
+transport layer. Both PowerShell Direct and PowerShell Remoting over WinRM
+will be implemented and compared on real runbook operations before one is
+chosen; see [remote control and firewall](remote-control-and-firewall.md).
+Initial scenarios cover TCP; UDP is deferred until the TCP
 workflow works end to end. The Windows version/build and
 architecture are selected when each run is scheduled. There are no custom
 drivers in the initial VM scope. Bare-metal runs, including their driver
 installation references, are a later extension.
 
 The first vertical slice uses two VMs (one link); the topology/runbook should
-then grow to three and support up to five. WinRM authentication,
-identity/privilege, and guest firewall policy are not yet specified.
+then grow to three and support up to five. Guest firewalls stay enabled, with
+a scoped rule group for test traffic. The WinRM authentication mode and the
+final channel choice are not yet decided.
 
 The initial address-family matrix requires IPv4-only and IPv6-only runs.
 Dual-stack socket coverage is also required, but ctsTraffic needs dual-stack
@@ -87,6 +91,7 @@ be corrected.
 | Leak detection method | [Leak detection workflow](leak-detection.md) |
 | Crash dumps, hang detection, debugger, failure buckets | [Crash capture and triage](crash-capture-and-triage.md) |
 | Application Verifier and Driver Verifier settings | [Verifier profiles](verifier-profiles.md) |
+| Host-to-guest control channels, unattended run rules, guest firewall | [Remote control and firewall](remote-control-and-firewall.md) |
 | Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
 | First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |
 
@@ -120,7 +125,9 @@ Before turning this plan into an executable runbook, confirm:
 
 1. Procedure for selecting static routable test addresses in
    [topologies.md](topologies.md).
-2. WinRM identity, privilege, authentication, and guest firewall policy.
+2. Remote control channel: result of the PowerShell Direct versus WinRM
+   evaluation in [remote control and firewall](remote-control-and-firewall.md),
+   the WinRM authentication mode, and the credential source.
 3. Per-system load-sizing signals and safe resource envelope, run durations,
    acceptable work-rate variance, and the leak-analysis thresholds defined in
    [leak detection](leak-detection.md).
