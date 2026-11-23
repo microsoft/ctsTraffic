@@ -10,39 +10,17 @@ stack using ctsTraffic. Each run must identify its topology, workload, verifier
 configuration, duration, fault model, acceptance criteria, and collected
 artifacts so that results can be reproduced and compared.
 
-The initial target is two Windows VMs on Hyper-V connected by one isolated
-Hyper-V Private virtual switch, growing to three or more VMs with one private
-switch per VM pair. Guest
-configuration, remote control, and artifact collection go through one
-transport layer. Both PowerShell Direct and PowerShell Remoting over WinRM
-will be implemented and compared on real runbook operations before one is
-chosen; see [remote control and firewall](remote-control-and-firewall.md).
-Initial scenarios cover TCP; UDP is deferred until the TCP
-workflow works end to end. The Windows version/build and
-architecture are selected when each run is scheduled. There are no custom
-drivers in the initial VM scope. Bare-metal runs, including their driver
-installation references, are a later extension.
+Current scope, in brief (each item is defined in the linked document):
 
-The first vertical slice uses two VMs (one link); the topology/runbook should
-then grow to three and support up to five. Guest firewalls stay enabled, with
-a scoped rule group for test traffic. The WinRM authentication mode and the
-final channel choice are not yet decided.
-
-The initial address-family matrix requires IPv4-only and IPv6-only runs.
-Dual-stack socket coverage is also required, but ctsTraffic needs dual-stack
-functionality before those runs can be scheduled. Start with the duplex IO
-pattern, then vary connection count and transfer duration, including many
-short connections, fewer long transfers, and combinations. Set load levels
-per system under test: avoid both inadequate stress and exceeding an approved
-resource/safety envelope. Goal 1 and Goal 3 TCP scenarios and every
-post-stress check must explicitly use ctsTraffic `-Verify:data`; Goal 2 stress
-workloads may use `-Verify:connection` when declared by the scenario.
-
-Select a compatible existing workload configuration or use optional system
-characterization to derive one. Validate its load and safety envelope on the
-participating systems before each campaign; fresh characterization is not
-mandatory for every run. Start IO-model coverage with IOCP, then expand to the
-other currently implemented models.
+- **Topology:** two Hyper-V VMs on one Private switch first, then three, up to
+  five; see [topologies](topologies.md).
+- **Workload:** TCP only (UDP deferred), IOCP duplex first, IPv4-only and
+  IPv6-only runs, ctsTraffic verification mode per goal; see
+  [goals and scenarios](goals-and-scenarios.md).
+- **Control and firewall:** PowerShell Direct and WinRM are both evaluated;
+  guest firewalls stay enabled with a scoped rule group; see
+  [remote control and firewall](remote-control-and-firewall.md).
+- **Out of initial scope:** custom drivers and bare-metal runs.
 
 ## Test promises
 
@@ -52,30 +30,6 @@ other currently implemented models.
 | 2 — Stress recovery | After resource pressure or connectivity/protocol faults, systems do not bugcheck and return to a healthy, usable state. | Stress-run evidence, host/guest health, and a post-stress verification workload. |
 | 3 — Control-path configuration reliability | IP-address, route, and neighbor-entry changes on test links do not fail connections when the path remains usable; if a change breaks connectivity, retries and recovery meet the scenario contract. | Before/after configuration state, operation results, connection failures/retries, traffic stalls, recovery, system/verifier health, and post-churn verification. |
 
-The IO/data path and the control/configuration path are separate scenario
-families. Control-path churn scenarios cover both changing objects used by
-active traffic and changing unrelated entries while traffic continues over
-the test link. A change that leaves the path usable must not interrupt
-connections; brief no-progress stalls may be acceptable but should be rare and
-have a campaign-defined limit. A change that deletes or makes a required
-object unusable may cause expected connection failures. ctsTraffic immediately
-attempts replacement connections until its configured `connections * iterations`
-target is met; record those failures/retries and
-verify the scenario's recovery contract.
-Verify configuration state independently of payload correctness.
-
-Collect ctsTraffic per-connection CSVs with `-ConnectionFilename` when
-individual connection outcomes or success rates are acceptance metrics (for
-example, Goal 1 and control-path recovery). Omit per-connection CSVs from
-intentional-failure stress scenarios when expected errors make them noisy and
-uninformative; retain the aggregate status and system-health evidence those
-scenarios require.
-Verifier-enabled runs prioritize bug detection and correctness evidence; they
-are not used as the throughput or work-over-time baseline. Uninstrumented runs
-provide that baseline and the memory observations. Stress and churn tests may
-intentionally produce connection errors, so each scenario must distinguish
-expected effects from unexpected failures.
-
 ## Documents
 
 Each topic has one authoritative document. Other documents summarize and link
@@ -84,8 +38,8 @@ be corrected.
 
 | Topic | Authoritative document |
 | --- | --- |
-| Goals, promises, scenario families, IO models, fault types | [Goals and scenario catalog](goals-and-scenarios.md) |
-| Phase steps and result bundle for any run | [Run lifecycle](run-lifecycle.md) |
+| Goals, promises, scenario families, IO models, address families, verification mode, CSV policy, fault types, acceptance matrix | [Goals and scenario catalog](goals-and-scenarios.md) |
+| Run inputs, phase steps, and result bundle for any run | [Run lifecycle](run-lifecycle.md) |
 | Build order, gates, phase measurement IDs (SET/EXE/CLN) | [End-to-end readiness plan](end-to-end-readiness-plan.md) |
 | Network layout, addressing, churn scope | [Initial topology](topologies.md) |
 | Leak detection method | [Leak detection workflow](leak-detection.md) |
@@ -94,6 +48,7 @@ be corrected.
 | Host-to-guest control channels, unattended run rules, guest firewall | [Remote control and firewall](remote-control-and-firewall.md) |
 | Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
 | First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |
+| Cross-cutting open decisions | This README ([open decisions](#open-decisions)); topic-specific open items stay in their own documents |
 
 ## Planning guardrails
 
@@ -141,3 +96,5 @@ Before turning this plan into an executable runbook, confirm:
 7. Pool-tag snapshot tool that works on the target architecture (including
    ARM64) and build.
 8. Hang timeout and whether a campaign opts in to an attached KDNET debugger.
+9. How each run's Windows version/build, architecture, and guest VHDX path are
+   supplied (Windows 11 RTM is the initial guest image).

@@ -34,20 +34,19 @@ criteria or compare their performance numbers directly.
 
 ### 1A. Instrumented correctness
 
-- Enable the `AV-DV-CORRECTNESS` [verifier profile](verifier-profiles.md)
-  (no fault injection).
+- Enable the `AV-DV-CORRECTNESS` [verifier profile](verifier-profiles.md).
+  1A never injects faults: no low-resource simulation, network faults, or
+  protocol resets. Every connection, protocol, or data failure is unexpected.
 - Run the declared ctsTraffic workload to exercise connection establishment,
   data transfer, protocol completion, and teardown.
 - Explicitly enable ctsTraffic data verification (`-Verify:data`) so received
-  data is checked for corruption. Classify intentionally incomplete transfers
-  from fault scenarios separately from data-integrity failures.
+  data is checked for corruption.
 - Capture verifier diagnostics, bugchecks, process exit status, ctsTraffic
   connection/protocol/data errors, and system event/crash evidence.
 - Judge this variant on correctness and diagnostics, not throughput, elapsed
   work rate, or memory stability: verifier overhead changes those observations.
 - Fail on an unexpected verifier finding, bugcheck, data/protocol corruption,
-  unexplained connection failure, or incomplete run. If a failure is an
-  intentional scenario input, define and label it in that scenario.
+  any connection failure, or incomplete run.
 
 ### 1B. Uninstrumented work and memory baseline
 
@@ -85,10 +84,12 @@ is a pilot to establish workload and memory observations; repeatability and
 leak thresholds remain open until calibrated and approved.
 
 Application Verifier and Driver Verifier settings are defined by name in
-[verifier profiles](verifier-profiles.md). Workload parameters,
-fixed duration, comparison method, tolerances, and leak
-thresholds are open decisions. Process memory and kernel pool use are distinct
-measurements and must have separate baselines and criteria.
+[verifier profiles](verifier-profiles.md). Fixed duration uses `-TimeLimit`
+and leak analysis uses the [leak detection workflow](leak-detection.md); the
+workload parameters, duration value, work-rate comparison method and
+tolerance, and leak thresholds are open decisions. Process memory and kernel
+pool use are distinct measurements and must have separate baselines and
+criteria.
 
 ### Workload sizing
 
@@ -242,29 +243,16 @@ criteria remain TBD.
 
 ## Scenario definition and result
 
-Every concrete scenario should record:
-
-- System class selected by the user: `desktop` or `server`.
-- Goal and scenario identifier; pass/fail criteria and expected failure classes.
-- Topology and VM roles; OS/build, driver, ctsTraffic build, and tool versions.
-- Protocol, IO pattern, transfer/connection settings, duration, repeat count,
-  and random seed or other reproducibility input when available.
-- Verifier state and exact settings, including when a reboot is required.
-- Fault type, target, trigger, start/stop times, and recovery action, if any.
-- For control-path scenarios, configuration targets and intended final state,
-  mutation sequence and operation outcomes, concurrent traffic effects, and
-  convergence and final-state observations.
-- Connection-result CSVs when connection success/recovery is measured; for
-  intentional-failure stress scenarios, record when per-connection CSVs are
-  omitted as uninformative.
-- Start/stop/cleanup outcomes, observed work and health metrics, artifacts,
-  deviations, and incident references.
+Record each concrete scenario with the [scenario template](scenario-template.md).
+The run-time inputs it must resolve are listed in
+[run lifecycle](run-lifecycle.md#run-inputs), and the required evidence in its
+[minimum result bundle](run-lifecycle.md#minimum-result-bundle).
 
 The initial acceptance matrix must keep these dimensions explicit:
 
 | Goal / variant | Verifiers | Fault injection | Primary acceptance |
 | --- | --- | --- | --- |
-| 1A correctness | `AV-DV-CORRECTNESS` | None unless specified by its own scenario | `-Verify:data`; correct completion; no unexpected verifier, bugcheck, data, or protocol failure |
+| 1A correctness | `AV-DV-CORRECTNESS` | None | `-Verify:data`; correct completion; no verifier finding, bugcheck, connection, data, or protocol failure |
 | 1B baseline | `NONE` | None | `-Verify:data`; fixed-duration (`-TimeLimit`) work and error criteria plus the [leak detection](leak-detection.md) user-mode and kernel-pool criteria |
 | 2 stress | `AV-DV-LOWRES` or `AV-DV-STRESS` | Resource, link-loss, adapter-lifecycle, or protocol failure | `-Verify:connection` allowed during stress (declared per scenario); `-Verify:data` for the post-stress check; no bugcheck/unexpected verifier finding; expected fault behavior; successful recovery check |
-| 3 control path | State and settings TBD | Configuration changes; semantics TBD | Operation outcomes, declared versus unexpected traffic effects, system/verifier health, convergence, and final configuration state against campaign criteria |
+| 3 control path | TBD; `AV-DV-CORRECTNESS` is the candidate | Configuration changes; semantics TBD | Operation outcomes, declared versus unexpected traffic effects, system/verifier health, convergence, and final configuration state against campaign criteria |

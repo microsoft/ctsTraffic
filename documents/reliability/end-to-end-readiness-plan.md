@@ -73,8 +73,8 @@ extensions.
 - **Crash capture:** every test VM always writes a complete memory dump;
   KDNET debugger attachment is an optional per-campaign opt-in (see
   [crash capture and triage](crash-capture-and-triage.md)).
-- **Verification mode:** `-Verify:data` for Goals 1 and 3 and post-stress
-  checks; `-Verify:connection` only for declared Goal 2 stress workloads.
+- **Verification mode:** as defined per goal in
+  [goals and scenarios](goals-and-scenarios.md); G1B uses `-Verify:data`.
 
 ## Current starting point
 
@@ -112,9 +112,10 @@ record:
 - Exact sources, units, sampling interval, and capture times for process
   memory, system memory, paged/nonpaged pool, pool-tag snapshots, connection
   outcomes, process status, and crash/reboot evidence.
-- The threshold and comparison method for repeated work rate and persistent
-  memory/pool growth, supplied by a reviewed configuration or established
-  through optional characterization. Without approved thresholds, a workload
+- The work-rate comparison method and tolerance, and the leak-analysis
+  thresholds for the [leak detection workflow](leak-detection.md), supplied
+  by a reviewed configuration or established through optional
+  characterization. Without approved thresholds, a workload
   can only be characterization, not a repeatability or leak pass.
 - The full no-verifier state to check, failure handling, clean stop procedure,
   quiescence condition, artifacts, and outcome rules.
@@ -265,25 +266,26 @@ without losing evidence or duplicating resources.
 
 ### Phase 3B — Compare PowerShell Direct and WinRM
 
-On the provisioned two-VM lab, run evaluation use cases RC-01 through RC-11
-from [remote control and firewall](remote-control-and-firewall.md) with each
+On the provisioned two-VM lab, run the evaluation use cases from
+[remote control and firewall](remote-control-and-firewall.md) with each
 channel. Use short ctsTraffic workloads; this phase measures the control
-channel, not the product.
+channel, not the product. RC-07 through RC-09 need network faults and the
+low-resource verifier profile, so they are deferred until Goal 2 tooling
+exists and must complete before the first Goal 2 run. They are not part of
+this phase, which keeps the no-verifier, no-fault rule for the first runner.
 
-1. Run each use case with each channel, repeated enough to observe failures
-   and timing variation. Record the listed measurements per channel.
-2. Include reboots, host link-loss faults, guest adapter-lifecycle faults, and
-   the low-resource verifier profile, so each channel is tested under the
-   conditions it must survive.
+1. Run RC-01 through RC-06, RC-10, and RC-11 with each channel, repeated
+   enough to observe failures and timing variation. Record the listed
+   measurements per channel.
+2. Include guest reboots, so each channel's reconnect behavior is measured.
 3. Measure the management traffic WinRM adds to each guest during monitoring
    and decide whether it is acceptable during G1B measured intervals.
 4. Apply the selection criteria and record the result, per operation, in the
    remote-control document.
 
-**Exit gate:** each runbook operation has a selected channel supported by
-recorded evaluation data, and the README open decision on remote control is
-closed. Until then, fault-time operations and hang probes use PowerShell
-Direct.
+**Exit gate:** each G1B runbook operation has a selected channel supported by
+recorded evaluation data. Until RC-07 through RC-09 are complete, fault-time
+operations and hang probes use PowerShell Direct.
 
 ### Phase 4 — Define the scenario input and result contracts
 
@@ -305,9 +307,10 @@ The definition must include:
   explicit handling for pilot/inconclusive results.
 
 For G1B, require verifier-disabled configuration, no fault injection,
-`-Verify:data`, and ctsTraffic connection CSVs. Define pre-execution, execution,
-execution-end, and post-cooldown observations for connection results, user-mode
-memory, kernel pool, process health, and system health.
+`-Verify:data`, and ctsTraffic connection CSVs. Define the
+[leak detection](leak-detection.md) snapshot series (noise floor, warm-up,
+`S0` … `S5`) and the execution-time samples for connection results,
+user-mode memory, kernel pool, process health, and system health.
 
 **Exit gate:** a scenario file cannot be accepted if a required command,
 measurement source, unit, or safety bound is missing. Acceptance mode also
@@ -330,25 +333,13 @@ before any state-changing action:
    changes, exact ctsTraffic commands, resource limits, stop conditions,
    artifact paths, and recovery actions. Require explicit operator approval
    before setup.
-4. **Setup:** provision the dedicated lab using Phase 3A or verify the retained
-   VM configuration, test links and addresses, stage and verify tools/scripts,
-   establish remote operations,
-   apply only scenario-declared OS settings, and verify the required verifier
-   state. Capture the complete post-provisioning snapshot before workload
-   execution. Do not proceed partially if any participant fails its setup gate.
-5. **Pre-run baseline:** capture health, verifier state, connection/network
-   state, memory and pool counters/snapshots, event-log position, and
-   performance-sampling readiness.
-6. **Execution:** coordinate listener/client start, persist exact commands and
-   timestamps, collect ctsTraffic outputs/CSVs and time-series measurements,
-   monitor every device, and stop/preserve evidence on a declared stop
-   condition.
-7. **Cooldown:** stop tools cleanly, record forced termination, wait for
-   measured quiescence, collect post-execution and post-cooldown memory/pool
-   data, confirm system health, and restore only the configuration declared by
-   the scenario. Retain VMs and switches for reuse; do not revert a checkpoint
-   before measuring post-run state or collecting evidence.
-8. **Closeout:** collect and verify artifacts, write a manifest and summary,
+4. **Run the lifecycle:** implement setup, execution, and cooldown as
+   defined in [run lifecycle](run-lifecycle.md) Phases 1–3. Provision through
+   Phase 3A or verify the retained lab. Record every Phase 5A measurement at
+   its capture point. Do not proceed partially if any participant fails its
+   setup gate, and do not revert a checkpoint before post-run measurements and
+   evidence collection.
+5. **Closeout:** collect and verify artifacts, write a manifest and summary,
    calculate criteria, classify the result as passed, failed, inconclusive, or
    aborted, and retain deviations/incidents.
 
@@ -387,7 +378,7 @@ and the scenario's desired state.
 | SET-04 Guest vNIC, IP, and firewall configuration | vNIC ID/name/MAC, connected switch, link state, VLAN/QoS, guest interface index, address/prefix, routes, neighbors, DNS, gateways, network profile per adapter, firewall profile settings, and the effective `ctsTraffic Reliability` rules | Hyper-V vNIC inventory plus guest network and firewall configuration; values/counts and before/after comparison; ICMP and short ctsTraffic reachability check per test link | Every endpoint has the exact planned test configuration, no duplicate address or unintended route exists, firewall rules match the scenario's ports/adapters/subnets, every test link is reachable, and the separate management connection is reachable. |
 | SET-05 Capacity and recovery readiness | Assigned and available CPU/RAM/storage, recovery-point identity, free artifact space, and declared resource envelope | Host/guest inventory and live capacity counters; counts, bytes, percentages | Available capacity meets the calibrated minimum and remains within the approved envelope; recovery path and artifact space are available. |
 | SET-06 Tools, remote operations, verifier state | Declared control channel and session result, ctsTraffic/support-tool versions and hashes, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration; both verifiers are disabled for G1B; all required monitors can collect data. |
-| SET-07 Baseline evidence readiness | Pre-run system memory, paged/nonpaged pool, required pool-tag snapshots, event-log position, network state, counter sample timestamps, and process-sampler readiness | Counter/snapshot outputs; bytes/counts and capture timestamps | Required baseline artifacts exist for every applicable device and have valid timestamps/units; sampling begins before workload launch. An absent ctsTraffic process has no process-memory baseline; capture its first live sample and label its workload stage. |
+| SET-07 Baseline evidence readiness | Noise-floor snapshots, event-log position, network state, counter sample timestamps, and process-sampler readiness | Counter/snapshot outputs; bytes/counts and capture timestamps | The persistent servers are running, the noise-floor snapshots defined in [leak detection](leak-detection.md) exist for every applicable device with valid timestamps/units, and sampling begins before the warm-up iteration. |
 | SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, firewall rule, WinRM/host trust, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
 | SET-09 Crash and hang capture readiness | Complete-dump configuration, dump path and free space, injected-NMI dump setting, WER local-dump settings, heartbeat/probe availability, and KDNET connection if the campaign opted in | Guest configuration query, free-space check, host heartbeat and PowerShell Direct probe | Every guest can write a complete dump and be probed for hangs; an opted-in debugger is connected. Otherwise setup fails. |
 
@@ -400,13 +391,13 @@ acceptable evidence.
 
 | Measurement ID | What to verify and record | Source / unit / timing | Scenario criterion |
 | --- | --- | --- | --- |
-| EXE-01 Invocation and process state | Exact command/config hash, target, process ID, launch/readiness/exit times, exit code, per-process standard output/error files, and listener/client roles | Runner event log and per-device process status; UTC timestamps/status | Required processes start on all assigned devices, execute the approved command, and exit as expected. Unexplained or nonzero exit fails G1B-07. |
+| EXE-01 Invocation and process state | Exact command/config hash, target, process ID, launch/readiness/exit times, exit code, per-process standard output/error files, and listener/client roles | Runner event log and per-device process status; UTC timestamps/status | Required processes start on all assigned devices, execute the approved command, and exit as expected. A nonzero exit code not fully explained by classified `-TimeLimit` cutoff errors fails G1B-07. |
 | EXE-02 Connection outcomes | Attempted, established, completed, failed, retried/replaced connections and success rate | ctsTraffic aggregate output and per-connection CSV; counts and percent, from first attempt through final completion | Every failure is counted; zero unexpected failures for this no-fault run. Retries do not erase earlier failures (G1B-01). |
 | EXE-03 Payload correctness | Data-verification successes/errors and completed transfers | ctsTraffic `-Verify:data` output; counts and bytes, over the complete run | All completed transfers verify; zero data-integrity errors (G1B-02). |
-| EXE-04 Work and elapsed time | Completed connections, transferred bytes, actual workload duration, and work rate | ctsTraffic output/CSV plus coordinated timestamps; counts, bytes, seconds, rate | Meets the calibrated target and approved duration; repeated-run variance is assessed only after a reference/tolerance is approved (G1B-03). |
-| EXE-05 User-mode memory | ctsTraffic process Private Bytes baseline, samples, peak, final live sample, and missing samples | Time-series process/performance-counter capture; bytes and UTC timestamps | Complete trace with defined sampling interval; compare warm-up-adjusted peak/final growth to approved threshold (G1B-04). |
-| EXE-06 System memory and kernel pool | Available/committed memory and paged/nonpaged pool samples, peaks, and deltas | Per-device Windows performance-counter capture; bytes, timestamps, sample interval | No missing required windows; compare to the approved transient and persistent bounds (G1B-05). |
-| EXE-07 Pool allocations | Required pre-run and post-cooldown pool-tag snapshots, plus any approved execution-time captures | Approved poolsnap/equivalent output; per-tag counts/bytes and UTC time | Snapshot capability is mandatory before any workload. Preserve attributable output; any leak conclusion follows the approved comparison method (G1B-06). |
+| EXE-04 Work and elapsed time | Completed connections, transferred bytes, actual duration, and work rate per `-TimeLimit` iteration | ctsTraffic output, status file, and CSV plus coordinated timestamps; counts, bytes, seconds, rate | Each measured iteration meets the calibrated target; iteration-to-iteration and run-to-run variance is assessed only after a tolerance is approved (G1B-03). |
+| EXE-05 User-mode memory | Persistent server process private bytes, handles, and threads at each snapshot; client process time series per iteration, with peaks and missing samples | Process counters at snapshots `S0` … `S5` plus per-iteration time series; bytes/counts and UTC timestamps | Complete series with the defined sampling interval; analyzed by [leak detection](leak-detection.md) (G1B-04). |
+| EXE-06 System memory and kernel pool | Available/committed memory, paged/nonpaged pool, and system handle count: time series plus values at each snapshot | Per-device Windows performance-counter capture; bytes/counts, timestamps, sample interval | No missing required windows; transient peaks recorded; snapshot values analyzed by leak detection (G1B-05). |
+| EXE-07 Pool allocations | Pool-tag snapshots at the noise floor and `S0` … `S5` | Approved pool-tag tool output; per-tag counts/bytes and UTC time | Snapshot capability is mandatory before any workload. Every snapshot in the series is present and attributable; analyzed by leak detection (G1B-06). |
 | EXE-08 Device and verifier health | Process liveness, system uptime/reboot/bugcheck, relevant event-log additions, and verifier state | Per-device health monitor and event/crash logs; status/counts/timestamps | No bugcheck, unexpected reboot, unexplained process failure, monitor loss, or verifier activation (G1B-07, G1B-08). |
 | EXE-09 Monitor completeness and stop decisions | Expected/actual sample counts, gaps, monitor process status, threshold crossings, and stop trigger | Monitor-controller log; counts, timestamps, threshold values | Missing critical monitoring or a stop-condition breach triggers safe abort and cannot produce a pass. |
 
@@ -421,8 +412,8 @@ allowed, the expected final network/VM configuration is the approved baseline.
 | --- | --- | --- | --- |
 | CLN-01 Process and connection shutdown | Graceful stop request, process exit, forced terminations, residual listeners/connections, and drain duration | Runner/process/network status; statuses, counts, seconds | All helpers stop as declared; no unexplained residual process/connection remains. Forced termination is recorded and prevents a clean pass unless explicitly allowed. |
 | CLN-02 VM/vSwitch/network state | VM state/configuration, vSwitch/switch-port/vNIC mappings, VLAN and adapter binding, guest addresses/routes/neighbors, firewall rule group and adapter network profiles, management reachability | Re-query Hyper-V host and guests; diff against approved post-setup state after cleanup | Retain owned VMs/switches and firewall rules and verify they remain reusable. No unapproved configuration drift; management remains reachable. Treat dynamic neighbor/cache changes under an explicit comparison policy, not exact equality. Any unexplained mismatch is a cleanup failure. |
-| CLN-03 Quiescence and post-run memory/pool | Residual activity, quiescence evidence, system memory/paged/nonpaged pool, and final pool-tag snapshot | Per-device counters/snapshots after stop and after cooldown; bytes/counts/elapsed time | Quiescence condition is met within the declared window; post-cooldown deltas satisfy approved limits (G1B-05, G1B-06). |
-| CLN-04 User-mode memory closeout | Last live ctsTraffic sample and process exit time; explicitly mark post-exit process memory as not applicable | Execution time-series and process monitor; bytes/timestamps/status | Required live samples exist before exit and are linked to G1B-04; do not treat a vanished process as a zero-byte sample. |
+| CLN-03 Quiescence and leak series | Quiescence-gate result and wait before each snapshot, residual connections, and the final post-cooldown snapshot after servers stop | Per-device counters/snapshots; bytes/counts/elapsed time | Every snapshot in the series met the quiescence gate or is marked `not quiescent`; the leak analysis outcome is recorded (G1B-04 through G1B-06). |
+| CLN-04 User-mode memory closeout | Last live sample and exit time of each client and of the persistent servers; post-exit process memory explicitly marked not applicable | Execution time-series and process monitor; bytes/timestamps/status | Required live samples exist before exit and are linked to G1B-04; do not treat a vanished process as a zero-byte sample. |
 | CLN-05 Health and verifier closeout | Final VM/host health, uptime/boot changes, event/crash review, verifier state | Health and verifier queries after cooldown; status/counts | No new bugcheck, unexpected reboot, or verifier activation; system remains usable (G1B-07, G1B-08). |
 | CLN-06 Artifact completeness | Expected logs, CSVs, counter files, pool snapshots, configuration diffs, and manifests | Artifact inventory with file size/hash and source device | Every required artifact exists, is readable, time-correlated, and maps to a measurement ID. Missing critical evidence prevents pass and does not erase an already observed failure. |
 | CLN-07 Outcome traceability | Each G1B criterion, its measured value, threshold, evidence reference, and final disposition | Generated run summary; criterion IDs and pass/fail/inconclusive result | The summary derives from recorded measurements; every criterion has evidence and an explicit disposition before the overall outcome is assigned. |
@@ -491,10 +482,10 @@ After every earlier gate passes:
 7. Evaluate all criteria with their resolved thresholds. A run still
    establishing thresholds belongs to characterization, not full acceptance;
    missing evidence never counts as success.
-8. Retain the lab and repeat under the same snapshot/scenario conditions enough
-   times to assess work-rate repeatability and persistent memory/pool growth.
-   Preserve each run independently and summarize comparisons without
-   overwriting raw data.
+8. Retain the lab and repeat the full scenario (each run on a fresh boot with
+   its own leak series) enough times to assess run-to-run work-rate
+   repeatability. Preserve each run independently and summarize comparisons
+   without overwriting raw data.
 
 ## Real-user acceptance
 

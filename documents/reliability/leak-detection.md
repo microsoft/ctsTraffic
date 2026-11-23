@@ -19,8 +19,8 @@ identical workloads on the same boot.
 - All iterations run on the same boot of every VM. A reboot, crash, or
   verifier change invalidates the series; start over.
 - The approved pool-tag snapshot tool must work on the target build and
-  architecture before the first iteration (see open decision in the
-  [readiness plan](end-to-end-readiness-plan.md)).
+  architecture before the first iteration (see
+  [open decisions](README.md#open-decisions)).
 - Use the same workload configuration, `-TimeLimit`, topology, and address
   family for every iteration.
 

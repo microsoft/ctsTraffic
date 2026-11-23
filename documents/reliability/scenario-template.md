@@ -38,6 +38,7 @@ calibration and must not be inferred from class alone.
 - **Fault type** (none, resource pressure, link loss, adapter lifecycle,
   protocol):
 - **KDNET debugger attached** (yes/no; complete dumps are always on):
+- **Remote control channel** ([options](remote-control-and-firewall.md)):
 - **Workload or configuration changes:**
 - **Expected behavior:**
 

@@ -66,6 +66,10 @@ declared setup mutation and is recorded in the setup log.
 
 Run each case with each channel on the two-VM lab, repeating it enough times
 to see failures and timing variation. Record the measurements listed.
+RC-07 through RC-09 need network faults and a verifier profile. They are
+deferred until Goal 2 tooling exists and must be completed before the first
+Goal 2 run; see Phase 3B of the
+[readiness plan](end-to-end-readiness-plan.md).
 
 | ID | Use case | Measurements |
 | --- | --- | --- |
@@ -95,13 +99,13 @@ Choose per operation, in this order:
 4. **Reach:** supports the planned multi-host and bare-metal extensions.
 5. **Cost:** setup effort and elapsed time.
 
-Until the evaluation is complete:
+Until RC-07 through RC-09 are complete, operations during network faults and
+hang probes use PowerShell Direct, because they must not depend on any guest
+network path.
 
-- Operations during network faults and hang probes use PowerShell Direct,
-  because they must not depend on any guest network path.
-- G1B work-over-time measurements record which channel performed polling
-  during the measured interval, so runs using different channels are not
-  compared as equivalent.
+G1B work-over-time measurements always record which channel performed polling
+during the measured interval, so runs using different channels are not
+compared as equivalent.
 
 Record the outcome and supporting data in this document. The outcome closes
 the remote-control item in the [open decisions](README.md#open-decisions).
@@ -123,7 +127,6 @@ These rules apply to either channel:
   termination only after a timeout, and record it as a cleanup finding.
 - Setup and cleanup never delete previous run output or evidence. Each run
   writes to a new run directory.
-- Use static test addresses. Do not use IPv6 link-local addresses.
 
 ## Guest firewall policy
 

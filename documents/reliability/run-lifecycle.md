@@ -17,19 +17,18 @@ Before setup, resolve one immutable run definition containing:
 - IP-family selection (IPv4-only or IPv6-only) and ctsTraffic IO model.
 - Guest OS, build, and architecture for each campaign, plus networking driver,
   ctsTraffic/tool versions, and available resources.
-- Verifier state/settings, IO pattern, connection count, transfer size,
-  duration, and repetitions, plus the ctsTraffic verification mode:
-  `-Verify:data` for Goal 1/3 and post-stress checks; `-Verify:connection`
-  only for declared Goal 2 stress workloads.
+- Verifier profile name ([verifier profiles](verifier-profiles.md)), IO
+  pattern, connection count, transfer size, duration, and repetitions, plus
+  the ctsTraffic verification mode required by the scenario's
+  [goal](goals-and-scenarios.md).
+- Remote control channel (PowerShell Direct or WinRM).
 - Campaign-calibrated load level, system-specific capacity assumptions,
   monitored resource bounds, and stop conditions.
 - Fault schedule (if applicable), observation plan, cleanup/recovery policy,
   and required artifacts.
-- ctsTraffic CSV policy: include connection-result CSVs when connection
-  success rates or individual connection outcomes are acceptance measures
-  (using `-ConnectionFilename`); omit noisy per-connection CSVs for
-  intentional-failure stress when they do not inform the result, and retain
-  aggregate status/error evidence.
+- Whether ctsTraffic connection-result CSVs (`-ConnectionFilename`) are
+  collected, following the CSV policy in
+  [goals and scenarios](goals-and-scenarios.md), and the reason when omitted.
 - For a control-path churn scenario, the exact declared IP-address, route,
   and/or neighbor add/update/remove operations, their targets and order, plus
   whether traffic uses each changed object or an unaffected object on the same
@@ -55,10 +54,10 @@ with missing or changed required configuration.
    attach the planned VM NICs. Apply unique, documented IP settings per link.
    Record adapter-to-switch and address mappings. Check the intended on-link
    paths and ensure there are no duplicate addresses or unintended routes.
-   Configure static IP addresses; do not use IPv6 link-local addresses. The
-   initial matrix requires separate IPv4-only and IPv6-only runs.
-   Dual-stack runs remain blocked until ctsTraffic supports dual-stack and
-   that support is validated.
+   Configure static IP addresses as defined in [topologies](topologies.md).
+   Each
+   run uses a single address family, as defined in
+   [goals and scenarios](goals-and-scenarios.md).
 3. **Stage tools and scripts.** Copy the approved ctsTraffic binaries,
    scenario scripts, support tools, and configuration to each guest. Verify
    versions and file integrity. Record the transfer and destination paths.
@@ -129,9 +128,8 @@ with missing or changed required configuration.
 5. On a crash, verifier finding, monitor loss, or other stop condition, record
    the incident and preserve volatile evidence where possible before cleanup.
    Avoid automatic retries that could overwrite first-failure evidence.
-6. Use the scenario's declared ctsTraffic verification mode (`-Verify:data`
-   except for declared Goal 2 stress workloads) and retain its verification
-   results as part of the run evidence.
+6. Use the scenario's declared ctsTraffic verification mode and retain its
+   verification results as part of the run evidence.
 7. **Exercise control-path churn (when in scope).** First establish and verify
    active ctsTraffic through the specifically affected test interfaces and
    addresses; record the mapping and traffic-health evidence. Apply only the
@@ -159,8 +157,10 @@ with missing or changed required configuration.
 1. Stop ctsTraffic and scenario helpers using the configured clean shutdown
    path. Record processes that do not stop and any forced termination.
 2. Wait for connections and helper processes to drain and for guests to reach
-   the scenario's defined quiescent condition. Record the wait duration and
-   any residual activity; do not equate elapsed time alone with quiescence.
+   the scenario's defined quiescent condition (for Goal 1B, the quiescence
+   gate in [leak detection](leak-detection.md#quiescence-gate)). Record the
+   wait duration and any residual activity; do not equate elapsed time alone
+   with quiescence.
 3. Capture post-run performance counters, user-mode process memory, kernel
    pool observations (using the approved pool-tag tool), verifier
    output, event/system logs, crash dumps, and ctsTraffic outputs before
@@ -198,11 +198,12 @@ partial-failure handling, and reuse gates.
 
 ## Minimum result bundle
 
-- Resolved run definition, topology/address map, and tool/config versions.
+- Resolved run definition, topology/address map, control channel, and
+  tool/config versions.
 - Setup gate results and pre-run baselines.
-- Per-VM ctsTraffic commands, outputs, and exit codes; connection-result CSVs
-  when connection success/recovery is measured, or the documented reason they
-  were omitted for an intentional-failure stress scenario.
+- Per-VM ctsTraffic commands, standard output/error files, and exit codes;
+  status files; connection-result CSVs when collected, or the documented
+  reason they were omitted.
 - Time-stamped monitor/counter data and fault-injection record.
 - Post-run counters, process memory, pool evidence, verifier/event logs, and
   crash artifacts, including explicit "not collected" reasons.
@@ -211,4 +212,4 @@ partial-failure handling, and reuse gates.
   acceptance criteria, outcome, deviations, and incident links.
 
 The exact counter set, capture interval, pool tool/version, result format,
-retention, and quiescence/recovery thresholds remain to be selected.
+retention, and recovery thresholds remain to be selected.

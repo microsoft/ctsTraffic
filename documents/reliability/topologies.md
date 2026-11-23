@@ -41,8 +41,8 @@ management vNIC on a dedicated management switch with static addresses so
 WinRM can be tested. Do not route management traffic through the isolated
 test switches. Use PowerShell Direct (`Invoke-Command -VMName`) for operations
 that may disrupt guest networking, such as adapter-lifecycle faults, because
-it does not depend on any guest network path. An optional KDNET debug vNIC, if used, must also stay off the
-test switches. Control-path churn must neither
+it does not depend on any guest network path. An optional KDNET debug vNIC,
+if used, must also stay off the test switches. Control-path churn must neither
 modify nor depend on the management interfaces, addresses, routes, neighbors,
 or connectivity; the management path remains available independently of the
 test links.
@@ -81,13 +81,10 @@ interface/address pairs used by active traffic and the intended peer links
 before making changes, including when a traffic address itself is changed or
 removed.
 
-Exercise both traffic relationships: traffic that actively uses the address,
-route, or neighbor entry being changed, and traffic that uses unaffected
-objects on the same test link while other entries are changed. Changes that
-leave the active path usable must not interrupt traffic. Deleting or modifying
-an object to break connectivity may interrupt traffic, but the scenario must
-specify how the affected path and traffic are expected to recover. Test both
-in-place updates where supported and delete-and-recreate sequences.
+The traffic relationships (changing objects in use versus unaffected objects),
+interruption rules, and recovery contract are defined in
+[Goal 3](goals-and-scenarios.md#goal-3--network-configuration-control-path-reliability).
+This section defines only which objects churn may touch.
 
 The permitted object scope is limited to the selected test NICs and their
 link-specific address/prefix assignments, routes associated with those NICs
@@ -106,9 +103,7 @@ interface/address pairings and activity. Correlate each observed change to the
 selected link and compare unaffected peer links and the separate management
 path against their baseline. Record any unexpected changes or management-path
 dependency as a scope failure. Exact ranges, counts, rates, APIs, and cleanup
-policy remain TBD. For each changed object, also record whether the active path
-remained usable and therefore traffic was uninterrupted, or whether the change
-intentionally broke connectivity and the declared recovery was observed.
+policy remain TBD.
 
 The final plan must define:
 
@@ -120,16 +115,15 @@ The final plan must define:
   detects adapter renumbering, duplicate addresses, or stale routes.
 - Which address is used by ctsTraffic for each client/server pairing and how
   each path is verified before execution.
-- IPv6 link-local addresses are out of scope and must not be used in place of
-  the selected static test addresses.
 
 ## Setup and verification expectations
 
-For each link, setup should verify the intended peer NICs are attached to the
+For each link, setup verifies the intended peer NICs are attached to the
 correct isolated switch and have matching address-family prefix/subnet
-mappings; verify reachability in both directions before starting ctsTraffic.
-Save switch, adapter, route, and address state as run artifacts. Also verify
-the management/control path is not accidentally using the test network.
+mappings, and verifies reachability in both directions before starting
+ctsTraffic (measurements SET-03 and SET-04 in the
+[readiness plan](end-to-end-readiness-plan.md)). Also verify the
+management/control path is not accidentally using the test network.
 
 The topology runbook must define how to handle a failed link check, a failed
 VM, a partially configured switch, and cleanup/recreation of the isolated
@@ -146,14 +140,7 @@ criteria rather than a silent variation of this baseline.
 
 ## Decisions required
 
-1. What procedure should select a static, routable IPv4 and IPv6 range for
-   each campaign?
-2. Which management switch type and address range, and which WinRM
-   authentication mode, will be used? (Guest firewall policy is defined in
-   [remote control and firewall](remote-control-and-firewall.md).)
-3. What process will supply the per-run Windows version/build and architecture?
-
-IPv4-only and IPv6-only are both required run configurations. Dual-stack
-socket testing is also required later, but is blocked until ctsTraffic adds
-support for it. Do not mark the networking reliability matrix complete
-without this follow-up.
+Address selection and the management switch type/addressing are tracked as
+[open decisions](README.md#open-decisions) 1 and 2. The address-family matrix,
+including the deferred dual-stack runs, is defined in
+[goals and scenarios](goals-and-scenarios.md).
