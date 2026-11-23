@@ -61,6 +61,9 @@ with missing or changed required configuration.
 3. **Stage tools and scripts.** Copy the approved ctsTraffic binaries,
    scenario scripts, support tools, and configuration to each guest. Verify
    versions and file integrity. Record the transfer and destination paths.
+   Refresh the host's debugger package cache and install the package
+   (user-mode debuggers and Application Verifier) on every guest, as defined
+   in [debugging tools](debugging-tools.md).
 4. **Establish remote operations and firewall rules.** Open sessions to every
    guest with the run's declared control channel (PowerShell Direct or WinRM)
    for configuration, process launch/status/stop, and artifact collection.

@@ -246,7 +246,8 @@ Resolve the initial provisioning/snapshot dependency explicitly:
    name collisions or unowned existing objects must stop provisioning.
 4. Bootstrap guest management using the approved design (PowerShell Direct
    first, then the management vNIC and WinRM listener), configure test vNICs
-   and static addresses, apply the guest firewall rules, stage tools, and
+   and static addresses, apply the guest firewall rules, stage tools, install
+   the [debugging tools](debugging-tools.md) package from the host cache, and
    establish recoverability. Verify each
    operation and record before/after state and partial failures.
 5. Capture a complete host-plus-guest snapshot after provisioning. The workload
@@ -377,9 +378,9 @@ and the scenario's desired state.
 | SET-03 vSwitch and port configuration | Switch ID/name/type, isolation mode, physical-adapter binding, management-OS sharing, extensions, switch ports, VLAN/QoS settings, and attached vNICs | Hyper-V switch/port configuration query/export; record each switch and attachment | Each test link maps to the planned isolated switch and expected endpoints. No test mutation can reach the management path. No unexpected attachment or setting is allowed on owned test switches; unrelated switches are not modified. |
 | SET-04 Guest vNIC, IP, and firewall configuration | vNIC ID/name/MAC, connected switch, link state, VLAN/QoS, guest interface index, address/prefix, routes, neighbors, DNS, gateways, network profile per adapter, firewall profile settings, and the effective `ctsTraffic Reliability` rules | Hyper-V vNIC inventory plus guest network and firewall configuration; values/counts and before/after comparison; ICMP and short ctsTraffic reachability check per test link | Every endpoint has the exact planned test configuration, no duplicate address or unintended route exists, firewall rules match the scenario's ports/adapters/subnets, every test link is reachable, and the separate management connection is reachable. |
 | SET-05 Capacity and recovery readiness | Assigned and available CPU/RAM/storage, recovery-point identity, free artifact space, and declared resource envelope | Host/guest inventory and live capacity counters; counts, bytes, percentages | Available capacity meets the calibrated minimum and remains within the approved envelope; recovery path and artifact space are available. |
-| SET-06 Tools, remote operations, verifier state | Declared control channel and session result, ctsTraffic/support-tool versions and hashes, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration; both verifiers are disabled for G1B; all required monitors can collect data. |
+| SET-06 Tools, remote operations, verifier state | Declared control channel and session result, ctsTraffic/support-tool versions and hashes, debugger package cache check and installed version with `cdb.exe`/`ntsd.exe`/`appverif.exe` file versions, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, cache metadata and MSI install log, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration, including the same debugger package version on all guests of an architecture; both verifiers are disabled for G1B; all required monitors can collect data. |
 | SET-07 Baseline evidence readiness | Noise-floor snapshots, event-log position, network state, counter sample timestamps, and process-sampler readiness | Counter/snapshot outputs; bytes/counts and capture timestamps | The persistent servers are running, the noise-floor snapshots defined in [leak detection](leak-detection.md) exist for every applicable device with valid timestamps/units, and sampling begins before the warm-up iteration. |
-| SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, firewall rule, WinRM/host trust, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
+| SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, firewall rule, WinRM/host trust, debugger package install/upgrade, host package cache refresh, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
 | SET-09 Crash and hang capture readiness | Complete-dump configuration, dump path and free space, injected-NMI dump setting, WER local-dump settings, heartbeat/probe availability, and KDNET connection if the campaign opted in | Guest configuration query, free-space check, host heartbeat and PowerShell Direct probe | Every guest can write a complete dump and be probed for hangs; an opted-in debugger is connected. Otherwise setup fails. |
 
 #### Execution phase
@@ -543,6 +544,7 @@ Resolve the relevant decisions in the [plan index](README.md) and
   vSwitch, switch-port, vNIC, and host-adapter capture and comparison.
 - Remote-control channel selection from Phase 3B, WinRM authentication mode,
   credential source, management switch type/addressing, and permissions.
+- Host cache location for the [debugging tools](debugging-tools.md) package.
 - User-supplied Windows 11 RTM VHDX path, per-VM allocations, and recovery-point
   policy. Automated provisioning and retained-lab reuse are required; reimage
   and destructive recovery are not normal cleanup.

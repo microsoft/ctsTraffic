@@ -45,6 +45,7 @@ be corrected.
 | Leak detection method | [Leak detection workflow](leak-detection.md) |
 | Crash dumps, hang detection, debugger, failure buckets | [Crash capture and triage](crash-capture-and-triage.md) |
 | Application Verifier and Driver Verifier settings | [Verifier profiles](verifier-profiles.md) |
+| Debugger and Application Verifier package: host cache and guest install | [Debugging tools](debugging-tools.md) |
 | Host-to-guest control channels, unattended run rules, guest firewall | [Remote control and firewall](remote-control-and-firewall.md) |
 | Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
 | First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |

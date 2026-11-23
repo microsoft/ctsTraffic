@@ -17,6 +17,9 @@ settings inline.
   records the effective settings (for example `verifier /querysettings` and
   the Application Verifier settings export) in the run bundle. A run whose
   effective settings differ from its declared profile is invalid.
+- Application Verifier comes from the debugger package installed on every
+  guest; see [debugging tools](debugging-tools.md). Record its version with
+  the effective settings.
 - Exact flags must be confirmed against the target Windows build and
   architecture before a profile is approved.
 
