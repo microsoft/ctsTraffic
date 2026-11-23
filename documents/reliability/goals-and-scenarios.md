@@ -79,8 +79,10 @@ matrix should include high connection counts with short transfers, low
 connection counts with long transfers, and selected combinations, then expand
 the combinations needed to expose regressions.
 
-Before a run, characterize capacity and declare its intended load level,
-target workload, upper resource/safety bounds, and stop conditions. Use
+Before a run, select a compatible existing workload configuration or use
+optional system characterization to derive one. Validate capacity and declare
+the intended load level, target workload, upper resource/safety bounds, and
+stop conditions. Use
 measured system behavior to show that the scenario applied enough pressure to
 meet its goal without exceeding those bounds. A run below its declared stress
 target is not evidence of resilience; a run beyond its approved envelope is

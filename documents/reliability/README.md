@@ -31,8 +31,11 @@ per system under test: avoid both inadequate stress and exceeding an approved
 resource/safety envelope. Every TCP reliability scenario must explicitly use
 ctsTraffic `-Verify:data`.
 
-Calibrate the load profile per system before each campaign. Start IO-model
-coverage with IOCP, then expand to the other currently implemented models.
+Select a compatible existing workload configuration or use optional system
+characterization to derive one. Validate its load and safety envelope on the
+participating systems before each campaign; fresh characterization is not
+mandatory for every run. Start IO-model coverage with IOCP, then expand to the
+other currently implemented models.
 
 ## Test promises
 
@@ -77,6 +80,8 @@ expected effects from unexpected failures.
   inventory and network configuration captured by a local script.
 - [First uninstrumented baseline scenario](scenarios/goal1b-clean-baseline.md) —
   initial clean TCP workload with connection and memory/pool measurements.
+- [End-to-end readiness plan](end-to-end-readiness-plan.md) — ordered work,
+  validation gates, and real-user acceptance required before a full run.
 - [Run lifecycle](run-lifecycle.md) — setup, execution, cooldown, evidence,
   and run completion gates.
 - [Initial topology](topologies.md) — proposed all-on-link, pairwise-private-

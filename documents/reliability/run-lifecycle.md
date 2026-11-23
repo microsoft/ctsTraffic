@@ -76,12 +76,14 @@ with missing or changed required configuration.
 7. **Gate execution.** Require every guest reachable, correct NIC/IP mapping,
    expected link connectivity, correct tool/config versions, sufficient free
    resources, and no pending reboot or unexplained health issue. Abort setup
-   rather than starting a partial multi-VM run. Before each campaign, calibrate
-   workload and load for the systems in that campaign. Confirm the workload is
+   rather than starting a partial multi-VM run. Before each campaign, select a
+   compatible workload configuration or optionally characterize the system to
+   derive one. Validate its load and safety envelope. Confirm the workload is
    not below the declared stress target, while remaining within approved
    resource and safety limits and stop conditions. The exact calibration
    signals and thresholds are TBD; this gate cannot be automated until they
-   are defined.
+   are defined. For G1B, require the approved pool-tag snapshot tool before any
+   workload, including characterization pilots.
 8. **Prepare control-path churn (when in scope).** Before any test changes,
    capture and retain the baseline IP address, route, and neighbor state for
    each affected test interface/address, along with enough system state to
@@ -170,6 +172,12 @@ with missing or changed required configuration.
 7. Mark the run **passed**, **failed**, **inconclusive**, or **aborted** using
    the scenario's criteria. Preserve failures and deviations; do not convert
    missing evidence into a pass.
+
+For the first G1B workflow, retain the dedicated VMs and switches for reuse
+after cooldown. Capture evidence and verify the approved post-setup state;
+do not automatically revert checkpoints, reimage guests, or delete resources.
+See the [readiness plan](end-to-end-readiness-plan.md) for provisioning,
+partial-failure handling, and reuse gates.
 
 ## Minimum result bundle
 
