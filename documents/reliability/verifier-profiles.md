@@ -42,6 +42,63 @@ settings inline.
 | `AV-DV-STRESS` | Goal 2 infrastructure and protocol faults | Same as `AV-DV-CORRECTNESS` | Same as `AV-DV-CORRECTNESS` |
 | `NONE` | Goal 1B, post-stress verification | Disabled | Disabled |
 
+A scenario may add Windows services as Application Verifier targets in
+addition to `ctsTraffic.exe`. It names each service, and setup applies the
+profile's Application Verifier settings to those services only, using the
+method below.
+
+## Targeting a specific service hosted in svchost.exe
+
+Many networking services run inside `svchost.exe`. Enabling Application
+Verifier on `C:\Windows\System32\svchost.exe` alone applies it to **every**
+svchost-hosted service on the system. That is almost never the goal.
+
+To limit it, also set the `VerifierActivationFilter` registry value under the
+`svchost.exe` Image File Execution Options key. The value is a
+space-delimited set of strings. Application Verifier is activated only in
+svchost processes whose command line contains one of those strings.
+
+### Steps
+
+1. **Find the target command line.** Run the service and read its host
+   process command line, for example with `tlist`, or
+   `Get-CimInstance Win32_Process -Filter "Name='svchost.exe'" | Select-Object ProcessId, CommandLine`.
+   For example, the firewall services `BFE` and `mpssvc` share this
+   command line:
+
+   ```text
+   C:\WINDOWS\system32\svchost.exe -k LocalServiceNoNetworkFirewall -p
+   ```
+
+2. **Choose filter strings** that appear only in the target processes'
+   command lines. Check every other running svchost command line to make sure
+   none of them also match. Every service in a matched process is verified,
+   not just the one you are interested in; record all of them.
+3. **Enable Application Verifier on `svchost.exe`** with the profile's
+   layers, and set the filter. For example, to verify only the firewall
+   services:
+
+   ```cmd
+   reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\svchost.exe" /v VerifierActivationFilter /t REG_SZ /d " LocalServiceNoNetworkFirewall "
+   ```
+
+4. **Restart the targeted services, or reboot the guest,** so their host
+   process starts with verification. Some services cannot be restarted on
+   their own; reboot in that case.
+5. **Verify the scope.** Confirm the verifier is loaded in the targeted svchost
+   processes and in no others, for example with `tasklist /m verifier.dll`.
+   Record the matching process IDs, command lines, and hosted services. A
+   verifier loaded in an unintended svchost process makes the setup invalid.
+
+### Recording and cleanup
+
+- The effective settings recorded for the run include the
+  `VerifierActivationFilter` value and the scope check from step 5.
+- When the profile is removed, delete the `VerifierActivationFilter` value
+  along with the `svchost.exe` Application Verifier settings, then restart the
+  services or reboot. A leftover filter, or verifier settings left on
+  `svchost.exe` without a filter, are configuration drift.
+
 ## Open items
 
 1. Confirm the exact Application Verifier layers and Driver Verifier options
@@ -53,3 +110,5 @@ settings inline.
 4. Decide whether verifier stops break into an attached debugger or are
    logged and continue, consistent with
    [crash capture](crash-capture-and-triage.md).
+5. Decide which svchost-hosted networking services, if any, each profile
+   targets by default, and confirm their filter strings on the target build.
