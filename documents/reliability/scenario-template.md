@@ -31,6 +31,13 @@ calibration and must not be inferred from class alone.
 - **Guest VHDX path:** {{VHDX_PATH}}
 - **Guest OS edition/version/build/architecture after install:**
 - **VM count/roles and per-VM vCPU/RAM:**
+- **Verifier profile** ([options](verifier-profiles.md)):
+- **ctsTraffic verification mode** (`-Verify:data`, or `-Verify:connection`
+  for declared Goal 2 stress only, with reason):
+- **Duration (`-TimeLimit`) and iterations:**
+- **Fault type** (none, resource pressure, link loss, adapter lifecycle,
+  protocol):
+- **KDNET debugger attached** (yes/no; complete dumps are always on):
 - **Workload or configuration changes:**
 - **Expected behavior:**
 

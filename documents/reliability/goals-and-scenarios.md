@@ -5,14 +5,19 @@ Concrete ctsTraffic command lines, parameter values, thresholds, and
 automation are to be added after the open decisions in
 [the plan index](README.md) are answered.
 
-The initial VM scenarios are TCP-only on three Hyper-V guests, with a maximum
-of five VMs. Select and record the Windows build and architecture for each
+The initial VM scenarios are TCP-only, starting with two Hyper-V guests on one
+link and growing to three, with a maximum of five VMs. UDP is deferred until
+the TCP workflow works end to end. Select and record the Windows build and
+architecture for each
 campaign. IPv4-only and
 IPv6-only configurations are both required. Dual-stack runs are blocked until
 ctsTraffic implements the necessary support. Start with the duplex IO pattern.
 Vary connection count and transfer duration independently and in combinations,
-calibrating load per system and campaign. Every TCP reliability scenario,
-including stress and recovery scenarios, must explicitly use `-Verify:data`.
+calibrating load per system and campaign. Goal 1 and Goal 3 TCP scenarios, and
+every post-stress verification check, must explicitly use `-Verify:data`.
+Goal 2 stress scenarios may use `-Verify:connection` when the stress technique
+requires it (for example, protocol-level RST injection that aborts transfers
+mid-stream); each such scenario must state the verification mode and why.
 
 There are no custom drivers in this initial scope; bare-metal test coverage
 will need explicit driver installation references and is tracked as a later
@@ -29,7 +34,8 @@ criteria or compare their performance numbers directly.
 
 ### 1A. Instrumented correctness
 
-- Enable the approved Application Verifier and Driver Verifier settings.
+- Enable the `AV-DV-CORRECTNESS` [verifier profile](verifier-profiles.md)
+  (no fault injection).
 - Run the declared ctsTraffic workload to exercise connection establishment,
   data transfer, protocol completion, and teardown.
 - Explicitly enable ctsTraffic data verification (`-Verify:data`) so received
@@ -49,8 +55,21 @@ criteria or compare their performance numbers directly.
 - Run the same declared workload with `-Verify:data` for a fixed duration and
   capture work over time (for example completed connections and transferred
   bytes/frames), as well as ctsTraffic errors and process exit status.
-- Capture user-mode process memory and kernel pool observations before and
-  after the run, with a defined observation window and attribution method.
+- **Fixed duration uses ctsTraffic `-TimeLimit`.** When the limit is reached,
+  ctsTraffic prints `Time-limit of N reached`, stops, still writes its final
+  status and summary, and returns the count of network plus protocol errors as
+  its exit code. Treat the time-limit notice as the expected end of the run.
+  Connections still in flight at the cutoff are not completed work; the pilot
+  must confirm whether they are counted as errors, and any such cutoff errors
+  are classified as expected end-of-run effects rather than failures. Compare
+  work by completed connections and bytes, normalized per unit time.
+- Capture the work-over-time series with `-StatusFilename` (and optionally
+  `-TcpInfoFilename`) so throughput and errors can be compared across the run,
+  not only as end totals.
+- Detect user-mode and kernel-pool leaks with the
+  [leak detection workflow](leak-detection.md): persistent servers, a noise
+  floor, a discarded warm-up, and five measured identical iterations analyzed
+  for steady growth normalized by work.
 - Compare repeated runs only under the same OS, driver, topology, workload,
   duration, and host-capacity conditions.
 - When connection success rate is an acceptance metric, enable and retain
@@ -65,8 +84,9 @@ The initial concrete instance is
 is a pilot to establish workload and memory observations; repeatability and
 leak thresholds remain open until calibrated and approved.
 
-Application Verifier and Driver Verifier configuration, workload parameters,
-fixed duration, repeat count, comparison method, tolerances, and leak
+Application Verifier and Driver Verifier settings are defined by name in
+[verifier profiles](verifier-profiles.md). Workload parameters,
+fixed duration, comparison method, tolerances, and leak
 thresholds are open decisions. Process memory and kernel pool use are distinct
 measurements and must have separate baselines and criteria.
 
@@ -118,9 +138,10 @@ criteria.
 does not bugcheck and returns to a healthy state capable of completing a
 simple verification workload.
 
-Run each stress scenario with Application Verifier and Driver Verifier enabled;
-the exact approved settings remain TBD. Explicitly use `-Verify:data` for every
-TCP scenario. A verifier finding or bugcheck is a failure even if the fault was
+Run each stress scenario with its declared Goal 2
+[verifier profile](verifier-profiles.md); the exact settings remain TBD. Stress workloads may use
+`-Verify:connection` (declared per scenario); the post-stress verification
+workload must use `-Verify:data`. A verifier finding or bugcheck is a failure even if the fault was
 injected. For each test, specify expected connection-level effects separately
 from system-level acceptance criteria. At the end, disable/restore verifier
 configuration as prescribed, reboot if required, verify health, and run a
@@ -136,9 +157,10 @@ verifier/crash evidence, and system health data.
 
 | Scenario family | Fault under test | Expected result and checks |
 | --- | --- | --- |
-| Resource pressure | Application Verifier and/or Driver Verifier options that simulate constrained or failed allocations/resources. | No bugcheck or unexpected verifier finding; expected operation failures are classified; the guest recovers and passes the post-stress check. Exact verifier settings and expected failures are TBD. |
-| Network infrastructure | Break a selected VM-to-VM path, then restore it, while ctsTraffic is active. | Observe and record loss/reconnect behavior; verify unaffected paths as applicable; confirm healthy post-fault operation. Fault method, timing, and recovery contract are TBD. |
-| TCP protocol/connection | Configure ctsTraffic to close/reset connections at randomized points in their lifecycle (the existing `TestScripts/ctsTraffic_io_reliability.cmd` uses `-Shutdown:random`). | Expected connection failures are allowed and counted separately; no system crash/verifier violation; system passes post-stress check. Confirm the exact supported injection semantics before treating this as a run contract. |
+| Resource pressure | The `AV-DV-LOWRES` [verifier profile](verifier-profiles.md), which simulates constrained or failed allocations/resources. | No bugcheck or unexpected verifier finding; expected operation failures are classified; the guest recovers and passes the post-stress check. Exact verifier settings and expected failures are TBD. |
+| Network infrastructure: link loss | From the Hyper-V host, disconnect a test vNIC from its Private switch (`Disconnect-VMNetworkAdapter`), hold for the declared outage, then reconnect it (`Connect-VMNetworkAdapter`). The guest sees media disconnect; the adapter and its addresses remain. | Short outages may leave connections intact and longer ones time out; each scenario declares the outage duration and expected connection outcome. Unaffected links must keep working. Host-side control is unaffected by guest load. Hyper-V only. |
+| Network infrastructure: adapter lifecycle | Inside the guest, through PowerShell Direct, disable and re-enable a test adapter (`Disable-NetAdapter` / `Enable-NetAdapter`) with a declared down time, or bounce it with `Reset-NetAdapter`. The interface and its addresses are removed and recreated. | Connections on that adapter fail immediately and are expected failures; replacements must succeed after re-enable. Exercises interface teardown racing in-flight IO. Commands use timeouts; a disable that hangs is a finding. Must never target the management adapter. Also works on bare metal. |
+| TCP protocol/connection | Reset connections at randomized points in their lifecycle using `-Verify:connection`, randomized `-Transfer` ranges, and `-Shutdown:random`, as in the existing `TestScripts/ctsTraffic_io_reliability.cmd`. Note: `-Shutdown:random` alone only chooses graceful close vs. RST after the transfer completes. | Expected connection failures are allowed and counted separately; no system crash/verifier violation; system passes post-stress check. Confirm the exact supported injection semantics before treating this as a run contract. |
 
 ## Goal 3 — Network configuration control-path reliability
 
@@ -242,7 +264,7 @@ The initial acceptance matrix must keep these dimensions explicit:
 
 | Goal / variant | Verifiers | Fault injection | Primary acceptance |
 | --- | --- | --- | --- |
-| 1A correctness | Enabled, settings TBD | None unless specified by its own scenario | `-Verify:data`; correct completion; no unexpected verifier, bugcheck, data, or protocol failure |
-| 1B baseline | Disabled | None | `-Verify:data`; fixed-duration work and error criteria plus separate user-mode and kernel-pool leak criteria |
-| 2 stress | Enabled, settings TBD | Resource, infrastructure, or protocol failure | `-Verify:data`; no bugcheck/unexpected verifier finding; expected fault behavior; successful recovery check |
+| 1A correctness | `AV-DV-CORRECTNESS` | None unless specified by its own scenario | `-Verify:data`; correct completion; no unexpected verifier, bugcheck, data, or protocol failure |
+| 1B baseline | `NONE` | None | `-Verify:data`; fixed-duration (`-TimeLimit`) work and error criteria plus the [leak detection](leak-detection.md) user-mode and kernel-pool criteria |
+| 2 stress | `AV-DV-LOWRES` or `AV-DV-STRESS` | Resource, link-loss, adapter-lifecycle, or protocol failure | `-Verify:connection` allowed during stress (declared per scenario); `-Verify:data` for the post-stress check; no bugcheck/unexpected verifier finding; expected fault behavior; successful recovery check |
 | 3 control path | State and settings TBD | Configuration changes; semantics TBD | Operation outcomes, declared versus unexpected traffic effects, system/verifier health, convergence, and final configuration state against campaign criteria |

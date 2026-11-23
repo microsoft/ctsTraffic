@@ -37,8 +37,10 @@ extensions.
 
 ## Approved first-run policies
 
-- **Provisioning:** create three dedicated VMs and their pairwise Private test
-  switches from a user-supplied VHDX. Validate image compatibility and record
+- **Provisioning:** create two dedicated VMs and their Private test switch
+  from a user-supplied VHDX for the first vertical slice, then extend the same
+  workflow to three VMs and their pairwise Private test switches. Validate
+  image compatibility and record
   the actual guest OS/build/architecture before running.
 - **Reuse:** retain the VMs and switches after cleanup for later runs. Stop
   run-owned tools, drain activity, collect evidence, and verify configuration
@@ -53,9 +55,20 @@ extensions.
   optional system-specific characterization workflow. Both routes produce a
   resolved workload configuration and validate resource limits before use.
 - **Pool evidence:** select and approve a pool-tag snapshot tool, validate its
-  availability and output on the target architecture/build, and require it
-  before any characterization pilot or scenario workload. Counters alone are
-  not sufficient for this first scenario.
+  availability and output on the target architecture/build (including ARM64),
+  and require it before any characterization pilot or scenario workload.
+  Counters alone are not sufficient for this first scenario.
+- **Fixed duration:** Goal 1B iterations use ctsTraffic `-TimeLimit`; the
+  time-limit notice is the expected end, and cutoff errors are classified as
+  expected end-of-run effects (see [goals](goals-and-scenarios.md)).
+- **Leak detection:** use the [leak detection workflow](leak-detection.md)
+  with persistent servers, a noise floor, a discarded warm-up, and five
+  measured iterations.
+- **Crash capture:** every test VM always writes a complete memory dump;
+  KDNET debugger attachment is an optional per-campaign opt-in (see
+  [crash capture and triage](crash-capture-and-triage.md)).
+- **Verification mode:** `-Verify:data` for Goals 1 and 3 and post-stress
+  checks; `-Verify:connection` only for declared Goal 2 stress workloads.
 
 ## Current starting point
 
@@ -79,7 +92,7 @@ record:
 - User-supplied Windows 11 RTM VHDX path, guest edition/version/build/architecture,
   VM generation, vCPU/RAM allocation, and recovery-point policy. Create the
   dedicated lab initially; validate and reuse it on subsequent runs.
-- The initial three-VM topology, private-switch and NIC mapping, management
+- The initial two-VM topology (then three), private-switch and NIC mapping, management
   path isolation, static addresses, selected address family, and address
   restoration procedure. IPv4-only and IPv6-only remain separate runs.
 - ctsTraffic build/hash, server/client role, exact supported command/config,
@@ -219,7 +232,8 @@ Resolve the initial provisioning/snapshot dependency explicitly:
    allocations, management/bootstrap design, and the proposed change list
    without modifying the host or image.
 3. After approval, create separate writable guest disks from the supplied image,
-   the three dedicated VMs, and three pairwise Private switches. Preserve the
+   the dedicated VMs (two for the first slice, then three), and their pairwise
+   Private switches. Preserve the
    source image. Journal stable IDs and ownership of every created resource;
    name collisions or unowned existing objects must stop provisioning.
 4. Bootstrap guest management using the approved design, configure test vNICs
@@ -344,6 +358,7 @@ and the scenario's desired state.
 | SET-06 Tools, remote operations, verifier state | WinRM/reachability, ctsTraffic/support-tool versions and hashes, driver versions, verifier configuration, monitor/counter availability | Remote command result, version/hash records, verifier-state capture; status and exact identifiers | Every device is controllable and has the approved tool/configuration; both verifiers are disabled for G1B; all required monitors can collect data. |
 | SET-07 Baseline evidence readiness | Pre-run system memory, paged/nonpaged pool, required pool-tag snapshots, event-log position, network state, counter sample timestamps, and process-sampler readiness | Counter/snapshot outputs; bytes/counts and capture timestamps | Required baseline artifacts exist for every applicable device and have valid timestamps/units; sampling begins before workload launch. An absent ctsTraffic process has no process-memory baseline; capture its first live sample and label its workload stage. |
 | SET-08 Setup mutation audit | Actual changes made by setup versus the approved plan, including VM, vSwitch, vNIC, IP, route, and verifier changes | Before/after configuration diff and setup operation log | Every change is declared and applied successfully; no unapproved change or unexplained drift remains. |
+| SET-09 Crash and hang capture readiness | Complete-dump configuration, dump path and free space, injected-NMI dump setting, WER local-dump settings, heartbeat/probe availability, and KDNET connection if the campaign opted in | Guest configuration query, free-space check, host heartbeat and PowerShell Direct probe | Every guest can write a complete dump and be probed for hangs; an opted-in debugger is connected. Otherwise setup fails. |
 
 #### Execution phase
 
@@ -383,7 +398,10 @@ allowed, the expected final network/VM configuration is the approved baseline.
 
 Link SET-01 through SET-08 and CLN-02 to configuration criterion G1B-00.
 Link baseline SET-07 to G1B-04 through G1B-06 where applicable, and verifier
-SET-06 to G1B-08. Require CLN-01 and CLN-05 for health criterion G1B-07.
+SET-06 to G1B-08. Require SET-09, CLN-01, and CLN-05 for health criterion
+G1B-07. Leak criteria G1B-04 through G1B-06 use the snapshot series defined in
+[leak detection](leak-detection.md); EXE-05 through EXE-07 and CLN-03 collect
+that series.
 CLN-06 and CLN-07 apply to every criterion and the overall run disposition.
 Preserve separate per-device and per-link results; aggregates must not conceal
 a failing endpoint or double-count both ends of a connection.
@@ -432,7 +450,7 @@ After every earlier gate passes:
 2. Select a compatible existing configuration or approved characterization
    output, validate its safety envelope, and finalize the immutable G1B scenario
    instance; ensure no execution-critical `TBD` remains.
-3. Verify the declared recovery point and dedicated three-VM topology.
+3. Verify the declared recovery point and dedicated two-VM (then three-VM) topology.
 4. Run preflight, review the no-mutation plan, and obtain operator approval.
 5. Execute setup, capture baselines, run the fixed-duration clean workload,
    monitor all participants, and perform cooldown.
@@ -505,10 +523,13 @@ Resolve the relevant decisions in the [plan index](README.md) and
 - User-supplied Windows 11 RTM VHDX path, per-VM allocations, and recovery-point
   policy. Automated provisioning and retained-lab reuse are required; reimage
   and destructive recovery are not normal cleanup.
-- Static address allocation, management-path isolation, and exact three-VM
-  topology.
-- Approved performance counters and required pool-tag tool, sampling interval,
-  optional characterization procedure, reviewed preset inventory, repeat count,
-  work-rate tolerance, and memory/pool thresholds.
-- Exact ctsTraffic parameter semantics, CSV interpretation, command lifecycle,
-  and supported stop behavior.
+- Static address allocation, management-path isolation, and exact two-VM and
+  three-VM topologies.
+- Approved performance counters and required pool-tag tool (working on ARM64
+  and x64), sampling interval,
+  optional characterization procedure, reviewed preset inventory, work-rate
+  tolerance, and leak-analysis thresholds.
+- Exact settings for each [verifier profile](verifier-profiles.md), the hang
+  timeout, and the crash-dump space policy.
+- How ctsTraffic counts connections in flight at the `-TimeLimit` cutoff
+  (confirm in the pilot), CSV interpretation, and supported stop behavior.

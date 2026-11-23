@@ -1,7 +1,8 @@
 # Initial VM Topology
 
-Status: **Draft**. The first topology targets three Windows VMs on Hyper-V.
-The runbook should support a mesh of up to five VMs. This is not yet an
+Status: **Draft**. The first topology is two Windows VMs on Hyper-V joined by
+one Private switch, then grows to three. The runbook should support a mesh of
+up to five VMs. This is not yet an
 executable network configuration; define address selection and validate the
 required IP families before implementation.
 
@@ -15,7 +16,14 @@ without intentionally disconnecting every peer.
 
 ## Pairwise private-switch model
 
-For the initial three VMs, create one Hyper-V Private switch and one
+The first vertical slice uses two VMs and a single link, which is the `N = 2`
+case of the same model:
+
+```text
+VM-A NIC-AB ── Private switch AB ── VM-B NIC-BA
+```
+
+For three VMs, create one Hyper-V Private switch and one
 point-to-point IP subnet for each VM pair. Each VM has one test NIC for every
 other VM (two test NICs per VM). The switches connect only the two endpoint VM
 NICs and do not provide a host adapter or external-network connection:
@@ -28,14 +36,19 @@ VM-B NIC-BC ── Private switch BC ── VM-C NIC-CB
 
 Use PowerShell Remoting/WinRM on a separate management path to configure and
 control the guests and collect artifacts. Do not route that management
-connection through the isolated test switches. Control-path churn must neither
+connection through the isolated test switches. Use PowerShell Direct
+(`Invoke-Command -VMName`) for operations that may disrupt guest networking,
+such as adapter-lifecycle faults, because it does not depend on any guest
+network path. An optional KDNET debug vNIC, if used, must also stay off the
+test switches. Control-path churn must neither
 modify nor depend on the management interfaces, addresses, routes, neighbors,
 or connectivity; the management path remains available independently of the
 test links.
 
 ## Address and adapter inventory
 
-Maintain a generated or reviewed table for every test NIC:
+Maintain a generated or reviewed table for every test NIC. The two-VM slice
+uses only the `Private-AB` rows; the three-VM table is:
 
 | VM | NIC identity | Peer | Virtual switch | IPv4 address/prefix | IPv6 address/prefix | Gateway/DNS |
 | --- | --- | --- | --- | --- | --- | --- |

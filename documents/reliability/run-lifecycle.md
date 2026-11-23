@@ -1,8 +1,8 @@
 # Reliability Run Lifecycle
 
 Status: **Draft**. This describes the phases and evidence required for a run.
-The starting scenarios use three Hyper-V VMs; the runbook supports campaigns
-of up to five VMs. It selects WinRM for remote operations, without yet
+The first vertical slice uses two Hyper-V VMs, then three; the runbook supports
+campaigns of up to five VMs. It selects WinRM for remote operations, without yet
 specifying a production-ready script or the WinRM security policy.
 
 ## Run inputs
@@ -17,8 +17,9 @@ Before setup, resolve one immutable run definition containing:
 - Guest OS, build, and architecture for each campaign, plus networking driver,
   ctsTraffic/tool versions, and available resources.
 - Verifier state/settings, IO pattern, connection count, transfer size,
-  duration, and repetitions. For TCP reliability scenarios, explicitly enable
-  ctsTraffic data verification (`-Verify:data`).
+  duration, and repetitions, plus the ctsTraffic verification mode:
+  `-Verify:data` for Goal 1/3 and post-stress checks; `-Verify:connection`
+  only for declared Goal 2 stress workloads.
 - Campaign-calibrated load level, system-specific capacity assumptions,
   monitored resource bounds, and stop conditions.
 - Fault schedule (if applicable), observation plan, cleanup/recovery policy,
@@ -66,10 +67,14 @@ with missing or changed required configuration.
    credentials in run artifacts. The identity, authentication, privilege, and
    firewall policy for WinRM is TBD and must be selected before implementing
    this step.
-5. **Configure guest OS and verifiers.** Apply only the scenario's declared
-   OS settings. Configure Application Verifier and/or Driver Verifier to the
-   approved profile, capture the exact resulting settings, and reboot/wait for
-   a healthy guest when required. Never enable a verifier implicitly.
+5. **Configure guest OS, crash capture, and verifiers.** Apply only the
+   scenario's declared OS settings. Configure complete memory dumps, injected
+   NMI dumps, and WER local dumps on every guest as defined in
+   [crash capture and triage](crash-capture-and-triage.md), and verify dump
+   space. Attach a KDNET debugger only if the campaign opts in. Apply the
+   scenario's named [verifier profile](verifier-profiles.md), capture the
+   exact resulting settings, and reboot/wait for a healthy guest when
+   required. Never enable a verifier implicitly.
 6. **Capture pre-run evidence.** Save baseline health, verifier state,
    relevant performance counters, process/pool observations, and event-log
    position. Validate the planned ctsTraffic role/configuration on all nodes.
@@ -107,17 +112,20 @@ with missing or changed required configuration.
    scenarios omit them.
 3. Monitor each guest for the defined health signals: process liveness,
    ctsTraffic status/error outputs, relevant performance counters, verifier
-   activity, system events, and bugcheck/reboot evidence. A counter
-   spot-check is diagnostic evidence, not proof by itself that the workload
-   succeeded.
+   activity, system events, and bugcheck/reboot evidence. Detect hangs with
+   the Hyper-V heartbeat and a PowerShell Direct probe, and force a dump with
+   an injected NMI when the hang timeout expires and no debugger is attached.
+   A counter spot-check is diagnostic evidence, not proof by itself that the
+   workload succeeded.
 4. Apply scheduled faults only at the declared target and time. Record
    trigger, duration, path affected, confirmation of restoration, and observed
    behavior. Do not inject a fault when the run's setup gate is not satisfied.
 5. On a crash, verifier finding, monitor loss, or other stop condition, record
    the incident and preserve volatile evidence where possible before cleanup.
    Avoid automatic retries that could overwrite first-failure evidence.
-6. For TCP reliability runs, explicitly use ctsTraffic `-Verify:data` and
-   retain its verification results as part of the run evidence.
+6. Use the scenario's declared ctsTraffic verification mode (`-Verify:data`
+   except for declared Goal 2 stress workloads) and retain its verification
+   results as part of the run evidence.
 7. **Exercise control-path churn (when in scope).** First establish and verify
    active ctsTraffic through the specifically affected test interfaces and
    addresses; record the mapping and traffic-health evidence. Apply only the
@@ -148,9 +156,11 @@ with missing or changed required configuration.
    the scenario's defined quiescent condition. Record the wait duration and
    any residual activity; do not equate elapsed time alone with quiescence.
 3. Capture post-run performance counters, user-mode process memory, kernel
-   pool observations (including poolsnap if approved/available), verifier
+   pool observations (using the approved pool-tag tool), verifier
    output, event/system logs, crash dumps, and ctsTraffic outputs before
-   resetting or restoring the VM.
+   resetting or restoring the VM. For leak measurements, follow the
+   quiescence gate and snapshot series in
+   [leak detection](leak-detection.md).
 4. For Goal 2, restore verifier state as specified, reboot if needed, confirm
    guest and network health, and run the designated simple verification
    workload. Capture its complete result as the recovery gate.
@@ -169,7 +179,8 @@ with missing or changed required configuration.
 6. Collect artifacts from all VMs into the run's uniquely named result
    directory. Verify expected files arrived and are readable; generate a
    manifest and a summary linking each metric to its source artifact.
-7. Mark the run **passed**, **failed**, **inconclusive**, or **aborted** using
+7. Assign each failure a [triage bucket](crash-capture-and-triage.md) and
+   mark the run **passed**, **failed**, **inconclusive**, or **aborted** using
    the scenario's criteria. Preserve failures and deviations; do not convert
    missing evidence into a pass.
 

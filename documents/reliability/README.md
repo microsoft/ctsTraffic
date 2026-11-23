@@ -10,17 +10,19 @@ stack using ctsTraffic. Each run must identify its topology, workload, verifier
 configuration, duration, fault model, acceptance criteria, and collected
 artifacts so that results can be reproduced and compared.
 
-The initial target is three Windows VMs on Hyper-V, with each VM-to-VM link
-carried directly over its own isolated Hyper-V Private virtual switch. Guest
+The initial target is two Windows VMs on Hyper-V connected by one isolated
+Hyper-V Private virtual switch, growing to three or more VMs with one private
+switch per VM pair. Guest
 configuration, remote control, and artifact collection will use PowerShell
-Remoting/WinRM. Initial scenarios cover TCP; the Windows version/build and
+Remoting/WinRM. Initial scenarios cover TCP; UDP is deferred until the TCP
+workflow works end to end. The Windows version/build and
 architecture are selected when each run is scheduled. There are no custom
 drivers in the initial VM scope. Bare-metal runs, including their driver
 installation references, are a later extension.
 
-The initial scenarios start with three VMs; the topology/runbook should support
-up to five. WinRM authentication, identity/privilege, and guest firewall policy
-are not yet specified.
+The first vertical slice uses two VMs (one link); the topology/runbook should
+then grow to three and support up to five. WinRM authentication,
+identity/privilege, and guest firewall policy are not yet specified.
 
 The initial address-family matrix requires IPv4-only and IPv6-only runs.
 Dual-stack socket coverage is also required, but ctsTraffic needs dual-stack
@@ -28,8 +30,9 @@ functionality before those runs can be scheduled. Start with the duplex IO
 pattern, then vary connection count and transfer duration, including many
 short connections, fewer long transfers, and combinations. Set load levels
 per system under test: avoid both inadequate stress and exceeding an approved
-resource/safety envelope. Every TCP reliability scenario must explicitly use
-ctsTraffic `-Verify:data`.
+resource/safety envelope. Goal 1 and Goal 3 TCP scenarios and every
+post-stress check must explicitly use ctsTraffic `-Verify:data`; Goal 2 stress
+workloads may use `-Verify:connection` when declared by the scenario.
 
 Select a compatible existing workload configuration or use optional system
 characterization to derive one. Validate its load and safety envelope on the
@@ -71,21 +74,21 @@ expected effects from unexpected failures.
 
 ## Documents
 
-- [Goals and scenario catalog](goals-and-scenarios.md) — IO-path and
-  control-path promises, run variants, scenario matrix, and acceptance
-  criteria to finalize.
-- [Scenario template](scenario-template.md) — simple per-campaign definition
-  with required `desktop` or `server` system class and measurements.
-- [Device profile template](device-profile-template.md) — reusable per-device
-  inventory and network configuration captured by a local script.
-- [First uninstrumented baseline scenario](scenarios/goal1b-clean-baseline.md) —
-  initial clean TCP workload with connection and memory/pool measurements.
-- [End-to-end readiness plan](end-to-end-readiness-plan.md) — ordered work,
-  validation gates, and real-user acceptance required before a full run.
-- [Run lifecycle](run-lifecycle.md) — setup, execution, cooldown, evidence,
-  and run completion gates.
-- [Initial topology](topologies.md) — proposed all-on-link, pairwise-private-
-  switch VM network.
+Each topic has one authoritative document. Other documents summarize and link
+to it; if they disagree, the authoritative document wins and the summary must
+be corrected.
+
+| Topic | Authoritative document |
+| --- | --- |
+| Goals, promises, scenario families, IO models, fault types | [Goals and scenario catalog](goals-and-scenarios.md) |
+| Phase steps and result bundle for any run | [Run lifecycle](run-lifecycle.md) |
+| Build order, gates, phase measurement IDs (SET/EXE/CLN) | [End-to-end readiness plan](end-to-end-readiness-plan.md) |
+| Network layout, addressing, churn scope | [Initial topology](topologies.md) |
+| Leak detection method | [Leak detection workflow](leak-detection.md) |
+| Crash dumps, hang detection, debugger, failure buckets | [Crash capture and triage](crash-capture-and-triage.md) |
+| Application Verifier and Driver Verifier settings | [Verifier profiles](verifier-profiles.md) |
+| Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
+| First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |
 
 ## Planning guardrails
 
@@ -103,6 +106,13 @@ expected effects from unexpected failures.
   post-stress health check as incidents requiring triage, not successful runs.
 - Do not enable verifiers or inject faults on a shared or production system;
   run only on explicitly assigned, recoverable test VMs.
+- Treat the Hyper-V host as part of the test environment. Record its build
+  (including Insider/pre-release builds), architecture, and load; a host
+  failure or host-side noise is a lab issue, not a guest product failure.
+  Do not run verifier or stress campaigns on a host that is also someone's
+  primary workstation without accepting that risk explicitly.
+- Every test VM always writes a complete memory dump on bugcheck; see
+  [crash capture and triage](crash-capture-and-triage.md).
 
 ## Open decisions
 
@@ -112,11 +122,15 @@ Before turning this plan into an executable runbook, confirm:
    [topologies.md](topologies.md).
 2. WinRM identity, privilege, authentication, and guest firewall policy.
 3. Per-system load-sizing signals and safe resource envelope, run durations,
-   repetitions, acceptable work-rate variance, and memory leak thresholds.
-4. Approved verifier settings, reboot policy, fault-injection boundaries, and
-   recovery/reset policy for Goal 2.
-5. IO model coverage/priority and the post-stress verification workload;
-   decide later when UDP enters scope.
+   acceptable work-rate variance, and the leak-analysis thresholds defined in
+   [leak detection](leak-detection.md).
+4. Exact settings for each [verifier profile](verifier-profiles.md), reboot
+   policy, fault-injection boundaries, and recovery/reset policy for Goal 2.
+5. IO model coverage/priority and the post-stress verification workload.
+   UDP is deferred until the TCP workflow works end to end.
 6. Control-path operation counts/rates, per-scenario requirements for existing
    versus replacement connections after recovery, and the allowed rare-stall
    threshold.
+7. Pool-tag snapshot tool that works on the target architecture (including
+   ARM64) and build.
+8. Hang timeout and whether a campaign opts in to an attached KDNET debugger.
