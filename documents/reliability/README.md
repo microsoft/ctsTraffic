@@ -47,6 +47,7 @@ be corrected.
 | Application Verifier and Driver Verifier settings | [Verifier profiles](verifier-profiles.md) |
 | Debugger and Application Verifier package: host cache and guest install | [Debugging tools](debugging-tools.md) |
 | Host-to-guest control channels, unattended run rules, guest firewall | [Remote control and firewall](remote-control-and-firewall.md) |
+| Values chosen for the lab: host paths, guest image, VM shape, management path, credential source | [Lab configuration](lab-configuration.md) |
 | Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
 | First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |
 | Cross-cutting open decisions | This README ([open decisions](#open-decisions)); topic-specific open items stay in their own documents |
@@ -79,23 +80,25 @@ be corrected.
 
 Before turning this plan into an executable runbook, confirm:
 
-1. Procedure for selecting static routable test addresses in
-   [topologies.md](topologies.md).
-2. Remote control channel: result of the PowerShell Direct versus WinRM
-   evaluation in [remote control and firewall](remote-control-and-firewall.md),
-   the WinRM authentication mode, and the credential source.
-3. Per-system load-sizing signals and safe resource envelope, run durations,
-   acceptable work-rate variance, and the leak-analysis thresholds defined in
-   [leak detection](leak-detection.md).
-4. Exact settings for each [verifier profile](verifier-profiles.md), reboot
+1. Remote control channel: result of the PowerShell Direct versus WinRM
+   evaluation in [remote control and firewall](remote-control-and-firewall.md).
+2. Per-system load-sizing signals and safe resource envelope for later
+   configurations, and the approved work-rate tolerance and leak-analysis
+   thresholds defined in [leak detection](leak-detection.md) (proposed from
+   pilot series, then approved).
+3. Exact settings for each [verifier profile](verifier-profiles.md), reboot
    policy, fault-injection boundaries, and recovery/reset policy for Goal 2.
-5. IO model coverage/priority and the post-stress verification workload.
+4. IO model coverage/priority and the post-stress verification workload.
    UDP is deferred until the TCP workflow works end to end.
-6. Control-path operation counts/rates, per-scenario requirements for existing
+5. Control-path operation counts/rates, per-scenario requirements for existing
    versus replacement connections after recovery, and the allowed rare-stall
    threshold.
-7. Pool-tag snapshot tool that works on the target architecture (including
-   ARM64) and build.
-8. Hang timeout and whether a campaign opts in to an attached KDNET debugger.
-9. How each run's Windows version/build, architecture, and guest VHDX path are
-   supplied (Windows 11 RTM is the initial guest image).
+6. Whether a campaign opts in to an attached KDNET debugger.
+
+Resolved for the first lab and recorded in
+[lab configuration](lab-configuration.md) or the owning topic document:
+test addressing ([topologies](topologies.md#address-and-adapter-inventory)),
+WinRM authentication and credential source, pool-tag tool
+([leak detection](leak-detection.md#scope-and-preconditions)), hang timeout
+([crash capture](crash-capture-and-triage.md#hang-detection)), and guest
+image and build.

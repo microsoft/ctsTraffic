@@ -50,15 +50,16 @@ To compare both channels, the first lab includes:
 
 - A management vNIC on each guest connected to a dedicated management switch,
   with static addresses, separate from every test switch. The management
-  switch type (for example, Internal with a host vNIC) and its address range
-  are recorded in [topologies](topologies.md).
+  switch and its addresses are recorded in
+  [lab configuration](lab-configuration.md#management-path).
 - A WinRM listener in each guest, with its inbound firewall rule scoped to the
   management adapter only.
 - A guest administrator credential for PowerShell Direct, and the selected
   WinRM authentication mode.
 
-Credentials are supplied at run time (for example, by prompt or a local
-secret store). They never appear in command lines, scripts in the repo, or
+Credentials are supplied at run time from the source recorded in
+[lab configuration](lab-configuration.md#remote-control). They never appear in
+command lines, scripts in the repo, or
 run artifacts. Any host-side change made for WinRM, such as TrustedHosts, is a
 declared setup mutation and is recorded in the setup log.
 

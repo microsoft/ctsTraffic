@@ -19,8 +19,11 @@ identical workloads on the same boot.
 - All iterations run on the same boot of every VM. A reboot, crash, or
   verifier change invalidates the series; start over.
 - The approved pool-tag snapshot tool must work on the target build and
-  architecture before the first iteration (see
-  [open decisions](README.md#open-decisions)).
+  architecture before the first iteration. The approved tool is a PowerShell
+  script in this repository that calls `NtQuerySystemInformation` with
+  `SystemPoolTagInformation` and writes one CSV row per tag (tag, paged and
+  nonpaged allocs, frees, and bytes). It has no external dependency and runs
+  on x64 and ARM64.
 - Use the same workload configuration, `-TimeLimit`, topology, and address
   family for every iteration.
 
@@ -40,7 +43,8 @@ identical workloads on the same boot.
 5. **Measured iterations.** Run `N` identical client iterations (approved
    default `N = 5`). After each, apply the quiescence gate and take snapshot
    `S1` … `SN`. During each iteration, sample the client process time series
-   (private bytes, handles, threads) and the system pool counters.
+   (private bytes, handles, threads) and the system pool counters every
+   5 seconds.
 6. **Analyze** each metric as described below.
 7. **Confirm suspects.** A flagged metric triggers a confirmation run (more
    iterations and/or a longer series) with targeted pool-allocation tracing for
@@ -55,8 +59,10 @@ Take a snapshot only after all of these hold, and record the elapsed wait:
 - No test-port TCP connections remain on the test interfaces other than the
   server listeners, including `TIME_WAIT` (Windows default is 120 seconds; use a
   bounded wait and record the residual count if it expires).
-- CPU use is below the declared idle threshold for the declared settle
-  interval.
+- CPU use is below 5% for a 60-second settle interval.
+
+The quiescence wait is bounded at 5 minutes, which covers the default
+120-second `TIME_WAIT`.
 
 If the gate times out, take the snapshot anyway, mark it `not quiescent`, and
 treat the iteration as inconclusive for leak analysis.
@@ -83,8 +89,10 @@ For each metric, using `S0` … `SN`:
 
 1. Compute interval deltas `d1` … `dN` and the least-squares slope.
 2. Normalize growth by work done: bytes (or count) per 1,000 completed
-   connections. Fixed-time iterations complete slightly different amounts of
-   work, so normalization is required for comparison.
+   connections and per GiB transferred. Fixed-time iterations complete slightly
+   different amounts of work, so normalization is required for comparison.
+   Report both; workloads with few large connections depend mostly on the
+   per-GiB value.
 3. Flag the metric as a **suspected leak** only if both hold:
    - It grew in at least `N - 1` of the `N` intervals.
    - Total growth `SN - S0` exceeds the larger of: the noise-floor multiple,
@@ -93,8 +101,10 @@ For each metric, using `S0` … `SN`:
    flag state, sorted by normalized growth.
 
 Thresholds (noise-floor multiple, absolute and relative floors per metric
-class) are **TBD** and must be calibrated from pilot runs and approved before
-a leak criterion can pass. Until then, the analysis output is characterization
+class) are **TBD**. They are calibrated by proposal and approval: run 3 pilot
+leak series with the scenario's workload, derive proposed values from their
+noise floors and growth, and record the derivation. The thresholds become
+approved only when the lab owner signs off. Until then, the analysis output is characterization
 only.
 
 ## Outcomes
@@ -103,5 +113,5 @@ only.
 | --- | --- |
 | No leak detected | No metric flagged, all snapshots quiescent, thresholds approved. |
 | Suspected leak | One or more metrics flagged; requires a confirmation run before filing. |
-| Confirmed leak | Growth continues in proportion to work in the confirmation run; file with tag, rate per 1,000 connections, and trace evidence. |
+| Confirmed leak | Growth continues in proportion to work in the confirmation run; file with tag, rate per 1,000 connections and per GiB, and trace evidence. |
 | Inconclusive | Missing snapshots, a non-quiescent snapshot, a reboot during the series, or unapproved thresholds. |

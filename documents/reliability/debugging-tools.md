@@ -41,7 +41,8 @@ Keep the previous cached version alongside the current one, so an earlier run
 can be reproduced and a bad package can be rolled back with approval.
 
 The cache location is a lab setting; it must be outside the repository and
-outside every run's result directory.
+outside every run's result directory. The v1 lab uses
+`C:\ctsReliability\cache\dbg` ([lab configuration](lab-configuration.md#host)).
 
 ### Refresh rule
 
@@ -89,8 +90,9 @@ leak results across it as if nothing had changed.
 Cleanup does not uninstall the package. It stays with the retained lab, like
 the VMs, switches, and firewall rules.
 
-## Open items
+## Host install
 
-1. The default host cache location.
-2. Whether the host itself also gets the package (for example, for KDNET
-   debugging or dump analysis).
+The host also installs the package from the same cache, using the MSI for the
+host's architecture, for dump analysis and optional KDNET debugging. Setup
+records the host's installed version. It does not need to match the guests'
+version, but a host older than the guests' version produces a warning.

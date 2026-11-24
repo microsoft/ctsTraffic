@@ -542,19 +542,21 @@ Resolve the relevant decisions in the [plan index](README.md) and
   versioning.
 - Exact Hyper-V fields and supported configuration sources to use for VM,
   vSwitch, switch-port, vNIC, and host-adapter capture and comparison.
-- Remote-control channel selection from Phase 3B, WinRM authentication mode,
-  credential source, management switch type/addressing, and permissions.
-- Host cache location for the [debugging tools](debugging-tools.md) package.
-- User-supplied Windows 11 RTM VHDX path, per-VM allocations, and recovery-point
-  policy. Automated provisioning and retained-lab reuse are required; reimage
-  and destructive recovery are not normal cleanup.
-- Static address allocation, management-path isolation, and exact two-VM and
-  three-VM topologies.
-- Approved performance counters and required pool-tag tool (working on ARM64
-  and x64), sampling interval,
-  optional characterization procedure, reviewed preset inventory, work-rate
-  tolerance, and leak-analysis thresholds.
-- Exact settings for each [verifier profile](verifier-profiles.md), the hang
-  timeout, and the crash-dump space policy.
+- Remote-control channel selection from Phase 3B and guest account
+  permissions. WinRM authentication, credential source, and the management
+  path are set in [lab configuration](lab-configuration.md).
+- Static address allocation is set in
+  [topologies](topologies.md#address-and-adapter-inventory); the guest image,
+  per-VM allocations, recovery-point policy, and debugger cache location are
+  set in [lab configuration](lab-configuration.md). Automated provisioning and
+  retained-lab reuse are required; reimage and destructive recovery are not
+  normal cleanup.
+- Exact two-VM and three-VM provisioning steps.
+- Approved performance counters, proof that the pool-tag script works on ARM64
+  and x64, optional characterization procedure, reviewed preset inventory,
+  and the work-rate tolerance and leak-analysis thresholds (proposed from 3
+  pilot leak series, then approved).
+- Exact settings for each [verifier profile](verifier-profiles.md) and the
+  crash-dump space policy.
 - How ctsTraffic counts connections in flight at the `-TimeLimit` cutoff
   (confirm in the pilot), CSV interpretation, and supported stop behavior.

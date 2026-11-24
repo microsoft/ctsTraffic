@@ -86,8 +86,9 @@ leak thresholds remain open until calibrated and approved.
 Application Verifier and Driver Verifier settings are defined by name in
 [verifier profiles](verifier-profiles.md). Fixed duration uses `-TimeLimit`
 and leak analysis uses the [leak detection workflow](leak-detection.md); the
-workload parameters, duration value, work-rate comparison method and
-tolerance, and leak thresholds are open decisions. Process memory and kernel
+workload parameters and duration are set per scenario configuration (see
+[G1B configuration v1](scenarios/goal1b-clean-baseline.md#configuration-v1));
+the work-rate tolerance and leak thresholds are open decisions. Process memory and kernel
 pool use are distinct measurements and must have separate baselines and
 criteria.
 

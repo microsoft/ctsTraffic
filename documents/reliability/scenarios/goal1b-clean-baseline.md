@@ -44,15 +44,62 @@ leak pass until workload and memory thresholds are approved.
   dumps configured per [crash capture and triage](../crash-capture-and-triage.md).
 - **Fault injection:** none. Do not disconnect links, alter network
   configuration, or inject protocol/resource failures during this scenario.
-- **Duration, connection count, transfer settings, repetitions:** resolve from
-  a compatible versioned configuration or optional system characterization.
-  Include intended load, resource bounds, and stop conditions before execution;
-  configuration selection alone does not establish safety on this system.
+- **Duration, connection count, transfer settings, repetitions:** set by
+  [configuration v1](#configuration-v1) below. A later version may come from
+  system characterization. Intended load, resource bounds, and stop
+  conditions are recorded before execution; selecting a configuration alone
+  does not establish that it is safe on this system.
 - **ctsTraffic logging:** enable `-ConnectionFilename` and `-StatusFilename`
   (optionally `-TcpInfoFilename`); preserve the per-connection CSV, status
   time series, and aggregate output for every iteration.
 - **Pool-tag evidence:** an approved, working pool-tag snapshot tool is
   mandatory before any workload, including characterization pilots.
+
+## Configuration v1
+
+Lab-wide settings (host, guest image, VM shape, management path, credentials)
+are in [lab configuration](../lab-configuration.md). This scenario adds:
+
+| Setting | Value |
+| --- | --- |
+| Emphasis | Data path: few long-lived connections at maximum throughput |
+| Topology | Two VMs on `Private-AB`; VM-A is the server, VM-B the client |
+| Address family | IPv4-only first (`192.168.1.1` server, `192.168.1.2` client); IPv6-only is a separate later run |
+| ctsTraffic binary | Release ARM64 built from this repository; record the commit and SHA-256 |
+| Concurrent connections | 32 |
+| Bytes per connection | 1 GiB (`-Transfer:1073741824`) |
+| Measured iteration length | 30 minutes (`-TimeLimit:1800000`) |
+| Pilot iteration length | 5 minutes (`-TimeLimit:300000`), otherwise identical; pilot results are never a pass |
+| Iterations | 1 warm-up plus 5 measured, on one boot, persistent server |
+| Counter sampling | Every 5 seconds |
+| Status updates | `-StatusUpdate:5000`, matching the counter interval |
+
+Server (VM-A), started once and kept running for the whole series:
+
+```text
+ctsTraffic.exe -Listen:192.168.1.1 -Pattern:duplex -IO:iocp -Transfer:1073741824 -Verify:data
+  -ConnectionFilename:<dir>\server_conn.csv -StatusFilename:<dir>\server_status.csv -StatusUpdate:5000
+```
+
+Client (VM-B), once per iteration:
+
+```text
+ctsTraffic.exe -Target:192.168.1.1 -Bind:192.168.1.2 -Pattern:duplex -IO:iocp -Transfer:1073741824
+  -Connections:32 -Verify:data -TimeLimit:1800000
+  -ConnectionFilename:<dir>\client_conn_<n>.csv -StatusFilename:<dir>\client_status_<n>.csv -StatusUpdate:5000
+```
+
+`<dir>` is the run's guest output folder and `<n>` the iteration number
+(`0` for warm-up). The pilot must confirm that these options are accepted
+together and how `-TimeLimit` reports connections cut off in flight.
+
+Pass/fail thresholds are not part of v1. The work-rate tolerance and leak
+thresholds are proposed from 3 pilot leak series and approved by the lab owner
+(see [leak detection](../leak-detection.md#analysis)). Until then, every run of
+this configuration is pilot or characterization only.
+
+Because each iteration completes relatively few connections (1 GiB each), leak
+growth is normalized per GiB transferred as well as per 1,000 connections.
 
 ## Measurement points
 

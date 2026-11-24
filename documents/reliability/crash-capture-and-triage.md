@@ -46,9 +46,10 @@ Detection and collection:
 
 A VM can hang without bugchecking, which produces no dump on its own.
 
-1. Monitor each VM with the Hyper-V heartbeat and a PowerShell Direct probe.
-2. If a VM is unresponsive for longer than the declared hang timeout and no
-   debugger is attached, the host injects an NMI to force a complete dump.
+1. Monitor each VM with the Hyper-V heartbeat and a PowerShell Direct probe,
+   every 60 seconds.
+2. If a VM misses 5 consecutive probes (5 minutes) and no debugger is
+   attached, the host injects an NMI to force a complete dump.
 3. Record the trigger time, last good probe, and dump result. Classify as a
    hang (below), not as an ordinary bugcheck.
 

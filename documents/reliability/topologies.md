@@ -3,7 +3,7 @@
 Status: **Draft**. The first topology is two Windows VMs on Hyper-V joined by
 one Private switch, then grows to three. The runbook should support a mesh of
 up to five VMs. This is not yet an
-executable network configuration; define address selection and validate the
+executable network configuration; validate the
 required IP families before implementation.
 
 ## Goal
@@ -54,15 +54,25 @@ uses only the `Private-AB` rows; the three-VM table is:
 
 | VM | NIC identity | Peer | Virtual switch | IPv4 address/prefix | IPv6 address/prefix | Gateway/DNS |
 | --- | --- | --- | --- | --- | --- | --- |
-| VM-A | NIC-AB | VM-B | Private-AB | Static, range TBD | Static, range TBD | TBD |
-| VM-B | NIC-BA | VM-A | Private-AB | Static, range TBD | Static, range TBD | TBD |
-| VM-A | NIC-AC | VM-C | Private-AC | Static, range TBD | Static, range TBD | TBD |
-| VM-C | NIC-CA | VM-A | Private-AC | Static, range TBD | Static, range TBD | TBD |
-| VM-B | NIC-BC | VM-C | Private-BC | Static, range TBD | Static, range TBD | TBD |
-| VM-C | NIC-CB | VM-B | Private-BC | Static, range TBD | Static, range TBD | TBD |
+| VM-A | NIC-AB | VM-B | Private-AB | 192.168.1.1/24 | fd00:1::1/64 | None |
+| VM-B | NIC-BA | VM-A | Private-AB | 192.168.1.2/24 | fd00:1::2/64 | None |
+| VM-A | NIC-AC | VM-C | Private-AC | 192.168.2.1/24 | fd00:2::1/64 | None |
+| VM-C | NIC-CA | VM-A | Private-AC | 192.168.2.3/24 | fd00:2::3/64 | None |
+| VM-B | NIC-BC | VM-C | Private-BC | 192.168.3.2/24 | fd00:3::2/64 | None |
+| VM-C | NIC-CB | VM-B | Private-BC | 192.168.3.3/24 | fd00:3::3/64 | None |
 
-Select static test IP addresses and prefixes for each campaign; the ranges do
-not need to be permanently reserved. Addresses must be usable and routable
+Addressing rule (v1): each pairwise switch has a link number `L` and each VM a
+VM number `V` (VM-A = 1 through VM-E = 5). A test NIC's address is
+`192.168.L.V/24` and `fd00:L::V/64`. Link numbers are assigned in pair order:
+AB = 1, AC = 2, BC = 3, then AD = 4, BD = 5, CD = 6, AE = 7, BE = 8, CE = 9,
+DE = 10. Test NICs have no default gateway and no DNS servers. The management
+subnet (`192.168.250.0/24`, see [lab configuration](lab-configuration.md#management-path))
+is outside this range. A run uses one address family (see
+[goals and scenarios](goals-and-scenarios.md)); setup assigns only that
+family's test addresses and records it. IPv6 link-local addresses remain but
+are never used for test traffic.
+
+Addresses must be usable and routable
 between the intended test peers, and IPv6 test addresses must not be
 link-local. Each private switch connects only the two peer NICs for its link.
 For each enabled address family, those endpoint NICs must have matching
@@ -107,10 +117,7 @@ policy remain TBD.
 
 The final plan must define:
 
-- Static IPv4 and IPv6 address/prefix selection for each point-to-point link,
-  including how the setup phase validates each endpoint pair.
-- Whether default gateways and DNS are intentionally absent on isolated test
-  NICs; how host/management connectivity remains separate.
+- How the setup phase validates each endpoint pair's static addresses.
 - Stable mapping from VM NIC to virtual switch and IP, including how setup
   detects adapter renumbering, duplicate addresses, or stale routes.
 - Which address is used by ctsTraffic for each client/server pairing and how
@@ -140,7 +147,7 @@ criteria rather than a silent variation of this baseline.
 
 ## Decisions required
 
-Address selection and the management switch type/addressing are tracked as
-[open decisions](README.md#open-decisions) 1 and 2. The address-family matrix,
-including the deferred dual-stack runs, is defined in
+Test addressing is set above; the management switch and its addressing are in
+[lab configuration](lab-configuration.md#management-path). The address-family
+matrix, including the deferred dual-stack runs, is defined in
 [goals and scenarios](goals-and-scenarios.md).
