@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "labId": "ctsrel-v1",
+  "labRoot": "C:\\ctsReliability",
+  "namePrefix": "ctsRel",
+  "goldenImage": {
+    "edition": "Windows 11 Pro",
+    "fileName": "golden-win11-arm64.vhdx",
+    "sizeGB": 64
+  },
+  "vm": {
+    "count": 2,
+    "generation": 2,
+    "processorCount": 4,
+    "memoryGB": 8,
+    "diskMode": "Differencing",
+    "secureBootTemplate": "MicrosoftWindows"
+  },
+  "management": {
+    "switchName": "ctsRel-Mgmt",
+    "subnet": "192.168.250.0/24",
+    "hostAddress": "192.168.250.254"
+  },
+  "test": {
+    "ipv4Prefix": 24,
+    "ipv6Prefix": 64,
+    "ctsTrafficPort": 4444
+  },
+  "guest": {
+    "adminUserName": "ctsadmin",
+    "credentialTarget": "ctsReliability/guest",
+    "rootPath": "C:\\ctsReliability"
+  },
+  "debugger": {
+    "sources": {
+      "amd64": null,
+      "arm64": null
+    }
+  }
+}

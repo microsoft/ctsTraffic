@@ -29,9 +29,15 @@ on an overlap. The Private test switches are not visible to the host.
   current release, which may be newer; record the actual edition, version,
   build, and UBR after installation. A build other than 26100 is acceptable
   only if recorded as the run's guest build.
-- Install once from the ISO into a golden VHDX under
-  `C:\ctsReliability\vhdx`. Generalize it, record its SHA-256, and create every
-  test VM from a differencing or copied disk of that golden image.
+- Build the golden VHDX under `C:\ctsReliability\vhdx` from the ISO with
+  `New-CtsGoldenImage.ps1`, without booting it. The script applies the Windows
+  11 Pro edition from `install.wim` to the VHDX and makes it bootable. An
+  image that has never booted is already in the generalized out-of-box state,
+  so no sysprep is needed. The script records the ISO and VHDX SHA-256 in a
+  metadata JSON file beside the VHDX, and marks the VHDX read-only. Every
+  test VM boots a differencing disk of that golden image. Each VM's first
+  boot completes OOBE from an injected unattend file that sets its computer
+  name and the guest account.
 
 ## Test VMs
 
@@ -43,6 +49,11 @@ on an overlap. The Private test switches are not visible to the host.
 | Memory | 8 GiB, **static** (dynamic memory disabled so memory and pool measurements are not perturbed) |
 | Checkpoints | Automatic checkpoints disabled. One clean checkpoint after provisioning and setup verification; revert is manual only, never automatic |
 | Crash capture | Per [crash capture and triage](crash-capture-and-triage.md) |
+| Guest settings | Applied and verified by provisioning: static adapter addresses by MAC, the `ctsTraffic Reliability` firewall rules, complete dumps with a page file of memory + 1 GiB, WER local dumps, High performance power plan with hibernation off, Windows Update disabled by policy, and Defender real-time protection off. Tamper Protection can block the Defender change; provisioning then records a finding instead of failing. |
+
+Provisioning usage is in the
+[`TestScripts/Reliability` README](../../TestScripts/Reliability/README.md);
+its tests are in [reliability tooling tests](tooling-tests.md).
 
 Two VMs use 8 of 12 cores and 16 GiB of the host's memory; three use all 12
 cores and 24 GiB. Record host CPU and memory load during every run, and treat
@@ -64,8 +75,8 @@ both channels:
 
 | Setting | Value |
 | --- | --- |
-| Guest account | Local administrator, same name on every guest |
-| Credential source | A Windows Credential Manager generic credential on the host, read at run time. Never written to scripts, logs, or artifacts |
+| Guest account | Local administrator `ctsadmin`, same name on every guest |
+| Credential source | Windows Credential Manager generic credential `ctsReliability/guest` on the host, stored with `Set-CtsGuestCredential.ps1` and read at run time. Never written to scripts, logs, or artifacts. The unattend file holds only the encoded form, and first-boot setup deletes it. |
 | WinRM | HTTP (5985) on the management adapter only, Negotiate authentication with the local account |
 | Host client trust | `TrustedHosts` set to exactly the guest management addresses; recorded as a host setup mutation |
 

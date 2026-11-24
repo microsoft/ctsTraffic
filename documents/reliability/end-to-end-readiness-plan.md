@@ -86,6 +86,12 @@ the device script does not orchestrate a consistent multi-device snapshot,
 capture the complete Hyper-V topology, or provide schema validation and drift
 checks.
 
+The `CtsReliability` module in `TestScripts/Reliability` now implements the
+Phase 2–3A tooling: snapshot, pool tag, debugger cache, golden image,
+provisioning and guest configuration. It is tested without elevation; see
+[reliability tooling tests](tooling-tests.md) for results and the elevated
+checks still outstanding.
+
 ## Work plan
 
 ### Phase 1 — Close the first scenario contract

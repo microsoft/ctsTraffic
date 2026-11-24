@@ -1,0 +1,45 @@
+Set-StrictMode -Version Latest
+
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.ps1' | Sort-Object Name) {
+    . $file.FullName
+}
+
+Export-ModuleMember -Function @(
+    'Get-CtsLabDefinition'
+    'Get-CtsLabTopology'
+    'Test-CtsSubnetOverlap'
+    'Test-CtsElevated'
+    'Get-CtsStoredCredential'
+    'Set-CtsStoredCredential'
+    'Remove-CtsStoredCredential'
+    'Write-CtsLogEntry'
+    'New-CtsGuestSession'
+    'Invoke-CtsGuestCommand'
+    'Copy-CtsToGuest'
+    'Copy-CtsFromGuest'
+    'Get-CtsDeviceInventoryScript'
+    'Get-CtsDeviceInventory'
+    'Get-CtsHyperVInventory'
+    'New-CtsSnapshot'
+    'Test-CtsSnapshot'
+    'Compare-CtsSnapshot'
+    'ConvertTo-CtsSnapshotReport'
+    'Get-CtsPoolTagSnapshot'
+    'Compare-CtsPoolTagSnapshot'
+    'Compare-CtsVersion'
+    'Get-CtsMsiProperty'
+    'Get-CtsDebuggerCacheEntry'
+    'Get-CtsDebuggerPackageScript'
+    'Update-CtsDebuggerCache'
+    'Install-CtsDebuggerPackage'
+    'New-CtsUnattendXml'
+    'New-CtsGoldenImage'
+    'Get-CtsHostArchitecture'
+    'Get-CtsGuestConfiguration'
+    'Get-CtsGuestConfigScript'
+    'Invoke-CtsGuestConfiguration'
+    'Get-CtsOwnershipJournal'
+    'Get-CtsHyperVState'
+    'Get-CtsProvisionPlan'
+    'Invoke-CtsLabProvision'
+)

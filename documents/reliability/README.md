@@ -48,6 +48,7 @@ be corrected.
 | Debugger and Application Verifier package: host cache and guest install | [Debugging tools](debugging-tools.md) |
 | Host-to-guest control channels, unattended run rules, guest firewall | [Remote control and firewall](remote-control-and-firewall.md) |
 | Values chosen for the lab: host paths, guest image, VM shape, management path, credential source | [Lab configuration](lab-configuration.md) |
+| Lab tooling tests: why they exist, how to run them, recorded results | [Reliability tooling tests](tooling-tests.md) |
 | Scenario and device record formats | [Scenario template](scenario-template.md), [device profile template](device-profile-template.md) |
 | First concrete scenario | [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md) |
 | Cross-cutting open decisions | This README ([open decisions](#open-decisions)); topic-specific open items stay in their own documents |

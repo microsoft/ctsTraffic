@@ -34,3 +34,6 @@
 /MSTest/*/*.log
 /ctsTraffic/ctsTraffic
 /ctsPerf/ctsPerf
+
+# CtsReliability local test results
+TestScripts/Reliability/Tests/results/
