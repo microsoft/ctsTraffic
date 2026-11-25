@@ -10,7 +10,7 @@ Writes, per edition, an NUnit XML file and a JSON summary, plus summary.md for t
 Tags:
   Live      reads the real local machine (CIM, Credential Manager, Hyper-V module); included by default.
   Elevated  needs an elevated session; these tests skip themselves when not elevated.
-  Share     reaches the internal share for the real debugger MSI; excluded unless -IncludeShare.
+  Share     reads the real debugger MSI from the internal share set in lab.local.json; excluded unless -IncludeShare.
 
 .EXAMPLE
 .\TestScripts\Reliability\Tests\Invoke-CtsReliabilityTests.ps1

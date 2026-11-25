@@ -5,8 +5,15 @@
   "namePrefix": "ctsRel",
   "goldenImage": {
     "edition": "Windows 11 Pro",
-    "fileName": "golden-win11-arm64.vhdx",
-    "sizeGB": 64
+    "fileName": "golden-win11-{arch}.vhdx",
+    "sizeGB": 64,
+    "iso": {
+      "fileName": "win11-{arch}.iso",
+      "sha256": {
+        "amd64": null,
+        "arm64": null
+      }
+    }
   },
   "vm": {
     "count": 2,

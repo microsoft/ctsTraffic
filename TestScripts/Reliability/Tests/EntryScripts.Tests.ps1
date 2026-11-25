@@ -87,6 +87,31 @@ Describe 'New-CtsGoldenImage.ps1' {
         Invoke-Entry 'New-CtsGoldenImage.ps1' @{ IsoPath = 'D:\x.iso'; LabDefinitionPath = $path } | Out-Null
         Should -Invoke New-CtsGoldenImage -Times 1 -Exactly -ParameterFilter { $Definition.labId -eq 'ctsrel-alt' }
     }
+    It 'defaults to the cached ISO' {
+        Mock Get-CtsIsoCacheEntry { [pscustomobject]@{ isoPath = 'C:\ctsReliability\iso\win11-arm64.iso' } }
+        Invoke-Entry 'New-CtsGoldenImage.ps1' | Out-Null
+        Should -Invoke New-CtsGoldenImage -Times 1 -Exactly -ParameterFilter { $IsoPath -eq 'C:\ctsReliability\iso\win11-arm64.iso' }
+    }
+    It 'explains how to get an ISO when none is cached' {
+        Mock Get-CtsIsoCacheEntry { $null }
+        { Invoke-Entry 'New-CtsGoldenImage.ps1' } | Should -Throw '*Get-CtsWindowsIso.ps1*'
+        Should -Invoke New-CtsGoldenImage -Times 0
+    }
+}
+
+Describe 'Get-CtsWindowsIso.ps1' {
+    BeforeEach { Mock Get-CtsWindowsIso { 'plan' } }
+
+    It 'plans by default and passes only the definition' {
+        Invoke-Entry 'Get-CtsWindowsIso.ps1' | Should -Be 'plan'
+        Should -Invoke Get-CtsWindowsIso -Times 1 -Exactly -ParameterFilter {
+            -not $Apply -and $Definition.labId -eq 'ctsrel-v1' -and -not $PSBoundParameters.ContainsKey('Source') -and -not $PSBoundParameters.ContainsKey('LabDefinitionPath')
+        }
+    }
+    It 'passes the source, hash, and switches' {
+        Invoke-Entry 'Get-CtsWindowsIso.ps1' @{ Source = 'https://x/y.iso'; ExpectedSha256 = ('a' * 64); Refresh = $true; Apply = $true } | Out-Null
+        Should -Invoke Get-CtsWindowsIso -Times 1 -Exactly -ParameterFilter { $Source -eq 'https://x/y.iso' -and $ExpectedSha256 -eq ('a' * 64) -and $Refresh -and $Apply -and -not $AllowUnverified }
+    }
 }
 
 Describe 'Invoke-CtsLabProvision.ps1' {

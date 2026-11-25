@@ -35,6 +35,8 @@ Export-ModuleMember -Function @(
     'New-CtsUnattendXml'
     'New-CtsGoldenImage'
     'Get-CtsHostArchitecture'
+    'Get-CtsIsoCacheEntry'
+    'Get-CtsWindowsIso'
     'Get-CtsGuestConfiguration'
     'Get-CtsGuestConfigScript'
     'Invoke-CtsGuestConfiguration'

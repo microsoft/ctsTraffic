@@ -68,7 +68,7 @@ The runner exits with code 1 if any test fails or an edition cannot run.
 | Option | Effect |
 | --- | --- |
 | `-Edition pwsh` or `-Edition powershell` | Run one edition only |
-| `-IncludeShare` | Also run tests that read the real debugger MSI from the internal share |
+| `-IncludeShare` | Also run tests that read the real debugger MSI from the internal share configured in `lab.local.json` |
 | `-ExcludeLive` | Skip tests that read the real local machine |
 | `-Path <file>` | Run selected test files |
 
@@ -85,7 +85,7 @@ Invoke-Pester .\TestScripts\Reliability\Tests\Provision.Tests.ps1 -Output Detail
 | *(none)* | Fully mocked or uses only `TestDrive` and an HKCU test key | Run |
 | `Live` | Reads the real local machine (CIM inventory, Credential Manager, the installed debugger, a guest-config dry run on the host) without changing configuration | Run |
 | `Elevated` | Needs an administrator session (real Hyper-V inventory, real pool tags); skips itself otherwise | Run, but skipped when not elevated |
-| `Share` | Reads the real MSI on the internal share | Excluded unless `-IncludeShare` |
+| `Share` | Reads the real MSI on the internal share configured in `lab.local.json` | Excluded unless `-IncludeShare` |
 
 The `Live` guest-config dry run only reads settings. Apply mode of the guest
 script is never run on the host.
@@ -96,42 +96,46 @@ All files are in `TestScripts\Reliability\Tests\`.
 
 | File | Covers | What it proves |
 | --- | --- | --- |
-| `Lab.Tests.ps1` | `src\Lab.ps1` | The lab definition loads and rejects missing or invalid fields. IPv4 helpers reject bad CIDRs. Subnet-overlap detection works. For each VM count, the topology has the documented link numbering, VM names, management addresses, and unique static MACs, with peers paired symmetrically. |
+| `Lab.Tests.ps1` | `src\Lab.ps1` | The lab definition loads, applies the local override file (but never a `labRoot` override), keeps internal paths out of the checked-in file, and rejects missing or invalid fields, including ISO and golden image file names with a path, and ISO hashes not keyed by `amd64` or `arm64`. IPv4 helpers reject bad CIDRs. Subnet-overlap detection works. For each VM count, the topology has the documented link numbering, VM names, management addresses, and unique static MACs, with peers paired symmetrically. |
 | `Credential.Tests.ps1` | `src\Credential.ps1` | Write, read, and remove round trip through Windows Credential Manager, using a dummy target and password (`Live`). |
 | `Transport.Tests.ps1` | `src\Transport.ps1` | The JSONL log writes one line per entry. Logged operations record success, and record and rethrow failure. PowerShell Direct uses `-VMName`. WinRM uses Negotiate against the management address. Guest command and copy helpers work. Waiting for a guest returns when it answers, or throws after the timeout. |
 | `Inventory.Tests.ps1` | `src\Inventory.ps1` | Local device inventory sections (`Live`). Hyper-V inventory with mocked and real Hyper-V (`Elevated`), including missing VMs. |
 | `Snapshot.Tests.ps1` | `src\Snapshot.ps1` | Schema validation, the manifest hash check, and detection of modified or deleted files. Report rendering. Drift comparison, including a single inserted route and the default ignore list. A real host-only snapshot, with no drift between two back-to-back captures (`Live`). |
 | `PoolTag.Tests.ps1` | `src\PoolTag.ps1` | Parsing of the 64-bit and 32-bit `SystemPoolTagInformation` layouts. A clear elevation error when only the non-admin placeholder entry is returned. CSV output that refuses to overwrite. Growth comparison and filtering. A real capture (`Elevated`). |
-| `DebuggerCache.Tests.ps1` | `src\DebuggerCache.ps1` | Version comparison and MSI property reads. The cache refresh rule: refresh only when the share is reachable and has a newer version, and never downgrade. The previous version is kept. Bad signatures and version mismatches are rejected without leaving partial files. Guest install decisions and exit codes, including 3010 reboot. Query of the installed tools on this machine (`Live`). The real share MSI (`Share`). |
+| `DebuggerCache.Tests.ps1` | `src\DebuggerCache.ps1` | Version comparison and MSI property reads. The cache refresh rule: refresh only when the share is reachable and has a newer version, and never downgrade. The previous version is kept. With no source configured, the cache is used with a warning, or setup fails and says how to configure one. Bad signatures and version mismatches are rejected without leaving partial files. Guest install decisions and exit codes, including 3010 reboot. Query of the installed tools on this machine (`Live`). The real share MSI (`Share`). |
+| `IsoCache.Tests.ps1` | `src\IsoCache.ps1` | `{arch}` in the ISO and golden image file names resolves to `amd64` or `arm64`, and only that architecture's pinned hash applies. URL query strings and fragments, which hold the download token, are stripped before anything is shown or recorded. The plan blocks on no source and no cache, plain http, a missing source file, a missing hash without `-AllowUnverified`, a malformed hash, or one that contradicts the hash pinned in the lab definition. Plan mode creates nothing. Apply caches a read-only copy with metadata, records unverified copies as unverified, deletes a leftover partial file, and leaves nothing behind on a hash mismatch. An existing cache is reused without a source, a new source is ignored without `-Refresh`, a changed or mismatched cached ISO is detected, and `-Refresh` replaces the cache and records the old hash. |
 | `GoldenImage.Tests.ps1` | `src\GoldenImage.ps1` | The unattend XML has the right passes and computer name, and the password only in encoded form. XML special characters are escaped. SetupComplete removes unattend copies. The plan blocks on a missing ISO, an existing target, a partial file, or low free space. Apply refuses without elevation or with a blocked plan. A failed build dismounts the ISO and leaves no final VHDX. |
 | `GuestConfig.Tests.ps1` | `src\GuestConfig.ps1` | The desired configuration derived from the lab definition. The guest script's dry-run versus apply behavior, Compliant, WouldChange, Changed, Failed and Blocked statuses, and the reboot flag. Registry sections, run against an HKCU test key. Adapter addressing, firewall rules, and Defender with Tamper Protection reported as Blocked, all mocked. A real read-only dry run on the host (`Live`). |
 | `Provision.Tests.ps1` | `src\Provision.ps1` | The pure plan's Create, Keep, Drift and Collision decisions and their blocking rules. The ownership journal: lab-ID check, replacement and atomic write. Hyper-V state capture. Apply orchestration with mocked Hyper-V: refuses when blocked or not elevated, creates only planned items, journals each one, and stops at the first failure while keeping evidence. |
-| `EntryScripts.Tests.ps1` | Every `TestScripts\Reliability\*.ps1` | Coverage checks: every source file and entry script has a test, and every entry script parses and has help. Each entry script loads the lab definition, plans by default, and passes exactly the intended arguments. Credential checks: user-name match, empty password, `-WhatIf`, and the password is never echoed. The snapshot comparison validates both snapshots before comparing. |
+| `EntryScripts.Tests.ps1` | Every `TestScripts\Reliability\*.ps1` | Coverage checks: every source file and entry script has a test, and every entry script parses and has help. Each entry script loads the lab definition, plans by default, and passes exactly the intended arguments. Credential checks: user-name match, empty password, `-WhatIf`, and the password is never echoed. The snapshot comparison validates both snapshots before comparing. The golden image build defaults to the cached ISO and explains how to get one when none is cached. |
 | `Prototypes.Tests.ps1` | `TestScripts\ctsTraffic_reliability_*.ps1` | The device profile and scenario template scripts fill every token, refuse to overwrite a file, refuse a missing directory or a bad VHDX path, and fail when no processor inventory is returned. |
 | `Invoke-CtsReliabilityTests.ps1` | — | The runner. It is not itself under test; its output is checked by reading `summary.md` after each run. |
 
 ## Recorded results
 
-Host: the lab host, ARM64, not elevated, not in Hyper-V Administrators.
-Date: 2026-11-24, runs `20261124T070849Z` and `20261124T070526Z` (Share).
+Host: the ARM64 lab host, not elevated, not in Hyper-V Administrators.
+Date: 2026-11-25. pwsh ran with `-IncludeShare` (run `20261125T204059Z`),
+reading the share path from `lab.local.json`. Windows PowerShell ran without
+it (run `20261125T210612Z`).
 
 | Edition | PowerShell | Pester | Passed | Failed | Skipped | NotRun |
 | --- | --- | --- | --- | --- | --- | --- |
-| pwsh | 7.7.0 | 6.2.0 | 220 | 0 | 2 | 2 |
-| powershell | 5.1.29715.1000 | 5.7.1 | 220 | 0 | 2 | 2 |
-| pwsh with `-IncludeShare` | 7.7.0 | 6.2.0 | 222 | 0 | 2 | 0 |
+| pwsh with `-IncludeShare` | 7.7.0 | 6.2.0 | 259 | 0 | 2 | 0 |
+| powershell | 5.1.29715.1000 | 5.7.1 | 257 | 0 | 2 | 2 |
 
-The per-file counts are the same in both editions:
+The per-file counts are the same in both editions, except that the two
+Share tests pass under pwsh and are not run under Windows PowerShell:
 
 | File | Total | Passed | Skipped | NotRun |
 | --- | --- | --- | --- | --- |
 | Credential | 5 | 5 | 0 | 0 |
-| DebuggerCache | 29 | 27 | 0 | 2 (Share) |
-| EntryScripts | 24 | 24 | 0 | 0 |
+| DebuggerCache | 30 | 28 | 0 | 2 (Share) |
+| EntryScripts | 28 | 28 | 0 | 0 |
 | GoldenImage | 19 | 19 | 0 | 0 |
 | GuestConfig | 23 | 23 | 0 | 0 |
 | Inventory | 10 | 9 | 1 (Elevated) | 0 |
-| Lab | 23 | 23 | 0 | 0 |
+| IsoCache | 24 | 24 | 0 | 0 |
+| Lab | 31 | 31 | 0 | 0 |
 | PoolTag | 11 | 10 | 1 (Elevated) | 0 |
 | Prototypes | 10 | 10 | 0 | 0 |
 | Provision | 24 | 24 | 0 | 0 |
@@ -165,8 +169,9 @@ No unelevated test can prove them. Record each result here when performed.
 
 | Item | Command | Proves | Status |
 | --- | --- | --- | --- |
-| Store guest credential | `Set-CtsGuestCredential.ps1` | The credential is stored under `ctsReliability/guest` | Not yet run |
-| Golden image build | `New-CtsGoldenImage.ps1 -IsoPath <iso> -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Not yet run |
+| Store guest credential | `Set-CtsGuestCredential.ps1` | The credential is stored under `ctsReliability/guest` | Done 2026-11-24: stored for `ctsadmin` |
+| ISO cache | `Get-CtsWindowsIso.ps1 -Source <url-or-path> -ExpectedSha256 <hash> -Apply` | A real download or copy completes, through BITS for https, the hash matches, and the cached ISO and metadata are read-only | Not yet run |
+| Golden image build | `New-CtsGoldenImage.ps1 -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Not yet run |
 | Unattend injection | Part of provisioning Apply | `Set-CtsVhdUnattend` finds the Windows partition. OOBE completes without prompts, including a product key prompt. SetupComplete removes every password-bearing copy. | Not yet run |
 | Lab provisioning | `Invoke-CtsLabProvision.ps1 -Apply` | Switches, host address, disks, VMs and journal entries are created. A second run plans only Keep. | Not yet run |
 | Guest phase | Part of provisioning Apply | Guest configuration applies and verifies. `Restart-VM -Wait -For Heartbeat` works. The High performance power plan exists on ARM64. Defender is Blocked only by Tamper Protection. The debugger MSI installs cdb, ntsd and appverif. | Not yet run |

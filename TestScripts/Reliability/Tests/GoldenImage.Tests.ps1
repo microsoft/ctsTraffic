@@ -95,8 +95,8 @@ Describe 'Get-CtsGoldenImagePlan / New-CtsGoldenImage (plan mode)' {
     It 'is not blocked when the ISO exists and nothing is built yet, and reports the target paths' {
         $plan = New-CtsGoldenImage -Definition $script:Def -IsoPath $script:Iso
         $plan.Blocked | Should -BeFalse
-        $plan.TargetPath | Should -Be (Join-Path $script:Def.labRoot 'vhdx\golden-win11-arm64.vhdx')
-        $plan.MetadataPath | Should -Be (Join-Path $script:Def.labRoot 'vhdx\golden-win11-arm64.json')
+        $plan.TargetPath | Should -Be (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).vhdx")
+        $plan.MetadataPath | Should -Be (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).json")
         $plan.Steps.Count | Should -BeGreaterThan 3
     }
 
@@ -113,12 +113,12 @@ Describe 'Get-CtsGoldenImagePlan / New-CtsGoldenImage (plan mode)' {
     }
 
     It 'blocks rather than overwrite an existing golden image' {
-        Set-Content -LiteralPath (Join-Path $script:Def.labRoot 'vhdx\golden-win11-arm64.vhdx') -Value 'x'
+        Set-Content -LiteralPath (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).vhdx") -Value 'x'
         (New-CtsGoldenImage -Definition $script:Def -IsoPath $script:Iso).Reasons -join ' ' | Should -Match 'never overwritten'
     }
 
     It 'blocks when a failed build left a partial VHDX' {
-        Set-Content -LiteralPath (Join-Path $script:Def.labRoot 'vhdx\golden-win11-arm64.partial.vhdx') -Value 'x'
+        Set-Content -LiteralPath (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).partial.vhdx") -Value 'x'
         (New-CtsGoldenImage -Definition $script:Def -IsoPath $script:Iso).Reasons -join ' ' | Should -Match 'failed build'
     }
 
@@ -159,7 +159,7 @@ Describe 'New-CtsGoldenImage -Apply guards' {
         $log = Join-Path $TestDrive 'golden.jsonl'
         { New-CtsGoldenImage -Definition $script:Def -IsoPath $script:Iso -Apply -LogPath $log } | Should -Throw '*simulated mount failure*'
         Should -Invoke -ModuleName CtsReliability Dismount-DiskImage -Times 1 -Exactly
-        Test-Path -LiteralPath (Join-Path $script:Def.labRoot 'vhdx\golden-win11-arm64.vhdx') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).vhdx") | Should -BeFalse
         $entries = @(Get-Content -LiteralPath $log | ForEach-Object { $_ | ConvertFrom-Json })
         ($entries | Where-Object operation -eq 'BuildGoldenImage').success | Should -BeFalse
     }

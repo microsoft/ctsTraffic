@@ -239,7 +239,7 @@ Describe 'Invoke-CtsLabProvision' -Skip:(-not $script:HasHyperV) {
         Should -Invoke -ModuleName CtsReliability New-VMSwitch -Times 1 -Exactly -ParameterFilter { $Name -eq 'ctsRel-Mgmt' -and $SwitchType -eq 'Internal' }
         Should -Invoke -ModuleName CtsReliability New-VMSwitch -Times 1 -Exactly -ParameterFilter { $Name -eq 'ctsRel-Private-AB' -and $SwitchType -eq 'Private' }
         Should -Invoke -ModuleName CtsReliability New-NetIPAddress -Times 1 -Exactly -ParameterFilter { $IPAddress -eq '192.168.250.254' -and $InterfaceAlias -eq 'vEthernet (ctsRel-Mgmt)' }
-        Should -Invoke -ModuleName CtsReliability New-VHD -Times 2 -Exactly -ParameterFilter { $Differencing -and $ParentPath -like '*golden-win11-arm64.vhdx' }
+        Should -Invoke -ModuleName CtsReliability New-VHD -Times 2 -Exactly -ParameterFilter { $Differencing -and $ParentPath -like "*golden-win11-$(Get-CtsHostArchitecture).vhdx" }
         Should -Invoke -ModuleName CtsReliability Set-CtsVhdUnattend -Times 1 -Exactly -ParameterFilter { $UnattendXml -match '<ComputerName>CTSREL-A</ComputerName>' -and $UnattendXml -notmatch 'unused-Pw1' }
         Should -Invoke -ModuleName CtsReliability New-VM -Times 2 -Exactly -ParameterFilter { $SwitchName -eq 'ctsRel-Mgmt' -and $MemoryStartupBytes -eq 8GB }
         Should -Invoke -ModuleName CtsReliability Set-VM -Times 2 -Exactly -ParameterFilter { $StaticMemory -and $AutomaticCheckpointsEnabled -eq $false -and $ProcessorCount -eq 4 }

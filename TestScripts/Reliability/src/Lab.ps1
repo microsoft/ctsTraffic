@@ -7,16 +7,40 @@ function Test-CtsElevated {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Merge-CtsObject {
+    # Copies every property of $Overlay onto $Base, recursing into nested objects.
+    param([Parameter(Mandatory)]$Base, [Parameter(Mandatory)]$Overlay)
+    foreach ($p in $Overlay.PSObject.Properties) {
+        $existing = $Base.PSObject.Properties[$p.Name]
+        if ($existing -and $existing.Value -is [System.Management.Automation.PSCustomObject] -and $p.Value -is [System.Management.Automation.PSCustomObject]) {
+            Merge-CtsObject -Base $existing.Value -Overlay $p.Value
+        } else {
+            $Base | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force
+        }
+    }
+}
+
 function Get-CtsLabDefinition {
     <#
     .SYNOPSIS
     Loads and validates a lab definition JSON file (default: lab.v1.json next to the module).
+    .DESCRIPTION
+    Values in the local override file (default: <labRoot>\lab.local.json) replace those in the definition.
+    The override holds machine- or organization-specific values, such as internal share paths, that must
+    not be committed to the public repository.
     #>
     [CmdletBinding()]
     param(
-        [string]$Path = (Join-Path (Split-Path $PSScriptRoot -Parent) 'lab.v1.json')
+        [string]$Path = (Join-Path (Split-Path $PSScriptRoot -Parent) 'lab.v1.json'),
+        [string]$LocalPath
     )
     $definition = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    if (-not $LocalPath -and $definition.PSObject.Properties['labRoot']) { $LocalPath = Join-Path $definition.labRoot 'lab.local.json' }
+    if ($LocalPath -and (Test-Path -LiteralPath $LocalPath -PathType Leaf)) {
+        $local = Get-Content -LiteralPath $LocalPath -Raw | ConvertFrom-Json
+        if ($local.PSObject.Properties['labRoot']) { throw "labRoot cannot be set in the local override file '$LocalPath'." }
+        Merge-CtsObject -Base $definition -Overlay $local
+    }
     $errors = [System.Collections.Generic.List[string]]::new()
 
     foreach ($name in 'schemaVersion', 'labId', 'labRoot', 'namePrefix', 'goldenImage', 'vm', 'management', 'test', 'guest', 'debugger') {
@@ -29,6 +53,22 @@ function Get-CtsLabDefinition {
         if ($definition.vm.memoryGB -lt 1) { $errors.Add('vm.memoryGB must be at least 1') }
         if ($definition.vm.diskMode -notin 'Differencing', 'Copy') { $errors.Add("vm.diskMode must be Differencing or Copy") }
         if ($definition.namePrefix -notmatch '^[A-Za-z][A-Za-z0-9-]{0,9}$') { $errors.Add('namePrefix must be 1-10 letters, digits, or hyphens, starting with a letter') }
+        if ([string]$definition.goldenImage.fileName -notmatch '^(?:[\w.-]|\{arch\})+\.vhdx$') { $errors.Add('goldenImage.fileName must be a plain file name ending in .vhdx; {arch} is replaced by the host architecture') }
+        $isoProperty = $definition.goldenImage.PSObject.Properties['iso']
+        if ($isoProperty -and $isoProperty.Value) {
+            $isoFile = $isoProperty.Value.PSObject.Properties['fileName']
+            if ($isoFile -and $isoFile.Value -and ([string]$isoFile.Value -notmatch '^(?:[\w.-]|\{arch\})+\.iso$')) { $errors.Add('goldenImage.iso.fileName must be a plain file name ending in .iso; {arch} is replaced by the host architecture') }
+            $isoHash = $isoProperty.Value.PSObject.Properties['sha256']
+            if ($isoHash -and $null -ne $isoHash.Value) {
+                $hashValid = $isoHash.Value -is [System.Management.Automation.PSCustomObject]
+                if ($hashValid) {
+                    foreach ($p in $isoHash.Value.PSObject.Properties) {
+                        if ($p.Name -notin 'amd64', 'arm64' -or ($p.Value -and ([string]$p.Value -notmatch '^[0-9A-Fa-f]{64}$'))) { $hashValid = $false }
+                    }
+                }
+                if (-not $hashValid) { $errors.Add('goldenImage.iso.sha256 must be null or an object with amd64 and arm64 keys, each null or a 64-character hex SHA-256') }
+            }
+        }
         $subnetValid = $true
         try { $null = ConvertTo-CtsIPv4Network $definition.management.subnet } catch { $subnetValid = $false; $errors.Add("management.subnet: $($_.Exception.Message)") }
         try {

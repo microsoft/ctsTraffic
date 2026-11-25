@@ -18,8 +18,28 @@ guest's OS architecture:
 
 | Guest architecture | Source MSI |
 | --- | --- |
-| x64 | `<internal-share>\dbg_amd64.msi` |
-| ARM64 | `<internal-share>\dbg_arm64.msi` |
+| x64 | `dbg_amd64.msi` from the internal debugger share |
+| ARM64 | `dbg_arm64.msi` from the internal debugger share |
+
+The share is internal, so its path is not in this repository. Set the full
+MSI paths on each host in the local override file
+`C:\ctsReliability\lab.local.json`, which is outside the repository:
+
+```json
+{
+  "debugger": {
+    "sources": {
+      "amd64": "\\\\<server>\\<path>\\dbg_amd64.msi",
+      "arm64": "\\\\<server>\\<path>\\dbg_arm64.msi"
+    }
+  }
+}
+```
+
+Values in `lab.local.json` replace those in `lab.v1.json`. Never commit
+internal server names or paths. Without a configured source, setup uses the
+cached MSI and warns. If nothing is cached, setup fails and says how to
+configure the source.
 
 Only the host reads the source share. Guests stay on isolated networks and
 never access the share or hold credentials for it. The host stages the MSI

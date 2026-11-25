@@ -127,12 +127,20 @@ function Update-CtsDebuggerCache {
     }
 
     $reachable = $false
-    try { $reachable = [bool](Test-Path -LiteralPath $SourcePath -PathType Leaf -ErrorAction Stop) } catch { $reachable = $false }
+    if ($SourcePath) {
+        try { $reachable = [bool](Test-Path -LiteralPath $SourcePath -PathType Leaf -ErrorAction Stop) } catch { $reachable = $false }
+    }
     $result.shareReachable = $reachable
 
     if (-not $reachable) {
-        if (-not $cached) { throw "No cached debugger MSI for $Architecture and the source '$SourcePath' is not accessible." }
-        $warnings.Add("Source '$SourcePath' not accessible; using cached $($cached.productVersion).")
+        $configureHint = "Set debugger.sources.$Architecture in $(Join-Path $Definition.labRoot 'lab.local.json') or pass -SourcePath."
+        if (-not $SourcePath) {
+            if (-not $cached) { throw "No cached debugger MSI for $Architecture and no source is configured. $configureHint" }
+            $warnings.Add("No debugger source configured for $Architecture; using cached $($cached.productVersion). $configureHint")
+        } else {
+            if (-not $cached) { throw "No cached debugger MSI for $Architecture and the source '$SourcePath' is not accessible." }
+            $warnings.Add("Source '$SourcePath' not accessible; using cached $($cached.productVersion).")
+        }
     }
     else {
         $source = Get-CtsMsiProperty -Path $SourcePath

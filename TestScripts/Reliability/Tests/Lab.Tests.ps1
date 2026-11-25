@@ -22,6 +22,30 @@ Describe 'Get-CtsLabDefinition' {
         $d.management.subnet | Should -Be '192.168.250.0/24'
     }
 
+    It 'keeps internal paths out of the checked-in definition' {
+        $d = $script:LabJson | ConvertFrom-Json
+        $d.debugger.sources.amd64 | Should -BeNullOrEmpty
+        $d.debugger.sources.arm64 | Should -BeNullOrEmpty
+    }
+
+    It 'applies values from the local override file' {
+        $local = Join-Path $TestDrive 'lab.local.json'
+        '{ "debugger": { "sources": { "arm64": "\\\\server\\share\\dbg_arm64.msi" } }, "vm": { "memoryGB": 4 } }' | Set-Content -LiteralPath $local
+        $d = Get-CtsLabDefinition -LocalPath $local
+        $d.debugger.sources.arm64 | Should -Be '\\server\share\dbg_arm64.msi'
+        $d.debugger.sources.amd64 | Should -BeNullOrEmpty
+        $d.vm.memoryGB | Should -Be 4
+        $d.vm.processorCount | Should -Be 4
+    }
+
+    It 'validates the merged definition and refuses a labRoot override' {
+        $bad = Join-Path $TestDrive 'bad.local.json'
+        '{ "vm": { "count": 9 } }' | Set-Content -LiteralPath $bad
+        { Get-CtsLabDefinition -LocalPath $bad } | Should -Throw -ExpectedMessage '*vm.count*'
+        '{ "labRoot": "D:\\elsewhere" }' | Set-Content -LiteralPath $bad
+        { Get-CtsLabDefinition -LocalPath $bad } | Should -Throw -ExpectedMessage '*labRoot cannot be set*'
+    }
+
     It 'rejects <Case>' -ForEach @(
         @{ Case = 'a missing field'; Mutate = { param($d) $d.PSObject.Properties.Remove('guest') }; Message = "*missing field 'guest'*" }
         @{ Case = 'an unsupported schemaVersion'; Mutate = { param($d) $d.schemaVersion = 2 }; Message = '*unsupported schemaVersion*' }
@@ -31,6 +55,11 @@ Describe 'Get-CtsLabDefinition' {
         @{ Case = 'an invalid namePrefix'; Mutate = { param($d) $d.namePrefix = '1bad_name' }; Message = '*namePrefix*' }
         @{ Case = 'a malformed management subnet'; Mutate = { param($d) $d.management.subnet = '192.168.250.0' }; Message = '*management.subnet*' }
         @{ Case = 'a host address outside the subnet'; Mutate = { param($d) $d.management.hostAddress = '192.168.1.254' }; Message = '*hostAddress is not inside*' }
+        @{ Case = 'a malformed ISO SHA-256'; Mutate = { param($d) $d.goldenImage.iso.sha256.arm64 = 'abc' }; Message = '*goldenImage.iso.sha256*' }
+        @{ Case = 'an ISO SHA-256 not keyed by architecture'; Mutate = { param($d) $d.goldenImage.iso.sha256 = 'a' * 64 }; Message = '*amd64 and arm64 keys*' }
+        @{ Case = 'an ISO SHA-256 for an unknown architecture'; Mutate = { param($d) $d.goldenImage.iso.sha256 | Add-Member x86 ('a' * 64) }; Message = '*amd64 and arm64 keys*' }
+        @{ Case = 'an ISO file name with a path'; Mutate = { param($d) $d.goldenImage.iso.fileName = '..\x.iso' }; Message = '*goldenImage.iso.fileName*' }
+        @{ Case = 'a golden image file name with a path'; Mutate = { param($d) $d.goldenImage.fileName = '..\{arch}.vhdx' }; Message = '*goldenImage.fileName*' }
     ) {
         $path = New-TestDefinitionFile -Mutate $Mutate
         { Get-CtsLabDefinition -Path $path } | Should -Throw -ExpectedMessage $Message

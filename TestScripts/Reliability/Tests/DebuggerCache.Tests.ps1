@@ -2,7 +2,8 @@
 # Tests for src\DebuggerCache.ps1 (policy: documents/reliability/debugging-tools.md).
 # Unit tests build real minimal MSI databases in TestDrive through the Windows Installer COM API, so the MSI
 # reader is exercised for real; only Authenticode (test MSIs are unsigned) and guest calls are mocked.
-# 'Share' tests read the real the internal share debugger MSI and are excluded unless the runner passes -IncludeShare.
+# 'Share' tests read the real debugger MSI from the internal share configured in lab.local.json and are
+# excluded unless the runner passes -IncludeShare.
 
 BeforeAll {
     Import-Module (Join-Path $PSScriptRoot '..\CtsReliability.psm1') -Force
@@ -146,6 +147,15 @@ Describe 'Update-CtsDebuggerCache refresh rule' {
         { Update -Source (Join-Path $script:Root 'offline\dbg_arm64.msi') } | Should -Throw -ExpectedMessage '*No cached debugger MSI*'
     }
 
+    It 'explains how to configure a source when none is set' {
+        $def = Get-CtsLabDefinition -LocalPath (Join-Path $TestDrive 'no-local.json')
+        { Update-CtsDebuggerCache -Definition $def -Architecture arm64 -CacheRoot $script:Cache -LogPath $script:Log } | Should -Throw -ExpectedMessage '*no source is configured*lab.local.json*'
+        New-TestMsi -Path $script:Source -Version '10.0.100.1'; $null = Update
+        $r = Update-CtsDebuggerCache -Definition $def -Architecture arm64 -CacheRoot $script:Cache -LogPath $script:Log
+        $r.cachedVersion | Should -Be '10.0.100.1'
+        $r.warnings | Should -BeLike '*No debugger source configured*'
+    }
+
     It 'rejects an MSI whose signature is not valid and leaves no partial file' {
         Mock -ModuleName CtsReliability Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'NotSigned'; StatusMessage = 'unsigned'; SignerCertificate = $null } }
         New-TestMsi -Path $script:Source -Version '10.0.100.1'
@@ -256,6 +266,10 @@ Describe 'Debugger package query script (this machine)' -Tag 'Live' {
 }
 
 Describe 'Real debugger share' -Tag 'Share' {
+    BeforeAll {
+        if (-not $script:Definition.debugger.sources.arm64) { throw 'Set debugger.sources.arm64 in C:\ctsReliability\lab.local.json to run Share tests.' }
+    }
+
     It 'reads the ARM64 MSI version from the share' {
         $p = Get-CtsMsiProperty -Path $script:Definition.debugger.sources.arm64
         $p.ProductName | Should -BeLike 'Debugging Tools for Windows*'

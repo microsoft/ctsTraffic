@@ -14,7 +14,9 @@ are not compared as if nothing had changed.
 | Lab root | `C:\ctsReliability` (outside the repository) |
 | Run result bundles | `C:\ctsReliability\runs\<runId>` |
 | Debugger package cache | `C:\ctsReliability\cache\dbg`; see [debugging tools](debugging-tools.md) |
-| Guest images | `C:\ctsReliability\vhdx` |
+| Local overrides | `C:\ctsReliability\lab.local.json`, never committed. Its values replace those in `lab.v1.json`. It holds internal values, such as the debugger share paths, that must not be in this public repository. |
+| Windows ISO cache | `C:\ctsReliability\iso`, file name from `goldenImage.iso.fileName` (`win11-{arch}.iso`) |
+| Guest images | `C:\ctsReliability\vhdx`, file name from `goldenImage.fileName` (`golden-win11-{arch}.vhdx`) |
 | Debugger package on host | Installed, for dump analysis and optional KDNET |
 
 The host's own networks must not overlap any lab subnet that the host can
@@ -29,7 +31,16 @@ on an overlap. The Private test switches are not visible to the host.
   current release, which may be newer; record the actual edition, version,
   build, and UBR after installation. A build other than 26100 is acceptable
   only if recorded as the run's guest build.
-- Build the golden VHDX under `C:\ctsReliability\vhdx` from the ISO with
+- Cache the ISO with `Get-CtsWindowsIso.ps1`, from a download link or a file
+  path, verifying the SHA-256 published with it. The cached ISO is read-only,
+  with a metadata file recording its hash and source, and is replaced only
+  with `-Refresh`. Setting `goldenImage.iso.sha256.amd64` or `.arm64` in
+  `lab.v1.json` pins the ISO for that architecture: a source or cached file
+  with another hash is refused.
+- The scripts replace `{arch}` in the ISO and golden image file names with
+  the host architecture, `amd64` or `arm64`, so one lab definition serves
+  both. Guests always match the host architecture.
+- Build the golden VHDX under `C:\ctsReliability\vhdx` from the cached ISO with
   `New-CtsGoldenImage.ps1`, without booting it. The script applies the Windows
   11 Pro edition from `install.wim` to the VHDX and makes it bootable. An
   image that has never booted is already in the generalized out-of-box state,

@@ -12,23 +12,36 @@ until you add `-Apply`.
 | --- | --- | --- |
 | `Set-CtsGuestCredential.ps1` | Prompt for the guest `ctsadmin` password and store it in Windows Credential Manager | No |
 | `Update-CtsDebuggerCache.ps1` | Refresh the host's cached debugger MSI when the share has a newer version | No |
-| `New-CtsGoldenImage.ps1 -IsoPath <iso> [-Apply]` | Plan or build the read-only golden VHDX | For `-Apply` |
+| `Get-CtsWindowsIso.ps1 [-Source <url-or-path>] [-ExpectedSha256 <hash>] [-Apply]` | Plan or cache the Windows ISO under `C:\ctsReliability\iso`, verifying its SHA-256. A cached ISO is reused and only replaced with `-Refresh` | No |
+| `New-CtsGoldenImage.ps1 [-IsoPath <iso>] [-Apply]` | Plan or build the read-only golden VHDX, from the cached ISO by default | For `-Apply` |
 | `Invoke-CtsLabProvision.ps1 [-Apply]` | Plan or create switches, VMs and disks, configure guests, install the debugger, and take the clean checkpoint | For `-Apply` |
 | `New-CtsSystemSnapshot.ps1 [-HostOnly]` | Capture a read-only host and guest snapshot | Hyper-V Administrators |
 | `Compare-CtsSystemSnapshot.ps1 -Reference <dir> -Difference <dir>` | Report drift between two snapshots | No |
 | `Get-CtsPoolTagSnapshot.ps1 [-Path <csv>]` | Capture kernel pool usage per tag | Yes |
 | `Compare-CtsPoolTagSnapshot.ps1 -Reference <csv> -Difference <csv>` | Report pool growth per tag | No |
 
-First-time setup order, run from an elevated session:
+First-time setup order, run from an elevated session. First create
+`C:\ctsReliability\lab.local.json` with the internal debugger share paths; see
+[debugging tools](../../documents/reliability/debugging-tools.md#package).
+Never commit internal server names or paths to this repository.
 
 ```powershell
 .\TestScripts\Reliability\Set-CtsGuestCredential.ps1
 .\TestScripts\Reliability\Update-CtsDebuggerCache.ps1
-.\TestScripts\Reliability\New-CtsGoldenImage.ps1 -IsoPath <path-to-Win11-ARM64.iso>          # review the plan
-.\TestScripts\Reliability\New-CtsGoldenImage.ps1 -IsoPath <path-to-Win11-ARM64.iso> -Apply
+.\TestScripts\Reliability\Get-CtsWindowsIso.ps1 -Source '<url-or-path>' -ExpectedSha256 <hash>          # review the plan
+.\TestScripts\Reliability\Get-CtsWindowsIso.ps1 -Source '<url-or-path>' -ExpectedSha256 <hash> -Apply
+.\TestScripts\Reliability\New-CtsGoldenImage.ps1                                             # review the plan
+.\TestScripts\Reliability\New-CtsGoldenImage.ps1 -Apply
 .\TestScripts\Reliability\Invoke-CtsLabProvision.ps1                                         # review the plan
 .\TestScripts\Reliability\Invoke-CtsLabProvision.ps1 -Apply
 ```
+
+Microsoft does not offer a stable download URL for the Windows ISO, so
+`Get-CtsWindowsIso.ps1` does not scrape microsoft.com. Get a link from the
+[Windows 11 Arm64 download page](https://www.microsoft.com/en-us/software-download/windows11arm64)
+(it expires after about 24 hours) and pass it, quoted, with the SHA-256 the
+page publishes. Only the URL without its query string is recorded. If no hash
+is published, `-AllowUnverified` caches the ISO and records it as unverified.
 
 The implementation is the `CtsReliability` module: `CtsReliability.psm1`
 loads `src\*.ps1`.

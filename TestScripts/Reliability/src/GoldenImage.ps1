@@ -93,8 +93,8 @@ del /f /q "%~f0"
 }
 
 function Get-CtsGoldenImagePath {
-    param([Parameter(Mandatory)]$Definition)
-    $vhdx = Join-Path (Join-Path $Definition.labRoot 'vhdx') $Definition.goldenImage.fileName
+    param([Parameter(Mandatory)]$Definition, [string]$Architecture = (Get-CtsHostArchitecture))
+    $vhdx = Join-Path (Join-Path $Definition.labRoot 'vhdx') ([string]$Definition.goldenImage.fileName).Replace('{arch}', $Architecture)
     return [pscustomobject]@{
         Vhdx     = $vhdx
         Partial  = [IO.Path]::ChangeExtension($vhdx, '.partial.vhdx')
