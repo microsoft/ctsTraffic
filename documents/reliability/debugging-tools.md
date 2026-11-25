@@ -23,7 +23,15 @@ guest's OS architecture:
 
 The share is internal, so its path is not in this repository. Set the full
 MSI paths on each host in the local override file
-`C:\ctsReliability\lab.local.json`, which is outside the repository:
+`C:\ctsReliability\lab.local.json`, which is outside the repository. Write it
+with `Set-CtsLocalConfig.ps1`, which plans by default and writes with
+`-Apply`:
+
+```powershell
+.\TestScripts\Reliability\Set-CtsLocalConfig.ps1 -DebuggerSourceArm64 '\\<server>\<path>\dbg_arm64.msi' -Apply
+```
+
+The resulting file looks like this:
 
 ```json
 {

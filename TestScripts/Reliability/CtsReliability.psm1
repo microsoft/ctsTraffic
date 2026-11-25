@@ -6,6 +6,7 @@ foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Fi
 
 Export-ModuleMember -Function @(
     'Get-CtsLabDefinition'
+    'Set-CtsLocalConfig'
     'Get-CtsLabTopology'
     'Test-CtsSubnetOverlap'
     'Test-CtsElevated'

@@ -10,6 +10,7 @@ until you add `-Apply`.
 
 | Script | Purpose | Needs elevation |
 | --- | --- | --- |
+| `Set-CtsLocalConfig.ps1 [-DebuggerSourceAmd64 <msi>] [-DebuggerSourceArm64 <msi>] [-Apply]` | Plan or write the internal debugger share paths to `C:\ctsReliability\lab.local.json`, outside the repository. Prompts for this host's architecture if no path is given | No |
 | `Set-CtsGuestCredential.ps1` | Prompt for the guest `ctsadmin` password and store it in Windows Credential Manager | No |
 | `Update-CtsDebuggerCache.ps1` | Refresh the host's cached debugger MSI when the share has a newer version | No |
 | `Get-CtsWindowsIso.ps1 [-Source <url-or-path>] [-ExpectedSha256 <hash>] [-Apply]` | Plan or cache the Windows ISO under `C:\ctsReliability\iso`, verifying its SHA-256. A cached ISO is reused and only replaced with `-Refresh` | No |
@@ -20,12 +21,13 @@ until you add `-Apply`.
 | `Get-CtsPoolTagSnapshot.ps1 [-Path <csv>]` | Capture kernel pool usage per tag | Yes |
 | `Compare-CtsPoolTagSnapshot.ps1 -Reference <csv> -Difference <csv>` | Report pool growth per tag | No |
 
-First-time setup order, run from an elevated session. First create
-`C:\ctsReliability\lab.local.json` with the internal debugger share paths; see
-[debugging tools](../../documents/reliability/debugging-tools.md#package).
-Never commit internal server names or paths to this repository.
+First-time setup order, run from an elevated session. Never commit internal
+server names or paths to this repository; `Set-CtsLocalConfig.ps1` keeps them
+in `C:\ctsReliability\lab.local.json`, outside it.
 
 ```powershell
+.\TestScripts\Reliability\Set-CtsLocalConfig.ps1                                             # prompts; review the plan
+.\TestScripts\Reliability\Set-CtsLocalConfig.ps1 -DebuggerSourceArm64 '<path-to-dbg_arm64.msi>' -Apply
 .\TestScripts\Reliability\Set-CtsGuestCredential.ps1
 .\TestScripts\Reliability\Update-CtsDebuggerCache.ps1
 .\TestScripts\Reliability\Get-CtsWindowsIso.ps1 -Source '<url-or-path>' -ExpectedSha256 <hash>          # review the plan

@@ -99,6 +99,27 @@ Describe 'New-CtsGoldenImage.ps1' {
     }
 }
 
+Describe 'Set-CtsLocalConfig.ps1' {
+    BeforeEach {
+        Mock Set-CtsLocalConfig { 'plan' }
+        Mock Get-CtsHostArchitecture { 'arm64' }
+        Mock Read-Host { '"\\server.example\share\dbg_arm64.msi" ' }
+    }
+
+    It 'prompts for this host architecture when no source is given' {
+        Invoke-Entry 'Set-CtsLocalConfig.ps1' | Should -Be 'plan'
+        Should -Invoke Read-Host -Times 1 -Exactly
+        Should -Invoke Set-CtsLocalConfig -Times 1 -Exactly -ParameterFilter {
+            $DebuggerSourceArm64 -eq '\\server.example\share\dbg_arm64.msi' -and -not $DebuggerSourceAmd64 -and -not $Apply -and $Definition.labId -eq 'ctsrel-v1'
+        }
+    }
+    It 'passes given sources and -Apply without prompting' {
+        Invoke-Entry 'Set-CtsLocalConfig.ps1' @{ DebuggerSourceAmd64 = '\\s\dbg_amd64.msi'; Apply = $true } | Out-Null
+        Should -Invoke Read-Host -Times 0
+        Should -Invoke Set-CtsLocalConfig -Times 1 -Exactly -ParameterFilter { $DebuggerSourceAmd64 -eq '\\s\dbg_amd64.msi' -and $Apply -and -not $PSBoundParameters.ContainsKey('LabDefinitionPath') }
+    }
+}
+
 Describe 'Get-CtsWindowsIso.ps1' {
     BeforeEach { Mock Get-CtsWindowsIso { 'plan' } }
 
