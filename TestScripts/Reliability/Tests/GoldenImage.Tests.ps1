@@ -1,6 +1,6 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0' }
-# Unit tests for src\GoldenImage.ps1. Building a real image needs elevation and an ISO, so the Apply path is
-# covered only for its guards here; the full build is a manual elevated verification (see tooling-tests.md).
+# Unit tests for src\GoldenImage.ps1. A full build remains a manual elevated verification with a real ISO
+# (see tooling-tests.md); guards, partition selection, and failure cleanup are mocked here.
 
 BeforeAll {
     Import-Module (Join-Path $PSScriptRoot '..\CtsReliability.psm1') -Force
@@ -162,5 +162,49 @@ Describe 'New-CtsGoldenImage -Apply guards' {
         Test-Path -LiteralPath (Join-Path $script:Def.labRoot "vhdx\golden-win11-$(Get-CtsHostArchitecture).vhdx") | Should -BeFalse
         $entries = @(Get-Content -LiteralPath $log | ForEach-Object { $_ | ConvertFrom-Json })
         ($entries | Where-Object operation -eq 'BuildGoldenImage').success | Should -BeFalse
+    }
+
+    It 'creates a reserved partition only when disk initialization did not supply one (<HasMsr>)' -TestCases @(
+        @{ HasMsr = $true; ExpectedCreates = 0 }
+        @{ HasMsr = $false; ExpectedCreates = 1 }
+    ) {
+        param($HasMsr, $ExpectedCreates)
+        Mock -ModuleName CtsReliability Test-CtsElevated { $true }
+        Mock -ModuleName CtsReliability Get-FileHash { [pscustomobject]@{ Hash = 'ABC' } }
+        Mock -ModuleName CtsReliability Mount-DiskImage { [pscustomobject]@{ ImagePath = 'x' } }
+        Mock -ModuleName CtsReliability Get-Volume { [pscustomobject]@{ DriveLetter = 'Z' } } -RemoveParameterType DiskImage
+        Mock -ModuleName CtsReliability Test-Path {
+            Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
+        }
+        Mock -ModuleName CtsReliability Test-Path { $true } -ParameterFilter { $LiteralPath -eq 'Z:\sources\install.wim' }
+        Mock -ModuleName CtsReliability Get-WindowsImage {
+            [pscustomobject]@{
+                ImageIndex = 3; ImageName = 'Windows 11 Pro'; Version = '10.0'
+                Architecture = if ((Get-CtsHostArchitecture) -eq 'arm64') { 12 } else { 9 }
+            }
+        }
+        Mock -ModuleName CtsReliability New-VHD { }
+        Mock -ModuleName CtsReliability Mount-VHD { [pscustomobject]@{ Number = 123 } }
+        Mock -ModuleName CtsReliability Get-Disk { [pscustomobject]@{ Number = 123 } }
+        Mock -ModuleName CtsReliability Initialize-Disk { }
+        Mock -ModuleName CtsReliability Get-Partition {
+            if ($HasMsr) { [pscustomobject]@{ GptType = '{e3c9e316-0b5c-4db8-817d-f92df00215ae}' } }
+        }
+        Mock -ModuleName CtsReliability New-Partition {
+            if ($UseMaximumSize) { throw 'partition test completed' }
+            New-CimInstance -Namespace 'root\Microsoft\Windows\Storage' -ClassName MSFT_Partition -ClientOnly -Property @{
+                DiskNumber = [uint32]123; PartitionNumber = [uint32]2
+            }
+        }
+        Mock -ModuleName CtsReliability Format-Volume { } -RemoveParameterType Partition
+        Mock -ModuleName CtsReliability Dismount-VHD { }
+        Mock -ModuleName CtsReliability Dismount-DiskImage { }
+
+        { New-CtsGoldenImage -Definition $script:Def -IsoPath $script:Iso -Apply } | Should -Throw '*partition test completed*'
+        Should -Invoke -ModuleName CtsReliability New-Partition -Times $ExpectedCreates -Exactly -ParameterFilter {
+            $DiskNumber -eq 123 -and $GptType -eq '{e3c9e316-0b5c-4db8-817d-f92df00215ae}'
+        }
+        Should -Invoke -ModuleName CtsReliability Dismount-VHD -Times 1 -Exactly
+        Should -Invoke -ModuleName CtsReliability Dismount-DiskImage -Times 1 -Exactly
     }
 }

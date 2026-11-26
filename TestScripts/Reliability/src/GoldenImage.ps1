@@ -193,7 +193,10 @@ function New-CtsGoldenImage {
         Initialize-Disk -Number $disk.Number -PartitionStyle GPT -ErrorAction Stop
         $esp = New-Partition -DiskNumber $disk.Number -Size 260MB -GptType $script:CtsEspGptType -AssignDriveLetter -ErrorAction Stop
         $null = Format-Volume -Partition $esp -FileSystem FAT32 -NewFileSystemLabel 'System' -Confirm:$false -ErrorAction Stop
-        $null = New-Partition -DiskNumber $disk.Number -Size 16MB -GptType $script:CtsMsrGptType -ErrorAction Stop
+        $msr = @(Get-Partition -DiskNumber $disk.Number -ErrorAction Stop | Where-Object GptType -eq $script:CtsMsrGptType)
+        if ($msr.Count -eq 0) {
+            $null = New-Partition -DiskNumber $disk.Number -Size 16MB -GptType $script:CtsMsrGptType -ErrorAction Stop
+        }
         $os = New-Partition -DiskNumber $disk.Number -UseMaximumSize -AssignDriveLetter -ErrorAction Stop
         $null = Format-Volume -Partition $os -FileSystem NTFS -NewFileSystemLabel 'Windows' -Confirm:$false -ErrorAction Stop
         $espLetter = (Get-Partition -DiskNumber $disk.Number -PartitionNumber $esp.PartitionNumber).DriveLetter

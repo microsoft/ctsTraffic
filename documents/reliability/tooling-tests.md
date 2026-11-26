@@ -164,6 +164,13 @@ These were fixed before the results above were recorded.
 | Guest config script | Windows returns IPv4 firewall remote addresses in mask form (`192.168.1.0/255.255.255.0`), so compliant rules looked changed. | Both sides are normalized before comparison. |
 | Test runner | Per-file counts were taken from Pester containers, which hold blocks rather than tests, so every file showed 1. | Counts are grouped by each test's source file. |
 
+The elevated ARM64 golden-image check on 2026-11-25 also found that disk
+initialization had already created a Microsoft Reserved partition; the build
+created a second one. The build now reuses the existing partition, creating
+one only when absent. Both cases have regression tests.
+The focused `GoldenImage.Tests.ps1` run passed all 21 tests in both PowerShell
+7 and Windows PowerShell 5.1 after the fix.
+
 ## Manual verification not automated
 
 These operations need an elevated session, real Hyper-V and a Windows ISO.
@@ -173,8 +180,8 @@ No unelevated test can prove them. Record each result here when performed.
 | --- | --- | --- | --- |
 | Local config | `Set-CtsLocalConfig.ps1 -DebuggerSourceArm64 <msi> -Apply` | The debugger share path is stored outside the repository and merged by `Get-CtsLabDefinition` | Done 2026-11-25: file written, plan run reports NoChange, Share tests read the path through it |
 | Store guest credential | `Set-CtsGuestCredential.ps1` | The credential is stored under `ctsReliability/guest` | Done 2026-11-24: stored for `ctsadmin` |
-| ISO cache | `Get-CtsWindowsIso.ps1 -Source <url-or-path> -ExpectedSha256 <hash> -Apply` | A real download or copy completes, through BITS for https, the hash matches, and the cached ISO and metadata are read-only | Not yet run |
-| Golden image build | `New-CtsGoldenImage.ps1 -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Not yet run |
+| ISO cache | `Get-CtsWindowsIso.ps1 -Source <url-or-path> -ExpectedSha256 <hash> -Apply` | A real download or copy completes, through BITS for https, the hash matches, metadata is written, and the cached ISO is read-only | Done 2026-11-25: English ARM64 ISO downloaded through BITS; SHA-256 matched Microsoft's published value |
+| Golden image build | `New-CtsGoldenImage.ps1 -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Done 2026-11-25: Windows 11 Pro ARM64 10.0.26300.9457 built; hash matched metadata; Test-VHD passed; read-only inspection verified one ESP, one MSR, one Windows partition, and ARM64 UEFI boot files; ISO/VHDX detached. Guest boot remains untested until provisioning |
 | Unattend injection | Part of provisioning Apply | `Set-CtsVhdUnattend` finds the Windows partition. OOBE completes without prompts, including a product key prompt. SetupComplete removes every password-bearing copy. | Not yet run |
 | Lab provisioning | `Invoke-CtsLabProvision.ps1 -Apply` | Switches, host address, disks, VMs and journal entries are created. A second run plans only Keep. | Not yet run |
 | Guest phase | Part of provisioning Apply | Guest configuration applies and verifies. `Restart-VM -Wait -For Heartbeat` works. The High performance power plan exists on ARM64. Defender is Blocked only by Tamper Protection. The debugger MSI installs cdb, ntsd and appverif. | Not yet run |
