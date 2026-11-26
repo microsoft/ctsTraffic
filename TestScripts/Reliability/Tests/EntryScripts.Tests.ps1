@@ -207,13 +207,20 @@ Describe 'Get-CtsPoolTagSnapshot.ps1' {
 
 Describe 'Compare-CtsPoolTagSnapshot.ps1' {
     BeforeEach {
-        Mock Compare-CtsPoolTagSnapshot { 'growth' }
+        Mock Compare-CtsPoolTagSnapshot {
+            [pscustomobject]@{ Tag = 'Tcp '; PagedUsedDelta = 64; NonPagedUsedDelta = 128
+                TotalUsedDelta = 192; OutstandingAllocsDelta = 2; OnlyIn = $null }
+        }
         'Tag' | Set-Content (Join-Path $TestDrive 'r.csv')
         'Tag' | Set-Content (Join-Path $TestDrive 'd.csv')
     }
 
     It 'compares two capture files' {
-        Invoke-Entry 'Compare-CtsPoolTagSnapshot.ps1' @{ Reference = (Join-Path $TestDrive 'r.csv'); Difference = (Join-Path $TestDrive 'd.csv'); MinimumBytes = 4096 } | Should -Be 'growth'
+        $result = Invoke-Entry 'Compare-CtsPoolTagSnapshot.ps1' @{ Reference = (Join-Path $TestDrive 'r.csv'); Difference = (Join-Path $TestDrive 'd.csv'); MinimumBytes = 4096 }
+        $result.PagedUsedDeltaBytes | Should -Be 64
+        $result.NonPagedUsedDeltaBytes | Should -Be 128
+        $result.TotalUsedDeltaBytes | Should -Be 192
+        $result.OutstandingAllocsDeltaCount | Should -Be 2
         Should -Invoke Compare-CtsPoolTagSnapshot -Times 1 -Exactly -ParameterFilter { $MinimumBytes -eq 4096 -and $Reference -like '*r.csv' }
     }
     It 'fails clearly when a capture is missing' {

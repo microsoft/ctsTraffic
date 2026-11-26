@@ -89,7 +89,13 @@ Describe 'Get-CtsPoolTagSnapshot' {
         @($rows.Tag) | Should -Be @('Aa  ', 'Zz  ')
         $read = @(Import-Csv $csv)
         $read.Count | Should -Be 2
-        $read[0].NonPagedUsed | Should -Be '128'
+        $read[0].PagedUsedBytes | Should -Be '32'
+        $read[0].NonPagedUsedBytes | Should -Be '128'
+        $read[0].PagedAllocsCount | Should -Be '2'
+        $read[0].PagedFreesCount | Should -Be '1'
+        $read[0].PagedOutstandingCount | Should -Be '1'
+        $read[0].NonPagedOutstandingCount | Should -Be '2'
+        $rows[0].NonPagedUsed | Should -Be 128
         (Get-Content $csv -TotalCount 1) | Should -Not -BeLike '#TYPE*'
     }
 
@@ -132,5 +138,23 @@ Describe 'Compare-CtsPoolTagSnapshot' {
         $script:Before | Export-TestCsv -Path $a
         $script:After | Export-TestCsv -Path $b
         @((Compare-CtsPoolTagSnapshot -Reference $a -Difference $b -MinimumBytes 1).Tag) | Should -Be @('New ', 'Tcp ')
+    }
+
+    It 'compares a legacy CSV with a unit-labeled capture without changing byte or count values' {
+        $legacy = Join-Path $TestDrive 'legacy.csv'
+        $labeled = Join-Path $TestDrive 'labeled.csv'
+        $script:Before | Export-TestCsv -Path $legacy
+        $script:After | Select-Object Tag,
+            @{ Name = 'PagedUsedBytes'; Expression = { $_.PagedUsed } },
+            @{ Name = 'NonPagedUsedBytes'; Expression = { $_.NonPagedUsed } },
+            @{ Name = 'PagedOutstandingCount'; Expression = { $_.PagedDiff } },
+            @{ Name = 'NonPagedOutstandingCount'; Expression = { $_.NonPagedDiff } } | Export-TestCsv -Path $labeled
+        $tcp = Compare-CtsPoolTagSnapshot -Reference $legacy -Difference $labeled | Where-Object Tag -eq 'Tcp '
+        $tcp.NonPagedUsedDelta | Should -Be 4000
+        $tcp.OutstandingAllocsDelta | Should -Be 20
+        $reverse = Compare-CtsPoolTagSnapshot -Reference $labeled -Difference $legacy -MinimumBytes -100000 |
+            Where-Object Tag -eq 'Tcp '
+        $reverse.NonPagedUsedDelta | Should -Be -4000
+        $reverse.OutstandingAllocsDelta | Should -Be -20
     }
 }

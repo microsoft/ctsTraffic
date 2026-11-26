@@ -100,7 +100,8 @@ function Get-CtsPoolTagSnapshot {
     Captures kernel pool usage per tag on the local machine or inside a guest. Requires an elevated
     session: Windows returns only a placeholder entry to non-administrators, which this function rejects.
     .PARAMETER Path
-    Optional CSV output path. The file must not already exist.
+    Optional CSV output path. Usage columns are in bytes; allocation and free columns are counts.
+    The file must not already exist. Returned PowerShell objects retain their original property names.
     .PARAMETER GuestSession
     Optional guest session from New-CtsGuestSession; when omitted the local machine is captured.
     #>
@@ -130,7 +131,15 @@ function Get-CtsPoolTagSnapshot {
     if ($Path) {
         $csvArgs = @{ LiteralPath = $Path; Encoding = 'UTF8' }
         if ($PSVersionTable.PSVersion.Major -lt 6) { $csvArgs.NoTypeInformation = $true }
-        $rows | Export-Csv @csvArgs
+        $rows | Select-Object Tag,
+            @{ Name = 'PagedAllocsCount'; Expression = { $_.PagedAllocs } },
+            @{ Name = 'PagedFreesCount'; Expression = { $_.PagedFrees } },
+            @{ Name = 'PagedOutstandingCount'; Expression = { $_.PagedDiff } },
+            @{ Name = 'PagedUsedBytes'; Expression = { $_.PagedUsed } },
+            @{ Name = 'NonPagedAllocsCount'; Expression = { $_.NonPagedAllocs } },
+            @{ Name = 'NonPagedFreesCount'; Expression = { $_.NonPagedFrees } },
+            @{ Name = 'NonPagedOutstandingCount'; Expression = { $_.NonPagedDiff } },
+            @{ Name = 'NonPagedUsedBytes'; Expression = { $_.NonPagedUsed } } | Export-Csv @csvArgs
     }
     return $rows
 }
@@ -138,7 +147,8 @@ function Get-CtsPoolTagSnapshot {
 function Compare-CtsPoolTagSnapshot {
     <#
     .SYNOPSIS
-    Returns per-tag growth between two pool tag snapshots (objects or CSV paths), largest growth first.
+    Returns per-tag growth in bytes between two pool tag snapshots (objects or CSV paths), largest growth first.
+    Accepts both the original and unit-labeled CSV column names.
     .PARAMETER MinimumBytes
     Only report tags whose paged or nonpaged bytes grew by at least this much.
     #>
@@ -149,7 +159,17 @@ function Compare-CtsPoolTagSnapshot {
         [int64]$MinimumBytes = 0
     )
     function Load($value) {
-        if ($value -is [string]) { return @(Import-Csv -LiteralPath $value) }
+        if ($value -is [string]) {
+            return @(Import-Csv -LiteralPath $value | ForEach-Object {
+                if ($_.PSObject.Properties['PagedUsedBytes']) {
+                    [pscustomobject]@{
+                        Tag = $_.Tag; PagedUsed = $_.PagedUsedBytes; NonPagedUsed = $_.NonPagedUsedBytes
+                        PagedDiff = $_.PagedOutstandingCount; NonPagedDiff = $_.NonPagedOutstandingCount
+                    }
+                }
+                else { $_ }
+            })
+        }
         return @($value)
     }
     $before = @{}

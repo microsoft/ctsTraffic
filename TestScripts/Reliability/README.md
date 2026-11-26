@@ -48,6 +48,11 @@ is published, `-AllowUnverified` caches the ISO and records it as unverified.
 The implementation is the `CtsReliability` module: `CtsReliability.psm1`
 loads `src\*.ps1`.
 
+Pool-tag CSV usage values and comparison deltas are **bytes**; allocation,
+free, and outstanding-allocation values are counts. New CSV headings include
+the units. The comparison script also accepts older CSVs with unlabeled
+headings; module-returned PowerShell objects retain their original names.
+
 ## Tests
 
 Every script has Pester tests in `Tests\`. Run them under both PowerShell

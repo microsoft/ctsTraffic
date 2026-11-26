@@ -4,7 +4,7 @@ Captures kernel pool usage per tag on this machine (a poolsnap) and optionally w
 
 .DESCRIPTION
 Requires an elevated session. Run inside a guest, or on the host. Use Compare-CtsPoolTagSnapshot.ps1 to
-compare two captures.
+compare two captures. CSV usage columns are bytes; allocation and free columns are counts.
 
 .EXAMPLE
 .\TestScripts\Reliability\Get-CtsPoolTagSnapshot.ps1 -Path C:\ctsReliability\pool-before.csv
