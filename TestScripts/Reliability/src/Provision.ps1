@@ -63,6 +63,14 @@ function Get-CtsHyperVState {
             ForEach-Object { [pscustomobject]@{ Name = $_.Name; Id = $_.Id.ToString(); SwitchType = [string]$_.SwitchType; Notes = $_.Notes } })
         $vms = @(Get-VM -ErrorAction Stop | Where-Object { $_.Name -like $prefix } | ForEach-Object {
                 $vm = $_
+                $disks = @(Get-VMHardDiskDrive -VM $vm | ForEach-Object Path)
+                $diskAncestors = @(foreach ($path in $disks) {
+                    while ([IO.Path]::GetExtension($path) -eq '.avhdx') {
+                        $path = (Get-VHD -Path $path -ErrorAction Stop).ParentPath
+                        if (-not $path) { throw "Checkpoint disk for '$($vm.Name)' has no parent." }
+                        $path
+                    }
+                })
                 [pscustomobject]@{
                     Name                        = $vm.Name
                     Id                          = $vm.Id.ToString()
@@ -73,7 +81,8 @@ function Get-CtsHyperVState {
                     MemoryStartupBytes          = [long]$vm.MemoryStartup
                     DynamicMemoryEnabled        = [bool]$vm.DynamicMemoryEnabled
                     AutomaticCheckpointsEnabled = [bool]$vm.AutomaticCheckpointsEnabled
-                    Disks                       = @(Get-VMHardDiskDrive -VM $vm | ForEach-Object Path)
+                    Disks                       = $disks
+                    DiskAncestors               = $diskAncestors
                     Checkpoints                 = @(Get-VMSnapshot -VM $vm -ErrorAction SilentlyContinue | ForEach-Object Name)
                     Adapters                    = @(Get-VMNetworkAdapter -VM $vm | ForEach-Object {
                             [pscustomobject]@{ Name = $_.Name; SwitchName = $_.SwitchName; MacAddress = $_.MacAddress; DynamicMacAddressEnabled = [bool]$_.DynamicMacAddressEnabled; DeviceNaming = [string]$_.DeviceNaming }
@@ -170,7 +179,8 @@ function Get-CtsProvisionPlan {
             if ($l.MemoryStartupBytes -ne [long]$Definition.vm.memoryGB * 1GB) { $diff.Add("memoryStartupBytes $($l.MemoryStartupBytes)") }
             if ($l.DynamicMemoryEnabled) { $diff.Add('dynamic memory enabled') }
             if ($l.AutomaticCheckpointsEnabled) { $diff.Add('automatic checkpoints enabled') }
-            if (@($l.Disks) -notcontains $diskPath) { $diff.Add("disk $diskPath not attached") }
+            $diskChain = @($l.Disks) + @(Get-CtsProp $l 'DiskAncestors')
+            if ($diskChain -notcontains $diskPath) { $diff.Add("disk $diskPath not attached") }
             $want = @($nics | ForEach-Object { "$($_.Name)|$($_.SwitchName)|$($_.MacAddress)|static" } | Sort-Object)
             $have = @($l.Adapters | ForEach-Object { "$($_.Name)|$($_.SwitchName)|$($_.MacAddress)|$(if ($_.DynamicMacAddressEnabled) { 'dynamic' } else { 'static' })" } | Sort-Object)
             if (($want -join ',') -ne ($have -join ',')) { $diff.Add("adapters [$($have -join ', ')] expected [$($want -join ', ')]") }

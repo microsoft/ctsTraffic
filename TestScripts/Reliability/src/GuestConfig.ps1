@@ -193,9 +193,19 @@ foreach ($adapter in @($Config.adapters | Where-Object { $_ })) {
 if ($Config.winrm.enable) {
     Invoke-ConfigItem -Name 'WinRM' -Get {
         $svc = Get-Service -Name WinRM
-        [pscustomobject]@{ status = [string]$svc.Status; startType = [string]$svc.StartType; listeners = @(Get-ChildItem -Path WSMan:\localhost\Listener -ErrorAction SilentlyContinue).Count }
-    } -Test { param($s) $s.status -eq 'Running' -and $s.startType -eq 'Automatic' -and $s.listeners -gt 0 } `
-      -Set { param($s) $null = Enable-PSRemoting -SkipNetworkProfileCheck -Force }
+        [pscustomobject]@{
+            status = [string]$svc.Status; startType = [string]$svc.StartType
+            delayedAutoStart = (Get-RegValues 'HKLM:\SYSTEM\CurrentControlSet\Services\WinRM' @('DelayedAutoStart')).DelayedAutoStart
+            listeners = @(Get-ChildItem -Path WSMan:\localhost\Listener -ErrorAction SilentlyContinue).Count
+        }
+    } -Test { param($s) $s.status -eq 'Running' -and $s.startType -eq 'Automatic' -and -not $s.delayedAutoStart -and $s.listeners -gt 0 } `
+      -Set {
+        param($s)
+        $null = Enable-PSRemoting -SkipNetworkProfileCheck -Force
+        Set-Service -Name WinRM -StartupType Automatic
+        Set-RegValues 'HKLM:\SYSTEM\CurrentControlSet\Services\WinRM' ([ordered]@{ DelayedAutoStart = 0 })
+        Start-Service -Name WinRM
+    }
 }
 
 if ($Config.firewall.disableBuiltinWinRMRules) {
@@ -261,10 +271,10 @@ if ($Config.pageFile) {
         -not $s.automatic -and (@($s.settings) -join ';') -eq ('{0}|{1}|{2}' -f $Config.pageFile.path, $Config.pageFile.initialMB, $Config.pageFile.maximumMB)
     } -Set { param($s)
         if ($s.automatic) { $null = Get-CimInstance -ClassName Win32_ComputerSystem | Set-CimInstance -Property @{ AutomaticManagedPagefile = $false } -PassThru }
-        foreach ($pf in @(Get-CimInstance -ClassName Win32_PageFileSetting)) { if ($pf.Name -ne $Config.pageFile.path) { Remove-CimInstance -InputObject $pf } }
-        $pf = Get-CimInstance -ClassName Win32_PageFileSetting | Where-Object { $_.Name -eq $Config.pageFile.path }
-        if (-not $pf) { $pf = New-CimInstance -ClassName Win32_PageFileSetting -Property @{ Name = $Config.pageFile.path } }
-        $null = $pf | Set-CimInstance -Property @{ InitialSize = [uint32]$Config.pageFile.initialMB; MaximumSize = [uint32]$Config.pageFile.maximumMB } -PassThru
+        # The ARM64 PageFileSetting provider can reject valid sizes; persist the boot setting directly.
+        $pagingFiles = [string[]]@('{0} {1} {2}' -f $Config.pageFile.path, $Config.pageFile.initialMB, $Config.pageFile.maximumMB)
+        $null = New-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' `
+            -Name PagingFiles -Value $pagingFiles -PropertyType MultiString -Force
     }
 }
 
@@ -310,6 +320,11 @@ if ($Config.defender) {
     } -Test { param($s) $s.realTimeProtection -eq [bool]$Config.defender.realTimeProtection } `
       -Set { param($s) Set-MpPreference -DisableRealtimeMonitoring (-not [bool]$Config.defender.realTimeProtection) } `
       -BlockedHint 'Real-time protection did not change; Tamper Protection is probably on. Turn it off in Windows Security, then rerun.'
+    $defenderResult = $results[$results.Count - 1]
+    if ($defenderResult.status -eq 'WouldChange' -and $defenderResult.before.tamperProtected -and -not [bool]$Config.defender.realTimeProtection) {
+        $defenderResult.status = 'Blocked'
+        $defenderResult.error = 'Tamper Protection is enabled. Turn it off in Windows Security, then rerun.'
+    }
 }
 
 $all = @($results)

@@ -231,7 +231,88 @@ Describe 'Guest script: firewall rules (mocked)' {
     }
 }
 
+Describe 'Guest script: WinRM (mocked)' {
+    BeforeEach {
+        $script:Winrm = @{ Status = 'Running'; StartType = 'Automatic'; DelayedAutoStart = 1 }
+        Mock Get-Service { [pscustomobject]@{ Status = $script:Winrm.Status; StartType = $script:Winrm.StartType } }
+        Mock Get-ItemProperty { [pscustomobject]@{ DelayedAutoStart = $script:Winrm.DelayedAutoStart } }
+        Mock Get-ChildItem { [pscustomobject]@{ Name = 'Listener' } }
+        Mock Enable-PSRemoting { }
+        Mock Set-Service { $script:Winrm.StartType = [string]$StartupType }
+        Mock Test-Path { $true }
+        Mock New-ItemProperty { $script:Winrm.DelayedAutoStart = $Value }
+        Mock Start-Service { $script:Winrm.Status = 'Running' }
+    }
+
+    It 'disables delayed startup and starts WinRM so post-reboot verification need not wait for delayed services' {
+        $script:Winrm.Status = 'Stopped'
+        $cfg = @{ winrm = @{ enable = $true } }
+        $r = Get-Item1 (Invoke-Script $cfg $false) 'WinRM'
+        $r.status | Should -Be 'Changed'
+        $r.after.delayedAutoStart | Should -Be 0
+        Should -Invoke Start-Service -Times 1 -Exactly -ParameterFilter { $Name -eq 'WinRM' }
+        (Get-Item1 (Invoke-Script $cfg $true) 'WinRM').status | Should -Be 'Compliant'
+    }
+
+    It 'reports delayed startup as drift without changing the service in a dry run' {
+        (Get-Item1 (Invoke-Script @{ winrm = @{ enable = $true } } $true) 'WinRM').status | Should -Be 'WouldChange'
+        Should -Invoke Set-Service -Times 0
+        Should -Invoke New-ItemProperty -Times 0
+        Should -Invoke Start-Service -Times 0
+    }
+}
+
+Describe 'Guest script: page file (mocked)' {
+    BeforeEach {
+        $script:Computer = New-CimInstance -ClassName Win32_ComputerSystem -ClientOnly -Property @{ AutomaticManagedPagefile = $true }
+        $script:PageFiles = @()
+        $script:PageConfig = @{ pageFile = @{ path = 'C:\pagefile.sys'; initialMB = 9216; maximumMB = 9216 } }
+        Mock Get-CimInstance {
+            if ($ClassName -eq 'Win32_ComputerSystem') { $script:Computer } else { $script:PageFiles }
+        }
+        Mock Set-CimInstance { $script:Computer.AutomaticManagedPagefile = $false }
+        Mock New-ItemProperty {
+            $script:PageFiles = @([pscustomobject]@{ Name = 'C:\pagefile.sys'; InitialSize = 9216; MaximumSize = 9216 })
+        }
+    }
+
+    It 'persists complete-dump sizing without using the failing PageFileSetting update provider' {
+        $r = Get-Item1 (Invoke-Script $script:PageConfig $false) 'PageFile'
+        $r.status | Should -Be 'Changed'
+        $r.rebootRequired | Should -BeTrue
+        Should -Invoke New-ItemProperty -Times 1 -Exactly -ParameterFilter {
+            $LiteralPath -eq 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' -and
+            $Name -eq 'PagingFiles' -and $PropertyType -eq 'MultiString' -and
+            ($Value -join ';') -eq 'C:\pagefile.sys 9216 9216'
+        }
+        Should -Invoke Set-CimInstance -Times 1 -Exactly -ParameterFilter { $Property.ContainsKey('AutomaticManagedPagefile') }
+        (Get-Item1 (Invoke-Script $script:PageConfig $true) 'PageFile').status | Should -Be 'Compliant'
+    }
+
+    It 'does not change page-file settings in a dry run' {
+        (Get-Item1 (Invoke-Script $script:PageConfig $true) 'PageFile').status | Should -Be 'WouldChange'
+        Should -Invoke Set-CimInstance -Times 0
+        Should -Invoke New-ItemProperty -Times 0
+    }
+}
+
 Describe 'Guest script: Defender (mocked)' {
+    It 'reports Tamper Protection as Blocked during verification without trying to disable protection' {
+        Mock Get-MpComputerStatus { [pscustomobject]@{ RealTimeProtectionEnabled = $true; IsTamperProtected = $true } }
+        Mock Set-MpPreference { }
+        $r = Get-Item1 (Invoke-Script @{ defender = @{ realTimeProtection = $false } } $true) 'DefenderRealTimeProtection'
+        $r.status | Should -Be 'Blocked'
+        $r.error | Should -Match 'Tamper Protection'
+        Should -Invoke Set-MpPreference -Times 0
+    }
+
+    It 'does not classify enabling protection as blocked by Tamper Protection' {
+        Mock Get-MpComputerStatus { [pscustomobject]@{ RealTimeProtectionEnabled = $false; IsTamperProtected = $true } }
+        Mock Set-MpPreference { }
+        (Get-Item1 (Invoke-Script @{ defender = @{ realTimeProtection = $true } } $true) 'DefenderRealTimeProtection').status | Should -Be 'WouldChange'
+        Should -Invoke Set-MpPreference -Times 0
+    }
+
     It 'reports Blocked with the Tamper Protection hint when real-time protection stays on' {
         Mock Get-MpComputerStatus { [pscustomobject]@{ RealTimeProtectionEnabled = $true; IsTamperProtected = $true } }
         Mock Set-MpPreference { }
@@ -254,8 +335,12 @@ Describe 'Guest script: live dry run on this machine' -Tag 'Live' {
         $c = Get-CtsGuestConfiguration -Definition $script:Def -Topology $script:Top2 -VmName 'ctsRel-A'
         $r = Invoke-CtsGuestConfiguration -Configuration $c
         $r.dryRun | Should -BeTrue
-        @($r.items | Where-Object { $_.status -in 'Changed', 'Blocked' }).Count | Should -Be 0
-        @($r.items).Count | Should -Be ($r.counts.compliant + $r.counts.wouldChange + $r.counts.failed)
+        @($r.items | Where-Object status -eq 'Changed').Count | Should -Be 0
+        foreach ($blocked in @($r.items | Where-Object status -eq 'Blocked')) {
+            $blocked.item | Should -Be 'DefenderRealTimeProtection'
+            $blocked.before.tamperProtected | Should -BeTrue
+        }
+        @($r.items).Count | Should -Be ($r.counts.compliant + $r.counts.wouldChange + $r.counts.blocked + $r.counts.failed)
         @($r.items | ForEach-Object item) | Should -Contain 'PageFile'
         @($r.items | ForEach-Object item) | Should -Contain 'Firewall:ctsRel-ctsTraffic-TCP'
         foreach ($f in @($r.items | Where-Object status -eq 'Failed')) { $f.item | Should -BeLike 'Adapter:*' -Because 'only the lab MACs are absent on the host' }

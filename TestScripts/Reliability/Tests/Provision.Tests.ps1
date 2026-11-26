@@ -78,6 +78,24 @@ Describe 'Get-CtsProvisionPlan' {
         $plan.Counts.Create | Should -Be 0
     }
 
+    It 'keeps an owned VM whose checkpoint disk descends from its recorded disk' {
+        $state = New-OwnedState
+        $state.Vms[0].Disks = @('C:\checkpoint.avhdx')
+        $state.Vms[0] | Add-Member -NotePropertyName DiskAncestors -NotePropertyValue @((Get-DiskPath 'ctsRel-A'))
+        $plan = Get-Plan $state
+        $plan.Blocked | Should -BeFalse
+        $plan.Counts.Keep | Should -Be 7
+    }
+
+    It 'blocks a checkpoint disk whose ancestry does not include the owned VM disk' {
+        $state = New-OwnedState
+        $state.Vms[0].Disks = @('C:\checkpoint.avhdx')
+        $state.Vms[0] | Add-Member -NotePropertyName DiskAncestors -NotePropertyValue @('C:\other.vhdx')
+        $plan = Get-Plan $state
+        $plan.Blocked | Should -BeTrue
+        (Get-PlanItem $plan 'VM' 'ctsRel-A').Detail | Should -Match 'not attached'
+    }
+
     It 'reports a same-named switch that is not in the journal as a Collision' {
         $state = New-State -Switches @([pscustomobject]@{ Name = 'ctsRel-Mgmt'; Id = 'someone-else'; SwitchType = 'Internal' })
         $plan = Get-Plan $state
@@ -181,16 +199,25 @@ Describe 'Get-CtsHyperVState' -Skip:(-not $script:HasHyperV) {
         { Get-CtsHyperVState -Definition $script:Def -Topology $script:Top } | Should -Throw '*Hyper-V Administrators*'
     }
 
-    It 'captures only lab-prefixed switches and VMs with their adapters and disks' {
+    It 'captures lab-prefixed resources and disk ancestry without hiding the attached disk (<DiskPath>)' -TestCases @(
+        @{ DiskPath = 'C:\d.vhdx'; Parents = @() }
+        @{ DiskPath = 'C:\checkpoint2.avhdx'; Parents = @('C:\checkpoint1.avhdx', 'C:\d.vhdx') }
+    ) {
+        param($DiskPath, $Parents)
         Mock -ModuleName CtsReliability Get-VMSwitch { @([pscustomobject]@{ Name = 'ctsRel-Mgmt'; Id = [guid]::Empty; SwitchType = 'Internal'; Notes = 'n' }, [pscustomobject]@{ Name = 'Default Switch'; Id = [guid]::Empty; SwitchType = 'Internal'; Notes = '' }) }
         Mock -ModuleName CtsReliability Get-VM { @([pscustomobject]@{ Name = 'ctsRel-A'; Id = [guid]::Empty; State = 'Off'; Notes = ''; Generation = 2; ProcessorCount = 4; MemoryStartup = 8GB; DynamicMemoryEnabled = $false; AutomaticCheckpointsEnabled = $false }, [pscustomobject]@{ Name = 'Unrelated'; Id = [guid]::Empty }) }
-        Mock -ModuleName CtsReliability Get-VMHardDiskDrive { [pscustomobject]@{ Path = 'C:\d.vhdx' } } -RemoveParameterType VM
+        Mock -ModuleName CtsReliability Get-VMHardDiskDrive { [pscustomobject]@{ Path = $DiskPath } } -RemoveParameterType VM
+        Mock -ModuleName CtsReliability Get-VHD {
+            [pscustomobject]@{ ParentPath = if ($Path -eq 'C:\checkpoint2.avhdx') { 'C:\checkpoint1.avhdx' } else { 'C:\d.vhdx' } }
+        }
         Mock -ModuleName CtsReliability Get-VMSnapshot { } -RemoveParameterType VM
         Mock -ModuleName CtsReliability Get-VMNetworkAdapter { [pscustomobject]@{ Name = 'NIC-Mgmt'; SwitchName = 'ctsRel-Mgmt'; MacAddress = '00155DCE01FE'; DynamicMacAddressEnabled = $false; DeviceNaming = 'On' } } -RemoveParameterType VM
         $s = Get-CtsHyperVState -Definition $script:Def -Topology $script:Top
         @($s.Switches).Name | Should -Be @('ctsRel-Mgmt')
         @($s.Vms).Name | Should -Be @('ctsRel-A')
-        $s.Vms[0].Disks | Should -Be @('C:\d.vhdx')
+        $s.Vms[0].Disks | Should -Be @($DiskPath)
+        @($s.Vms[0].DiskAncestors).Count | Should -Be @($Parents).Count
+        if ($Parents.Count -gt 0) { $s.Vms[0].DiskAncestors | Should -Be $Parents }
         $s.Vms[0].Adapters[0].MacAddress | Should -Be '00155DCE01FE'
     }
 }

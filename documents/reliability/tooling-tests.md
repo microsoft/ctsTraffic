@@ -171,6 +171,22 @@ one only when absent. Both cases have regression tests.
 The focused `GoldenImage.Tests.ps1` run passed all 21 tests in both PowerShell
 7 and Windows PowerShell 5.1 after the fix.
 
+The first elevated two-VM provisioning run on 2026-11-26 exposed three more
+live-only issues: the ARM64 page-file CIM provider rejected valid sizes, WinRM
+was configured for delayed startup and was stopped at post-reboot verification,
+and checkpoint AVHDX attachments were incorrectly reported as disk drift.
+Guest configuration now writes the page-file boot setting as a registry
+multi-string and configures immediate automatic WinRM startup. The provisioning
+plan follows checkpoint ancestry while retaining the actual attached disk path.
+Verification also reports Tamper Protection as Blocked instead of WouldChange.
+The final focused runs passed all 29 GuestConfig tests and 27 Provision tests
+in both PowerShell editions. The live retry verified both guests after reboot,
+9216 MB allocated page files, running WinRM, bidirectional IPv4/IPv6 test-link
+reachability, enabled firewalls, and a seven-Keep/no-drift provisioning plan.
+The host-plus-two-guest snapshot was complete and passed schema/manifest
+validation. Tamper Protection remains enabled in both guests; this is a
+reported setup finding, not a clean-baseline reliability pass.
+
 ## Manual verification not automated
 
 These operations need an elevated session, real Hyper-V and a Windows ISO.
@@ -181,10 +197,10 @@ No unelevated test can prove them. Record each result here when performed.
 | Local config | `Set-CtsLocalConfig.ps1 -DebuggerSourceArm64 <msi> -Apply` | The debugger share path is stored outside the repository and merged by `Get-CtsLabDefinition` | Done 2026-11-25: file written, plan run reports NoChange, Share tests read the path through it |
 | Store guest credential | `Set-CtsGuestCredential.ps1` | The credential is stored under `ctsReliability/guest` | Done 2026-11-24: stored for `ctsadmin` |
 | ISO cache | `Get-CtsWindowsIso.ps1 -Source <url-or-path> -ExpectedSha256 <hash> -Apply` | A real download or copy completes, through BITS for https, the hash matches, metadata is written, and the cached ISO is read-only | Done 2026-11-25: English ARM64 ISO downloaded through BITS; SHA-256 matched Microsoft's published value |
-| Golden image build | `New-CtsGoldenImage.ps1 -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Done 2026-11-25: Windows 11 Pro ARM64 10.0.26300.9457 built; hash matched metadata; Test-VHD passed; read-only inspection verified one ESP, one MSR, one Windows partition, and ARM64 UEFI boot files; ISO/VHDX detached. Guest boot remains untested until provisioning |
-| Unattend injection | Part of provisioning Apply | `Set-CtsVhdUnattend` finds the Windows partition. OOBE completes without prompts, including a product key prompt. SetupComplete removes every password-bearing copy. | Not yet run |
-| Lab provisioning | `Invoke-CtsLabProvision.ps1 -Apply` | Switches, host address, disks, VMs and journal entries are created. A second run plans only Keep. | Not yet run |
-| Guest phase | Part of provisioning Apply | Guest configuration applies and verifies. `Restart-VM -Wait -For Heartbeat` works. The High performance power plan exists on ARM64. Defender is Blocked only by Tamper Protection. The debugger MSI installs cdb, ntsd and appverif. | Not yet run |
+| Golden image build | `New-CtsGoldenImage.ps1 -Apply` | The edition applies, bcdboot works for ARM64 from the host, metadata is written, and the VHDX is read-only | Done 2026-11-25: Windows 11 Pro ARM64 10.0.26300.9457 built; hash matched metadata; Test-VHD passed; read-only inspection verified one ESP, one MSR, one Windows partition, and ARM64 UEFI boot files; ISO/VHDX detached. Guest boot verified during provisioning on 2026-11-26 |
+| Unattend injection | Part of provisioning Apply | `Set-CtsVhdUnattend` finds the Windows partition. OOBE completes without prompts, including a product key prompt. SetupComplete removes every password-bearing copy. | Done 2026-11-26: both guests completed unattended boot, SetupComplete markers exist, and UnattendCleanup verified compliant |
+| Lab provisioning | `Invoke-CtsLabProvision.ps1 -Apply` | Switches, host address, disks, VMs and journal entries are created. A second run plans only Keep. | Done 2026-11-26: two guests, both switches, clean checkpoints and complete validated snapshot created; follow-up plan has seven Keep, no Create/Drift/Collision |
+| Guest phase | Part of provisioning Apply | Guest configuration applies and verifies. `Restart-VM -Wait -For Heartbeat` works. The High performance power plan exists on ARM64. Defender is Blocked only by Tamper Protection. The debugger MSI installs cdb, ntsd and appverif. | Done with finding 2026-11-26: both guests rebooted, 15 configuration items compliant per guest; debugger 10.0.29680.1004 installed with all three tools; Defender remains Blocked by Tamper Protection in both guests |
 | Elevated tests | Runner from an elevated session | The two Elevated tests pass | Not yet run |
 | WinRM channel | Phase 3B | Host TrustedHosts and the WinRM listener work over NIC-Mgmt | Deferred to Phase 3B |
 
