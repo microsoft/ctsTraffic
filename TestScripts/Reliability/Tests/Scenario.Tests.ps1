@@ -13,6 +13,7 @@ Describe 'Test-CtsScenario' {
         $errors | Should -Contain 'safety.resourceBounds is unresolved'
         $errors | Should -Contain 'safety.stopConditions is unresolved'
         $errors | Should -Contain 'artifacts.paths is unresolved'
+        @($errors | Where-Object { $_ -like 'workload.*Arguments must contain*' }) | Should -BeNullOrEmpty
     }
 
     It 'still blocks execution if a caller fills the known fields and changes the status' {
@@ -37,6 +38,28 @@ Describe 'Test-CtsScenario' {
         $errors | Should -Contain "instrumentation.driverVerifier must be 'disabled'"
         $errors | Should -Contain "instrumentation.faultInjection must be 'none'"
         $errors | Should -Contain "workload.verification must be 'data'"
+    }
+
+    It 'detects inconsistent workload settings and argument templates' {
+        $scenario = $script:ScenarioJson | ConvertFrom-Json
+        $scenario.workload.connections = 10
+        $scenario.workload.serverArguments += '-Verify:connection'
+        $scenario.workload.clientArguments = @($scenario.workload.clientArguments | Where-Object { $_ -notlike '-ConnectionFilename:*' })
+        $errors = @(Test-CtsScenario -Scenario $scenario)
+        $errors | Should -Contain "workload.clientArguments must contain exactly one '-Connections:10'"
+        $errors | Should -Contain "workload.serverArguments must contain exactly one '-Verify:data'"
+        $errors | Should -Contain "workload.clientArguments must contain exactly one '-ConnectionFilename:{clientConnectionCsv}'"
+    }
+
+    It 'reports invalid numeric values and mismatched sampling intervals' {
+        $scenario = $script:ScenarioJson | ConvertFrom-Json
+        $scenario.workload.connections = 0
+        $scenario.workload.transferBytesPerConnection = 1.5
+        $scenario.instrumentation.sampleIntervalMs = 1000
+        $errors = @(Test-CtsScenario -Scenario $scenario)
+        $errors | Should -Contain 'workload.connections must be a positive integer'
+        $errors | Should -Contain 'workload.transferBytesPerConnection must be a positive integer'
+        $errors | Should -Contain 'workload.statusUpdateMs must match instrumentation.sampleIntervalMs'
     }
 
     It 'treats empty safety values as unresolved' {

@@ -34,11 +34,57 @@ function Test-CtsScenario {
 
     foreach ($check in @(
             @{ name = 'workload.verification'; value = (Get-CtsProp $workload 'verification'); expected = 'data' }
+            @{ name = 'workload.protocol'; value = (Get-CtsProp $workload 'protocol'); expected = 'tcp' }
+            @{ name = 'workload.io'; value = (Get-CtsProp $workload 'io'); expected = 'iocp' }
+            @{ name = 'workload.pattern'; value = (Get-CtsProp $workload 'pattern'); expected = 'duplex' }
             @{ name = 'instrumentation.applicationVerifier'; value = (Get-CtsProp $instrumentation 'applicationVerifier'); expected = 'disabled' }
             @{ name = 'instrumentation.driverVerifier'; value = (Get-CtsProp $instrumentation 'driverVerifier'); expected = 'disabled' }
             @{ name = 'instrumentation.faultInjection'; value = (Get-CtsProp $instrumentation 'faultInjection'); expected = 'none' }
         )) {
         if ($check.value -ne $check.expected) { "$($check.name) must be '$($check.expected)'" }
+    }
+
+    foreach ($name in 'connections', 'transferBytesPerConnection', 'measuredTimeLimitMs', 'pilotTimeLimitMs', 'warmupIterations', 'measuredIterations', 'statusUpdateMs') {
+        $value = Get-CtsProp $workload $name
+        if (($value -isnot [int] -and $value -isnot [long]) -or $value -le 0) {
+            "workload.$name must be a positive integer"
+        }
+    }
+
+    $interval = Get-CtsProp $instrumentation 'sampleIntervalMs'
+    if (($interval -isnot [int] -and $interval -isnot [long]) -or $interval -le 0) {
+        'instrumentation.sampleIntervalMs must be a positive integer'
+    }
+    elseif ($interval -ne (Get-CtsProp $workload 'statusUpdateMs')) {
+        'workload.statusUpdateMs must match instrumentation.sampleIntervalMs'
+    }
+
+    $argumentChecks = @(
+        @{ role = 'server'; option = 'Listen'; value = '{serverAddress}' }
+        @{ role = 'client'; option = 'Target'; value = '{serverAddress}' }
+        @{ role = 'client'; option = 'Bind'; value = '{clientAddress}' }
+        @{ role = 'client'; option = 'Connections'; value = (Get-CtsProp $workload 'connections') }
+        @{ role = 'client'; option = 'TimeLimit'; value = '{timeLimitMs}' }
+        @{ role = 'server'; option = 'ConnectionFilename'; value = '{serverConnectionCsv}' }
+        @{ role = 'client'; option = 'ConnectionFilename'; value = '{clientConnectionCsv}' }
+        @{ role = 'server'; option = 'StatusFilename'; value = '{serverStatusCsv}' }
+        @{ role = 'client'; option = 'StatusFilename'; value = '{clientStatusCsv}' }
+    )
+    foreach ($role in 'server', 'client') {
+        $argumentChecks += @{ role = $role; option = 'Pattern'; value = 'duplex' }
+        $argumentChecks += @{ role = $role; option = 'IO'; value = 'iocp' }
+        $argumentChecks += @{ role = $role; option = 'Transfer'; value = (Get-CtsProp $workload 'transferBytesPerConnection') }
+        $argumentChecks += @{ role = $role; option = 'Verify'; value = 'data' }
+        $argumentChecks += @{ role = $role; option = 'StatusUpdate'; value = (Get-CtsProp $workload 'statusUpdateMs') }
+    }
+    foreach ($check in $argumentChecks) {
+        $arguments = @(Get-CtsProp $workload "$($check.role)Arguments")
+        $prefix = '-{0}:' -f $check.option
+        $matching = @($arguments | Where-Object { $_ -is [string] -and $_.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) })
+        $expected = '{0}{1}' -f $prefix, $check.value
+        if ($matching.Count -ne 1 -or $matching[0] -ine $expected) {
+            "workload.$($check.role)Arguments must contain exactly one '$expected'"
+        }
     }
 
     foreach ($check in @(

@@ -148,11 +148,11 @@ artifact inventory records each required or optional file's device, path,
 presence, size and SHA-256 when present. An observed failure is not converted
 to a pilot or inconclusive result merely because other evidence is missing.
 
-The module's preliminary `Test-CtsScenario` reports known blockers and always
-blocks execution; it does not validate the complete contract. The draft JSON
-still lacks approved resource bounds, calibrated thresholds, and required
-measurement details. Phase 4 is not complete and no workload is authorized by
-this section.
+The module's preliminary `Test-CtsScenario` reports known blockers, including
+inconsistent workload settings and argument templates, and always blocks
+execution; it does not validate the complete contract. The draft JSON still
+lacks approved resource bounds, calibrated thresholds, and required measurement
+details. Phase 4 is not complete and no workload is authorized by this section.
 
 ## Measurement points
 
