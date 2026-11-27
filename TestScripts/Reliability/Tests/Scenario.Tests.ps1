@@ -13,7 +13,12 @@ Describe 'Test-CtsScenario' {
         $errors | Should -Contain 'safety.resourceBounds is unresolved'
         $errors | Should -Contain 'safety.stopConditions is unresolved'
         $errors | Should -Contain 'artifacts.paths is unresolved'
+        $errors | Should -Contain 'measurements.G1B-00.artifactPath is unresolved'
+        $errors | Should -Contain 'measurements.G1B-00.missingDataBehavior is unresolved'
         @($errors | Where-Object { $_ -like 'workload.*Arguments must contain*' }) | Should -BeNullOrEmpty
+        @($errors | Where-Object { $_ -like 'measurements must contain exactly one*' }) | Should -BeNullOrEmpty
+        @($errors | Where-Object { $_ -like 'instrumentation.quiescence.*' }) | Should -BeNullOrEmpty
+        $errors | Should -Not -Contain 'instrumentation.leakSnapshots must contain S0 through S<measuredIterations> in order'
     }
 
     It 'still blocks execution if a caller fills the known fields and changes the status' {
@@ -60,6 +65,40 @@ Describe 'Test-CtsScenario' {
         $errors | Should -Contain 'workload.connections must be a positive integer'
         $errors | Should -Contain 'workload.transferBytesPerConnection must be a positive integer'
         $errors | Should -Contain 'workload.statusUpdateMs must match instrumentation.sampleIntervalMs'
+    }
+
+    It 'reports missing and duplicate measurements and unresolved metadata' {
+        $scenario = $script:ScenarioJson | ConvertFrom-Json
+        $scenario.measurements = @($scenario.measurements | Where-Object { $_.id -ne 'G1B-01' })
+        $scenario.measurements += $scenario.measurements[0]
+        $scenario.measurements[1].source = ''
+        $scenario.measurements[1].units = @()
+        $errors = @(Test-CtsScenario -Scenario $scenario)
+        $errors | Should -Contain "measurements must contain exactly one 'G1B-00'"
+        $errors | Should -Contain "measurements must contain exactly one 'G1B-01'"
+        $errors | Should -Contain 'measurements.G1B-02.source is unresolved'
+        $errors | Should -Contain 'measurements.G1B-02.units must contain nonempty strings'
+    }
+
+    It 'reports invalid leak-series and quiescence conditions' {
+        $scenario = $script:ScenarioJson | ConvertFrom-Json
+        $scenario.workload.persistentServer = $false
+        $scenario.instrumentation.leakSnapshots = @('S0', 'S2', 'S1', 'S3', 'S4', 'S5')
+        $scenario.instrumentation.noiseFloorIntervalMs = 0
+        $scenario.instrumentation.quiescence.clientsExited = $false
+        $scenario.instrumentation.quiescence.testPortConnectionsRemaining = 1
+        $scenario.instrumentation.quiescence.cpuBelowPercent = 101
+        $scenario.instrumentation.quiescence.timeoutSeconds = 10
+        $scenario.instrumentation.quiescence.onTimeout = 'ignore'
+        $errors = @(Test-CtsScenario -Scenario $scenario)
+        $errors | Should -Contain 'workload.persistentServer must be true'
+        $errors | Should -Contain 'instrumentation.leakSnapshots must contain S0 through S<measuredIterations> in order'
+        $errors | Should -Contain 'instrumentation.noiseFloorIntervalMs must be a positive integer'
+        $errors | Should -Contain 'instrumentation.quiescence.clientsExited must be true'
+        $errors | Should -Contain 'instrumentation.quiescence.testPortConnectionsRemaining must be zero'
+        $errors | Should -Contain 'instrumentation.quiescence.cpuBelowPercent must be greater than zero and at most 100'
+        $errors | Should -Contain 'instrumentation.quiescence.timeoutSeconds must be at least settleSeconds'
+        $errors | Should -Contain 'instrumentation.quiescence.onTimeout must capture and mark the leak analysis inconclusive'
     }
 
     It 'treats empty safety values as unresolved' {

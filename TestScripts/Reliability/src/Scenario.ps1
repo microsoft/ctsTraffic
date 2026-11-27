@@ -59,6 +59,90 @@ function Test-CtsScenario {
         'workload.statusUpdateMs must match instrumentation.sampleIntervalMs'
     }
 
+    $snapshotCount = Get-CtsProp $instrumentation 'noiseFloorSnapshotCount'
+    if (($snapshotCount -isnot [int] -and $snapshotCount -isnot [long]) -or $snapshotCount -le 0) {
+        'instrumentation.noiseFloorSnapshotCount must be a positive integer'
+    }
+    $noiseInterval = Get-CtsProp $instrumentation 'noiseFloorIntervalMs'
+    if ($null -ne $noiseInterval -and
+        (($noiseInterval -isnot [int] -and $noiseInterval -isnot [long]) -or $noiseInterval -le 0)) {
+        'instrumentation.noiseFloorIntervalMs must be a positive integer'
+    }
+    if ((Get-CtsProp $workload 'persistentServer') -isnot [bool] -or
+        -not (Get-CtsProp $workload 'persistentServer')) {
+        'workload.persistentServer must be true'
+    }
+    $iterations = Get-CtsProp $workload 'measuredIterations'
+    if (($iterations -is [int] -or $iterations -is [long]) -and $iterations -gt 0) {
+        $snapshots = @(Get-CtsProp $instrumentation 'leakSnapshots')
+        $validSnapshots = $snapshots.Count -eq ($iterations + 1)
+        if ($validSnapshots) {
+            for ($i = 0; $i -lt $snapshots.Count; $i++) {
+                if ($snapshots[$i] -cne "S$i") { $validSnapshots = $false; break }
+            }
+        }
+        if (-not $validSnapshots) {
+            'instrumentation.leakSnapshots must contain S0 through S<measuredIterations> in order'
+        }
+    }
+
+    $quiescence = Get-CtsProp $instrumentation 'quiescence'
+    if ((Get-CtsProp $quiescence 'clientsExited') -isnot [bool] -or
+        -not (Get-CtsProp $quiescence 'clientsExited')) {
+        'instrumentation.quiescence.clientsExited must be true'
+    }
+    $connectionsRemaining = Get-CtsProp $quiescence 'testPortConnectionsRemaining'
+    if (($connectionsRemaining -isnot [int] -and $connectionsRemaining -isnot [long]) -or $connectionsRemaining -ne 0) {
+        'instrumentation.quiescence.testPortConnectionsRemaining must be zero'
+    }
+    $cpuLimit = Get-CtsProp $quiescence 'cpuBelowPercent'
+    if (($cpuLimit -isnot [int] -and $cpuLimit -isnot [long] -and $cpuLimit -isnot [double] -and $cpuLimit -isnot [decimal]) -or
+        [double]::IsNaN([double]$cpuLimit) -or [double]::IsInfinity([double]$cpuLimit) -or
+        $cpuLimit -le 0 -or $cpuLimit -gt 100) {
+        'instrumentation.quiescence.cpuBelowPercent must be greater than zero and at most 100'
+    }
+    $settle = Get-CtsProp $quiescence 'settleSeconds'
+    $timeout = Get-CtsProp $quiescence 'timeoutSeconds'
+    foreach ($check in @(@{ name = 'settleSeconds'; value = $settle }, @{ name = 'timeoutSeconds'; value = $timeout })) {
+        if (($check.value -isnot [int] -and $check.value -isnot [long]) -or $check.value -le 0) {
+            "instrumentation.quiescence.$($check.name) must be a positive integer"
+        }
+    }
+    if (($settle -is [int] -or $settle -is [long]) -and ($timeout -is [int] -or $timeout -is [long]) -and
+        $settle -gt 0 -and $timeout -gt 0 -and $timeout -lt $settle) {
+        'instrumentation.quiescence.timeoutSeconds must be at least settleSeconds'
+    }
+    if ((Get-CtsProp $quiescence 'onTimeout') -ne 'capture-not-quiescent-and-mark-leak-analysis-inconclusive') {
+        'instrumentation.quiescence.onTimeout must capture and mark the leak analysis inconclusive'
+    }
+
+    $measurements = @(Get-CtsProp $Scenario 'measurements')
+    $expectedIds = @(0..8 | ForEach-Object { 'G1B-{0:00}' -f $_ })
+    foreach ($expectedId in $expectedIds) {
+        $matchingMeasurements = @($measurements | Where-Object { (Get-CtsProp $_ 'id') -eq $expectedId })
+        if ($matchingMeasurements.Count -ne 1) {
+            "measurements must contain exactly one '$expectedId'"
+            continue
+        }
+        $measurement = $matchingMeasurements[0]
+        foreach ($field in 'source', 'artifactPath', 'missingDataBehavior') {
+            $value = Get-CtsProp $measurement $field
+            if ($value -isnot [string] -or [string]::IsNullOrWhiteSpace($value)) {
+                "measurements.$expectedId.$field is unresolved"
+            }
+        }
+        foreach ($field in 'units', 'capturePoints') {
+            $values = @(Get-CtsProp $measurement $field)
+            if ($values.Count -eq 0 -or @($values | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+                "measurements.$expectedId.$field must contain nonempty strings"
+            }
+        }
+    }
+    foreach ($measurement in $measurements) {
+        $measurementId = Get-CtsProp $measurement 'id'
+        if ($measurementId -notin $expectedIds) { "unsupported measurement id '$measurementId'" }
+    }
+
     $argumentChecks = @(
         @{ role = 'server'; option = 'Listen'; value = '{serverAddress}' }
         @{ role = 'client'; option = 'Target'; value = '{serverAddress}' }

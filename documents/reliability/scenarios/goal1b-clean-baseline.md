@@ -120,7 +120,7 @@ The scenario definition must describe, at minimum:
 | `scope` | Goal, system class, supported guest OS/architecture, topology, device roles, and required snapshot fields. Record actual device IDs, addresses, build, and snapshot ID in the resolved run definition. |
 | `workload` | Server and client argument templates, executable identity, address family, connections, transfer bytes, time limits, warm-up and measured iterations. Resolve the v1 settings above and record the exact argument vector per process. Require TCP/IOCP duplex and `-Verify:data`. |
 | `instrumentation` | Both verifiers disabled, no fault injection, counter interval, required monitors, noise-floor captures, quiescence conditions, and `S0` through `S5` capture points. |
-| `measurements` | For every G1B criterion, its source, unit, interval or capture points, artifact path, missing-data behavior, and threshold or explicit calibration status. |
+| `measurements` | For every G1B criterion, its source, unit, interval or capture points, `artifactPath`, `missingDataBehavior`, and threshold or explicit calibration status. |
 | `safety` | Approved resource bounds, stop conditions, monitor-loss behavior, bounded cleanup and recovery, and allowed operator actions. Values not yet approved remain unresolved and block execution, including pilots. |
 | `artifacts` | Required and optional artifacts, their device/iteration scope, output paths, and completeness rules. Connection and status CSVs, logs, counter series, pool snapshots, verifier evidence, and run configuration are required. |
 | `outcomeRules` | Pass, pilot/characterization, inconclusive, and failure rules, including how observed failures and missing evidence take precedence. |
@@ -149,10 +149,11 @@ presence, size and SHA-256 when present. An observed failure is not converted
 to a pilot or inconclusive result merely because other evidence is missing.
 
 The module's preliminary `Test-CtsScenario` reports known blockers, including
-inconsistent workload settings and argument templates, and always blocks
-execution; it does not validate the complete contract. The draft JSON still
-lacks approved resource bounds, calibrated thresholds, and required measurement
-details. Phase 4 is not complete and no workload is authorized by this section.
+inconsistent workload arguments, measurement coverage, and quiescence settings,
+and always blocks execution; it does not validate the complete contract. The
+draft JSON still lacks approved resource bounds, calibrated thresholds, and
+required measurement details. Phase 4 is not complete and no workload is
+authorized by this section.
 
 ## Measurement points
 
