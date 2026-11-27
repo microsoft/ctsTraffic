@@ -113,7 +113,16 @@ with missing or changed required configuration.
    offsets.
 2. Execute for the scenario's declared duration or completion condition.
    Preserve the exact command line/configuration, per-process exit code, and
-   per-process standard output and standard error files.
+   per-process standard output and standard error files. Record the executable
+   path and argument vector as well as the actual command line for each
+   process, without credentials. Preserve each process's original console
+   output, including the final summary when present; record a missing summary
+   explicitly rather than substituting CSV data or claiming a pass.
+   On normal completion, ctsTraffic writes its historic connection statistics,
+   TCP byte totals, and elapsed time to stdout regardless of console verbosity.
+   A CSV `-ConnectionFilename` does not contain that console summary. An early
+   exception or forced termination can leave it absent; retain the partial
+   output, error details, and exit code for classification.
    Enable and collect ctsTraffic connection-result CSVs only when required by
    the scenario's connection-success/recovery metrics using
    `-ConnectionFilename`; record the reason when intentionally noisy failure

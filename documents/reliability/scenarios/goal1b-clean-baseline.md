@@ -51,7 +51,11 @@ leak pass until workload and memory thresholds are approved.
   does not establish that it is safe on this system.
 - **ctsTraffic logging:** enable `-ConnectionFilename` and `-StatusFilename`
   (optionally `-TcpInfoFilename`); preserve the per-connection CSV, status
-  time series, and aggregate output for every iteration.
+  time series, exact per-process command line and argument vector, and original
+  stdout and stderr for every iteration. The final historic connection
+  statistics, TCP byte totals, and elapsed time are written to stdout, not to
+  a CSV connection log. If the final summary is absent, record it as missing;
+  retain partial output and the exit code for classification.
 - **Pool-tag evidence:** an approved, working pool-tag snapshot tool is
   mandatory before any workload, including characterization pilots.
 
@@ -122,7 +126,7 @@ The scenario definition must describe, at minimum:
 | `instrumentation` | Both verifiers disabled, no fault injection, counter interval, required monitors, noise-floor captures, quiescence conditions, and `S0` through `S5` capture points. |
 | `measurements` | For every G1B criterion, its source, unit, interval or capture points, `artifactPath`, `missingDataBehavior`, and threshold or explicit calibration status. |
 | `safety` | Approved resource bounds, stop conditions, monitor-loss behavior, bounded cleanup and recovery, and allowed operator actions. Values not yet approved remain unresolved and block execution, including pilots. |
-| `artifacts` | Required and optional artifacts, their device/iteration scope, output paths, and completeness rules. Connection and status CSVs, logs, counter series, pool snapshots, verifier evidence, and run configuration are required. |
+| `artifacts` | Required and optional artifacts, their device/iteration scope, output paths, and completeness rules. Per-process command lines, stdout, stderr, final summaries, connection and status CSVs, counter series, pool snapshots, verifier evidence, and run configuration are required. |
 | `outcomeRules` | Pass, pilot/characterization, inconclusive, and failure rules, including how observed failures and missing evidence take precedence. |
 
 The resolved run definition supplies the run ID, owner, mode, snapshot
@@ -185,7 +189,7 @@ without meeting the quiescence gate.
 | G1B-04 | User-mode memory | Persistent server process (private bytes, handles, threads) at `S0` … `S5`; client process time series per iteration | No metric flagged by the [leak detection](../leak-detection.md) analysis. Thresholds are TBD; do not claim a leak pass until they are approved. |
 | G1B-05 | System memory and kernel pool totals | Pool paged/nonpaged bytes, committed and available memory, and system handle count at noise floor and `S0` … `S5`, plus time series | No metric flagged by the leak analysis; transient peaks recorded. Thresholds are TBD. |
 | G1B-06 | Pool allocation detail | Approved pool-tag tool output at noise floor and `S0` … `S5`; per-tag allocation count and bytes | No tag flagged by the leak analysis. Missing tool capability blocks all workloads; a missing required snapshot makes the leak result inconclusive. |
-| G1B-07 | Process/system health | ctsTraffic exit code (equals network plus protocol error count), process monitor, heartbeat/hang probe, crash-dump and WER folders, Windows event evidence; setup through cleanup | Exit code is zero or fully explained by classified cutoff errors; no bugcheck, hang, unexpected reboot, unexplained process failure, or required-monitor loss. Crash capture was verified as configured before execution. |
+| G1B-07 | Process/system health | ctsTraffic exit code, process monitor, heartbeat/hang probe, crash-dump and WER folders, Windows event evidence; setup through cleanup | Exit code is zero or fully explained by classified cutoff errors; no bugcheck, hang, unexpected reboot, unexplained process failure, or required-monitor loss. Crash capture was verified as configured before execution. On normal completion the exit code is network plus protocol errors, capped at `MAXINT`; early failures can return other codes. |
 | G1B-08 | Verifier state | Captured Application Verifier and Driver Verifier configuration; enabled/disabled state; setup, execution, and cleanup | Both remain disabled for the full run; any unexpected enabled verifier invalidates the run. |
 
 ## Outcome rules

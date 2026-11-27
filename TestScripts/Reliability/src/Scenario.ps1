@@ -143,6 +143,11 @@ function Test-CtsScenario {
         if ($measurementId -notin $expectedIds) { "unsupported measurement id '$measurementId'" }
     }
 
+    $requiredArtifacts = @(Get-CtsProp $artifacts 'required')
+    foreach ($artifact in 'per-process command lines', 'process stdout and stderr', 'final console summaries') {
+        if ($artifact -notin $requiredArtifacts) { "artifacts.required must include '$artifact'" }
+    }
+
     $argumentChecks = @(
         @{ role = 'server'; option = 'Listen'; value = '{serverAddress}' }
         @{ role = 'client'; option = 'Target'; value = '{serverAddress}' }

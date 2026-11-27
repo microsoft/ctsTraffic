@@ -150,7 +150,9 @@
     "required": [
       "connection CSVs",
       "status CSVs",
+      "per-process command lines",
       "process stdout and stderr",
+      "final console summaries",
       "counter time series",
       "pool snapshots",
       "verifier state",

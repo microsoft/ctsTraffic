@@ -165,8 +165,9 @@ These rules apply to either channel:
   error files per process, for example with `Start-Process
   -RedirectStandardOutput -RedirectStandardError -PassThru`. Keep these files
   as run evidence.
-- Record every process exit code. For ctsTraffic, the exit code is the sum of
-  network and protocol errors.
+- Record every process exit code. On normal completion ctsTraffic returns the
+  sum of network and protocol errors, capped at `MAXINT`; early failures can
+  return other error codes.
 - Stop processes by the documented clean shutdown path first. Use forced
   termination only after a timeout, and record it as a cleanup finding.
 - Setup and cleanup never delete previous run output or evidence. Each run

@@ -18,6 +18,7 @@ Describe 'Test-CtsScenario' {
         @($errors | Where-Object { $_ -like 'workload.*Arguments must contain*' }) | Should -BeNullOrEmpty
         @($errors | Where-Object { $_ -like 'measurements must contain exactly one*' }) | Should -BeNullOrEmpty
         @($errors | Where-Object { $_ -like 'instrumentation.quiescence.*' }) | Should -BeNullOrEmpty
+        @($errors | Where-Object { $_ -like 'artifacts.required must include*' }) | Should -BeNullOrEmpty
         $errors | Should -Not -Contain 'instrumentation.leakSnapshots must contain S0 through S<measuredIterations> in order'
     }
 
@@ -99,6 +100,17 @@ Describe 'Test-CtsScenario' {
         $errors | Should -Contain 'instrumentation.quiescence.cpuBelowPercent must be greater than zero and at most 100'
         $errors | Should -Contain 'instrumentation.quiescence.timeoutSeconds must be at least settleSeconds'
         $errors | Should -Contain 'instrumentation.quiescence.onTimeout must capture and mark the leak analysis inconclusive'
+    }
+
+    It 'reports missing command and console evidence requirements' {
+        $scenario = $script:ScenarioJson | ConvertFrom-Json
+        $scenario.artifacts.required = @($scenario.artifacts.required | Where-Object {
+                $_ -notin @('per-process command lines', 'process stdout and stderr', 'final console summaries')
+            })
+        $errors = @(Test-CtsScenario -Scenario $scenario)
+        $errors | Should -Contain "artifacts.required must include 'per-process command lines'"
+        $errors | Should -Contain "artifacts.required must include 'process stdout and stderr'"
+        $errors | Should -Contain "artifacts.required must include 'final console summaries'"
     }
 
     It 'treats empty safety values as unresolved' {
