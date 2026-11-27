@@ -55,7 +55,9 @@ leak pass until workload and memory thresholds are approved.
   stdout and stderr for every iteration. The final historic connection
   statistics, TCP byte totals, and elapsed time are written to stdout, not to
   a CSV connection log. If the final summary is absent, record it as missing;
-  retain partial output and the exit code for classification.
+  retain partial output and the exit code for classification. The read-only
+  `Get-CtsTrafficTcpSummary` module function can inspect an already-collected
+  stdout file; it does not collect output or determine the run outcome.
 - **Pool-tag evidence:** an approved, working pool-tag snapshot tool is
   mandatory before any workload, including characterization pilots.
 

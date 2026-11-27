@@ -52,6 +52,11 @@ The draft G1B scenario can be inspected with `Test-CtsScenario -Path
 <scenario.json>` after importing the module. This preliminary check always
 blocks execution; full scenario validation and a runner are not implemented.
 
+`Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
+stdout file and reports whether a complete TCP summary is present. It does not
+run ctsTraffic, collect files, classify the result, or replace the original
+stdout and exit code.
+
 Pool-tag CSV usage values and comparison deltas are **bytes**; allocation,
 free, and outstanding-allocation values are counts. New CSV headings include
 the units. The comparison script also accepts older CSVs with unlabeled
