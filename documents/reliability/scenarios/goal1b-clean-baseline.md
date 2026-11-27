@@ -103,7 +103,7 @@ growth is normalized per GiB transferred as well as per 1,000 connections.
 
 ## Structured scenario and result contracts
 
-Status: **draft design; no scenario validator or runner exists yet**. The
+Status: **draft design; full validation and a runner do not exist yet**. The
 [draft JSON scenario](../../../TestScripts/Reliability/scenarios/g1b-clean-baseline.v1.json)
 records known v1 settings and unresolved values; it is not an executable run
 definition. Use versioned JSON for execution inputs and results, consistent
@@ -148,9 +148,11 @@ artifact inventory records each required or optional file's device, path,
 presence, size and SHA-256 when present. An observed failure is not converted
 to a pilot or inconclusive result merely because other evidence is missing.
 
-The draft JSON does not yet provide a validation implementation, approved
-resource bounds, calibrated thresholds, or all required measurement details.
-Phase 4 is not complete and no workload is authorized by this section.
+The module's preliminary `Test-CtsScenario` reports known blockers and always
+blocks execution; it does not validate the complete contract. The draft JSON
+still lacks approved resource bounds, calibrated thresholds, and required
+measurement details. Phase 4 is not complete and no workload is authorized by
+this section.
 
 ## Measurement points
 

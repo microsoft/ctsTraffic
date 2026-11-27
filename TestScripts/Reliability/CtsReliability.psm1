@@ -23,6 +23,7 @@ Export-ModuleMember -Function @(
     'Get-CtsHyperVInventory'
     'New-CtsSnapshot'
     'Test-CtsSnapshot'
+    'Test-CtsScenario'
     'Compare-CtsSnapshot'
     'ConvertTo-CtsSnapshotReport'
     'Get-CtsPoolTagSnapshot'
