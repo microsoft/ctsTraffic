@@ -89,6 +89,49 @@ Goal 2 run; see Phase 3B of the
 Also record the operator setup effort, credential handling, and any guest or
 host change each channel required.
 
+## Interim two-guest evaluation
+
+The 2026-11-26/27 UTC checks below are **partial**. They used the ARM64 lab
+and benign helpers, not a ctsTraffic workload. No channel has been selected
+and the Phase 3B exit gate remains open. Evidence paths are under the lab
+host's `C:\ctsReliability\lab`; they are not repository files.
+
+| Check | Observation | Evidence directory |
+| --- | --- | --- |
+| Sessions and small files | Three Direct collections and three WinRM upload/collection trials per guest succeeded with matching hashes. Both channels propagated a synthetic process exit and remote error on each guest. | `remote-eval-20261127T001331Z`, `winrm-eval-20261127T004135Z` |
+| Concurrent queries | Three sequential and three concurrent two-guest query trials succeeded per channel. These are short, differently timed samples, not a long-run comparison. | `remote-concurrency-20261127T001922Z`, `winrm-eval-20261127T004135Z` |
+| Reboot recovery | Both channels reconnected after one ordinary reboot per guest. Guest A's first successful post-boot queries finished about 27 s (Direct) and 32 s (WinRM) after the request; guest B's recorded checks finished about 31 s for each. | `reboot-eval-20261127T005026Z` |
+| Process control | Two benign-helper trials per channel per guest started, were checked three times, stopped by signal, exited with code 0, and had output collected. All recorded helper PIDs had exited. | `process-eval-corrected-20261127T010433Z` |
+| Management traffic | In two short five-poll windows per guest, WinRM recorded 104,691-105,367 bytes received and 62,903-67,542 bytes sent on the guest management adapter. Idle and Direct windows recorded zero bytes. Sessions were opened before the measured windows; background traffic is included. | `management-traffic-eval-20261127T011619Z` |
+| Artifact collection | A 32 MiB random fixture was staged by Direct and collected once per guest over each channel, with size and SHA-256 verified. Direct collection took 3.08-3.63 s and WinRM 22.08-22.38 s. This is not a dump-size test. | `artifact-transfer-eval-20261127T012012Z` |
+
+The first guest A reboot evaluation falsely reported a timeout because its
+one-off command converted a UTC time to a timezone-less string and reparsed
+it as local time. The original logs and corrected analysis are both retained;
+the first successful query's returned boot time was not retained per attempt.
+The first helper evaluation did not retain the process handle and could not
+reliably read exit codes. The corrected repeat retained the handle and
+captured all eight exit codes.
+
+Host WinRM was changed from Disabled/Stopped to Manual/Running, and the empty
+TrustedHosts value was set to the two guest management addresses. Starting the
+service activated an existing wildcard HTTP listener on port 5985; the
+built-in inbound WinRM rules were disabled, but other firewall rules may
+affect exposure. These approved changes remain in place and are recorded in
+`winrm-setup-20261127T003655Z`.
+
+Remaining work includes the actual coordinated ctsTraffic launch, long-run
+monitoring and its network impact, dump-size and remaining artifact types,
+repeated reboot recovery, and hang-probe false-positive/negative evaluation.
+RC-07 through RC-09 remain deferred. Guest B's Windows Update service changed
+from Disabled to Manual under LocalSystem. On 2026-11-27 UTC, its startup type
+was restored to Disabled while stopped; both channels verified the service and
+`NoAutoUpdate=1` after a short interval. The cause remains unknown, so
+recurrence must be checked during preflight. Evidence is in
+`guest-b-update-remediation-20261127T013331Z`. The existing Defender Tamper
+Protection findings also remain for the readiness assessment; the checks
+above do not authorize a workload.
+
 ## Selection criteria
 
 Choose per operation, in this order:

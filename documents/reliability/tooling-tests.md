@@ -202,7 +202,7 @@ No unelevated test can prove them. Record each result here when performed.
 | Lab provisioning | `Invoke-CtsLabProvision.ps1 -Apply` | Switches, host address, disks, VMs and journal entries are created. A second run plans only Keep. | Done 2026-11-26: two guests, both switches, clean checkpoints and complete validated snapshot created; follow-up plan has seven Keep, no Create/Drift/Collision |
 | Guest phase | Part of provisioning Apply | Guest configuration applies and verifies. `Restart-VM -Wait -For Heartbeat` works. The High performance power plan exists on ARM64. Defender is Blocked only by Tamper Protection. The debugger MSI installs cdb, ntsd and appverif. | Done with finding 2026-11-26: both guests rebooted, 15 configuration items compliant per guest; debugger 10.0.29680.1004 installed with all three tools; Defender remains Blocked by Tamper Protection in both guests |
 | Elevated tests | Runner from an elevated session | The two Elevated tests pass | Not yet run |
-| WinRM channel | Phase 3B | Host TrustedHosts and the WinRM listener work over NIC-Mgmt | Deferred to Phase 3B |
+| WinRM channel | Phase 3B | Host TrustedHosts and the WinRM listener work over NIC-Mgmt | Partially verified on both guests; the [channel evaluation](remote-control-and-firewall.md#interim-two-guest-evaluation) and selection remain incomplete |
 
 ## Maintaining the tests
 

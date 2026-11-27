@@ -101,6 +101,55 @@ this configuration is pilot or characterization only.
 Because each iteration completes relatively few connections (1 GiB each), leak
 growth is normalized per GiB transferred as well as per 1,000 connections.
 
+## Structured scenario and result contracts
+
+Status: **draft design; no scenario validator or runner exists yet**. Use
+versioned JSON for execution inputs and results, consistent with the lab
+definition. This Markdown remains the human-readable scenario. The JSON
+scenario, the resolved run definition, and the result are distinct documents;
+each has an explicit `schemaVersion`. A run references an immutable scenario
+ID and version, and retains the exact resolved input and its SHA-256.
+
+The scenario definition must describe, at minimum:
+
+| Field | Required content |
+| --- | --- |
+| `scenarioId`, `scenarioVersion` | Stable identity and version; this scenario is `G1B-CLEAN-BASELINE`. |
+| `scope` | Goal, system class, supported guest OS/architecture, topology, device roles, and required snapshot fields. Record actual device IDs, addresses, build, and snapshot ID in the resolved run definition. |
+| `workload` | Server and client argument templates, executable identity, address family, connections, transfer bytes, time limits, warm-up and measured iterations. Resolve the v1 settings above and record the exact argument vector per process. Require TCP/IOCP duplex and `-Verify:data`. |
+| `instrumentation` | Both verifiers disabled, no fault injection, counter interval, required monitors, noise-floor captures, quiescence conditions, and `S0` through `S5` capture points. |
+| `measurements` | For every G1B criterion, its source, unit, interval or capture points, artifact path, missing-data behavior, and threshold or explicit calibration status. |
+| `safety` | Approved resource bounds, stop conditions, monitor-loss behavior, bounded cleanup and recovery, and allowed operator actions. Values not yet approved remain unresolved and block execution, including pilots. |
+| `artifacts` | Required and optional artifacts, their device/iteration scope, output paths, and completeness rules. Connection and status CSVs, logs, counter series, pool snapshots, verifier evidence, and run configuration are required. |
+| `outcomeRules` | Pass, pilot/characterization, inconclusive, and failure rules, including how observed failures and missing evidence take precedence. |
+
+The resolved run definition supplies the run ID, owner, mode, snapshot
+reference, approved topology and participant IDs, selected channel per
+operation, output roots, and approved system-specific bounds and thresholds.
+It must not contain credentials. Paths and argument values are data, not shell
+commands; the eventual runner must construct an argument vector without
+evaluating input as PowerShell code.
+
+Before any setup, validation must reject unsupported versions, missing required
+fields, unsupported fields, unresolved commands, sources, units or safety bounds,
+and incompatible topology, verifier or fault settings. Acceptance mode also
+requires every pass/fail threshold. Characterization may leave only explicitly
+identified thresholds under investigation unresolved; it cannot report an
+acceptance pass. The run plan and explicit operator approval remain required
+after validation.
+
+The result contract must retain the resolved-input reference and hash, UTC
+timestamps, participant and channel identities, planned and observed commands,
+exit codes, setup/cleanup findings, measurements with units and capture points,
+missing or non-quiescent evidence, and the outcome with its reasons. Its
+artifact inventory records each required or optional file's device, path,
+presence, size and SHA-256 when present. An observed failure is not converted
+to a pilot or inconclusive result merely because other evidence is missing.
+
+This design does not yet provide a JSON scenario, validation implementation,
+approved resource bounds, or calibrated thresholds. Phase 4 is not complete
+and no workload is authorized by this section.
+
 ## Measurement points
 
 Follow the [leak detection workflow](../leak-detection.md):
