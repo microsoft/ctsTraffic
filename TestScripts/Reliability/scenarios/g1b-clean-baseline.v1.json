@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "G1B-CLEAN-BASELINE",
+  "scenarioVersion": 1,
+  "status": "draft",
+  "scope": {
+    "goal": "1B",
+    "systemClass": "desktop",
+    "topology": "two-vm-private-ab",
+    "roles": {
+      "server": "VM-A",
+      "client": "VM-B"
+    },
+    "guestOs": "Windows 11 Pro",
+    "architecture": "arm64",
+    "requiredSnapshotFields": null
+  },
+  "workload": {
+    "executable": "ctsTraffic.exe",
+    "protocol": "tcp",
+    "io": "iocp",
+    "pattern": "duplex",
+    "addressFamily": "ipv4",
+    "serverAddress": "192.168.1.1",
+    "clientAddress": "192.168.1.2",
+    "connections": 32,
+    "transferBytesPerConnection": 1073741824,
+    "measuredTimeLimitMs": 1800000,
+    "pilotTimeLimitMs": 300000,
+    "warmupIterations": 1,
+    "measuredIterations": 5,
+    "statusUpdateMs": 5000,
+    "verification": "data",
+    "persistentServer": true,
+    "serverArguments": [
+      "-Listen:{serverAddress}",
+      "-Pattern:duplex",
+      "-IO:iocp",
+      "-Transfer:1073741824",
+      "-Verify:data",
+      "-ConnectionFilename:{serverConnectionCsv}",
+      "-StatusFilename:{serverStatusCsv}",
+      "-StatusUpdate:5000"
+    ],
+    "clientArguments": [
+      "-Target:{serverAddress}",
+      "-Bind:{clientAddress}",
+      "-Pattern:duplex",
+      "-IO:iocp",
+      "-Transfer:1073741824",
+      "-Connections:32",
+      "-Verify:data",
+      "-TimeLimit:{timeLimitMs}",
+      "-ConnectionFilename:{clientConnectionCsv}",
+      "-StatusFilename:{clientStatusCsv}",
+      "-StatusUpdate:5000"
+    ]
+  },
+  "instrumentation": {
+    "applicationVerifier": "disabled",
+    "driverVerifier": "disabled",
+    "faultInjection": "none",
+    "sampleIntervalMs": 5000,
+    "noiseFloorSnapshotCount": 3,
+    "noiseFloorIntervalMs": null,
+    "leakSnapshots": ["S0", "S1", "S2", "S3", "S4", "S5"],
+    "quiescence": {
+      "clientsExited": true,
+      "testPortConnectionsRemaining": 0,
+      "cpuBelowPercent": 5,
+      "settleSeconds": 60,
+      "timeoutSeconds": 300,
+      "onTimeout": "capture-not-quiescent-and-mark-leak-analysis-inconclusive"
+    }
+  },
+  "measurements": [
+    {
+      "id": "G1B-00",
+      "source": "approved snapshot and live configuration inventory",
+      "units": ["configuration values"],
+      "capturePoints": ["before setup", "after setup", "after cleanup"],
+      "criterion": "configuration matches the reviewed scenario with no unapproved drift"
+    },
+    {
+      "id": "G1B-01",
+      "source": "ctsTraffic aggregate output and connection CSV",
+      "units": ["count", "percent"],
+      "capturePoints": ["each measured iteration"],
+      "criterion": "account for failures and retries; no unexpected connection failures"
+    },
+    {
+      "id": "G1B-02",
+      "source": "ctsTraffic data verification and error output",
+      "units": ["count"],
+      "capturePoints": ["execution"],
+      "criterion": "completed transfers pass verification with zero integrity errors"
+    },
+    {
+      "id": "G1B-03",
+      "source": "ctsTraffic summary, status time series and connection CSV",
+      "units": ["count", "bytes", "bytes per second"],
+      "capturePoints": ["each measured iteration"],
+      "workTarget": null,
+      "workRateTolerance": null
+    },
+    {
+      "id": "G1B-04",
+      "source": "server process snapshots and client process time series",
+      "units": ["bytes", "count"],
+      "capturePoints": ["S0", "S1", "S2", "S3", "S4", "S5", "each iteration"],
+      "leakThresholds": null
+    },
+    {
+      "id": "G1B-05",
+      "source": "system memory, kernel pool and system handle counters",
+      "units": ["bytes", "count"],
+      "capturePoints": ["noise floor", "S0", "S1", "S2", "S3", "S4", "S5", "time series"],
+      "leakThresholds": null
+    },
+    {
+      "id": "G1B-06",
+      "source": "pool-tag snapshots",
+      "units": ["bytes", "count"],
+      "capturePoints": ["noise floor", "S0", "S1", "S2", "S3", "S4", "S5"],
+      "leakThresholds": null
+    },
+    {
+      "id": "G1B-07",
+      "source": "process exit, process monitor, heartbeat, hang probe, dumps and event logs",
+      "units": ["exit code", "event count"],
+      "capturePoints": ["setup", "execution", "cleanup"],
+      "criterion": "no unexplained process failure, bugcheck, hang, reboot or required-monitor loss"
+    },
+    {
+      "id": "G1B-08",
+      "source": "Application Verifier and Driver Verifier configuration",
+      "units": ["configuration values"],
+      "capturePoints": ["setup", "execution", "cleanup"],
+      "criterion": "both verifiers remain disabled"
+    }
+  ],
+  "safety": {
+    "resourceBounds": null,
+    "stopConditions": null,
+    "monitorLossBehavior": null,
+    "cleanupAndRecovery": null,
+    "allowedOperatorActions": null
+  },
+  "artifacts": {
+    "required": [
+      "connection CSVs",
+      "status CSVs",
+      "process stdout and stderr",
+      "counter time series",
+      "pool snapshots",
+      "verifier state",
+      "resolved run definition"
+    ],
+    "optional": ["TCP info CSV"],
+    "conditional": ["crash and WER dumps when generated"],
+    "paths": null,
+    "completenessRules": null
+  },
+  "outcomeRules": {
+    "acceptancePassRequiresApprovedThresholds": true,
+    "characterizationCanPassAcceptance": false,
+    "missingEvidence": "inconclusive unless an observed failure applies",
+    "observedFailure": "fail",
+    "pilotResults": "never acceptance pass"
+  },
+  "unresolved": [
+    "Required snapshot fields and exact measurement sources and paths",
+    "Noise-floor interval, resource bounds, stop conditions and recovery",
+    "Work target, work-rate tolerance and leak thresholds",
+    "Artifact paths, completeness rules and run-specific selections"
+  ]
+}

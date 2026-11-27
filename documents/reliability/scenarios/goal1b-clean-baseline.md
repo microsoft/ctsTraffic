@@ -103,9 +103,11 @@ growth is normalized per GiB transferred as well as per 1,000 connections.
 
 ## Structured scenario and result contracts
 
-Status: **draft design; no scenario validator or runner exists yet**. Use
-versioned JSON for execution inputs and results, consistent with the lab
-definition. This Markdown remains the human-readable scenario. The JSON
+Status: **draft design; no scenario validator or runner exists yet**. The
+[draft JSON scenario](../../../TestScripts/Reliability/scenarios/g1b-clean-baseline.v1.json)
+records known v1 settings and unresolved values; it is not an executable run
+definition. Use versioned JSON for execution inputs and results, consistent
+with the lab definition. This Markdown remains the human-readable scenario. The JSON
 scenario, the resolved run definition, and the result are distinct documents;
 each has an explicit `schemaVersion`. A run references an immutable scenario
 ID and version, and retains the exact resolved input and its SHA-256.
@@ -146,9 +148,9 @@ artifact inventory records each required or optional file's device, path,
 presence, size and SHA-256 when present. An observed failure is not converted
 to a pilot or inconclusive result merely because other evidence is missing.
 
-This design does not yet provide a JSON scenario, validation implementation,
-approved resource bounds, or calibrated thresholds. Phase 4 is not complete
-and no workload is authorized by this section.
+The draft JSON does not yet provide a validation implementation, approved
+resource bounds, calibrated thresholds, or all required measurement details.
+Phase 4 is not complete and no workload is authorized by this section.
 
 ## Measurement points
 
