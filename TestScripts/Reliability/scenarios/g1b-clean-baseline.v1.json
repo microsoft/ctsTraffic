@@ -23,9 +23,9 @@
     "addressFamily": "ipv4",
     "serverAddress": "192.168.1.1",
     "clientAddress": "192.168.1.2",
-    "connections": 32,
+    "connections": 8,
     "transferBytesPerConnection": 1073741824,
-    "measuredTimeLimitMs": 1800000,
+    "measuredTimeLimitMs": 300000,
     "pilotTimeLimitMs": 300000,
     "warmupIterations": 1,
     "measuredIterations": 5,
@@ -48,7 +48,7 @@
       "-Pattern:duplex",
       "-IO:iocp",
       "-Transfer:1073741824",
-      "-Connections:32",
+      "-Connections:8",
       "-Verify:data",
       "-TimeLimit:{timeLimitMs}",
       "-ConnectionFilename:{clientConnectionCsv}",
@@ -173,6 +173,8 @@
   "unresolved": [
     "Required snapshot fields and exact measurement sources and paths",
     "Noise-floor interval, resource bounds, stop conditions and recovery",
+    "Cutoff-error attribution and persistent baseline server time bound and stop behavior",
+    "Separate duplex pilot arguments and remaining evidence requirements are not represented by these templates",
     "Work target, work-rate tolerance and leak thresholds",
     "Artifact paths, completeness rules and run-specific selections"
   ]

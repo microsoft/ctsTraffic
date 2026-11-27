@@ -59,9 +59,10 @@ criteria or compare their performance numbers directly.
   status and summary, and returns the count of network plus protocol errors as
   its exit code. Treat the time-limit notice as the expected end of the run.
   Connections still in flight at the cutoff are not completed work; the pilot
-  must confirm whether they are counted as errors, and any such cutoff errors
-  are classified as expected end-of-run effects rather than failures. Compare
-  work by completed connections and bytes, normalized per unit time.
+  must confirm whether they are counted as errors and how to attribute them.
+  Only errors supported by evidence as cutoff effects are classified as
+  expected; the time-limit notice alone does not establish their cause.
+  Compare work by completed connections and bytes, normalized per unit time.
 - Capture the work-over-time series with `-StatusFilename` (and optionally
   `-TcpInfoFilename`) so throughput and errors can be compared across the run,
   not only as end totals.

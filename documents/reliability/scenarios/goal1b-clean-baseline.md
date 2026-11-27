@@ -1,9 +1,10 @@
 # G1B-CLEAN-BASELINE — Uninstrumented TCP Work and Memory Baseline
 
-Status: **Draft scenario; execution remains gated**. This is the first concrete
-Goal 1B scenario. Use a reviewed existing workload configuration or optional
-system characterization to resolve parameters. It is not a repeatability or
-leak pass until workload and memory thresholds are approved.
+Status: **Workload plan of record; execution remains gated**. This is the
+first concrete Goal 1B scenario. The workload settings below apply to the
+pilot and baseline unless noted otherwise. The scenario and result contracts
+remain draft; it is not a repeatability or leak pass until workload and memory
+thresholds are approved.
 
 ## Run definition
 
@@ -31,9 +32,10 @@ leak pass until workload and memory thresholds are approved.
 - **Data verification:** explicitly pass ctsTraffic `-Verify:data`.
 - **Duration:** each client iteration uses ctsTraffic `-TimeLimit`. The
   `Time-limit of N reached` notice is the expected end of an iteration.
-  Connections in flight at the cutoff are not completed work; any errors they
-  produce at the cutoff are classified as expected end-of-run effects. The
-  pilot must confirm how ctsTraffic counts them.
+  Connections in flight at the cutoff are not completed work. The pilot must
+  confirm how ctsTraffic counts them and how to identify cutoff-related errors;
+  the time-limit notice alone does not establish that an error was caused by
+  the cutoff.
 - **Iterations:** one discarded warm-up plus five measured iterations on the
   same boot, with ctsTraffic servers kept running across all of them, as
   defined in [leak detection](../leak-detection.md).
@@ -72,11 +74,12 @@ are in [lab configuration](../lab-configuration.md). This scenario adds:
 | Topology | Two VMs on `Private-AB`; VM-A is the server, VM-B the client |
 | Address family | IPv4-only first (`192.168.1.1` server, `192.168.1.2` client); IPv6-only is a separate later run |
 | ctsTraffic binary | Release ARM64 built from this repository; record the commit and SHA-256 |
-| Concurrent connections | 32 |
-| Bytes per connection | 1 GiB (`-Transfer:1073741824`) |
-| Measured iteration length | 30 minutes (`-TimeLimit:1800000`) |
-| Pilot iteration length | 5 minutes (`-TimeLimit:300000`), otherwise identical; pilot results are never a pass |
+| Concurrent connections | 8 (ctsTraffic default) |
+| Bytes per connection | 1 GiB / 1,073,741,824 bytes (ctsTraffic default) |
+| Measured iteration length | 5 minutes (`-TimeLimit:300000`) |
+| Pilot iteration length | 5 minutes (`-TimeLimit:300000`); see the separate pilot below |
 | Iterations | 1 warm-up plus 5 measured, on one boot, persistent server |
+| Server lifetime | Persistent for the baseline series; a safe time bound and stop procedure are unresolved. The pilot alone uses a seven-minute watchdog. |
 | Counter sampling | Every 5 seconds |
 | Status updates | `-StatusUpdate:5000`, matching the counter interval |
 
@@ -91,21 +94,88 @@ Client (VM-B), once per iteration:
 
 ```text
 ctsTraffic.exe -Target:192.168.1.1 -Bind:192.168.1.2 -Pattern:duplex -IO:iocp -Transfer:1073741824
-  -Connections:32 -Verify:data -TimeLimit:1800000
+  -Connections:8 -Verify:data -TimeLimit:300000
   -ConnectionFilename:<dir>\client_conn_<n>.csv -StatusFilename:<dir>\client_status_<n>.csv -StatusUpdate:5000
 ```
 
 `<dir>` is the run's guest output folder and `<n>` the iteration number
-(`0` for warm-up). The pilot must confirm that these options are accepted
-together and how `-TimeLimit` reports connections cut off in flight.
+(`0` for warm-up). Before using these G1B templates, confirm that their
+options are accepted together and how `-TimeLimit` reports connections cut off
+in flight.
+
+Source review of the G1B templates identifies additional execution
+constraints, not a completed pilot:
+
+- The client omits `-Iterations` and `-RateLimit`, so it attempts connections
+  indefinitely at an unlimited configured rate until the time limit. Its
+  8 connections are a concurrency target, not a total-work limit.
+- The server omits `-ServerExitLimit` and `-TimeLimit`, so it has no automatic
+  exit bound. A verified, bounded stop and fallback are required before launch.
+- In duplex mode, the 1 GiB transfer target is the total per connection,
+  split between send and receive, not 1 GiB in each direction.
+- The tool's advanced help describes `-TimeLimit` as an abort cap, whereas
+  this scenario intentionally uses it to end each fixed-duration iteration.
+  The resulting in-flight outcomes and their attribution remain unverified;
+  neither the notice nor timing alone proves an error is expected.
+
+These observations come from `ctsConfig.cpp`, `ctsSocketBroker.cpp`,
+`ctsIOPattern.cpp`, and `ctsTraffic.cpp`; they do not prove the staged binary
+behaves as intended under load. The pilot still requires a reviewed safety
+envelope, monitoring, stop procedure, and explicit approval.
 
 Pass/fail thresholds are not part of v1. The work-rate tolerance and leak
 thresholds are proposed from 3 pilot leak series and approved by the lab owner
 (see [leak detection](../leak-detection.md#analysis)). Until then, every run of
 this configuration is pilot or characterization only.
 
-Because each iteration completes relatively few connections (1 GiB each), leak
-growth is normalized per GiB transferred as well as per 1,000 connections.
+Leak growth is normalized per GiB transferred as well as per 1,000 connections;
+the number of completed connections per iteration remains to be measured.
+
+## Five-minute duplex pilot
+
+The operator selected a separate five-minute pilot using duplex, explicit
+logging, and otherwise the tool's defaults. Subject to verifying the test
+addresses and resolving the unique guest output directory, the proposed
+commands are:
+
+```text
+C:\ctsReliability\tools\ctsTraffic.exe -Listen:192.168.1.1 -Pattern:duplex -TimeLimit:420000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-server-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-server-error.log -StatusFilename:<run-dir>\g1b-pilot-server-status.csv
+C:\ctsReliability\tools\ctsTraffic.exe -Target:192.168.1.1 -Pattern:duplex -TimeLimit:300000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-client-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-client-error.log -StatusFilename:<run-dir>\g1b-pilot-client-status.csv
+```
+
+`<run-dir>` is a separately resolved, unique directory on each guest; these
+are command templates, not shell-ready commands. `-StatusFilename` selects
+the status CSV; `-StatusUpdate` takes an interval in milliseconds, not a
+filename. It is omitted here, retaining the 5000 ms default.
+
+VM-A is the server and VM-B is the client. The client time limit begins after
+its own launch; it does not stop the server. The server's seven-minute time
+limit is an operator-selected watchdog and starts when the server starts, so
+the controller must ensure enough server time remains for the client.
+The server and client `-TimeLimit` options are abort caps, not guarantees of
+graceful connection completion. `-ServerExitLimit` is not a time limit: it
+counts accepted connections and is not specified in this pilot.
+Defaults include TCP/IOCP, data verification, eight concurrent client
+connections, a 1 GiB total transfer per connection, unlimited iterations, and
+no configured rate limit. The client
+does not specify a bind address, so the chosen source interface must be
+verified before use.
+
+The operator selected stop thresholds of 100 MiB free memory and 10 GiB free
+disk on each guest. The latter leaves a nominal margin over the 8 GiB guest
+memory size for a complete dump. A working controller must monitor both
+guests, stop on a threshold breach or loss of required monitoring, and handle
+unexpected exit, watchdog expiration, and bounded cleanup. Threshold sampling
+does not guarantee free space cannot fall below the limit between samples.
+
+The requested logs supply connection, error, and status evidence; they do not
+by themselves establish an outcome or replace original stdout, stderr,
+commands, exit codes, and the other required observations. Resolve the
+remaining evidence requirements and verify the monitoring and bounded cleanup
+before execution. The current preliminary scenario check still blocks
+execution; no pilot runner or complete preflight exists. This pilot is not an
+acceptance pass and is not represented by the G1B JSON argument templates
+below.
 
 ## Structured scenario and result contracts
 
@@ -185,7 +255,7 @@ without meeting the quiescence gate.
 | Criterion ID | Measurement | Source / unit / capture points | Success criterion |
 | --- | --- | --- | --- |
 | G1B-00 | Environment/configuration conformance | Approved snapshot compared with live Hyper-V VM, vSwitch/switch-port/vNIC and guest OS/network configuration; before setup, after setup, and after cleanup | Actual configuration matches the reviewed scenario before execution; owned VMs/switches remain reusable with no unapproved drift after cleanup. Compare final state to the approved post-setup state; account explicitly for dynamic neighbor/cache changes. |
-| G1B-01 | Connection attempts, successes, failures, retries, and success rate | ctsTraffic aggregate output and `-ConnectionFilename` CSV; counts and percent (successful completions / attempts); each measured iteration | Every failure is accounted for; zero unexpected connection failures in this no-fault run. Errors from connections in flight at the `-TimeLimit` cutoff are classified as expected end-of-run effects. Report retries separately; they do not erase failed attempts. |
+| G1B-01 | Connection attempts, successes, failures, retries, and success rate | ctsTraffic aggregate output and `-ConnectionFilename` CSV; counts and percent (successful completions / attempts); each measured iteration | Every failure is accounted for; zero unexpected connection failures in this no-fault run. Classify an error as a cutoff effect only with evidence supporting that attribution; unresolved errors are not automatically expected. Report retries separately; they do not erase failed attempts. |
 | G1B-02 | Payload correctness | ctsTraffic `-Verify:data` result and error output; verified transfers and error count; entire execution | All completed transfers pass data verification; zero data-integrity errors. |
 | G1B-03 | Completed work and work rate | ctsTraffic summary, `-StatusFilename` time series, and CSV; completed connections and transferred bytes per `-TimeLimit` iteration | Each measured iteration meets the resolved work target, and iteration-to-iteration variance is within the approved tolerance. Without an approved target and tolerance, execution is characterization only. |
 | G1B-04 | User-mode memory | Persistent server process (private bytes, handles, threads) at `S0` … `S5`; client process time series per iteration | No metric flagged by the [leak detection](../leak-detection.md) analysis. Thresholds are TBD; do not claim a leak pass until they are approved. |

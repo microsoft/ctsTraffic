@@ -65,8 +65,8 @@ extensions.
   and require it before any characterization pilot or scenario workload.
   Counters alone are not sufficient for this first scenario.
 - **Fixed duration:** Goal 1B iterations use ctsTraffic `-TimeLimit`; the
-  time-limit notice is the expected end, and cutoff errors are classified as
-  expected end-of-run effects (see [goals](goals-and-scenarios.md)).
+  time-limit notice is the expected end. Classifying an error as a cutoff
+  effect requires supporting evidence (see [goals](goals-and-scenarios.md)).
 - **Leak detection:** use the [leak detection workflow](leak-detection.md)
   with persistent servers, a noise floor, a discarded warm-up, and five
   measured iterations.
