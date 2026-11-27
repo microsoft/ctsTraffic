@@ -62,3 +62,40 @@ Describe 'Get-CtsTrafficTcpSummary' {
         { Get-CtsTrafficTcpSummary -Path (Join-Path $TestDrive 'missing.txt') } | Should -Throw
     }
 }
+
+Describe 'Get-CtsTrafficTcpConnectionResults' {
+    BeforeAll {
+        $script:ConnectionHeader = 'TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId'
+    }
+
+    It 'counts recorded success and error results from a UTF-16 TCP CSV' {
+        $path = Join-Path $TestDrive 'connections.csv'
+        [System.IO.File]::WriteAllLines($path, @(
+                $script:ConnectionHeader
+                '1.000,192.168.1.1:4444,192.168.1.2:50000,10,20,10,20,1000,Succeeded,id1'
+                '2.000,192.168.1.1:4444,192.168.1.2:50001,0,0,0,0,0,10054: reset,id2'
+                '3.000,192.168.1.1:4444,192.168.1.2:50002,10,20,10,20,1000,Succeeded,id3'
+            ), [System.Text.Encoding]::Unicode)
+        $summary = Get-CtsTrafficTcpConnectionResults -Path $path
+        $summary.RecordedRows | Should -Be 3
+        @($summary.ResultCounts | Where-Object Result -eq 'Succeeded')[0].Count | Should -Be 2
+        @($summary.ResultCounts | Where-Object Result -eq '10054: reset')[0].Count | Should -Be 1
+    }
+
+    It 'reports no recorded results for a header-only file' {
+        $path = Write-OutputFixture 'empty-connections.csv' @($script:ConnectionHeader)
+        $summary = Get-CtsTrafficTcpConnectionResults -Path $path
+        $summary.RecordedRows | Should -Be 0
+        $summary.ResultCounts | Should -BeNullOrEmpty
+    }
+
+    It 'rejects incompatible headers and malformed or truncated records' {
+        $badHeader = Write-OutputFixture 'wrong-header.csv' @('not a TCP CSV')
+        { Get-CtsTrafficTcpConnectionResults -Path $badHeader } | Should -Throw '*header*'
+        $truncated = Write-OutputFixture 'truncated-row.csv' @($script:ConnectionHeader, '1.000,a,b,1,2')
+        { Get-CtsTrafficTcpConnectionResults -Path $truncated } | Should -Throw '*line 2*'
+        $invalid = Write-OutputFixture 'invalid-row.csv' @($script:ConnectionHeader, '1.000,a,b,NaN,2,1,2,100,Succeeded,id')
+        { Get-CtsTrafficTcpConnectionResults -Path $invalid } | Should -Throw '*line 2*'
+        { Get-CtsTrafficTcpConnectionResults -Path (Join-Path $TestDrive 'missing.csv') } | Should -Throw
+    }
+}

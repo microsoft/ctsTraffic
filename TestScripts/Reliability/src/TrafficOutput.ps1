@@ -25,6 +25,7 @@ function Get-CtsTrafficTcpSummary {
                 $headerCount++
                 if ($headerCount -eq 1) { $capturing = $true }
             }
+
             if (-not $capturing) { continue }
             $characters += $line.Length + 2
             if ($characters -gt 65536) {
@@ -76,5 +77,53 @@ function Get-CtsTrafficTcpSummary {
         Complete   = $null -eq $issue
         Summary    = $summary
         Issue      = $issue
+    }
+}
+
+function Get-CtsTrafficTcpConnectionResults {
+    <#
+    .SYNOPSIS
+    Summarizes recorded results from a collected ctsTraffic TCP connection CSV.
+    .DESCRIPTION
+    Counts the result strings in the native TCP CSV. This does not establish
+    that the file is complete, count all attempts, or classify a run outcome.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    $header = 'TimeSlice,LocalAddress,RemoteAddress,SendBytes,SendBps,RecvBytes,RecvBps,TimeMs,Result,ConnectionId'
+    $results = [System.Collections.Generic.Dictionary[string, long]]::new([StringComparer]::Ordinal)
+    $reader = [System.IO.StreamReader]::new($Path, [System.Text.Encoding]::UTF8, $true)
+    $count = [long]0
+    try {
+        if ($reader.ReadLine() -cne $header) {
+            throw 'Not a supported ctsTraffic TCP connection CSV header.'
+        }
+        $lineNumber = 1
+        while ($null -ne ($line = $reader.ReadLine())) {
+            $lineNumber++
+            $fields = $line.Split(',')
+            if ($fields.Count -ne 10 -or
+                $fields[0] -cnotmatch '^\d+(\.\d+)?$' -or
+                @($fields[3..7] | Where-Object { $_ -cnotmatch '^\d+$' }).Count -ne 0 -or
+                [string]::IsNullOrWhiteSpace($fields[8])) {
+                throw "Invalid TCP connection CSV record on line $lineNumber."
+            }
+            $result = $fields[8]
+            if (-not $results.ContainsKey($result)) { $results[$result] = 0 }
+            $results[$result]++
+            $count++
+        }
+    }
+    finally {
+        $reader.Dispose()
+    }
+
+    [pscustomobject]@{
+        Path          = $Path
+        RecordedRows  = $count
+        ResultCounts  = @($results.GetEnumerator() | Sort-Object Key | ForEach-Object {
+                [pscustomobject]@{ Result = $_.Key; Count = $_.Value }
+            })
     }
 }

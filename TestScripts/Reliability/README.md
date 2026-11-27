@@ -57,6 +57,11 @@ stdout file and reports whether a complete TCP summary is present. It does not
 run ctsTraffic, collect files, classify the result, or replace the original
 stdout and exit code.
 
+`Get-CtsTrafficTcpConnectionResults -Path <connection-csv>` counts the result
+strings in a collected TCP connection CSV. It does not prove the file is
+complete, count every attempt, or determine the run outcome. The reader has
+only been checked against synthetic CSVs, not an actual traffic run.
+
 Pool-tag CSV usage values and comparison deltas are **bytes**; allocation,
 free, and outstanding-allocation values are counts. New CSV headings include
 the units. The comparison script also accepts older CSVs with unlabeled
