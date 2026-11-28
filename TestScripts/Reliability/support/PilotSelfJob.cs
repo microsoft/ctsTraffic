@@ -99,4 +99,42 @@ namespace CtsReliability
             }
         }
     }
+
+    public static class PilotResources
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MemoryStatus
+        {
+            public uint Length, MemoryLoad;
+            public ulong TotalPhysical, AvailablePhysical;
+            public ulong TotalPageFile, AvailablePageFile;
+            public ulong TotalVirtual, AvailableVirtual, AvailableExtendedVirtual;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GlobalMemoryStatusEx(ref MemoryStatus status);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetDiskFreeSpaceExW(
+            string directory, out ulong available, out ulong total, out ulong free);
+
+        public static ulong AvailableMemoryBytes()
+        {
+            var status = new MemoryStatus();
+            status.Length = (uint)Marshal.SizeOf(typeof(MemoryStatus));
+            if (!GlobalMemoryStatusEx(ref status))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not read available memory.");
+            return status.AvailablePhysical;
+        }
+
+        public static ulong AvailableDiskBytes(string directory)
+        {
+            ulong available, total, free;
+            if (!GetDiskFreeSpaceExW(directory, out available, out total, out free))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not read available disk space.");
+            return available;
+        }
+    }
 }

@@ -67,11 +67,12 @@ handles. An optional job wait timeout reports an unknown outcome on timeout;
 it does not bound job submission or cleanup, or establish that a timed-out
 start did not execute. These helpers are not a complete pilot controller.
 
-`support\PilotSelfJob.cs` is an experimental containment primitive for a
-dedicated guardian process; entering its job permanently confines that process.
-It is not yet integrated with pilot launch or monitoring. Losing a remote
-session alone does not ensure the guardian exits; a separate monitor-loss
-watchdog is still required.
+`support\PilotGuardian.ps1` is an experimental standalone guardian. It confines
+itself and its child to a kill-on-close job and watches a heartbeat, local
+memory and disk, and a separate lifetime limit. It is not integrated into a
+pilot controller; the host heartbeat, coordinated start, recovery, and
+preflight are still required. Sampling cannot prevent a resource breach
+between checks, and a stalled guardian cannot be assumed to enforce its limit.
 
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not

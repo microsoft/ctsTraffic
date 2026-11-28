@@ -171,6 +171,9 @@ memory size for a complete dump. A working controller must monitor both
 guests, stop on a threshold breach or loss of required monitoring, and handle
 unexpected exit, watchdog expiration, and bounded cleanup. Threshold sampling
 does not guarantee free space cannot fall below the limit between samples.
+The operator approved `RemoteSigned` for each dedicated guardian process so
+it can run its locally staged script; this does not change the persistent
+guest execution policy.
 
 Use the connection CSV and error log to inspect recorded outcomes, and the
 status CSV and recorded process timestamps to assess progress and elapsed
