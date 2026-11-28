@@ -81,6 +81,12 @@ a guest session. A timeout, remoting error, or logging failure leaves the
 outcome unknown; the wait timeout does not bound submission or job cleanup.
 The helper is not a continuous monitor or a pilot controller.
 
+An internal experimental guardian launcher creates a heartbeat and starts an
+already-staged guardian using the session-owned process helper. A successful
+start does not prove that the guardian initialized or that its child started.
+An uncertain start must not be retried as if no process was launched; the
+launcher neither stages or verifies files nor implements coordinated recovery.
+
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.

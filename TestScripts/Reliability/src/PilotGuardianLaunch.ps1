@@ -1,0 +1,45 @@
+# Starts an already-staged experimental guardian; this does not authorize traffic.
+
+function Start-CtsPilotGuardian {
+    param(
+        [Parameter(Mandatory)]$GuestSession,
+        [Parameter(Mandatory)][string]$Directory,
+        [Parameter(Mandatory)][ValidateSet('Server', 'Client')][string]$Role,
+        [Parameter(Mandatory)][string]$Token,
+        [Parameter(Mandatory)][string]$PowerShellPath,
+        [Parameter(Mandatory)][ValidateRange(1, 600)][int]$TimeoutSeconds
+    )
+
+    if ($Token -cnotmatch '^[0-9a-f]{32}$') { throw 'Invalid guardian process token.' }
+    if ($Directory -notmatch '^[Cc]:\\[^\\]' -or $Directory -match '[\s"<>|?*\x00-\x1f]' -or
+        $Directory.Substring(2) -match ':' -or
+        @($Directory.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0) {
+        throw 'Guardian directory must be a non-root C: path without whitespace or dot segments.'
+    }
+    if ($PowerShellPath -notmatch '^[A-Za-z]:\\' -or $PowerShellPath -match '[\s"<>|?*\x00-\x1f]' -or
+        $PowerShellPath.Substring(2) -match ':' -or
+        @($PowerShellPath.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0 -or
+        [IO.Path]::GetFileName($PowerShellPath) -ine 'powershell.exe') {
+        throw 'Guardian host must be an absolute Windows PowerShell executable path without whitespace or dot segments.'
+    }
+
+    $scriptPath = [IO.Path]::Combine($Directory, 'PilotGuardian.ps1')
+    $specPath = [IO.Path]::Combine($Directory, 'spec.json')
+    $prefix = 'g1b-pilot-' + $Role.ToLowerInvariant() + '-guardian-process'
+    $stdoutPath = [IO.Path]::Combine($Directory, "$prefix-stdout.txt")
+    $stderrPath = [IO.Path]::Combine($Directory, "$prefix-stderr.txt")
+
+    $heartbeat = Write-CtsPilotHeartbeat -GuestSession $GuestSession -Directory $Directory -Action Create -TimeoutSeconds $TimeoutSeconds
+    $process = Invoke-CtsPilotProcessAction -GuestSession $GuestSession -Action Start -Token $Token -FilePath $PowerShellPath `
+        -Arguments @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', $scriptPath, '-SpecPath', $specPath) `
+        -StdoutPath $stdoutPath -StderrPath $stderrPath -TimeoutSeconds $TimeoutSeconds
+
+    [pscustomobject]@{
+        Token = $Token
+        ProcessId = $process.ProcessId
+        StartedUtc = $process.StartedUtc
+        HeartbeatPath = $heartbeat.Path
+        StdoutPath = $stdoutPath
+        StderrPath = $stderrPath
+    }
+}
