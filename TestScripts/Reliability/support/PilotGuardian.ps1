@@ -157,7 +157,7 @@ finally {
     }
     if ($null -ne $stdout) { $stdout.Dispose() }
     if ($null -ne $stderr) { $stderr.Dispose() }
-    if ($processPinned) { $processHandle.DangerousRelease() }
+    # Keep the child PID pinned until this dedicated guardian process exits.
     if ($null -ne $process) { $process.Dispose() }
 }
 

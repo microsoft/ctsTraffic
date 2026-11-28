@@ -100,6 +100,18 @@ or unknown result is not proof that no child started. Its timeout does not
 bound remote submission, cleanup, or blocking calls, and it does not coordinate
 or authorize a run.
 
+An internal one-shot listener observation checks the server's exact IPv4
+address, port, and child PID without making a connection, while pulsing and
+checking the tracked guardian before and after the query. It requires matching
+startup and launch receipts and assumes their event file is trustworthy. A
+positive result is only a point-in-time observation, not proof of client
+reachability or continuing readiness. The caller must maintain heartbeats
+afterward and for any other running guardian. Remote calls may block beyond the
+job wait timeout. This check is not a coordinated startup or authorization.
+The guardian retains the child's process handle until it exits, preventing PID
+reuse while its liveness checks bracket the observation. Older staged guardians
+do not provide this guarantee and must not be used for this check.
+
 An internal staging helper exclusively creates the guardian script, native
 source, and specification in a supplied guest directory and checks their
 SHA-256 hashes after writing. A failed or interrupted staging operation can

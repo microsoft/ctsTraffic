@@ -65,6 +65,11 @@ Describe 'guardian startup observer' {
                 -Launch $Launch -StartupTimeoutSeconds 2 -PollSeconds 1 -TimeoutSeconds 2
             $result.Outcome | Should -Be 'ChildStarted'
             $result.ChildProcessId | Should -Be 123
+            $result.Token | Should -Be $Launch.Token
+            $result.GuardianProcessId | Should -Be $Launch.ProcessId
+            $result.Directory | Should -Be 'C:\runs\pilot'
+            $result.Role | Should -Be 'Server'
+            $result.Target | Should -Be 'A'
         }
         Should -Invoke -ModuleName CtsReliability Write-CtsPilotHeartbeat -Times 1 -Exactly -ParameterFilter { $Action -eq 'Pulse' }
         Should -Invoke -ModuleName CtsReliability Invoke-CtsPilotProcessAction -Times 2 -Exactly -ParameterFilter {

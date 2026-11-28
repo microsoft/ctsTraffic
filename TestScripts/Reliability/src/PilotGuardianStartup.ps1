@@ -99,7 +99,11 @@ function Wait-CtsPilotGuardianStartup {
                 if ($status.Exited) {
                     return [pscustomobject]@{ Outcome = 'GuardianExited'; ChildProcessId = $event.ChildProcessId; Error = $null }
                 }
-                return [pscustomobject]@{ Outcome = 'ChildStarted'; ChildProcessId = $event.ChildProcessId; Error = $null }
+                return [pscustomobject]@{
+                    Outcome = 'ChildStarted'; ChildProcessId = $event.ChildProcessId; Error = $null
+                    Token = $token; GuardianProcessId = $guardianId; Directory = $Directory; Role = $Role
+                    Target = $GuestSession.Target
+                }
             }
             if ($clock.Elapsed.TotalSeconds -ge $StartupTimeoutSeconds) { break }
             Start-Sleep -Seconds ([Math]::Min($PollSeconds, [Math]::Max(1, [Math]::Ceiling($StartupTimeoutSeconds - $clock.Elapsed.TotalSeconds))))
