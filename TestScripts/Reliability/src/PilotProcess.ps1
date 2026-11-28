@@ -137,9 +137,66 @@ function Invoke-CtsPilotProcessAction {
         [string[]]$Arguments = @(),
         [string]$StdoutPath = '',
         [string]$StderrPath = '',
-        [ValidateRange(1, 60000)][int]$WaitMilliseconds = 5000
+        [ValidateRange(1, 60000)][int]$WaitMilliseconds = 5000,
+        [ValidateRange(0, 600)][int]$TimeoutSeconds = 0
     )
-    Invoke-CtsGuestCommand -GuestSession $GuestSession -ScriptBlock $script:CtsPilotProcessScript `
-        -ArgumentList @($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds) `
-        -Operation "PilotProcess:$Action"
+    $remoteArguments = @($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds)
+    $processAction = $Action
+    if ($TimeoutSeconds -eq 0) {
+        Invoke-CtsGuestCommand -GuestSession $GuestSession -ScriptBlock $script:CtsPilotProcessScript `
+            -ArgumentList $remoteArguments -Operation "PilotProcess:$Action"
+        return
+    }
+
+    try {
+        Invoke-CtsLogged -Operation "PilotProcess:$Action" -Channel $GuestSession.Channel -Target $GuestSession.Target -LogPath $GuestSession.LogPath -Action {
+            $job = $null
+            try {
+                $job = Invoke-Command -Session $GuestSession.Session -ScriptBlock $script:CtsPilotProcessScript -ArgumentList $remoteArguments -AsJob -ErrorAction Stop
+                if ($null -eq (Wait-Job -Job $job -Timeout $TimeoutSeconds -ErrorAction Stop)) {
+                    throw "Timed out after $TimeoutSeconds seconds."
+                }
+                if ($job.State -ne 'Completed') {
+                    throw "Job ended in state '$($job.State)'."
+                }
+                $results = @(Receive-Job -Job $job -ErrorAction Stop)
+                if ($results.Count -ne 1) { throw 'Did not return exactly one result.' }
+                $result = $results[0]
+                $pidValue = Get-CtsProp $result 'ProcessId'
+                if ((Get-CtsProp $result 'Token') -cne $Token -or
+                    ($pidValue -isnot [int] -and $pidValue -isnot [long]) -or $pidValue -le 0) {
+                    throw 'Process result has an invalid token or process ID.'
+                }
+                if ($processAction -eq 'Start') {
+                    $started = Get-CtsProp $result 'StartedUtc'
+                    $parsed = [DateTimeOffset]::MinValue
+                    if ($started -isnot [string] -or $started -notmatch 'Z$' -or
+                        -not [DateTimeOffset]::TryParse($started, [ref]$parsed)) {
+                        throw 'Process result has an invalid start time.'
+                    }
+                }
+                if ($processAction -in 'Status', 'Stop') {
+                    $exited = Get-CtsProp $result 'Exited'
+                    if ($exited -isnot [bool] -or ($processAction -eq 'Stop' -and -not $exited)) {
+                        throw 'Process result has an invalid exit state.'
+                    }
+                }
+                if ($processAction -in 'Status', 'Stop', 'Complete') {
+                    $exitCode = Get-CtsProp $result 'ExitCode'
+                    if (-not (Test-CtsHasProp $result 'ExitCode') -or
+                        (($processAction -ne 'Status' -or $exited) -and $exitCode -isnot [int]) -or
+                        ($processAction -eq 'Status' -and -not $exited -and $null -ne $exitCode)) {
+                        throw 'Process result has an invalid exit code.'
+                    }
+                }
+                return $result
+            }
+            finally {
+                if ($null -ne $job) { Remove-Job -Job $job -Force -ErrorAction SilentlyContinue }
+            }
+        }
+    }
+    catch {
+        throw "Pilot process $Action did not complete reliably; its outcome is unknown: $($_.Exception.Message)"
+    }
 }

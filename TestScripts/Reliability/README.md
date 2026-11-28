@@ -63,8 +63,9 @@ monitor loop, complete preflight, or authorization to run traffic.
 Internal pilot-process helpers retain process handles in a guest session and
 create stdout/stderr files exclusively. Forced stop targets the tracked PID
 while its original handle is pinned. Loss of the session also loses the
-handles, and process wait limits do not bound the remote call itself. These
-helpers are not a complete or verified pilot controller.
+handles. An optional job wait timeout reports an unknown outcome on timeout;
+it does not bound job submission or cleanup, or establish that a timed-out
+start did not execute. These helpers are not a complete pilot controller.
 
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not

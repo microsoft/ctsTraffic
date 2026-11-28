@@ -16,6 +16,107 @@ Describe 'session-owned pilot process operations' {
         $script:Stderr = Join-Path $TestDrive "$($script:Token)-stderr.txt"
     }
 
+    Describe 'timed pilot process operations' {
+        BeforeAll {
+            $script:Guest = [pscustomobject]@{ Session = (New-MockObject -Type ([System.Management.Automation.Runspaces.PSSession])); Channel = 'Direct'; Target = 'vm'; LogPath = '' }
+            $script:CompletedJob = Start-Job -ScriptBlock { }
+            $null = Wait-Job -Job $script:CompletedJob
+            $script:FailedJob = Start-Job -ScriptBlock { throw 'job failed' }
+            $null = Wait-Job -Job $script:FailedJob
+        }
+
+        AfterAll {
+            Remove-Job -Job $script:CompletedJob -Force -ErrorAction SilentlyContinue
+            Remove-Job -Job $script:FailedJob -Force -ErrorAction SilentlyContinue
+        }
+
+        BeforeEach {
+            Mock -ModuleName CtsReliability Invoke-Command { $script:CompletedJob }
+            Mock -ModuleName CtsReliability Wait-Job { $script:CompletedJob }
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; Exited = $false; ExitCode = $null } }
+            Mock -ModuleName CtsReliability Remove-Job { }
+        }
+
+        It 'returns the remote result and removes the job' {
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                $result = Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Status -Token ('a' * 32) -TimeoutSeconds 10
+                $result.ProcessId | Should -Be 123
+            }
+            Should -Invoke -ModuleName CtsReliability Invoke-Command -Times 1 -Exactly -ParameterFilter { $AsJob }
+            Should -Invoke -ModuleName CtsReliability Remove-Job -Times 1 -Exactly
+        }
+
+        It 'reports an unknown outcome on timeout and removes the job' {
+            Mock -ModuleName CtsReliability Wait-Job { }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Start -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*outcome is unknown*'
+            }
+            Should -Invoke -ModuleName CtsReliability Remove-Job -Times 1 -Exactly
+        }
+
+        It 'rejects failed jobs and missing results' {
+            Mock -ModuleName CtsReliability Invoke-Command { $script:FailedJob }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Stop -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*outcome is unknown*'
+            }
+            Mock -ModuleName CtsReliability Invoke-Command { $script:CompletedJob }
+            Mock -ModuleName CtsReliability Receive-Job { }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Status -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*exactly one result*'
+            }
+        }
+
+        It 'treats submission errors and mismatched process identity as unknown outcomes' {
+            Mock -ModuleName CtsReliability Invoke-Command { throw 'submission failed' }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Start -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*outcome is unknown*'
+            }
+            Mock -ModuleName CtsReliability Invoke-Command { $script:CompletedJob }
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('b' * 32); ProcessId = 123; Exited = $false } }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Status -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*invalid token*'
+            }
+        }
+
+        It 'rejects malformed status and reports logging failure as an unknown outcome' {
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; Exited = $true } }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Status -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*invalid exit code*'
+            }
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; Exited = $false; ExitCode = $null } }
+            Mock -ModuleName CtsReliability Write-CtsLogEntry { throw 'simulated logging failure' }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Status -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*outcome is unknown*'
+            }
+        }
+
+        It 'rejects incomplete start, stop, and completion responses' {
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; StartedUtc = 'invalid' } }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Start -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*invalid start time*'
+            }
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; Exited = $false; ExitCode = $null } }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Stop -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*invalid exit state*'
+            }
+            Mock -ModuleName CtsReliability Receive-Job { [pscustomobject]@{ Token = ('a' * 32); ProcessId = 123; ExitCode = $null } }
+            InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest } {
+                param($Guest)
+                { Invoke-CtsPilotProcessAction -GuestSession $Guest -Action Complete -Token ('a' * 32) -TimeoutSeconds 1 } | Should -Throw '*invalid exit code*'
+            }
+        }
+    }
+
     It 'retains a process handle, collects raw output, and preserves the exit code' {
         $encoded = Encode-TestCommand '[Console]::Out.Write("out"); [Console]::Error.Write("err"); exit 7'
         InModuleScope CtsReliability -Parameters @{ Token = $script:Token; Exe = $script:PowerShellPath; Encoded = $encoded; OutFile = $script:Stdout; ErrFile = $script:Stderr } {
