@@ -77,7 +77,7 @@ are in [lab configuration](../lab-configuration.md). This scenario adds:
 | Concurrent connections | 8 (ctsTraffic default) |
 | Bytes per connection | 1 GiB / 1,073,741,824 bytes (ctsTraffic default) |
 | Measured iteration length | 5 minutes (`-TimeLimit:300000`) |
-| Pilot iteration length | 5 minutes (`-TimeLimit:300000`); see the separate pilot below |
+| Pilot | 1,024 connection attempts, with a five-minute client time cap; see the separate pilot below |
 | Iterations | 1 warm-up plus 5 measured, on one boot, persistent server |
 | Server lifetime | Persistent for the baseline series; a safe time bound and stop procedure are unresolved. The pilot alone uses a seven-minute watchdog. |
 | Counter sampling | Every 5 seconds |
@@ -131,16 +131,18 @@ this configuration is pilot or characterization only.
 Leak growth is normalized per GiB transferred as well as per 1,000 connections;
 the number of completed connections per iteration remains to be measured.
 
-## Five-minute duplex pilot
+## 1,024-connection duplex pilot
 
-The operator selected a separate five-minute pilot using duplex, explicit
-logging, and otherwise the tool's defaults. Subject to verifying the test
+The operator selected a separate pilot targeting 1,024 connection attempts,
+using duplex, explicit logging, and otherwise the tool's defaults. The
+five-minute client and seven-minute server caps remain safety limits, so the
+pilot may stop before reaching its target. Subject to verifying the test
 addresses and resolving the unique guest output directory, the proposed
 commands are:
 
 ```text
-C:\ctsReliability\tools\ctsTraffic.exe -Listen:192.168.1.1 -Pattern:duplex -TimeLimit:420000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-server-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-server-error.log -StatusFilename:<run-dir>\g1b-pilot-server-status.csv
-C:\ctsReliability\tools\ctsTraffic.exe -Target:192.168.1.1 -Pattern:duplex -TimeLimit:300000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-client-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-client-error.log -StatusFilename:<run-dir>\g1b-pilot-client-status.csv
+C:\ctsReliability\tools\ctsTraffic.exe -Listen:192.168.1.1 -Pattern:duplex -ServerExitLimit:1024 -TimeLimit:420000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-server-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-server-error.log -StatusFilename:<run-dir>\g1b-pilot-server-status.csv
+C:\ctsReliability\tools\ctsTraffic.exe -Target:192.168.1.1 -Pattern:duplex -Iterations:128 -TimeLimit:300000 -ConsoleVerbosity:0 -ConnectionFilename:<run-dir>\g1b-pilot-client-connection.csv -ErrorFilename:<run-dir>\g1b-pilot-client-error.log -StatusFilename:<run-dir>\g1b-pilot-client-status.csv
 ```
 
 `<run-dir>` is a separately resolved, unique directory on each guest; these
@@ -153,11 +155,13 @@ its own launch; it does not stop the server. The server's seven-minute time
 limit is an operator-selected watchdog and starts when the server starts, so
 the controller must ensure enough server time remains for the client.
 The server and client `-TimeLimit` options are abort caps, not guarantees of
-graceful connection completion. `-ServerExitLimit` is not a time limit: it
-counts accepted connections and is not specified in this pilot.
+graceful connection completion. `-ServerExitLimit` counts server connections,
+not time; the server watchdog remains necessary if fewer than 1,024 arrive.
 Defaults include TCP/IOCP, data verification, eight concurrent client
-connections, a 1 GiB total transfer per connection, unlimited iterations, and
-no configured rate limit. The client
+connections, a 1 GiB total transfer per connection, and no configured rate
+limit. With eight concurrent connections, 128 client iterations target 1,024
+attempts, not necessarily 1,024 successes. Completing all 1,024 transfers
+would transfer 1 TiB in total per endpoint. The client
 does not specify a bind address, so the chosen source interface must be
 verified before use.
 
@@ -168,14 +172,17 @@ guests, stop on a threshold breach or loss of required monitoring, and handle
 unexpected exit, watchdog expiration, and bounded cleanup. Threshold sampling
 does not guarantee free space cannot fall below the limit between samples.
 
-The requested logs supply connection, error, and status evidence; they do not
-by themselves establish an outcome or replace original stdout, stderr,
-commands, exit codes, and the other required observations. Resolve the
-remaining evidence requirements and verify the monitoring and bounded cleanup
-before execution. The current preliminary scenario check still blocks
-execution; no pilot runner or complete preflight exists. This pilot is not an
-acceptance pass and is not represented by the G1B JSON argument templates
-below.
+Use the connection CSV and error log to inspect recorded outcomes, and the
+status CSV and recorded process timestamps to assess progress and elapsed
+time. Record attempts, successes, failures, and whether either time cap ended
+the run; an incomplete or failed target is not a successful 1,024-connection
+run. Keep original stdout, stderr, commands, exit codes, and the other required
+observations: the CSV alone does not establish that all attempts were recorded.
+Resolve the remaining evidence requirements and verify the monitoring and
+bounded cleanup before execution. The current preliminary scenario check
+still blocks execution; no pilot runner or complete preflight exists. This
+pilot is not an acceptance pass and is not represented by the G1B JSON
+argument templates below.
 
 ## Structured scenario and result contracts
 
