@@ -89,6 +89,17 @@ An uncertain start must not be retried as if no guardian was launched.
 Do not use previously staged guardians: older versions also stop children for
 resource thresholds or their own lifetime cutoff.
 
+An internal startup observer pulses one launched guardian while reading its
+child-start event and checking the tracked guardian process. A start event is
+historical evidence, not proof the child is still alive or listening on TCP;
+the child PID must not be used to stop a process. It assumes the receipt and
+event file belong to the same reserved run and does not prevent tampering.
+The caller must immediately continue heartbeats for a running guardian after
+the observer returns; otherwise heartbeat loss can stop its child. A timeout
+or unknown result is not proof that no child started. Its timeout does not
+bound remote submission, cleanup, or blocking calls, and it does not coordinate
+or authorize a run.
+
 An internal staging helper exclusively creates the guardian script, native
 source, and specification in a supplied guest directory and checks their
 SHA-256 hashes after writing. A failed or interrupted staging operation can
