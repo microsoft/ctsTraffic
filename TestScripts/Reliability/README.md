@@ -87,6 +87,14 @@ start does not prove that the guardian initialized or that its child started.
 An uncertain start must not be retried as if no process was launched; the
 launcher neither stages or verifies files nor implements coordinated recovery.
 
+An internal staging helper exclusively creates the guardian script, native
+source, and specification in a supplied guest directory and checks their
+SHA-256 hashes after writing. A failed or interrupted staging operation can
+leave partial files; it must not be blindly retried in that directory. It does
+not validate directory access controls, prevent later modification, verify the
+child executable, or authorize a run. Staging uses a synchronous guest call
+without a hard timeout.
+
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.

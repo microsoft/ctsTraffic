@@ -1,5 +1,14 @@
 # Starts an already-staged experimental guardian; this does not authorize traffic.
 
+function Assert-CtsPilotGuardianDirectory {
+    param([Parameter(Mandatory)][string]$Directory)
+    if ($Directory -notmatch '^[Cc]:\\[^\\]' -or $Directory -match '[\s"<>|?*\x00-\x1f]' -or
+        $Directory.Substring(2) -match ':' -or
+        @($Directory.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0) {
+        throw 'Guardian directory must be a non-root C: path without whitespace or dot segments.'
+    }
+}
+
 function Start-CtsPilotGuardian {
     param(
         [Parameter(Mandatory)]$GuestSession,
@@ -11,11 +20,7 @@ function Start-CtsPilotGuardian {
     )
 
     if ($Token -cnotmatch '^[0-9a-f]{32}$') { throw 'Invalid guardian process token.' }
-    if ($Directory -notmatch '^[Cc]:\\[^\\]' -or $Directory -match '[\s"<>|?*\x00-\x1f]' -or
-        $Directory.Substring(2) -match ':' -or
-        @($Directory.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0) {
-        throw 'Guardian directory must be a non-root C: path without whitespace or dot segments.'
-    }
+    Assert-CtsPilotGuardianDirectory -Directory $Directory
     if ($PowerShellPath -notmatch '^[A-Za-z]:\\' -or $PowerShellPath -match '[\s"<>|?*\x00-\x1f]' -or
         $PowerShellPath.Substring(2) -match ':' -or
         @($PowerShellPath.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0 -or
