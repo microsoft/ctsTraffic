@@ -195,8 +195,11 @@ with missing or changed required configuration.
    outcomes, and residual deviations as artifacts. Do not mark recovery
    successful if expected configuration, traffic, or health is not verified.
 6. Collect artifacts from all VMs into the run's uniquely named result
-   directory. Verify expected files arrived and are readable; generate a
-   manifest and a summary linking each metric to its source artifact.
+   directory, including WER dumps produced by the run. Distinguish them from
+   pre-existing dumps and account for incomplete or inaccessible files; do
+   not delete or overwrite the originals. Verify expected files arrived and
+   are readable; generate a manifest and a summary linking each metric to its
+   source artifact.
 7. Assign each failure a [triage bucket](crash-capture-and-triage.md) and
    mark the run **passed**, **failed**, **inconclusive**, or **aborted** using
    the scenario's criteria. Preserve failures and deviations; do not convert

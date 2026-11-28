@@ -60,6 +60,12 @@ existing session; `Test-CtsPilotGuestSample` reports resource or reboot
 findings against supplied limits. These are individual observations, not a
 monitor loop, complete preflight, or authorization to run traffic.
 
+Internal network-sample helpers record the server address and the client's
+selected source, route, and adapter without sending traffic. They can report
+address, route, and adapter findings against supplied expectations. These
+are point-in-time observations, not proof of firewall reachability, VM identity,
+future route selection, complete preflight, or authorization to run.
+
 Internal pilot-process helpers retain process handles in a guest session and
 create stdout/stderr files exclusively. Forced stop targets the tracked PID
 while its original handle is pinned. Loss of the session also loses the
@@ -143,7 +149,10 @@ The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.
 An internal helper can reserve a new guest run directory exclusively; it does
-not validate the parent directory's access controls or authorize a run.
+not validate the parent directory's access controls or authorize a run. The
+intended run layout retains logs and dumps in a unique directory under
+`C:\ctsReliability` on the host and guests. Collection of dumps from their
+configured shared or fixed paths into that directory is not implemented.
 
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not

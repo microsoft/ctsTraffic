@@ -150,6 +150,18 @@ are command templates, not shell-ready commands. `-StatusFilename` selects
 the status CSV; `-StatusUpdate` takes an interval in milliseconds, not a
 filename. It is omitted here, retaining the 5000 ms default.
 
+Retain each run's logs and dumps in a dedicated directory under
+`C:\ctsReliability`. The intended layout is
+`C:\ctsReliability\runs\pilot-<run-id>` on the host and each guest, with
+separate server and client evidence in the host's run directory. The run
+directory must be newly reserved, not an existing directory adopted or
+overwritten. The current guest WER configuration writes to the shared
+`C:\ctsReliability\dumps` folder, and system dumps may use another fixed path.
+Final cleanup collects WER dumps produced by the run into its run directory,
+distinguishing them from pre-existing files and accounting for incomplete
+writes. This collection is not implemented yet. Do not delete or overwrite
+the original dumps during collection.
+
 VM-A is the server and VM-B is the client. The client time limit begins after
 its own launch; it does not stop the server. The server's seven-minute time
 limit is an operator-selected watchdog and starts when the server starts, so
