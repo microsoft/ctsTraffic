@@ -174,6 +174,11 @@ not validate the parent directory's access controls or authorize a run. The
 intended run layout retains logs and dumps in a unique directory under
 `C:\ctsReliability` on the host and guests. Complete collection of dumps from
 their configured shared or fixed paths into that directory is not implemented.
+An internal layout helper reserves matching host, server, and client directories
+under a supplied existing root. It records partial or unknown reservations and
+never deletes them or retries. It does not check directory access controls,
+prove guest identity, prevent later modification, bound remote calls, or
+authorize a run.
 Internal WER inventories compare dump names and metadata before and after a run,
 flagging changed or missing pre-existing files and guest reboots. New or changed
 files are candidates, not proof of attribution or completed writes; unchanged
