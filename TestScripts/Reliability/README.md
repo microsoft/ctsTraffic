@@ -70,9 +70,14 @@ start did not execute. These helpers are not a complete pilot controller.
 `support\PilotGuardian.ps1` is an experimental standalone guardian. It confines
 itself and its child to a kill-on-close job and watches a heartbeat, local
 memory and disk, and a separate lifetime limit. It is not integrated into a
-pilot controller; the host heartbeat, coordinated start, recovery, and
+pilot controller; continuous host heartbeats, coordinated start, recovery, and
 preflight are still required. Sampling cannot prevent a resource breach
 between checks, and a stalled guardian cannot be assumed to enforce its limit.
+
+An internal heartbeat helper creates and updates a guardian heartbeat through
+a guest session. A timeout, remoting error, or logging failure leaves the
+outcome unknown; the wait timeout does not bound submission or job cleanup.
+The helper is not a continuous monitor or a pilot controller.
 
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
