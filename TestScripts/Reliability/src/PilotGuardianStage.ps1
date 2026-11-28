@@ -37,7 +37,6 @@ function New-CtsPilotGuardianStage {
         [Parameter(Mandatory)][ValidateRange(1, [long]::MaxValue)][long]$MinimumFreeMemoryBytes,
         [Parameter(Mandatory)][ValidateRange(1, [long]::MaxValue)][long]$MinimumFreeDiskBytes,
         [Parameter(Mandatory)][ValidateRange(2, 600)][int]$HeartbeatTimeoutSeconds,
-        [Parameter(Mandatory)][ValidateRange(1, 3600)][int]$MaximumLifetimeSeconds,
         [Parameter(Mandatory)][ValidateRange(100, 5000)][int]$PollMilliseconds
     )
     Assert-CtsPilotGuardianDirectory -Directory $Directory
@@ -62,7 +61,6 @@ function New-CtsPilotGuardianStage {
         minimumFreeMemoryBytes = $MinimumFreeMemoryBytes
         minimumFreeDiskBytes = $MinimumFreeDiskBytes
         heartbeatTimeoutSeconds = $HeartbeatTimeoutSeconds
-        maximumLifetimeSeconds = $MaximumLifetimeSeconds
         pollMilliseconds = $PollMilliseconds
     }
     $names = @('PilotGuardian.ps1', 'PilotSelfJob.cs', 'spec.json')

@@ -1,4 +1,4 @@
-# Dedicated process only. The caller must stage this script and PilotSelfJob.cs together.
+# Dedicated guardian process; only loss of monitoring stops a running child.
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$SpecPath)
 
@@ -6,16 +6,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $directory = Split-Path -Parent $SpecPath
 $spec = Get-Content -LiteralPath $SpecPath -Raw | ConvertFrom-Json
-if ($directory -notmatch '^[Cc]:\\' -or $directory -match '[\s"<>|?*\x00-\x1f]' -or
+if ($directory -notmatch '^[Cc]:\\[^\\]' -or $directory -match '[\s"<>|?*\x00-\x1f]' -or
+    $directory.Substring(2) -match ':' -or
     @($directory.Substring(3).Split('\') | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -gt 0) {
-    throw 'Guardian requires a local C: run directory without whitespace or dot segments.'
+    throw 'Guardian requires a non-root C: run directory without whitespace or dot segments.'
 }
 if ($spec.role -notin 'server', 'client' -or $spec.executable -notmatch '^[A-Za-z]:\\' -or
-    $spec.executable -match '[\s"\x00]' -or $spec.minimumFreeMemoryBytes -isnot [long] -and $spec.minimumFreeMemoryBytes -isnot [int] -or
-    $spec.minimumFreeDiskBytes -isnot [long] -and $spec.minimumFreeDiskBytes -isnot [int] -or
+    $spec.executable -match '[\s"\x00]' -or
+    ($spec.minimumFreeMemoryBytes -isnot [long] -and $spec.minimumFreeMemoryBytes -isnot [int]) -or
+    ($spec.minimumFreeDiskBytes -isnot [long] -and $spec.minimumFreeDiskBytes -isnot [int]) -or
     $spec.minimumFreeMemoryBytes -le 0 -or $spec.minimumFreeDiskBytes -le 0 -or
     $spec.heartbeatTimeoutSeconds -isnot [int] -or $spec.heartbeatTimeoutSeconds -lt 2 -or
-    $spec.maximumLifetimeSeconds -isnot [int] -or $spec.maximumLifetimeSeconds -lt 1 -or
     $spec.pollMilliseconds -isnot [int] -or $spec.pollMilliseconds -lt 100 -or
     $spec.pollMilliseconds -gt 5000 -or $spec.pollMilliseconds -ge ($spec.heartbeatTimeoutSeconds * 1000)) {
     throw 'Invalid guardian specification.'
@@ -48,7 +49,7 @@ $processId = $null
 $heartbeatTicks = [long]0
 $heartbeatObservedAgeSeconds = 0.0
 $heartbeatAge = [Diagnostics.Stopwatch]::StartNew()
-$lifetime = [Diagnostics.Stopwatch]::StartNew()
+$resourceWarning = $false
 
 function Write-GuardianEvent($Value) {
     $events.WriteLine(($Value | ConvertTo-Json -Compress))
@@ -77,14 +78,15 @@ function Read-GuardianSample {
     }
     $memory = [CtsReliability.PilotResources]::AvailableMemoryBytes()
     $disk = [CtsReliability.PilotResources]::AvailableDiskBytes([IO.Path]::GetPathRoot($directory))
-    $sample = [ordered]@{
+    Write-GuardianEvent ([ordered]@{
         type = 'sample'; utc = [DateTime]::UtcNow.ToString('o')
         freeMemoryBytes = $memory; freeDiskBytes = $disk
+    })
+    $below = $memory -lt [uint64]$spec.minimumFreeMemoryBytes -or $disk -lt [uint64]$spec.minimumFreeDiskBytes
+    if ($below -and -not $script:resourceWarning) {
+        Write-GuardianEvent ([ordered]@{ type = 'warning'; utc = [DateTime]::UtcNow.ToString('o'); detail = 'Resource threshold breached.' })
     }
-    Write-GuardianEvent $sample
-    if ($memory -lt [uint64]$spec.minimumFreeMemoryBytes -or $disk -lt [uint64]$spec.minimumFreeDiskBytes) {
-        throw 'ResourceLimit: free memory or disk is below its minimum.'
-    }
+    $script:resourceWarning = $below
 }
 
 try {
@@ -113,21 +115,18 @@ try {
     $stdoutTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
     $stderrTask = $process.StandardError.BaseStream.CopyToAsync($stderr)
     Write-GuardianEvent ([ordered]@{ type = 'started'; utc = [DateTime]::UtcNow.ToString('o'); processId = $processId })
-    $lifetime.Restart()
     while ($true) {
         $exited = $process.WaitForExit($spec.pollMilliseconds)
-        Read-GuardianSample
-        if ($lifetime.Elapsed.TotalSeconds -ge $spec.maximumLifetimeSeconds) {
-            $reason = 'Watchdog'
-            break
+        if ($stdoutTask.IsFaulted -or $stderrTask.IsFaulted -or $stdoutTask.IsCanceled -or $stderrTask.IsCanceled) {
+            throw 'MonitorLost: output capture failed.'
         }
+        Read-GuardianSample
         if ($exited) { $reason = 'Exited'; break }
     }
 }
 catch {
     $detail = $_.Exception.Message
     if ($detail -like 'MonitorLost:*') { $reason = 'MonitorLost' }
-    elseif ($detail -like 'ResourceLimit:*') { $reason = 'ResourceLimit' }
 }
 finally {
     if ($null -ne $process -and $processPinned) {

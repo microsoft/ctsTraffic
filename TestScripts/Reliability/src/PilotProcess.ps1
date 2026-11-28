@@ -2,7 +2,7 @@
 # These helpers do not implement preflight, monitoring, or a run workflow.
 
 $script:CtsPilotProcessScript = {
-    param($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds)
+    param($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds, $ExpectedProcessId)
 
     $ErrorActionPreference = 'Stop'
     if ($Token -notmatch '^[0-9a-f]{32}$') { throw 'Invalid process token.' }
@@ -76,6 +76,9 @@ $script:CtsPilotProcessScript = {
     if (-not $registry.ContainsKey($Token)) { throw 'Unknown process token in this session.' }
     $record = $registry[$Token]
     $process = $record.Process
+    if ($ExpectedProcessId -gt 0 -and $process.Id -ne $ExpectedProcessId) {
+        throw 'Tracked process ID does not match the expected process.'
+    }
     switch ($Action) {
         'Status' {
             $process.Refresh()
@@ -138,9 +141,10 @@ function Invoke-CtsPilotProcessAction {
         [string]$StdoutPath = '',
         [string]$StderrPath = '',
         [ValidateRange(1, 60000)][int]$WaitMilliseconds = 5000,
-        [ValidateRange(0, 600)][int]$TimeoutSeconds = 0
+        [ValidateRange(0, 600)][int]$TimeoutSeconds = 0,
+        [ValidateRange(0, 2147483647)][int]$ExpectedProcessId = 0
     )
-    $remoteArguments = @($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds)
+    $remoteArguments = @($Action, $Token, $FilePath, $Arguments, $StdoutPath, $StderrPath, $WaitMilliseconds, $ExpectedProcessId)
     $processAction = $Action
     if ($TimeoutSeconds -eq 0) {
         Invoke-CtsGuestCommand -GuestSession $GuestSession -ScriptBlock $script:CtsPilotProcessScript `

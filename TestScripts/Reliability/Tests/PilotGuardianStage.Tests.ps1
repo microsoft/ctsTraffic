@@ -18,7 +18,7 @@ Describe 'experimental guardian staging' {
             $files = @(New-CtsPilotGuardianStage -GuestSession $Guest -Directory $Directory -Role Client `
                 -Executable 'C:\Windows\powershell.exe' -Arguments @('-NoProfile', '-NonInteractive') `
                 -MinimumFreeMemoryBytes 104857600 -MinimumFreeDiskBytes 10737418240 `
-                -HeartbeatTimeoutSeconds 10 -MaximumLifetimeSeconds 30 -PollMilliseconds 200)
+                -HeartbeatTimeoutSeconds 10 -PollMilliseconds 200)
             $files.Count | Should -Be 3
             foreach ($file in $files) {
                 (Get-FileHash -LiteralPath $file.Path -Algorithm SHA256).Hash | Should -Be $file.Sha256
@@ -34,7 +34,6 @@ Describe 'experimental guardian staging' {
             $spec.minimumFreeMemoryBytes | Should -Be 104857600
             $spec.minimumFreeDiskBytes | Should -Be 10737418240
             $spec.heartbeatTimeoutSeconds | Should -Be 10
-            $spec.maximumLifetimeSeconds | Should -Be 30
             $spec.pollMilliseconds | Should -Be 200
         }
     }
@@ -47,7 +46,7 @@ Describe 'experimental guardian staging' {
             { New-CtsPilotGuardianStage -GuestSession $Guest -Directory $Directory -Role Server `
                 -Executable 'C:\Windows\powershell.exe' -Arguments @('-NoProfile') `
                 -MinimumFreeMemoryBytes 1 -MinimumFreeDiskBytes 1 -HeartbeatTimeoutSeconds 10 `
-                -MaximumLifetimeSeconds 30 -PollMilliseconds 200 } | Should -Throw '*staging outcome is unknown*'
+                -PollMilliseconds 200 } | Should -Throw '*staging outcome is unknown*'
         }
         [IO.File]::ReadAllText($existing) | Should -Be 'preserve'
         Test-Path -LiteralPath (Join-Path $script:Directory 'PilotGuardian.ps1') | Should -BeTrue
@@ -60,7 +59,7 @@ Describe 'experimental guardian staging' {
                 GuestSession = $Guest; Directory = $Directory; Role = 'Client'
                 Executable = 'C:\Windows\powershell.exe'; Arguments = @('-NoProfile')
                 MinimumFreeMemoryBytes = 1; MinimumFreeDiskBytes = 1
-                HeartbeatTimeoutSeconds = 2; MaximumLifetimeSeconds = 30; PollMilliseconds = 200
+                HeartbeatTimeoutSeconds = 2; PollMilliseconds = 200
             }
             $params.Directory = 'C:\runs\..\other'
             { New-CtsPilotGuardianStage @params } | Should -Throw
@@ -82,7 +81,7 @@ Describe 'experimental guardian staging' {
                 GuestSession = $Guest; Directory = $Directory; Role = 'Client'
                 Executable = 'C:\Windows\powershell.exe'; Arguments = @('-NoProfile')
                 MinimumFreeMemoryBytes = 1; MinimumFreeDiskBytes = 1
-                HeartbeatTimeoutSeconds = 10; MaximumLifetimeSeconds = 30; PollMilliseconds = 200
+                HeartbeatTimeoutSeconds = 10; PollMilliseconds = 200
             }
             { New-CtsPilotGuardianStage @params } | Should -Throw '*staging outcome is unknown*'
         }
@@ -96,7 +95,7 @@ Describe 'experimental guardian staging' {
             { New-CtsPilotGuardianStage -GuestSession $Guest -Directory $Directory -Role Client `
                 -Executable 'C:\Windows\powershell.exe' -Arguments @('-NoProfile') `
                 -MinimumFreeMemoryBytes 1 -MinimumFreeDiskBytes 1 -HeartbeatTimeoutSeconds 10 `
-                -MaximumLifetimeSeconds 30 -PollMilliseconds 200 } | Should -Throw '*staging outcome is unknown*'
+                -PollMilliseconds 200 } | Should -Throw '*staging outcome is unknown*'
         }
     }
 }

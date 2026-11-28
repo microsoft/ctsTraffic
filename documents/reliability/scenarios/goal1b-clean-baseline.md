@@ -165,12 +165,15 @@ would transfer 1 TiB in total per endpoint. The client
 does not specify a bind address, so the chosen source interface must be
 verified before use.
 
-The operator selected stop thresholds of 100 MiB free memory and 10 GiB free
-disk on each guest. The latter leaves a nominal margin over the 8 GiB guest
-memory size for a complete dump. A working controller must monitor both
-guests, stop on a threshold breach or loss of required monitoring, and handle
-unexpected exit, watchdog expiration, and bounded cleanup. Threshold sampling
-does not guarantee free space cannot fall below the limit between samples.
+The operator selected observation thresholds of 100 MiB free memory and 10 GiB
+free disk on each guest. The latter leaves a nominal margin over the 8 GiB
+guest memory size for a complete dump. Guardians may terminate a running
+ctsTraffic instance only on loss of required monitoring, such as a lost
+heartbeat or observer failure. Connection failures, a nonzero peer exit, and
+resource-threshold breaches must not themselves terminate a running instance.
+Record those conditions as evidence; the configured ctsTraffic time limits
+remain in effect. Resource exhaustion remains possible, and sampling cannot
+prevent breaches between observations.
 The operator approved `RemoteSigned` for each dedicated guardian process so
 it can run its locally staged script; this does not change the persistent
 guest execution policy.
@@ -181,9 +184,9 @@ time. Record attempts, successes, failures, and whether either time cap ended
 the run; an incomplete or failed target is not a successful 1,024-connection
 run. Keep original stdout, stderr, commands, exit codes, and the other required
 observations: the CSV alone does not establish that all attempts were recorded.
-Resolve the remaining evidence requirements and verify the monitoring and
-bounded cleanup before execution. The current preliminary scenario check
-still blocks execution; no pilot runner or complete preflight exists. This
+Resolve the remaining evidence requirements and verify monitoring-loss
+handling and coordinated startup before execution. The current preliminary
+scenario check still blocks execution; no pilot runner or complete preflight exists. This
 pilot is not an acceptance pass and is not represented by the G1B JSON
 argument templates below.
 

@@ -195,13 +195,16 @@ Describe 'session-owned pilot process operations' {
                     -Arguments @('-NoProfile', '-NonInteractive', '-EncodedCommand', $Encoded) -StdoutPath $OutFile -StderrPath $ErrFile
                 $second = Invoke-CtsPilotProcessAction -GuestSession $guest -Action Start -Token $Other -FilePath $Exe `
                     -Arguments @('-NoProfile', '-NonInteractive', '-EncodedCommand', $Encoded) -StdoutPath $OtherOut -StderrPath $OtherErr
+                { Invoke-CtsPilotProcessAction -GuestSession $guest -Action Stop -Token $Token -ExpectedProcessId $second.ProcessId } |
+                    Should -Throw '*does not match*'
+                (Invoke-CtsPilotProcessAction -GuestSession $guest -Action Status -Token $Token -ExpectedProcessId $first.ProcessId).Exited | Should -BeFalse
                 $global:CtsReliabilityPilotProcesses[$Token].HandlePinned = $false
                 try {
                     { Invoke-CtsPilotProcessAction -GuestSession $guest -Action Stop -Token $Token } | Should -Throw '*not pinned*'
                     (Invoke-CtsPilotProcessAction -GuestSession $guest -Action Status -Token $Token).Exited | Should -BeFalse
                 }
                 finally { $global:CtsReliabilityPilotProcesses[$Token].HandlePinned = $true }
-                $stopped = Invoke-CtsPilotProcessAction -GuestSession $guest -Action Stop -Token $Token -WaitMilliseconds 10000
+                $stopped = Invoke-CtsPilotProcessAction -GuestSession $guest -Action Stop -Token $Token -WaitMilliseconds 10000 -ExpectedProcessId $first.ProcessId
                 $stopped.ProcessId | Should -Be $first.ProcessId
                 $stopped.Exited | Should -BeTrue
                 $otherStatus = Invoke-CtsPilotProcessAction -GuestSession $guest -Action Status -Token $Other

@@ -67,14 +67,14 @@ handles. An optional job wait timeout reports an unknown outcome on timeout;
 it does not bound job submission or cleanup, or establish that a timed-out
 start did not execute. These helpers are not a complete pilot controller.
 
-`support\PilotGuardian.ps1` is an experimental standalone guardian. It confines
-itself and its child to a kill-on-close job and watches a heartbeat, local
-memory and disk, and a separate lifetime limit. It is not integrated into a
-pilot controller; continuous host heartbeats, coordinated start, recovery, and
-preflight are still required. Sampling cannot prevent a resource breach
-between checks, and a stalled guardian cannot be assumed to enforce its limit.
-Heartbeat age includes time elapsed before each observation; an overdue
-observation fails closed even if a newer heartbeat is present.
+`support\PilotGuardian.ps1` is an experimental guardian which starts its
+child in a kill-on-close job. Loss of required monitoring, including heartbeat
+loss or guardian termination, can stop that child. Resource threshold breaches
+are recorded as warnings and do not themselves stop it. A child exit code,
+including a nonzero code from connection errors, does not stop the peer.
+There is no guardian lifetime cutoff; the configured ctsTraffic time limit
+remains separate. Sampling can miss resource breaches, and a stalled guardian
+cannot be assumed to enforce monitoring loss.
 
 An internal heartbeat helper creates and updates a guardian heartbeat through
 a guest session. A timeout, remoting error, or logging failure leaves the
@@ -82,10 +82,12 @@ outcome unknown; the wait timeout does not bound submission or job cleanup.
 The helper is not a continuous monitor or a pilot controller.
 
 An internal experimental guardian launcher creates a heartbeat and starts an
-already-staged guardian using the session-owned process helper. A successful
-start does not prove that the guardian initialized or that its child started.
-An uncertain start must not be retried as if no process was launched; the
-launcher neither stages or verifies files nor implements coordinated recovery.
+already-staged guardian using the session-owned process helper. It checks
+guardian source hashes before launch, but does not prevent later modification.
+A successful start does not prove that the guardian or child initialized.
+An uncertain start must not be retried as if no guardian was launched.
+Do not use previously staged guardians: older versions also stop children for
+resource thresholds or their own lifetime cutoff.
 
 An internal staging helper exclusively creates the guardian script, native
 source, and specification in a supplied guest directory and checks their
@@ -102,6 +104,14 @@ unknown. A normal child exit does not by itself establish the traffic outcome.
 The reader assumes its receipts and guest files belong to the same reserved
 run; it does not validate their provenance or protect them against changes.
 Its job wait timeout does not bound submission or cleanup.
+
+An experimental two-guardian monitor pulses and observes already-started
+guardians. On a monitoring failure for one guardian, it stops pulsing that
+guardian, which can stop its child on heartbeat loss; it continues observing
+the other guardian. A nonzero child exit does not interrupt the peer. The
+monitor does not handle coordinated startup, unknown starts, session-loss
+recovery, complete preflight, or traffic classification. Calls can block
+despite their job wait timeouts.
 
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not

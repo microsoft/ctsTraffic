@@ -8,10 +8,22 @@ BeforeAll {
 
 Describe 'experimental guardian launch' {
     BeforeEach {
+        Mock -ModuleName CtsReliability Invoke-CtsGuestCommand { $true }
         Mock -ModuleName CtsReliability Write-CtsPilotHeartbeat { [pscustomobject]@{ Path = 'C:\runs\pilot\heartbeat.txt' } }
         Mock -ModuleName CtsReliability Invoke-CtsPilotProcessAction {
             [pscustomobject]@{ ProcessId = 123; StartedUtc = '2026-01-01T00:00:00Z' }
         }
+    }
+
+    It 'refuses a stale or unverified guardian before starting anything' {
+        Mock -ModuleName CtsReliability Invoke-CtsGuestCommand { throw 'Guardian file hash mismatch' }
+        InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest; Token = $script:Token } {
+            param($Guest, $Token)
+            { Start-CtsPilotGuardian -GuestSession $Guest -Directory 'C:\runs\pilot' -Role Client -Token $Token `
+                -PowerShellPath 'C:\Windows\powershell.exe' -TimeoutSeconds 1 } | Should -Throw '*hash mismatch*'
+        }
+        Should -Invoke -ModuleName CtsReliability Write-CtsPilotHeartbeat -Times 0
+        Should -Invoke -ModuleName CtsReliability Invoke-CtsPilotProcessAction -Times 0
     }
 
     It 'creates a heartbeat then starts the dedicated guardian with distinct process output paths' {
