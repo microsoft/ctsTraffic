@@ -159,6 +159,13 @@ and never blindly retry an unknown start. This is not a coordinated controller,
 does not validate preflight or evidence provenance, and its remote calls can
 block despite wait timeouts.
 
+An internal observation helper collects each worker's ordered job events and
+marks invalid event ordering or launch identity, missing completion, or job
+failures unknown without stopping its peer. It retains received events in
+memory; the parent must persist them. It does not fully validate event contents,
+detect a stalled worker, prove continued listener readiness, or authorize a
+client launch.
+
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.
