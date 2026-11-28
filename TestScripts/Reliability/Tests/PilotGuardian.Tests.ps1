@@ -5,9 +5,20 @@ BeforeAll {
     $script:PowerShellPath = (Get-Command powershell.exe).Source
     function Invoke-GuardianFixture {
         param([string]$Command, [int]$HeartbeatSeconds = 20, [int]$LifetimeSeconds = 20,
-            [long]$MemoryMinimum = 1, [long]$DiskMinimum = 1, [switch]$ExistingStdout, [switch]$Pulse)
+            [long]$MemoryMinimum = 1, [long]$DiskMinimum = 1, [switch]$ExistingStdout, [switch]$Pulse,
+            [int]$InitialHeartbeatAgeSeconds = 0, [switch]$RemoveHeartbeatOnExit, [switch]$SetFutureHeartbeat)
         $directory = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $null = New-Item -ItemType Directory -Path $directory
+        $heartbeat = Join-Path $directory 'heartbeat.txt'
+        [IO.File]::WriteAllText($heartbeat, 'alive')
+        [IO.File]::SetLastWriteTimeUtc($heartbeat, [DateTime]::UtcNow.AddSeconds(-$InitialHeartbeatAgeSeconds))
+        $initialHeartbeatUtc = [IO.File]::GetLastWriteTimeUtc($heartbeat)
+        if ($RemoveHeartbeatOnExit) {
+            $Command += "; Remove-Item -LiteralPath '$($heartbeat -replace "'", "''")' -ErrorAction Stop"
+        }
+        if ($SetFutureHeartbeat) {
+            $Command += "; [IO.File]::SetLastWriteTimeUtc('$($heartbeat -replace "'", "''")', [DateTime]::UtcNow.AddMinutes(1)); Start-Sleep -Seconds 10"
+        }
         $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Command))
         $spec = [ordered]@{
             role = 'client'; executable = $script:PowerShellPath
@@ -18,8 +29,6 @@ BeforeAll {
         }
         $specPath = Join-Path $directory 'spec.json'
         [IO.File]::WriteAllText($specPath, ($spec | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
-        $heartbeat = Join-Path $directory 'heartbeat.txt'
-        [IO.File]::WriteAllText($heartbeat, 'alive')
         $pulseJob = if ($Pulse) {
             Start-Job -ArgumentList $heartbeat -ScriptBlock {
                 param($Path)
@@ -46,6 +55,7 @@ BeforeAll {
             [pscustomobject]@{
                 Directory = $directory
                 GuardianExitCode = $guardian.ExitCode
+                InitialHeartbeatUtc = $initialHeartbeatUtc
                 Result = if (Test-Path -LiteralPath $resultPath) { Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json } else { $null }
             }
         }
@@ -74,6 +84,36 @@ Describe 'standalone pilot guardian' {
         $r.Result.reason | Should -Be 'MonitorLost' -Because $r.Result.detail
         $r.Result.processId | Should -BeGreaterThan 0
         $r.Result.exitCode | Should -Not -BeNullOrEmpty
+    }
+
+    It 'counts the age of the initial heartbeat toward the timeout' {
+        $r = Invoke-GuardianFixture 'Start-Sleep -Seconds 30' -HeartbeatSeconds 15 -InitialHeartbeatAgeSeconds 9
+        $r.Result.reason | Should -Be 'MonitorLost' -Because $r.Result.detail
+        $r.Result.processId | Should -BeGreaterThan 0
+        $events = @(Get-Content -LiteralPath (Join-Path $r.Directory 'g1b-pilot-client-guardian.jsonl') |
+            ForEach-Object { $_ | ConvertFrom-Json })
+        $finished = $events | Where-Object type -eq 'finished'
+        (([DateTimeOffset]$finished.utc) - ([DateTimeOffset]$r.InitialHeartbeatUtc)).TotalSeconds | Should -BeLessThan 18
+    }
+
+    It 'does not launch a child for a heartbeat too far in the future' {
+        $r = Invoke-GuardianFixture 'Start-Sleep -Seconds 30' -InitialHeartbeatAgeSeconds -30
+        $r.Result.reason | Should -Be 'MonitorLost' -Because $r.Result.detail
+        $r.Result.processId | Should -BeNullOrEmpty
+    }
+
+    It 'stops a running child when a later heartbeat is too far in the future' {
+        $r = Invoke-GuardianFixture 'Start-Sleep -Seconds 1' -SetFutureHeartbeat
+        $r.Result.reason | Should -Be 'MonitorLost' -Because $r.Result.detail
+        $r.Result.processId | Should -BeGreaterThan 0
+        $r.Result.exitCode | Should -Not -BeNullOrEmpty
+    }
+
+    It 'checks monitoring even when the child exits' {
+        $r = Invoke-GuardianFixture 'Start-Sleep -Milliseconds 100' -RemoveHeartbeatOnExit
+        $r.Result.reason | Should -Be 'MonitorLost' -Because $r.Result.detail
+        $r.Result.processId | Should -BeGreaterThan 0
+        $r.Result.exitCode | Should -Be 0
     }
 
     It 'keeps a running child alive while heartbeats advance' {

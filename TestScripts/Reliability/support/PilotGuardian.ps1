@@ -46,6 +46,7 @@ $detail = $null
 $exitCode = $null
 $processId = $null
 $heartbeatTicks = [long]0
+$heartbeatObservedAgeSeconds = 0.0
 $heartbeatAge = [Diagnostics.Stopwatch]::StartNew()
 $lifetime = [Diagnostics.Stopwatch]::StartNew()
 
@@ -57,24 +58,22 @@ function Write-GuardianEvent($Value) {
 function Read-GuardianSample {
     if (-not [IO.File]::Exists($heartbeatPath)) { throw 'MonitorLost: heartbeat is missing.' }
     $ticks = [IO.File]::GetLastWriteTimeUtc($heartbeatPath).Ticks
-    if ($script:heartbeatTicks -eq 0) {
+    if ($script:heartbeatTicks -ne 0 -and
+        ($script:heartbeatObservedAgeSeconds + $script:heartbeatAge.Elapsed.TotalSeconds) -ge $spec.heartbeatTimeoutSeconds) {
+        throw 'MonitorLost: heartbeat timed out.'
+    }
+    if ($script:heartbeatTicks -eq 0 -or $ticks -gt $script:heartbeatTicks) {
         $heartbeatUtc = [DateTime]::new($ticks, [DateTimeKind]::Utc)
         $age = ([DateTime]::UtcNow - $heartbeatUtc).TotalSeconds
         if ($age -lt -2 -or $age -ge $spec.heartbeatTimeoutSeconds) {
-            throw 'MonitorLost: initial heartbeat is stale or in the future.'
+            throw 'MonitorLost: heartbeat is stale or in the future.'
         }
         $script:heartbeatTicks = $ticks
+        $script:heartbeatObservedAgeSeconds = [Math]::Max(0, $age)
         $script:heartbeatAge.Restart()
     }
     elseif ($ticks -lt $script:heartbeatTicks) {
         throw 'MonitorLost: heartbeat timestamp moved backwards.'
-    }
-    elseif ($ticks -gt $script:heartbeatTicks) {
-        $script:heartbeatTicks = $ticks
-        $script:heartbeatAge.Restart()
-    }
-    elseif ($script:heartbeatAge.Elapsed.TotalSeconds -ge $spec.heartbeatTimeoutSeconds) {
-        throw 'MonitorLost: heartbeat timed out.'
     }
     $memory = [CtsReliability.PilotResources]::AvailableMemoryBytes()
     $disk = [CtsReliability.PilotResources]::AvailableDiskBytes([IO.Path]::GetPathRoot($directory))
@@ -116,12 +115,13 @@ try {
     Write-GuardianEvent ([ordered]@{ type = 'started'; utc = [DateTime]::UtcNow.ToString('o'); processId = $processId })
     $lifetime.Restart()
     while ($true) {
-        if ($process.WaitForExit($spec.pollMilliseconds)) { $reason = 'Exited'; break }
+        $exited = $process.WaitForExit($spec.pollMilliseconds)
         Read-GuardianSample
         if ($lifetime.Elapsed.TotalSeconds -ge $spec.maximumLifetimeSeconds) {
             $reason = 'Watchdog'
             break
         }
+        if ($exited) { $reason = 'Exited'; break }
     }
 }
 catch {

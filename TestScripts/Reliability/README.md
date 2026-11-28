@@ -73,6 +73,8 @@ memory and disk, and a separate lifetime limit. It is not integrated into a
 pilot controller; continuous host heartbeats, coordinated start, recovery, and
 preflight are still required. Sampling cannot prevent a resource breach
 between checks, and a stalled guardian cannot be assumed to enforce its limit.
+Heartbeat age includes time elapsed before each observation; an overdue
+observation fails closed even if a newer heartbeat is present.
 
 An internal heartbeat helper creates and updates a guardian heartbeat through
 a guest session. A timeout, remoting error, or logging failure leaves the
