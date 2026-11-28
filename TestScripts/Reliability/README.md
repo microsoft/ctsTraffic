@@ -150,6 +150,15 @@ monitor does not handle coordinated startup, unknown starts, session-loss
 recovery, complete preflight, or traffic classification. Calls can block
 despite their job wait timeouts.
 
+An experimental endpoint worker uses a separate host job and guest session
+to stage, launch, and monitor one guardian. A failed or nonzero child does not
+directly stop any process; loss of that worker's monitoring can stop its child.
+The worker can start the supplied executable and is not authorization to run
+traffic. Its parent must keep the job alive, consume and retain its events,
+and never blindly retry an unknown start. This is not a coordinated controller,
+does not validate preflight or evidence provenance, and its remote calls can
+block despite wait timeouts.
+
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.
