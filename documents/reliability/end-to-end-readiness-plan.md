@@ -92,6 +92,56 @@ provisioning and guest configuration. It is tested without elevation; see
 [reliability tooling tests](tooling-tests.md) for results and the elevated
 checks still outstanding.
 
+### Pilot handoff — 2026-11-28
+
+The immediate goal is a **finite real-traffic pilot**, not the full G1B
+profiling series. No ctsTraffic workload has been run yet. The pilot and its
+commands are documented in [G1B-CLEAN-BASELINE](scenarios/goal1b-clean-baseline.md#1024-connection-duplex-pilot).
+The preliminary scenario validator still blocks execution.
+
+- Branch `docs/windows-networking-reliability-plan` was pushed through
+  `a6a86db` before this handoff. Its latest work adds isolated endpoint workers,
+  worker-event observation, matching host/guest run-directory reservation,
+  and an endpoint WER cleanup helper.
+- The lab is a Windows ARM64 Hyper-V host with `ctsRel-A` as server
+  (`192.168.1.1`) and `ctsRel-B` as client (`192.168.1.2`), each with 4 vCPUs
+  and 8 GiB RAM. PowerShell Direct uses the locally stored credential target
+  `ctsReliability/guest`; credentials must not be written to artifacts.
+  The operator reported no VM or network usage restrictions.
+- Retain each run's logs and dumps under
+  `C:\ctsReliability\runs\pilot-<run-id>` on the host and guests. WER writes
+  to the shared guest dump folder; cleanup must preserve originals, identify
+  pre-existing or ambiguous candidates, collect verified copies, and report
+  missing or incomplete evidence. System-dump collection remains outstanding.
+- Guardians may terminate a running ctsTraffic process **only for loss of
+  required monitoring**. Connection failures, a nonzero peer exit, and
+  resource-threshold breaches are evidence, not reasons to terminate it.
+  The 100 MiB free-memory and 10 GiB free-disk thresholds are warnings. The
+  approved `RemoteSigned` policy applies only to dedicated guardian processes.
+- Benign trials verified isolated workers, listener observation, continued
+  peer execution after a nonzero exit and after the other worker lost
+  monitoring, and matching run-directory reservation. A synthetic WER trial
+  verified new and changed candidate copies and host hashes while preserving
+  originals at
+  `C:\ctsReliability\runs\pilot-7a2ed1a47b34479a93c77fd0fadd4fc6`.
+  The latest targeted WER suite passed 19 tests in each PowerShell edition.
+- The last complete point-in-time snapshot was
+  `C:\ctsReliability\snapshots\snap-20261128T062813Z-DESKTOP-BCUQIHL`.
+  Both guest binary hashes matched in that snapshot, but reboot or other
+  changes can invalidate it. Refresh observations and complete preflight
+  rather than treating it as authorization.
+
+Resume with read-only checks of the repository, host, VMs, and sessions after
+the reboot. Then implement and validate coordinated server/client startup,
+including fresh listener evidence and sufficient server lifetime for the
+client. Remote submission and cleanup can block despite wait timeouts; do not
+assume those timeouts are hard bounds, retry an unknown start, or interrupt a
+peer because the other endpoint failed. Integrate WER and system-dump
+collection into final run cleanup, persist worker events and other required
+artifacts, complete preflight, and exercise the full lifecycle with benign
+processes before considering real traffic. The current workers and helpers
+are building blocks, not a complete or authorized pilot runner.
+
 ## Work plan
 
 ### Phase 1 — Close the first scenario contract
