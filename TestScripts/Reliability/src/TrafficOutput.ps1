@@ -127,3 +127,60 @@ function Get-CtsTrafficTcpConnectionResults {
             })
     }
 }
+
+function Get-CtsTrafficTcpStatus {
+    <#
+    .SYNOPSIS
+    Reads the last sample from a collected ctsTraffic TCP status CSV.
+    .DESCRIPTION
+    Rates are bytes per second for the interval; completed and error counts
+    are cumulative. This does not establish file completeness or run outcome.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+
+    $header = 'TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError'
+    $reader = [System.IO.StreamReader]::new($Path, [System.Text.Encoding]::UTF8, $true)
+    $count = [long]0
+    $last = $null
+    try {
+        if ($reader.ReadLine() -cne $header) {
+            throw 'Not a supported ctsTraffic TCP status CSV header.'
+        }
+        $lineNumber = 1
+        while ($null -ne ($line = $reader.ReadLine())) {
+            $lineNumber++
+            $fields = $line.Split(',')
+            $seconds = [decimal]0
+            $values = [System.Collections.Generic.List[uint64]]::new()
+            $valid = $fields.Count -eq 7 -and $fields[0] -cmatch '^\d+(\.\d+)?$' -and
+                [decimal]::TryParse($fields[0], [Globalization.NumberStyles]::AllowDecimalPoint, [Globalization.CultureInfo]::InvariantCulture, [ref]$seconds)
+            if ($valid) {
+                foreach ($field in $fields[1..6]) {
+                    $value = [uint64]0
+                    if ($field -cnotmatch '^\d+$' -or
+                        -not [uint64]::TryParse($field, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$value)) {
+                        $valid = $false
+                        break
+                    }
+                    $values.Add($value)
+                }
+            }
+            if (-not $valid) { throw "Invalid TCP status CSV record on line $lineNumber." }
+            $last = [pscustomobject]@{
+                TimeSliceSeconds = $seconds
+                SendBytesPerSecond = $values[0]
+                ReceiveBytesPerSecond = $values[1]
+                InFlight = $values[2]
+                Completed = $values[3]
+                NetworkErrors = $values[4]
+                DataErrors = $values[5]
+            }
+            $count++
+        }
+    }
+    finally {
+        $reader.Dispose()
+    }
+    [pscustomobject]@{ Path = $Path; RecordedSamples = $count; LastSample = $last }
+}

@@ -99,3 +99,38 @@ Describe 'Get-CtsTrafficTcpConnectionResults' {
         { Get-CtsTrafficTcpConnectionResults -Path (Join-Path $TestDrive 'missing.csv') } | Should -Throw
     }
 }
+
+Describe 'Get-CtsTrafficTcpStatus' {
+    BeforeAll {
+        $script:StatusHeader = 'TimeSlice,SendBps,RecvBps,In-Flight,Completed,NetError,DataError'
+    }
+
+    It 'reads the last sample and its cumulative counters from a UTF-16 status CSV' {
+        $path = Join-Path $TestDrive 'status.csv'
+        [IO.File]::WriteAllLines($path, @($script:StatusHeader, '1.000,20,30,8,2,1,0', '6.250,40,50,4,7,2,1'), [Text.Encoding]::Unicode)
+        $result = Get-CtsTrafficTcpStatus -Path $path
+        $result.RecordedSamples | Should -Be 2
+        $result.LastSample.TimeSliceSeconds | Should -Be 6.25
+        $result.LastSample.SendBytesPerSecond | Should -Be 40
+        $result.LastSample.ReceiveBytesPerSecond | Should -Be 50
+        $result.LastSample.InFlight | Should -Be 4
+        $result.LastSample.Completed | Should -Be 7
+        $result.LastSample.NetworkErrors | Should -Be 2
+        $result.LastSample.DataErrors | Should -Be 1
+    }
+
+    It 'reports an empty status file without inventing a sample' {
+        $path = Write-OutputFixture 'empty-status.csv' @($script:StatusHeader)
+        $result = Get-CtsTrafficTcpStatus -Path $path
+        $result.RecordedSamples | Should -Be 0
+        $result.LastSample | Should -BeNullOrEmpty
+    }
+
+    It 'rejects incompatible, truncated, and invalid records' {
+        { Get-CtsTrafficTcpStatus -Path (Write-OutputFixture 'bad-status-header.csv' @('other')) } | Should -Throw '*header*'
+        foreach ($row in @('1.000,1,2', '1.000,1,2,3,4,5,-1', '1.000,1,2,3,4,5,18446744073709551616', '1x,1,2,3,4,5,6')) {
+            { Get-CtsTrafficTcpStatus -Path (Write-OutputFixture 'bad-status.csv' @($script:StatusHeader, $row)) } | Should -Throw '*line 2*'
+        }
+        { Get-CtsTrafficTcpStatus -Path (Join-Path $TestDrive 'missing-status.csv') } | Should -Throw
+    }
+}

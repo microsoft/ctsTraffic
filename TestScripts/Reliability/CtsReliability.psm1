@@ -28,6 +28,7 @@ Export-ModuleMember -Function @(
     'Test-CtsPilotGuestSample'
     'Get-CtsTrafficTcpSummary'
     'Get-CtsTrafficTcpConnectionResults'
+    'Get-CtsTrafficTcpStatus'
     'Compare-CtsSnapshot'
     'ConvertTo-CtsSnapshotReport'
     'Get-CtsPoolTagSnapshot'

@@ -63,6 +63,10 @@ while its original handle is pinned. Loss of the session also loses the
 handles, and process wait limits do not bound the remote call itself. These
 helpers are not a complete or verified pilot controller.
 
+The internal pilot command resolver produces the documented finite-pilot
+argument vectors and artifact paths without starting traffic. It does not
+create or reserve output directories, verify targets, or authorize a run.
+
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not
 run ctsTraffic, collect files, classify the result, or replace the original
@@ -72,6 +76,11 @@ stdout and exit code.
 strings in a collected TCP connection CSV. It does not prove the file is
 complete, count every attempt, or determine the run outcome. The reader has
 only been checked against synthetic CSVs, not an actual traffic run.
+
+`Get-CtsTrafficTcpStatus -Path <status-csv>` reads the last recorded TCP
+status sample from a collected file. Rates are interval bytes per second;
+completed and error counts are cumulative. It does not prove completeness or
+classify the run, and has only been checked against synthetic CSVs.
 
 Pool-tag CSV usage values and comparison deltas are **bytes**; allocation,
 free, and outstanding-allocation values are counts. New CSV headings include
