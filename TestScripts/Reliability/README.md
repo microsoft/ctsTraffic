@@ -191,6 +191,14 @@ or protection against later modification. Failed transfers may leave partial
 files and must not be blindly retried in the same directory. System-dump
 collection is not implemented. Remote calls lack hard deadlines.
 
+An internal endpoint WER cleanup helper takes a pre-run inventory, inventories
+again after the workload, and attempts one verified guest copy and host transfer
+per new or changed candidate. It records reboots, ambiguous or missing files,
+and per-copy unknown outcomes, without deleting originals or retrying uncertain
+copies. Its caller must ensure the workload has ended and persist the returned
+evidence. Completion describes these operations only, not attribution, WER
+write completion, or full run cleanup.
+
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not
 run ctsTraffic, collect files, classify the result, or replace the original
