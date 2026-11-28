@@ -205,7 +205,9 @@ function Copy-CtsPilotWerCandidate {
             SourcePath = $sourcePath; DestinationPath = $destinationPath
             Bytes = $values[0].Bytes; Sha256 = $values[0].Sha256
             CandidateKind = $kind; BootChanged = $comparison.BootChanged
+            Target = $GuestSession.Target; Guest = $After.Guest
         }
     }
+
     catch { throw "WER copy outcome is unknown; do not retry into the same path: $($_.Exception.Message)" }
 }
