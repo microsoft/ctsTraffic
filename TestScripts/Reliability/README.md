@@ -58,10 +58,10 @@ findings against supplied limits. These are individual observations, not a
 monitor loop, complete preflight, or authorization to run traffic.
 
 Internal pilot-process helpers retain process handles in a guest session and
-create stdout/stderr files exclusively. Forced stopping is not implemented;
-loss of the session also loses the handles, and process wait limits do not
-bound the remote call itself. These helpers are not a complete or verified
-pilot controller.
+create stdout/stderr files exclusively. Forced stop targets the tracked PID
+while its original handle is pinned. Loss of the session also loses the
+handles, and process wait limits do not bound the remote call itself. These
+helpers are not a complete or verified pilot controller.
 
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not

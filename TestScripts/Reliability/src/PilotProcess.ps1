@@ -49,9 +49,17 @@ $script:CtsPilotProcessScript = {
                 Stderr = $stderr
                 StdoutTask = $null
                 StderrTask = $null
+                PinnedHandle = $null
+                HandlePinned = $false
             }
             $registry[$Token] = $record
             $registered = $true
+            # Keep the kernel process object alive so its PID cannot be reused.
+            $record.PinnedHandle = $process.SafeHandle
+            $pinned = $false
+            $record.PinnedHandle.DangerousAddRef([ref]$pinned)
+            $record.HandlePinned = $pinned
+            if (-not $pinned) { throw 'Could not retain the process handle.' }
             $record.StdoutTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
             $record.StderrTask = $process.StandardError.BaseStream.CopyToAsync($stderr)
             return [pscustomobject]@{ Token = $Token; ProcessId = $process.Id; StartedUtc = $process.StartTime.ToUniversalTime().ToString('o') }
@@ -78,6 +86,21 @@ $script:CtsPilotProcessScript = {
                 ExitCode = if ($process.HasExited) { $process.ExitCode } else { $null }
             }
         }
+        'Stop' {
+            if (-not $record.HandlePinned) { throw 'Process handle is not pinned; refusing to stop it.' }
+            $process.Refresh()
+            if (-not $process.HasExited) {
+                try {
+                    Stop-Process -Id $process.Id -ErrorAction Stop
+                }
+                catch {
+                    $process.Refresh()
+                    if (-not $process.HasExited) { throw }
+                }
+            }
+            if (-not $process.WaitForExit($WaitMilliseconds)) { throw 'Tracked process did not exit within the timeout.' }
+            return [pscustomobject]@{ Token = $Token; ProcessId = $process.Id; Exited = $true; ExitCode = $process.ExitCode }
+        }
         'Complete' {
             if (-not $process.WaitForExit($WaitMilliseconds)) { throw 'Tracked process has not exited.' }
             $tasks = [System.Threading.Tasks.Task[]]@(@($record.StdoutTask, $record.StderrTask) | Where-Object { $null -ne $_ })
@@ -92,6 +115,10 @@ $script:CtsPilotProcessScript = {
                 if ($drained -or @($tasks | Where-Object { -not $_.IsCompleted }).Count -eq 0) {
                     $record.Stdout.Dispose()
                     $record.Stderr.Dispose()
+                    if ($record.HandlePinned) {
+                        $record.PinnedHandle.DangerousRelease()
+                        $record.HandlePinned = $false
+                    }
                     $process.Dispose()
                     $registry.Remove($Token)
                 }
@@ -104,7 +131,7 @@ $script:CtsPilotProcessScript = {
 function Invoke-CtsPilotProcessAction {
     param(
         [Parameter(Mandatory)]$GuestSession,
-        [Parameter(Mandatory)][ValidateSet('Start', 'Status', 'Complete')][string]$Action,
+        [Parameter(Mandatory)][ValidateSet('Start', 'Status', 'Stop', 'Complete')][string]$Action,
         [Parameter(Mandatory)][string]$Token,
         [string]$FilePath = '',
         [string[]]$Arguments = @(),
