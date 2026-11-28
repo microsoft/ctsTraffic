@@ -40,6 +40,20 @@ Describe 'Get-CtsDeviceInventory (local machine)' -Tag 'Live' {
         $script:Inventory.sections.identity.data.computerName | Should -Be $env:COMPUTERNAME
     }
 
+    It 'captures both configured and active driver verifier output' {
+        $verifier = $script:Inventory.sections.verifier
+        $verifier.status | Should -Be 'ok' -Because $verifier.reason
+        @($verifier.data.driverVerifierSettings).Count | Should -BeGreaterThan 0
+        @($verifier.data.driverVerifierActive).Count | Should -BeGreaterThan 0
+    }
+
+    It 'marks verifier evidence unavailable when the native query fails' {
+        Mock -ModuleName CtsReliability verifier.exe { $global:LASTEXITCODE = 1; 'simulated failure' }
+        $inventory = Get-CtsDeviceInventory -RootPath (Join-Path $TestDrive 'root')
+        $inventory.sections.verifier.status | Should -Be 'unavailable'
+        $inventory.sections.verifier.reason | Should -BeLike '*querysettings*'
+    }
+
     It 'keeps full route detail for all interfaces by default' {
         $routes = $script:Inventory.sections.routes.data
         @($routes.detailInterfaceFilter) | Should -Be @('*')

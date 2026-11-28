@@ -48,6 +48,9 @@ is published, `-AllowUnverified` caches the ISO and records it as unverified.
 The implementation is the `CtsReliability` module: `CtsReliability.psm1`
 loads `src\*.ps1`.
 
+The device inventory records both configured and active Driver Verifier query
+output; a failed or empty query marks the verifier section unavailable.
+
 The draft G1B scenario can be inspected with `Test-CtsScenario -Path
 <scenario.json>` after importing the module. This preliminary check always
 blocks execution; full scenario validation and a runner are not implemented.
@@ -66,6 +69,8 @@ helpers are not a complete or verified pilot controller.
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.
+An internal helper can reserve a new guest run directory exclusively; it does
+not validate the parent directory's access controls or authorize a run.
 
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not

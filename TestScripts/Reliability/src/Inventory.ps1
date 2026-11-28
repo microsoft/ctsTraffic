@@ -184,7 +184,7 @@ $script:CtsDeviceInventoryScript = {
         }
     }
 
-    $sections.verifier = Section 'HKLM Image File Execution Options, verifier.exe /querysettings' {
+    $sections.verifier = Section 'HKLM Image File Execution Options, verifier.exe /querysettings and /query' {
         $ifeo = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options'
         $appVerifier = @(Get-ChildItem -LiteralPath $ifeo -ErrorAction SilentlyContinue | ForEach-Object {
                 $p = Get-ItemProperty -LiteralPath $_.PSPath
@@ -201,10 +201,22 @@ $script:CtsDeviceInventoryScript = {
                 }
             } | Sort-Object { $_.image })
         $dv = RegValues 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management'
+        $settings = @(& verifier.exe /querysettings 2>&1 | ForEach-Object { "$_" })
+        $settingsExit = $LASTEXITCODE
+        if ($settingsExit -ne 0 -or $settings.Count -eq 0) {
+            throw "verifier.exe /querysettings failed or returned no output (exit $settingsExit)."
+        }
+        $active = @(& verifier.exe /query 2>&1 | ForEach-Object { "$_" })
+        $activeExit = $LASTEXITCODE
+        if ($activeExit -ne 0 -or $active.Count -eq 0) {
+            throw "verifier.exe /query failed or returned no output (exit $activeExit)."
+        }
         [ordered]@{
             applicationVerifierImages = $appVerifier
             driverVerifierDrivers     = if ($dv -and $dv.Contains('VerifyDrivers')) { $dv['VerifyDrivers'] } else { $null }
             driverVerifierLevel       = if ($dv -and $dv.Contains('VerifyDriverLevel')) { $dv['VerifyDriverLevel'] } else { $null }
+            driverVerifierSettings    = $settings
+            driverVerifierActive      = $active
         }
     }
 
