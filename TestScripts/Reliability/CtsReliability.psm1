@@ -24,6 +24,8 @@ Export-ModuleMember -Function @(
     'New-CtsSnapshot'
     'Test-CtsSnapshot'
     'Test-CtsScenario'
+    'Get-CtsPilotGuestSample'
+    'Test-CtsPilotGuestSample'
     'Get-CtsTrafficTcpSummary'
     'Get-CtsTrafficTcpConnectionResults'
     'Compare-CtsSnapshot'

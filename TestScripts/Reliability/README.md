@@ -52,6 +52,11 @@ The draft G1B scenario can be inspected with `Test-CtsScenario -Path
 <scenario.json>` after importing the module. This preliminary check always
 blocks execution; full scenario validation and a runner are not implemented.
 
+`Get-CtsPilotGuestSample` reads guest boot time and free resources through an
+existing session; `Test-CtsPilotGuestSample` reports resource or reboot
+findings against supplied limits. These are individual observations, not a
+monitor loop, complete preflight, or authorization to run traffic.
+
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not
 run ctsTraffic, collect files, classify the result, or replace the original
