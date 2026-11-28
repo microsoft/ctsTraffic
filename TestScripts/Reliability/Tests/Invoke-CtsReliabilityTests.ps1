@@ -58,7 +58,11 @@ Import-Module Pester -MinimumVersion 5.0
     pesterVersion = (Get-Module Pester).Version.ToString()
     passed = `$r.PassedCount; failed = `$r.FailedCount; skipped = `$r.SkippedCount; notRun = `$r.NotRunCount
     durationSeconds = [math]::Round(`$r.Duration.TotalSeconds, 1)
-    failedTests = @(`$r.Failed | ForEach-Object { `$_.ExpandedPath })
+    failedTests = @(`$r.Failed | ForEach-Object { `$_.ExpandedPath }) + @(
+        if (`$r.Result -ne 'Passed') {
+            'Pester run result: {0}; failed containers: {1}; failed blocks: {2}' -f `$r.Result, `$r.FailedContainersCount, `$r.FailedBlocksCount
+        }
+    )
     files = @(`$r.Tests | Group-Object { Split-Path `$_.ScriptBlock.File -Leaf } | Sort-Object Name | ForEach-Object {
         [ordered]@{ file = `$_.Name; total = `$_.Count
             passed = @(`$_.Group | Where-Object Result -eq 'Passed').Count

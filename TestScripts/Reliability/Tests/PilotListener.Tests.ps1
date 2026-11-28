@@ -118,3 +118,66 @@ Describe 'listener CIM probe' -Tag 'Live' {
         }
     }
 }
+
+Describe 'server readiness gate' {
+    BeforeEach {
+        $script:Observations = 0
+        Mock -ModuleName CtsReliability Wait-CtsPilotGuardianStartup {
+            [pscustomobject]@{ Outcome = 'ChildStarted'; ChildProcessId = 123; Error = $null }
+        }
+        Mock -ModuleName CtsReliability Get-CtsPilotListenerObservation {
+            $script:Observations++
+            [pscustomobject]@{
+                Outcome = if ($script:Observations -gt 1) { 'Listening' } else { 'NotObserved' }
+                Error = $null
+            }
+        }
+    }
+
+    It 'waits for the child-start event and then retries listener observations' {
+        InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest; Launch = $script:Launch } {
+            param($Guest, $Launch)
+            $result = Wait-CtsPilotServerReadiness -GuestSession $Guest -Directory 'C:\runs\pilot' -Launch $Launch `
+                -Address '192.168.1.1' -Port 4444 -StartupTimeoutSeconds 10 -ListenerTimeoutSeconds 10 `
+                -PollSeconds 1 -TimeoutSeconds 2
+            $result.Outcome | Should -Be 'Listening'
+            $result.Startup.ChildProcessId | Should -Be 123
+        }
+        Should -Invoke -ModuleName CtsReliability Wait-CtsPilotGuardianStartup -Times 1 -Exactly -ParameterFilter { $Role -eq 'Server' }
+        Should -Invoke -ModuleName CtsReliability Get-CtsPilotListenerObservation -Times 2 -Exactly
+    }
+
+    It 'does not query the listener when startup is unknown' {
+        Mock -ModuleName CtsReliability Wait-CtsPilotGuardianStartup { [pscustomobject]@{ Outcome = 'Unknown'; Error = 'session lost' } }
+        InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest; Launch = $script:Launch } {
+            param($Guest, $Launch)
+            $result = Wait-CtsPilotServerReadiness -GuestSession $Guest -Directory 'C:\runs\pilot' -Launch $Launch `
+                -Address '192.168.1.1' -Port 4444 -StartupTimeoutSeconds 2 -ListenerTimeoutSeconds 2 `
+                -PollSeconds 1 -TimeoutSeconds 2
+            $result.Outcome | Should -Be 'Unknown'
+            $result.Error | Should -Be 'session lost'
+        }
+        Should -Invoke -ModuleName CtsReliability Get-CtsPilotListenerObservation -Times 0
+    }
+
+    It 'reports listener timeout without stopping a process' {
+        Mock -ModuleName CtsReliability Get-CtsPilotListenerObservation { [pscustomobject]@{ Outcome = 'NotObserved'; Error = $null } }
+        InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest; Launch = $script:Launch } {
+            param($Guest, $Launch)
+            $result = Wait-CtsPilotServerReadiness -GuestSession $Guest -Directory 'C:\runs\pilot' -Launch $Launch `
+                -Address '192.168.1.1' -Port 4444 -StartupTimeoutSeconds 2 -ListenerTimeoutSeconds 1 `
+                -PollSeconds 1 -TimeoutSeconds 2
+            $result.Outcome | Should -Be 'ListenerTimeout'
+        }
+    }
+
+    It 'propagates guardian exit during listener observation' {
+        Mock -ModuleName CtsReliability Get-CtsPilotListenerObservation { [pscustomobject]@{ Outcome = 'GuardianExited'; Error = $null } }
+        InModuleScope CtsReliability -Parameters @{ Guest = $script:Guest; Launch = $script:Launch } {
+            param($Guest, $Launch)
+            (Wait-CtsPilotServerReadiness -GuestSession $Guest -Directory 'C:\runs\pilot' -Launch $Launch `
+                -Address '192.168.1.1' -Port 4444 -StartupTimeoutSeconds 2 -ListenerTimeoutSeconds 2 `
+                -PollSeconds 1 -TimeoutSeconds 2).Outcome | Should -Be 'GuardianExited'
+        }
+    }
+}

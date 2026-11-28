@@ -14,6 +14,17 @@ $script:CtsPilotListenerScript = {
     }
 }
 
+function Assert-CtsPilotListenerAddress {
+    param([Parameter(Mandatory)][string]$Address)
+    $ip = $null
+    if (-not [Net.IPAddress]::TryParse($Address, [ref]$ip) -or
+        $ip.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+        $Address -notmatch '^\d{1,3}(\.\d{1,3}){3}$' -or
+        $Address -cne $ip.ToString() -or $Address -eq '0.0.0.0') {
+        throw 'Listener address must be a canonical non-wildcard IPv4 address.'
+    }
+}
+
 function Get-CtsPilotListenerObservation {
     param(
         [Parameter(Mandatory)]$GuestSession,
@@ -25,13 +36,7 @@ function Get-CtsPilotListenerObservation {
         [Parameter(Mandatory)][ValidateRange(1, 600)][int]$TimeoutSeconds
     )
     Assert-CtsPilotGuardianDirectory -Directory $Directory
-    $ip = $null
-    if (-not [Net.IPAddress]::TryParse($Address, [ref]$ip) -or
-        $ip.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
-        $Address -notmatch '^\d{1,3}(\.\d{1,3}){3}$' -or
-        $Address -cne $ip.ToString() -or $Address -eq '0.0.0.0') {
-        throw 'Listener address must be a canonical non-wildcard IPv4 address.'
-    }
+    Assert-CtsPilotListenerAddress -Address $Address
     $token = Get-CtsProp $Launch 'Token'
     $guardianId = Get-CtsProp $Launch 'ProcessId'
     $childId = Get-CtsProp $Startup 'ChildProcessId'
@@ -81,4 +86,42 @@ function Get-CtsPilotListenerObservation {
         }
     }
     catch { [pscustomobject]@{ Outcome = 'Unknown'; Error = $_.Exception.Message } }
+}
+
+function Wait-CtsPilotServerReadiness {
+    param(
+        [Parameter(Mandatory)]$GuestSession,
+        [Parameter(Mandatory)][string]$Directory,
+        [Parameter(Mandatory)]$Launch,
+        [Parameter(Mandatory)][string]$Address,
+        [Parameter(Mandatory)][ValidateRange(1, 65535)][int]$Port,
+        [Parameter(Mandatory)][ValidateRange(1, 600)][int]$StartupTimeoutSeconds,
+        [Parameter(Mandatory)][ValidateRange(1, 600)][int]$ListenerTimeoutSeconds,
+        [Parameter(Mandatory)][ValidateRange(1, 60)][int]$PollSeconds,
+        [Parameter(Mandatory)][ValidateRange(1, 600)][int]$TimeoutSeconds
+    )
+    Assert-CtsPilotGuardianDirectory -Directory $Directory
+    Assert-CtsPilotListenerAddress -Address $Address
+    $startup = Wait-CtsPilotGuardianStartup -GuestSession $GuestSession -Directory $Directory -Role Server -Launch $Launch `
+        -StartupTimeoutSeconds $StartupTimeoutSeconds -PollSeconds $PollSeconds -TimeoutSeconds $TimeoutSeconds
+    if ($startup.Outcome -ne 'ChildStarted') {
+        return [pscustomobject]@{
+            Outcome = if ($startup.Outcome -eq 'Timeout') { 'StartupTimeout' } else { $startup.Outcome }
+            Startup = $startup; Listener = $null; Error = $startup.Error
+        }
+    }
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        $listener = Get-CtsPilotListenerObservation -GuestSession $GuestSession -Directory $Directory -Launch $Launch `
+            -Startup $startup -Address $Address -Port $Port -TimeoutSeconds $TimeoutSeconds
+        if ($listener.Outcome -ne 'NotObserved') {
+            return [pscustomobject]@{ Outcome = $listener.Outcome; Startup = $startup; Listener = $listener; Error = $listener.Error }
+        }
+        if ($clock.Elapsed.TotalSeconds -ge $ListenerTimeoutSeconds) { break }
+        Start-Sleep -Seconds ([Math]::Min($PollSeconds, [Math]::Max(1, [Math]::Ceiling($ListenerTimeoutSeconds - $clock.Elapsed.TotalSeconds))))
+    } while ($true)
+    [pscustomobject]@{
+        Outcome = 'ListenerTimeout'; Startup = $startup; Listener = $listener
+        Error = 'Server listener was not observed.'
+    }
 }

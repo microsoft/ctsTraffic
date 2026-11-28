@@ -111,6 +111,9 @@ job wait timeout. This check is not a coordinated startup or authorization.
 The guardian retains the child's process handle until it exits, preventing PID
 reuse while its liveness checks bracket the observation. Older staged guardians
 do not provide this guarantee and must not be used for this check.
+An internal server-readiness gate combines the startup observer and repeated
+listener observations; it does not start the client or maintain heartbeats after
+returning. Both timeouts are polling deadlines, not hard remote-call bounds.
 
 An internal staging helper exclusively creates the guardian script, native
 source, and specification in a supplied guest directory and checks their
