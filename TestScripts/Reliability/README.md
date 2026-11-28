@@ -156,8 +156,17 @@ create or reserve output directories, verify targets, or authorize a run.
 An internal helper can reserve a new guest run directory exclusively; it does
 not validate the parent directory's access controls or authorize a run. The
 intended run layout retains logs and dumps in a unique directory under
-`C:\ctsReliability` on the host and guests. Collection of dumps from their
-configured shared or fixed paths into that directory is not implemented.
+`C:\ctsReliability` on the host and guests. Complete collection of dumps from
+their configured shared or fixed paths into that directory is not implemented.
+Internal WER inventories compare dump names and metadata before and after a run,
+flagging changed or missing pre-existing files and guest reboots. New or changed
+files are candidates, not proof of attribution or completed writes; unchanged
+metadata does not prove unchanged content. A separate internal helper can copy
+a candidate into a reserved guest run directory with exclusive creation and
+hash verification, without deleting the original. It does not prove attribution
+or that WER has finished writing. A failed or timed-out copy may leave a partial
+file and must not be blindly retried at the same path. Host collection and
+system-dump collection are not implemented. Remote calls lack hard deadlines.
 
 `Get-CtsTrafficTcpSummary -Path <stdout-file>` reads an already-collected
 stdout file and reports whether a complete TCP summary is present. It does not

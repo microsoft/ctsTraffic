@@ -159,8 +159,9 @@ overwritten. The current guest WER configuration writes to the shared
 `C:\ctsReliability\dumps` folder, and system dumps may use another fixed path.
 Final cleanup collects WER dumps produced by the run into its run directory,
 distinguishing them from pre-existing files and accounting for incomplete
-writes. This collection is not implemented yet. Do not delete or overwrite
-the original dumps during collection.
+writes. Inventory and guest-side copy helpers exist, but end-to-end collection
+and attribution are not implemented yet. Do not delete or overwrite the
+original dumps during collection.
 
 VM-A is the server and VM-B is the client. The client time limit begins after
 its own launch; it does not stop the server. The server's seven-minute time
