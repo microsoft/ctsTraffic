@@ -66,6 +66,11 @@ address, route, and adapter findings against supplied expectations. These
 are point-in-time observations, not proof of firewall reachability, VM identity,
 future route selection, complete preflight, or authorization to run.
 
+An internal binary check compares one guest snapshot's recorded executable
+size and SHA-256 with an expected hash. The snapshot is point-in-time evidence:
+the check does not verify its provenance or prevent later binary replacement,
+and does not authorize a run.
+
 Internal pilot-process helpers retain process handles in a guest session and
 create stdout/stderr files exclusively. Forced stop targets the tracked PID
 while its original handle is pinned. Loss of the session also loses the
