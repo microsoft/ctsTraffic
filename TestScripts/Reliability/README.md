@@ -95,6 +95,14 @@ not validate directory access controls, prevent later modification, verify the
 child executable, or authorize a run. Staging uses a synchronous guest call
 without a hard timeout.
 
+An internal completion-evidence reader checks matching guardian launch and
+tracked-process completion receipts, then reads and validates the guardian
+result. Missing, malformed, contradictory, or inaccessible evidence is
+unknown. A normal child exit does not by itself establish the traffic outcome.
+The reader assumes its receipts and guest files belong to the same reserved
+run; it does not validate their provenance or protect them against changes.
+Its job wait timeout does not bound submission or cleanup.
+
 The internal pilot command resolver produces the documented finite-pilot
 argument vectors and artifact paths without starting traffic. It does not
 create or reserve output directories, verify targets, or authorize a run.
